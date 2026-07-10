@@ -4,6 +4,7 @@ pub mod pipeline;
 pub mod regexes;
 pub mod token;
 pub mod unicode;
+pub mod viral;
 
 use model::{NomCode, ParseError, ParsedName, Rank};
 
