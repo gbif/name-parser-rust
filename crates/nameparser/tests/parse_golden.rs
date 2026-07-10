@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Full-parse golden harness — error-classification gate (Phase 1, Task 6) + full
 //! `ParsedName` field parity (Phase 1 Slice 4 Task 4 — the back end: AuthorshipParser,
-//! CodeInference, Assemble, `stripAuthorshipMarkers` all wired into `Pipeline::run`).
+//! CodeInference, Assemble, `stripAuthorshipMarkers` all wired into `Pipeline::run` — plus a
+//! following Phase 1 Slice 4 change that ported `replace_homoglyphs`'s backing table,
+//! closing the field-parity gate's last residual).
 //!
 //! Diffs Rust `nameparser::parse()` against the real Java CLI oracle
 //! (`testdata/expected-parse.jsonl`) over the ~8017-name benchmark corpus
@@ -10,9 +12,9 @@
 //!   1. **Error classification (asserted 0, unchanged since Task 6).** The parsed/unparsable
 //!      PARTITION (Java `error` <=> Rust `Err`; Java `parsed` <=> Rust `Ok`), and, for rows
 //!      unparsable on both sides, that the `NameType`/`NomCode` agree.
-//!   2. **Full `ParsedName` field parity (asserted 0 — as of Task 4, modulo the tiny
-//!      documented allowlist below).** For rows both sides parse, diffs EVERY field of the
-//!      Java `parsed` object — [`ALL_FIELD_KEYS`], the complete 30-field wire shape
+//!   2. **Full `ParsedName` field parity (asserted 0, no exceptions).** For
+//!      rows both sides parse, diffs EVERY field of the Java `parsed` object —
+//!      [`ALL_FIELD_KEYS`], the complete 30-field wire shape
 //!      documented on `model::name::ParsedName`'s own field-order doc comment (`rank` ..
 //!      `sanctioningAuthor`) — via `serde_json::Value` on both sides (an absent JSON key
 //!      means unset/`None`, matching the model's `skip_serializing_if`).
@@ -31,10 +33,12 @@
 //!
 //!      This is the milestone this task is named for: the Rust parser reproduces Java's
 //!      full `ParsedName` — every parsed field, not just a downstream-independent subset —
-//!      over the whole corpus. [`ALLOWLIST`] documents the (small, root-caused) set of
-//!      fields/counts this gate tolerates rather than asserting a hard 0, e.g. the
-//!      `replace_homoglyphs` stub (StripAndStash step 13, deferred by design since Phase 1
-//!      Slice 2 — porting its backing table is a sizeable sub-project of its own).
+//!      over the whole corpus, with 0 mismatches on every one of the 30 fields. [`ALLOWLIST`]
+//!      is currently EMPTY — kept as infrastructure (not deleted) so a future regression
+//!      that's already root-caused and consciously deferred can be allowlisted explicitly,
+//!      the same way it briefly held a documented 4-count entry each for `specificEpithet`/
+//!      `warnings` (the `replace_homoglyphs` stub, StripAndStash step 13 — since ported in
+//!      full, closing that gap to 0).
 //!
 //! Regenerate the oracle with (see the Task 6 brief for the authoritative command):
 //! ```text
@@ -122,26 +126,29 @@ const UNORDERED_FIELD_KEYS: [&str; 3] = ["warnings", "notho", "epithetQualifier"
 /// in this port — NOT a general escape hatch. Every entry here must name its root cause.
 /// Checked as `actual <= allowed` (a regression that *increases* the count still fails).
 ///
-/// Both entries below trace to the SAME single root cause and the SAME 2 unique corpus
-/// names (each appearing twice in the corpus — lines 4429/5826 "Musca domeſtica Linnaeus
-/// 1758" and 4430/5827 "Amphisbæna fuliginoſa Linnaeus 1758"): `replace_homoglyphs`
-/// (`pipeline::stripandstash`, step 13) is a pre-existing DOCUMENTED no-op stub — see its
-/// own doc comment — because Java's `UnicodeUtils.replaceHomoglyphs` backing table (a
-/// ~175-line codepoint -> canonical-char resource) is a sizeable sub-project of its own,
-/// deferred by design since Phase 1 Slice 2 (StripAndStash), well before this task. Both
-/// names contain U+017F LATIN SMALL LETTER LONG S ("ſ", an 18th-century typographic
-/// variant of "s") in their specific epithet — "domeſtica"/"fuliginoſa" — which Java's table
-/// folds to plain "s" (-> `specificEpithet`) and flags with the (non-gated everywhere else)
-/// `HOMOGLYHPS` warning (-> `warnings`); the stub leaves both untouched. Confirmed
-/// NARROWLY scoped to this one character, not a broader gap: the corpus's other
-/// exotic-script-adjacent row, "Dreyfusia nüßlini" (German eszett "ß", lines 4431/5828),
-/// is untouched by Java's own table too (0 mismatches — `ß` is a legitimate letter, not a
-/// homoglyph) and `genus="Amphisbæna"` (containing the "æ" ligature) is ALSO left alone by
-/// Java on both of the affected rows, so the residual is exactly this one codepoint, not a
-/// systemic divergence. Every other field, and every other one of the corpus's 8017 names,
-/// is full parity — see the Task 4 report for the complete triage log. Porting the real
-/// table is left to a later slice, per the original StripAndStash deferral note.
-const ALLOWLIST: &[(&str, usize)] = &[("specificEpithet", 4), ("warnings", 4)];
+/// **Currently EMPTY — every field is full 0-mismatch parity.** This held
+/// `[("specificEpithet", 4), ("warnings", 4)]` until the `replace_homoglyphs` table port
+/// below closed it out: both entries traced to the SAME single root cause and the SAME 2
+/// unique corpus names (each appearing twice in the corpus — lines 4429/5826 "Musca
+/// domeſtica Linnaeus 1758" and 4430/5827 "Amphisbæna fuliginoſa Linnaeus 1758").
+/// `replace_homoglyphs` (`pipeline::stripandstash`, step 13) was a DOCUMENTED no-op stub
+/// because Java's `UnicodeUtils.replaceHomoglyphs` backing table (a codepoint ->
+/// canonical-char resource, `crate::unicode`'s `HOMOGLYPHS`) was a sizeable sub-project of
+/// its own, deferred by design since Phase 1 Slice 2 (StripAndStash), well before Phase 1
+/// Slice 4. Both names contain U+017F LATIN SMALL LETTER LONG S ("ſ", an 18th-century
+/// typographic variant of "s") in their specific epithet — "domeſtica"/"fuliginoſa" — which
+/// Java's table folds to plain "s" (-> `specificEpithet`) and flags with the (non-gated
+/// everywhere else) `HOMOGLYHPS` warning (-> `warnings`); the stub left both untouched. That
+/// gap was confirmed NARROWLY scoped to this one character, not a broader one: the corpus's
+/// other exotic-script-adjacent row, "Dreyfusia nüßlini" (German eszett "ß", lines
+/// 4431/5828), was already untouched by Java's own table too (0 mismatches — `ß` is a
+/// legitimate letter, not a homoglyph) and `genus="Amphisbæna"` (containing the "æ"
+/// ligature) is ALSO left alone by Java on both of the affected rows (a ligature, not a
+/// homoglyph — `replace_homoglyphs` does not fold it either, post-port) — so the residual
+/// was exactly this one codepoint, not a systemic divergence. The table port loaded the
+/// real table into `crate::unicode` (see its module doc for the loader/table details) and
+/// wired it into step 13, closing both counts to 0.
+const ALLOWLIST: &[(&str, usize)] = &[];
 
 fn allowed_mismatches(key: &str) -> usize {
     ALLOWLIST
@@ -368,9 +375,9 @@ fn matches_java_error_classification_over_corpus() {
         type_code_mismatches.len()
     );
 
-    // GATE (Phase 1 Slice 4 Task 4 — the milestone): every one of the 30 fields of the full
-    // `ParsedName` wire shape must match the Java oracle, up to the (currently empty, see
-    // its own doc comment) ALLOWLIST. Asserted per-field (not as a single pooled total) so
+    // GATE (Phase 1 Slice 4 — the milestone): every one of the 30 fields of the
+    // full `ParsedName` wire shape must match the Java oracle, up to the (currently empty,
+    // see its own doc comment) ALLOWLIST. Asserted per-field (not as a single pooled total) so
     // a future regression's failure message names the exact field that broke; re-run with
     // `--nocapture` for up to `FIELD_EXAMPLE_CAP` concrete failing inputs per field from the
     // eprintln! block above.

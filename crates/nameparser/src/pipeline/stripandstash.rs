@@ -24,14 +24,14 @@
 //! baseline print to an asserted-0 gate over the 10 downstream-independent fields — see
 //! that file's own module doc.
 //!
-//! One step, `replace_homoglyphs` (step 13), is a DOCUMENTED stub — see its own doc
-//! comment — since porting its backing table is a sizeable sub-project deferred by design
-//! (mirrors `crate::unicode`'s own existing deferral of the same table). Separately, Java's
-//! `stripAuthorshipMarkers` — an auxiliary-authorship reimplementation that duplicates a
-//! handful of this file's own strip steps but is NOT part of this ordered `run()` dispatch
-//! at all — is DEFERRED to the AuthorshipParser slice: it is only ever invoked on the
-//! caller-supplied `authorship` string via the not-yet-ported AuthorshipParser path, so it
-//! is unreachable/untestable from this crate's current entry points.
+//! Step 13, `replace_homoglyphs`, delegates to `crate::unicode`'s full port of Java's
+//! `UnicodeUtils` homoglyph table (Phase 1 Slice 4) — see that step's own doc comment.
+//! Separately, Java's `stripAuthorshipMarkers` — an auxiliary-authorship
+//! reimplementation that duplicates a handful of this file's own strip steps but is NOT
+//! part of this ordered `run()` dispatch at all — is ported further down this same file
+//! (`strip_authorship_markers`, Phase 1 Slice 4 Task 4) as its own, shorter, ordered step
+//! list, invoked on the caller-supplied `authorship` string from `pipeline::mod`'s
+//! aux-authorship path.
 
 use std::sync::LazyLock;
 
@@ -542,15 +542,17 @@ fn normalise_letter_subdivision_marker(_ctx: &mut ParseContext, s: String) -> St
 /// Java LETTER_QMARK_LETTER (StripAndStash.java:295): `.*\p{L}\?\p{L}.*`, no flags. Has
 /// `\p{L}` and an unescaped wildcard `.*` bookends, no `\s`/`\d`/`\w`/`\b` atoms at all ->
 /// nothing to ASCII-scope. Called via `.matches()` on a `.*CORE.*` shape -> restructured to
-/// the core-only `is_match` form (same reasoning as `GREEK_MARKER_TEST`). Shared with the
-/// not-yet-ported `stripAuthorshipMarkers` (StripAndStash.java:440) — defining it once here
-/// makes it available for that future call site too.
+/// the core-only `is_match` form (same reasoning as `GREEK_MARKER_TEST`). Shared with
+/// `stripAuthorshipMarkers` (StripAndStash.java:440, ported below as
+/// `strip_authorship_markers`) — defining it once here makes it directly reusable by that
+/// call site too.
 static LETTER_QMARK_LETTER: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\p{L}\?\p{L}").unwrap());
 
 /// Java QMARK_BETWEEN_LETTERS (StripAndStash.java:296): `(\p{L})\?(\p{L})`, no flags. No
 /// `\s`/`\d`/`\w`/`\b` atoms -> nothing to scope, ported verbatim. Shared with
-/// `stripAuthorshipMarkers` (not yet ported), same as its sibling above.
+/// `stripAuthorshipMarkers` (ported below as `strip_authorship_markers`), same as its
+/// sibling above.
 static QMARK_BETWEEN_LETTERS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(\p{L})\?(\p{L})").unwrap());
 
@@ -558,9 +560,10 @@ static QMARK_BETWEEN_LETTERS: LazyLock<Regex> =
 /// a word is a transcription artefact for a missing letter ("Istv?nffi") — strips the "?"
 /// and glues the surrounding word parts directly together (no placeholder letter is
 /// guessed: "Istv?nffi" -> "Istvnffi"), flagging doubtful + `QUESTION_MARKS_REMOVED`. (The
-/// identical inline logic also opens the separate, not-yet-ported `stripAuthorshipMarkers`
-/// auxiliary-authorship path — `StripAndStash.java` duplicates it rather than sharing a
-/// helper, so this port does too, reusing the same static patterns.)
+/// identical inline logic also opens the separate `stripAuthorshipMarkers`
+/// auxiliary-authorship path (ported below as `strip_authorship_markers`) —
+/// `StripAndStash.java` duplicates it rather than sharing a helper, so this port does too,
+/// reusing the same static patterns.)
 fn repair_question_mark_in_word(ctx: &mut ParseContext, s: String) -> String {
     if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
         let s = QMARK_BETWEEN_LETTERS.replace_all(&s, "$1$2").into_owned();
@@ -768,20 +771,37 @@ fn normalise_hyphens(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
-// ---- Step 13: replaceHomoglyphs — STUBBED ----
+// ---- Step 13: replaceHomoglyphs ----
 
-/// Java `StripAndStash.replaceHomoglyphs` (StripAndStash.java:839-854) delegates to
-/// `UnicodeUtils.containsHomoglyphs`/`replaceHomoglyphs`, which load a ~175-line
-/// `unicode/homoglyphs.txt` resource at static-init time into a codepoint -> canonical-char
-/// map (`UnicodeUtils.java:58-139`). Porting that table is a sizeable sub-project of its
-/// own — `crate::unicode`'s own module doc already documents this exact deferral ("Only
-/// `normalizeQuotes` is ported here; the homoglyph-replacement table … is intentionally NOT
-/// ported"). Per this task's brief, STUBBED as a documented no-op: this step only ever sets
-/// the (non-gated) `HOMOGLYHPS` warning and normalises the working string for RARE
-/// non-Latin-lookalike input — it does not touch any of the 10 downstream-independent gate
-/// fields, so leaving it a no-op does not affect this slice's gate. Port the real table in
-/// a later slice, alongside `unicode.rs`'s existing deferral note.
-fn replace_homoglyphs(_ctx: &mut ParseContext, s: String) -> String {
+/// Java `StripAndStash.replaceHomoglyphs` (StripAndStash.java:839-854):
+/// ```java
+/// if (UnicodeUtils.containsHomoglyphs(s)) {
+///   String repl = UnicodeUtils.replaceHomoglyphs(s, false);
+///   if (!repl.equals(s)) {
+///     ctx.name.addWarning(Warnings.HOMOGLYHPS);
+///     s = repl;
+///   }
+/// }
+/// ```
+/// Delegates to [`crate::unicode::contains_homoglyphs`]/[`crate::unicode::replace_homoglyphs`]
+/// — the full codepoint -> canonical-char table port (`UnicodeUtils.java:58-139`'s
+/// `~175`-line `unicode/homoglyphs.txt` loader; see that module's own doc comment for the
+/// loader/table details) — flagging `HOMOGLYHPS` only when the string actually changed.
+/// `inclHyphens=false` at this (the table's only) call site: Unicode hyphen variants are
+/// already normalised to ASCII by the immediately-preceding `normalise_hyphens` (step 12),
+/// per Java's own comment on this method ("Hyphen homoglyphs are intentionally excluded —
+/// those are normalised above already"). Both the outer `contains_homoglyphs` fast-path
+/// check and the inner `repl != s` re-check are redundant in the overwhelmingly common case
+/// (a table hit always changes the string, since no row's canonical ever equals one of its
+/// own look-alikes) but ported verbatim anyway, mirroring Java's exact structure.
+fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
+    if crate::unicode::contains_homoglyphs(&s) {
+        let repl = crate::unicode::replace_homoglyphs(&s);
+        if repl != s {
+            ctx.name.add_warning(warnings::HOMOGLYHPS);
+            return repl;
+        }
+    }
     s
 }
 
@@ -793,10 +813,11 @@ fn replace_homoglyphs(_ctx: &mut ParseContext, s: String) -> String {
 /// high-bit punctuation characters to their Latin look-alikes, flagging `HOMOGLYHPS` when
 /// anything changed (spot-checked against the Java CLI oracle: "Aus bus Plesn¡k, 1900" ->
 /// `authors=["Plesnik"]`, warning "homoglyphs replaced"). Java's real signature takes
-/// `ParsedName` directly (shared with the not-yet-ported `stripAuthorshipMarkers`
-/// auxiliary-authorship path) — ported with that same signature here (`_name` suffix) so
-/// that future call site can reuse it directly; `repair_win1252_artefacts` below is the
-/// uniform `(ctx, s)`-shaped wrapper `run`'s dispatcher needs.
+/// `ParsedName` directly (shared with the `stripAuthorshipMarkers` auxiliary-authorship
+/// path, ported below as `strip_authorship_markers`) — ported with that same signature here
+/// (`_name` suffix) so that call site can reuse it directly, which it does;
+/// `repair_win1252_artefacts` below is the uniform `(ctx, s)`-shaped wrapper `run`'s
+/// dispatcher needs.
 fn repair_win1252_artefacts_name(name: &mut ParsedName, s: String) -> String {
     if s.contains('\u{00A1}')
         || s.contains('\u{00A2}')
@@ -1065,13 +1086,14 @@ static CV_EX: LazyLock<FancyRegex> =
 
 /// Java HORT_EX (StripAndStash.java:308): `\bHort\.(?=\s+ex\s+)`, no flags — note the
 /// literal capital "Hort" (NOT case-insensitive). Same fancy_regex/ASCII-whitespace
-/// reasoning as `CV_EX`. Shared with the not-yet-ported `stripAuthorshipMarkers`.
+/// reasoning as `CV_EX`. Shared with `stripAuthorshipMarkers` (ported below as
+/// `strip_authorship_markers`).
 static HORT_EX: LazyLock<FancyRegex> =
     LazyLock::new(|| FancyRegex::new(r"\bHort\.(?=[ \t\n\x0B\f\r]+ex[ \t\n\x0B\f\r]+)").unwrap());
 
 /// Java HORTUS_EX (StripAndStash.java:309): `\bhortus[a]?\b(?=\s+ex\s+)`, no flags. Same
-/// fancy_regex/ASCII-whitespace reasoning as `CV_EX`. Shared with the not-yet-ported
-/// `stripAuthorshipMarkers`.
+/// fancy_regex/ASCII-whitespace reasoning as `CV_EX`. Shared with `stripAuthorshipMarkers`
+/// (ported below as `strip_authorship_markers`).
 static HORTUS_EX: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(r"\bhortus[a]?\b(?=[ \t\n\x0B\f\r]+ex[ \t\n\x0B\f\r]+)").unwrap()
 });
@@ -1616,8 +1638,9 @@ static SINGLE_TITLE_WORD: LazyLock<Regex> =
 /// `(?i).*\b(?:ined|ms|msc|unpublished)\b.*`, no `UNICODE_CHARACTER_CLASS`. RESTRUCTURED:
 /// called via `.matches()` on a `.*CORE.*` shape -> equivalent to an unanchored `is_match`
 /// on CORE alone (same restructuring as `GREEK_MARKER_TEST`/`SEROVAR_TEST` in batch 1).
-/// `\b` (x2) ASCII-scoped. Shared with the not-yet-ported `stripAuthorshipMarkers` and
-/// `stripManuscriptMarker` (batch 4) — defined once here, reusable file-wide.
+/// `\b` (x2) ASCII-scoped. Shared with `stripAuthorshipMarkers` (ported below as
+/// `strip_authorship_markers`) and `stripManuscriptMarker` (batch 4) — defined once here,
+/// reusable file-wide.
 static MANUSCRIPT_KEYWORD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:ined|ms|msc|unpublished)(?-u:\b)").unwrap());
 
@@ -2704,11 +2727,12 @@ fn strip_manuscript_marker(ctx: &mut ParseContext, s: String) -> String {
 // (`tests/parse_golden.rs`) from a deferred baseline print to a real `assert_eq!(…, 0)`
 // over the 10 downstream-independent fields — see that file's own module doc.
 //
-// DEFERRED to the AuthorshipParser slice: Java's separate `stripAuthorshipMarkers`
-// auxiliary-authorship reimplementation is NOT part of this ordered `run()` dispatch at
-// all (see the investigation §4) — it is only ever invoked on the caller-supplied
-// `authorship` string via the not-yet-ported AuthorshipParser path, so it is
-// unreachable/untestable from this crate's current entry points and is not ported here.
+// NOTE: Java's separate `stripAuthorshipMarkers` auxiliary-authorship reimplementation is
+// NOT part of this ordered `run()` dispatch at all (see the investigation §4) — it is only
+// ever invoked on the caller-supplied `authorship` string, from `pipeline::mod`'s
+// aux-authorship path. It is NOT ported here (alongside these three steps); it's ported
+// later in this same file, as its own separate, shorter, ordered step list — see
+// `strip_authorship_markers` and the section doc comment above it (Phase 1 Slice 4 Task 4).
 //
 // This batch also extends `model::enums::Rank` with 18 new variants these three steps
 // reference — the suprageneric family-group ranks for step 53, plus SUBGENUS and the
@@ -3655,17 +3679,45 @@ mod tests {
         assert!(c.name.warnings.is_empty());
     }
 
-    // ---- Step 13: replaceHomoglyphs (documented stub) ----
+    // ---- Step 13: replaceHomoglyphs ----
 
     #[test]
-    fn replace_homoglyphs_is_a_documented_noop_this_slice() {
+    fn cyrillic_lookalike_is_folded_to_latin_and_flags_homoglyphs() {
         let mut c = ctx("x");
-        let input = "Aus \u{0430}bus".to_string(); // Cyrillic 'а' look-alike
-        let out = replace_homoglyphs(&mut c, input.clone());
-        assert_eq!(
-            out, input,
-            "stubbed this slice — see the step's doc comment"
-        );
+        let out = replace_homoglyphs(&mut c, "Aus \u{0430}bus".to_string()); // Cyrillic 'а'
+        assert_eq!(out, "Aus abus");
+        assert!(c.name.warnings.contains(&warnings::HOMOGLYHPS.to_string()));
+    }
+
+    /// The exact corpus shape this step used to leave untouched (see
+    /// `tests/parse_golden.rs`'s now-empty `ALLOWLIST`): a specific epithet carrying U+017F
+    /// LATIN SMALL LETTER LONG S folds to plain "s".
+    #[test]
+    fn long_s_in_specific_epithet_is_folded_and_flags_homoglyphs() {
+        let mut c = ctx("x");
+        let out = replace_homoglyphs(&mut c, "Musca dome\u{017F}tica Linnaeus 1758".to_string());
+        assert_eq!(out, "Musca domestica Linnaeus 1758");
+        assert!(c.name.warnings.contains(&warnings::HOMOGLYHPS.to_string()));
+    }
+
+    #[test]
+    fn hybrid_marker_and_ae_ligature_are_not_homoglyphs_here_either() {
+        let mut c = ctx("x");
+        let out = replace_homoglyphs(&mut c, "Abies \u{00D7} Picea".to_string());
+        assert_eq!(out, "Abies \u{00D7} Picea");
+        assert!(c.name.warnings.is_empty());
+
+        let mut c2 = ctx("x");
+        let out2 = replace_homoglyphs(&mut c2, "Amphisb\u{00E6}na".to_string());
+        assert_eq!(out2, "Amphisb\u{00E6}na");
+        assert!(c2.name.warnings.is_empty());
+    }
+
+    #[test]
+    fn plain_name_is_untouched_with_no_warning() {
+        let mut c = ctx("x");
+        let out = replace_homoglyphs(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
         assert!(c.name.warnings.is_empty());
     }
 
