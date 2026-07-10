@@ -1,17 +1,25 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Full-parse golden harness — error-classification gate (Phase 1, Task 6).
+//! Full-parse golden harness — error-classification gate (Phase 1, Task 6) + the
+//! downstream-independent-field BASELINE (Phase 1 Slice 2, Task 1).
 //!
 //! Diffs Rust `nameparser::parse()` against the real Java CLI oracle
 //! (`testdata/expected-parse.jsonl`) over the ~8017-name benchmark corpus
-//! (`testdata/benchmark-data.txt`). Per the plan's Global Constraint ("this slice's gate
-//! is error-classification only"), this test does NOT compare parsed-field content —
-//! only:
-//!   1. the parsed/unparsable PARTITION (Java `error` <=> Rust `Err`; Java `parsed` <=>
-//!      Rust `Ok`), and
-//!   2. for rows unparsable on both sides, that the `NameType`/`NomCode` agree.
+//! (`testdata/benchmark-data.txt`). Two independent measurements:
 //!
-//! Downstream pipeline stages (StripAndStash onward) aren't ported yet, so a `parsed`/`Ok`
-//! agreement's field CONTENT is out of scope until later slices.
+//!   1. **Error classification (asserted 0, unchanged since Task 6).** The parsed/unparsable
+//!      PARTITION (Java `error` <=> Rust `Err`; Java `parsed` <=> Rust `Ok`), and, for rows
+//!      unparsable on both sides, that the `NameType`/`NomCode` agree.
+//!   2. **Downstream-independent fields (BASELINE ONLY — not yet asserted).** For rows both
+//!      sides parse, diffs the 10 fields that `StripAndStash` (Phase 1 Slice 2) exclusively
+//!      populates — `extinct`, `originalSpelling`, `nomenclaturalNote`, `taxonomicNote`,
+//!      `publishedIn`, `publishedInPage`, `publishedInYear`, `manuscript`, `candidatus`,
+//!      `cultivarEpithet` — via `serde_json::Value` on both sides (an absent JSON key means
+//!      unset/`None`, matching the model's `skip_serializing_if`). `StripAndStash` isn't
+//!      ported yet, so this run only measures the trajectory's starting point (see
+//!      `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md`) — every mismatch
+//!      counted here is *expected*. The per-field counts are printed to stderr rather than
+//!      asserted, and are driven towards 0 as later Slice 2 batches (2b..2e) port the steps
+//!      that set each field.
 //!
 //! Regenerate the oracle with (see the Task 6 brief for the authoritative command):
 //! ```text
@@ -20,6 +28,8 @@
 //! java -jar "$JAR" parse --input=- --output=- --format=jsonl \
 //!   < testdata/benchmark-data.txt > testdata/expected-parse.jsonl 2>/dev/null
 //! ```
+
+use std::collections::HashMap;
 
 use nameparser::model::{NameType, NomCode};
 
@@ -43,6 +53,29 @@ struct Mismatch {
     detail: String,
 }
 
+/// The 10 downstream-independent fields `StripAndStash` (Phase 1 Slice 2) exclusively
+/// populates — Java JSON key names, in wire order (see `model::name::ParsedName`'s
+/// field-order doc comment: `extinct`..`cultivarEpithet` interleave `ParsedName`'s own
+/// fields with `ParsedAuthorship`'s). Same list as the plan's "Downstream-independent
+/// field set" section.
+const FIELD_KEYS: [&str; 10] = [
+    "extinct",
+    "originalSpelling",
+    "nomenclaturalNote",
+    "taxonomicNote",
+    "publishedIn",
+    "publishedInPage",
+    "publishedInYear",
+    "manuscript",
+    "candidatus",
+    "cultivarEpithet",
+];
+
+/// Cap on how many example mismatches are printed per field (mirrors the `.take(20)` cap
+/// already used for the partition/type-code listings, just smaller since there are 10
+/// fields rather than 2 categories).
+const FIELD_EXAMPLE_CAP: usize = 5;
+
 #[test]
 fn matches_java_error_classification_over_corpus() {
     let path = concat!(
@@ -60,6 +93,15 @@ fn matches_java_error_classification_over_corpus() {
     let mut total = 0usize;
     let mut partition_mismatches: Vec<Mismatch> = Vec::new();
     let mut type_code_mismatches: Vec<Mismatch> = Vec::new();
+
+    // BASELINE (not gated — see the module doc): rows where both sides parsed, and
+    // per-field mismatch tallies + capped examples over the 10 downstream-independent
+    // fields StripAndStash will populate.
+    let mut both_parsed = 0usize;
+    let mut field_mismatch_counts: HashMap<&'static str, usize> =
+        FIELD_KEYS.iter().map(|&k| (k, 0)).collect();
+    let mut field_mismatch_examples: HashMap<&'static str, Vec<Mismatch>> =
+        FIELD_KEYS.iter().map(|&k| (k, Vec::new())).collect();
 
     for (idx, line) in data.lines().enumerate() {
         if line.trim().is_empty() {
@@ -120,9 +162,31 @@ fn matches_java_error_classification_over_corpus() {
                     });
                 }
             }
-            (None, Ok(_)) => {
-                // Both parsed. Parsed-field CONTENT is not gated this slice (downstream
-                // pipeline stages aren't ported yet).
+            (None, Ok(rust_pn)) => {
+                // Both parsed. Diff the 10 downstream-independent fields StripAndStash
+                // (Phase 1 Slice 2) will populate — BASELINE only this task, see below;
+                // full parsed-name parity (tokenised name parts, authorship, etc.) stays
+                // out of scope until later slices.
+                both_parsed += 1;
+                let java_obj = java_parsed
+                    .expect("java_error is None so java_parsed is Some (asserted above)");
+                let rust_value = serde_json::to_value(&rust_pn)
+                    .expect("ParsedName always serializes to JSON");
+                for &key in FIELD_KEYS.iter() {
+                    let jv = java_obj.get(key);
+                    let rv = rust_value.get(key);
+                    if jv != rv {
+                        *field_mismatch_counts.get_mut(key).unwrap() += 1;
+                        let examples = field_mismatch_examples.get_mut(key).unwrap();
+                        if examples.len() < FIELD_EXAMPLE_CAP {
+                            examples.push(Mismatch {
+                                line: line_no,
+                                input: input.to_string(),
+                                detail: format!("java={jv:?} rust={rv:?}"),
+                            });
+                        }
+                    }
+                }
             }
         }
     }
@@ -139,6 +203,33 @@ fn matches_java_error_classification_over_corpus() {
         eprintln!("  TYPE/CODE  line {}: {:?} — {}", m.line, m.input, m.detail);
     }
 
+    // BASELINE report (not gated): per-field mismatch counts over the `both_parsed` rows,
+    // for the 10 downstream-independent fields StripAndStash will populate. Right now
+    // StripAndStash isn't ported, so Rust never sets any of them — each count below is
+    // simply how many corpus names Java sets that field on, i.e. the trajectory's
+    // starting point (Slice 2 batches 2b..2e should drive these towards 0 as they land).
+    eprintln!(
+        "parse golden (downstream-independent fields — BASELINE, StripAndStash NOT yet ported): {both_parsed} both-parsed rows"
+    );
+    for &key in FIELD_KEYS.iter() {
+        let n = field_mismatch_counts[key];
+        let pct = if both_parsed == 0 {
+            0.0
+        } else {
+            100.0 * n as f64 / both_parsed as f64
+        };
+        eprintln!("  {key:<18} {n:>5} mismatches ({pct:>5.1}% of both-parsed rows)");
+    }
+    for &key in FIELD_KEYS.iter() {
+        let examples = &field_mismatch_examples[key];
+        if !examples.is_empty() {
+            eprintln!("  --- {key} (first {} example(s)) ---", examples.len());
+            for m in examples {
+                eprintln!("    line {}: {:?} — {}", m.line, m.input, m.detail);
+            }
+        }
+    }
+
     assert_eq!(
         partition_mismatches.len(),
         0,
@@ -151,6 +242,14 @@ fn matches_java_error_classification_over_corpus() {
         "{} type/code mismatches on rows both sides agree are unparsable — see stderr with --nocapture",
         type_code_mismatches.len()
     );
+
+    // DEFERRED: assert 0 once StripAndStash batch 2e lands (see
+    // docs/superpowers/plans/2026-07-10-phase1-stripandstash.md). StripAndStash — the ONLY
+    // stage that sets these 10 fields — isn't ported yet, so every mismatch tallied above
+    // is expected right now; asserting 0 here would fail immediately and for the wrong
+    // reason. Intentionally NOT `assert_eq!`-ed: each Slice 2 batch (2b..2e) should reduce
+    // `field_mismatch_counts`, and only batch 2e (which ports the last 3 steps plus
+    // `stripAuthorshipMarkers`) is expected to bring every one of these to 0.
 }
 
 /// Sanity-checks this file's own enum-name mapping against the reference rows quoted in
