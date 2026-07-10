@@ -10,3 +10,6 @@ tools/out/
 # on every run; the corpora themselves (testdata/*.txt) ARE tracked.
 testdata/*.java.jsonl
 testdata/*.rust.jsonl
+
+# IDE
+/.idea/
