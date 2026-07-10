@@ -97,3 +97,7 @@ averages (Rust 13.73 µs, Java 28.77 µs) land close to the spike's Java referen
   entries) is not reproduced here — that corpus isn't present in this repo yet (see the Phase 2
   plan's "Data note"); this entry only covers the 8017-row `benchmark-data.txt` corpus both
   repos ship.
+- This file measures *speed*; for *correctness* parity (the Rust CLI's `parse` output diffed
+  field-for-field against the Java CLI's, via the new `compare` subcommand, over
+  `benchmark-data.txt` and 6 further Java test-resource corpora), see `cross-validation.md` at
+  the repo root.

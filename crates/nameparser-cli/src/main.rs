@@ -23,7 +23,6 @@
 //!     are not fed to the parser as pre-split hints.
 //!   - `--format=json|csv|tsv` (only `jsonl`, the default, is implemented; the others exit
 //!     with a clear "not implemented yet" message rather than silently mis-writing).
-//!   - `compare` subcommand (Phase 2 Task 3).
 //!
 //! ## `benchmark` (Phase 2 Task 2 — implemented)
 //!
@@ -37,7 +36,42 @@
 //! like Java. `benchmarks.md` at the repo root records the actual Rust-vs-Java full-parser
 //! throughput comparison this command was built to make (the comparison the Phase 0 spike,
 //! which only measured components, deferred).
+//!
+//! ## `compare` (Phase 2 Task 3 — implemented)
+//!
+//! Mirrors the Java CLI's `CompareCli`: streams two JSONL files (as produced by `parse`) in
+//! lockstep and reports rows compared / identical / differing, status transitions
+//! (`PARSED→ERROR` etc.), and the top differing field paths, plus a per-row dump of every
+//! differing leaf value (capped by `--max-diffs`, default 100 — the aggregate counts are never
+//! capped). `--ignore-whitespace` strips whitespace from string leaves before comparing.
+//! Whichever of `a`/`b` runs out of lines first is reported as `Extra rows in A/B`; a
+//! `line`-field mismatch between the two rows at the same position is counted but does not stop
+//! the comparison. Like Java's `CompareCli`, everything (the per-row diff dump AND the summary)
+//! goes to stdout unless `--output=PATH` redirects the diff dump to a file, in which case the
+//! summary (plus a "Per-row diffs written to ..." trailer) still goes to stdout.
+//!
+//! One deliberate divergence from Java's exact algorithm, required rather than optional: Java's
+//! own `CompareCli` diffs `parsed.warnings` (and would diff `notho`/`epithetQualifier`, though
+//! neither has actually been observed to disagree) as a plain positional JSON array — but
+//! `warnings` is backed by a Java `HashSet<String>` on the oracle side and by an
+//! insertion-order `Vec<String>` on this crate's side (see `model::name::ParsedName::warnings`'s
+//! own doc comment), so the same *content* can legitimately render in a different array order
+//! on the two sides. This `compare` sorts the value under the `warnings`/`notho`/
+//! `epithetQualifier` keys (by each element's rendered JSON text) before comparing, at any
+//! nesting depth — the exact same 3-key definition, and the same rationale, as the core crate's
+//! own golden harness (`crates/nameparser/tests/parse_golden.rs`'s `UNORDERED_FIELD_KEYS`/
+//! `json_eq_unordered`) — so a set-identical-but-differently-ordered row is correctly reported
+//! as IDENTICAL rather than a false positive. Every other field, at every nesting depth, is
+//! compared positionally, which is correct since every other array in this schema
+//! (`authors`/`exAuthors` in particular) is genuinely ordered.
+//!
+//! Deliberately narrower than Java's `Args`-based option surface: only `--output`,
+//! `--ignore-whitespace`, and `--max-diffs` are implemented (matching this task's brief); `a`/
+//! `b` are plain required positional arguments rather than also accepting Java's `--a=`/`--b=`
+//! flag alternates or a third positional path as an alternate spelling of `--output` — those add
+//! no behaviour beyond what `--output` plus two positional args already covers.
 
+use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::path::Path;
@@ -45,6 +79,7 @@ use std::time::Instant;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
 use nameparser::model::{NameType, ParseError, ParsedName};
+use serde_json::Value;
 
 /// Print a progress line to stderr every this-many parsed rows (unless `--quiet`). Matches
 /// the Java CLI's `ParseCli.PROGRESS_EVERY`.
@@ -117,6 +152,8 @@ enum Command {
     Parse(ParseArgs),
     /// Measure parser throughput on a name-per-line input file.
     Benchmark(BenchmarkArgs),
+    /// Diff two JSONL files produced by `parse`, in lockstep.
+    Compare(CompareArgs),
 }
 
 /// Options for `nameparser-cli parse`, mirroring the Java CLI's `ParseCli` option set
@@ -170,6 +207,7 @@ fn main() {
     let result = match cli.command {
         Command::Parse(args) => run_parse(args),
         Command::Benchmark(args) => run_benchmark(args),
+        Command::Compare(args) => run_compare(args),
     };
     if let Err(e) = result {
         eprintln!("nameparser-cli: {e}");
@@ -537,6 +575,511 @@ fn name_type_label(t: NameType) -> String {
         .to_string()
 }
 
+// ---------------------------------------------------------------------------------------
+// compare
+// ---------------------------------------------------------------------------------------
+
+/// Field names — the exact JSON wire spelling `ParsedName` serialises to (see
+/// `nameparser::model::name`) — whose value is backed by a Java `Set`/`Map`-shaped collection
+/// (`warnings`: `HashSet<String>`; `notho`: `EnumSet<NamePart>`; `epithetQualifier`:
+/// `EnumMap<NamePart, String>`) on the Java oracle side, and are therefore compared
+/// order-insensitively below: the exact same 3-key definition (and rationale) as the core
+/// crate's own golden harness's `UNORDERED_FIELD_KEYS`
+/// (`crates/nameparser/tests/parse_golden.rs`) — matching "the golden harness's parity
+/// definition" for these fields, not just `warnings` alone, so a real `notho`/`epithetQualifier`
+/// order artifact surfaced by a corpus that harness doesn't cover would not be misreported as a
+/// bug either. In practice only `warnings` has actually been observed to disagree in order
+/// (`notho`'s own dedicated unit tests in `model::name` prove the Rust side always emits
+/// ordinal order, matching `EnumSet`'s deterministic ordinal iteration on the Java side;
+/// `epithetQualifier` is a JSON *object*, which the recursive comparison below already treats
+/// order-insensitively by walking the union of both sides' keys regardless of declaration
+/// order) — but all three are listed here, not just the one known to matter today.
+const UNORDERED_FIELD_KEYS: [&str; 3] = ["warnings", "notho", "epithetQualifier"];
+
+/// Options for `nameparser-cli compare`, mirroring the Java CLI's `CompareCli` option set
+/// (`--output`, `--ignore-whitespace`, `--max-diffs`) — see this module's doc comment for the
+/// full behavioural contract this reproduces, and for the deliberate narrower option surface
+/// (no `--a=`/`--b=`/positional-third-arg alternates).
+#[derive(Args)]
+struct CompareArgs {
+    /// First JSONL file, as produced by `parse`.
+    a: String,
+
+    /// Second JSONL file, as produced by `parse` — same source and line order as `a`.
+    b: String,
+
+    /// Write per-row diffs here instead of stdout.
+    #[arg(long)]
+    output: Option<String>,
+
+    /// Strip whitespace from string leaves before comparing (formatting-only spacing
+    /// differences won't count as a diff).
+    #[arg(long)]
+    ignore_whitespace: bool,
+
+    /// Cap the per-row diff dump at this many differing rows. The aggregate counts (rows
+    /// differing, status transitions, top fields) are never capped.
+    #[arg(long, default_value_t = 100)]
+    max_diffs: usize,
+}
+
+/// The classification `compare` buckets each row into, mirroring the Java CLI's
+/// `CompareCli.Status` — used only for the `statusTransitions` breakdown (e.g. `PARSED→ERROR`).
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum RowStatus {
+    Parsed,
+    Error,
+    Empty,
+}
+
+impl RowStatus {
+    /// Classifies one JSONL row: a present, non-null `error` key wins over a present, non-null
+    /// `parsed` key (a row should never have both, but this matches Java's `if`/`else if` order
+    /// exactly in case it ever does); otherwise the row is `Empty`.
+    fn of(row: &Value) -> Self {
+        let present = |k: &str| row.get(k).is_some_and(|v| !v.is_null());
+        if present("error") {
+            RowStatus::Error
+        } else if present("parsed") {
+            RowStatus::Parsed
+        } else {
+            RowStatus::Empty
+        }
+    }
+
+    fn label(self) -> &'static str {
+        match self {
+            RowStatus::Parsed => "PARSED",
+            RowStatus::Error => "ERROR",
+            RowStatus::Empty => "EMPTY",
+        }
+    }
+}
+
+/// One differing leaf value, keyed by its dotted/bracketed path (e.g.
+/// `parsed.combinationAuthorship.authors[0]`) — mirrors the Java CLI's `CompareCli.Diff`.
+#[derive(Debug)]
+struct FieldDiff {
+    path: String,
+    left: String,
+    right: String,
+}
+
+/// A simple insertion-order-preserving counter, replicating Java's `LinkedHashMap<String,
+/// Long>` + `Map.Entry.comparingByValue().reversed()` stream: entries keep first-seen order
+/// among themselves, and [`Self::sorted_desc`] sorts by count descending with a *stable* sort,
+/// so ties keep that first-seen order — matching Java's behaviour exactly. A linear-scan
+/// `Vec<(String, u64)>` rather than a `HashMap` is deliberate: the cardinality here is bounded
+/// by the small, fixed JSON schema (a few dozen field paths at most, 9 possible status-pairs),
+/// never by row count, so this stays cheap in practice regardless of corpus size, and needs no
+/// extra dependency (an ordered map isn't in `std`).
+#[derive(Default)]
+struct OrderedCounter {
+    entries: Vec<(String, u64)>,
+}
+
+impl OrderedCounter {
+    fn increment(&mut self, key: &str) {
+        match self.entries.iter_mut().find(|(k, _)| k == key) {
+            Some(e) => e.1 += 1,
+            None => self.entries.push((key.to_string(), 1)),
+        }
+    }
+
+    fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
+    /// Entries sorted descending by count; ties keep insertion order (Rust's `sort_by` is
+    /// stable), matching Java's `Map.Entry.comparingByValue().reversed()` over a
+    /// `LinkedHashMap`'s stream.
+    fn sorted_desc(&self) -> Vec<(&str, u64)> {
+        let mut v: Vec<(&str, u64)> = self.entries.iter().map(|(k, c)| (k.as_str(), *c)).collect();
+        v.sort_by_key(|(_, c)| std::cmp::Reverse(*c));
+        v
+    }
+}
+
+/// Running counters + metadata for one `compare` run — mirrors the Java CLI's
+/// `CompareCli.Report`.
+struct CompareReport {
+    file_a: String,
+    file_b: String,
+    ignore_whitespace: bool,
+    rows_compared: u64,
+    rows_differed: u64,
+    line_number_mismatches: u64,
+    extra_rows_a: u64,
+    extra_rows_b: u64,
+    status_transitions: OrderedCounter,
+    field_diff_counts: OrderedCounter,
+}
+
+impl CompareReport {
+    fn new(file_a: String, file_b: String, ignore_whitespace: bool) -> Self {
+        CompareReport {
+            file_a,
+            file_b,
+            ignore_whitespace,
+            rows_compared: 0,
+            rows_differed: 0,
+            line_number_mismatches: 0,
+            extra_rows_a: 0,
+            extra_rows_b: 0,
+            status_transitions: OrderedCounter::default(),
+            field_diff_counts: OrderedCounter::default(),
+        }
+    }
+
+    /// Prints the aggregate summary — matches the Java CLI's `CompareCli.Report.printSummary`
+    /// section-for-section (modulo Java's `%,d` thousands-separator formatting, which this
+    /// skips: the CLI crate's dependency budget is `clap` only, so no formatting crate was
+    /// added for a cosmetic difference that affects no parity-relevant behaviour).
+    fn print_summary<W: Write>(&self, out: &mut W) -> io::Result<()> {
+        writeln!(out, "=== JSONL comparison summary ===")?;
+        writeln!(out, "A: {}", self.file_a)?;
+        writeln!(out, "B: {}", self.file_b)?;
+        writeln!(out, "ignore-whitespace: {}", self.ignore_whitespace)?;
+        writeln!(out, "Rows compared:      {}", self.rows_compared)?;
+        writeln!(
+            out,
+            "Rows identical:     {}",
+            self.rows_compared - self.rows_differed
+        )?;
+        let pct = if self.rows_compared == 0 {
+            0.0
+        } else {
+            100.0 * self.rows_differed as f64 / self.rows_compared as f64
+        };
+        writeln!(
+            out,
+            "Rows differing:     {} ({pct:.2}%)",
+            self.rows_differed
+        )?;
+        if self.line_number_mismatches > 0 {
+            writeln!(
+                out,
+                "Line-number mismatches: {}",
+                self.line_number_mismatches
+            )?;
+        }
+        if self.extra_rows_a > 0 {
+            writeln!(out, "Extra rows in A: {}", self.extra_rows_a)?;
+        }
+        if self.extra_rows_b > 0 {
+            writeln!(out, "Extra rows in B: {}", self.extra_rows_b)?;
+        }
+        if !self.status_transitions.is_empty() {
+            writeln!(out)?;
+            writeln!(out, "Status transitions (parsed/error/empty):")?;
+            for (k, c) in self.status_transitions.sorted_desc() {
+                writeln!(out, "  {k:<20} {c}")?;
+            }
+        }
+        if !self.field_diff_counts.is_empty() {
+            writeln!(out)?;
+            writeln!(out, "Top differing fields:")?;
+            for (k, c) in self.field_diff_counts.sorted_desc().into_iter().take(40) {
+                writeln!(out, "  {k:<44} {c}")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+/// Runs the `compare` subcommand end to end: open both files, stream them in lockstep, write
+/// per-row diffs to stdout or `--output`, and always print the summary to stdout afterwards —
+/// matches the Java CLI's `CompareCli.main`.
+fn run_compare(args: CompareArgs) -> io::Result<()> {
+    let file_a = File::open(&args.a)
+        .map_err(|e| io::Error::new(e.kind(), format!("cannot open {}: {e}", args.a)))?;
+    let file_b = File::open(&args.b)
+        .map_err(|e| io::Error::new(e.kind(), format!("cannot open {}: {e}", args.b)))?;
+
+    let stdout = io::stdout();
+    match args.output.as_deref() {
+        None => {
+            let mut sink = stdout.lock();
+            let report = compare_streams(
+                BufReader::new(file_a),
+                BufReader::new(file_b),
+                &args,
+                &mut sink,
+            )?;
+            report.print_summary(&mut sink)
+        }
+        Some(path) => {
+            let mut file_sink = BufWriter::new(File::create(path)?);
+            let report = compare_streams(
+                BufReader::new(file_a),
+                BufReader::new(file_b),
+                &args,
+                &mut file_sink,
+            )?;
+            file_sink.flush()?;
+            let mut out = stdout.lock();
+            report.print_summary(&mut out)?;
+            writeln!(
+                out,
+                "Per-row diffs written to {}",
+                absolute_path(Path::new(path)).display()
+            )
+        }
+    }
+}
+
+/// Streams `a`/`b` in lockstep, comparing one JSONL row at a time and writing per-row diffs to
+/// `diff_sink` — matches the Java CLI's `CompareCli.compare`.
+fn compare_streams<A: BufRead, B: BufRead, W: Write>(
+    a: A,
+    b: B,
+    args: &CompareArgs,
+    diff_sink: &mut W,
+) -> io::Result<CompareReport> {
+    let mut report = CompareReport::new(args.a.clone(), args.b.clone(), args.ignore_whitespace);
+    let mut lines_a = a.lines();
+    let mut lines_b = b.lines();
+
+    loop {
+        let la = lines_a.next().transpose()?;
+        let lb = lines_b.next().transpose()?;
+        match (la, lb) {
+            (None, None) => break,
+            (Some(_), None) => {
+                let mut extra = 1u64;
+                while lines_a.next().transpose()?.is_some() {
+                    extra += 1;
+                }
+                report.extra_rows_a = extra;
+                break;
+            }
+            (None, Some(_)) => {
+                let mut extra = 1u64;
+                while lines_b.next().transpose()?.is_some() {
+                    extra += 1;
+                }
+                report.extra_rows_b = extra;
+                break;
+            }
+            (Some(la), Some(lb)) => {
+                report.rows_compared += 1;
+                let oa: Value = serde_json::from_str(&la)
+                    .map_err(|e| invalid_json_error(&args.a, report.rows_compared, &la, e))?;
+                let ob: Value = serde_json::from_str(&lb)
+                    .map_err(|e| invalid_json_error(&args.b, report.rows_compared, &lb, e))?;
+                compare_row(&mut report, &oa, &ob, args, diff_sink)?;
+            }
+        }
+    }
+    Ok(report)
+}
+
+/// Wraps a per-row JSON parse failure with enough context (file, 1-based row number, an
+/// abbreviated view of the offending line) to locate the bad input — where Java's
+/// `JsonParser.parseString(...).getAsJsonObject()` would instead throw an uncaught exception
+/// straight out of `main`.
+fn invalid_json_error(file: &str, row: u64, raw: &str, err: serde_json::Error) -> io::Error {
+    io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!(
+            "invalid JSON on line {row} of {file}: {err} (raw: {})",
+            abbreviate(raw)
+        ),
+    )
+}
+
+/// Compares one row pair: tallies a `line`-field mismatch and a status transition if either
+/// applies, then walks the full value tree for differing leaves — matches the loop body of the
+/// Java CLI's `CompareCli.compare`.
+fn compare_row<W: Write>(
+    report: &mut CompareReport,
+    oa: &Value,
+    ob: &Value,
+    args: &CompareArgs,
+    diff_sink: &mut W,
+) -> io::Result<()> {
+    let line_a = oa.get("line").and_then(Value::as_i64).unwrap_or(-1);
+    let line_b = ob.get("line").and_then(Value::as_i64).unwrap_or(-1);
+    if line_a != line_b {
+        report.line_number_mismatches += 1;
+    }
+
+    let sa = RowStatus::of(oa);
+    let sb = RowStatus::of(ob);
+    if sa != sb {
+        report
+            .status_transitions
+            .increment(&format!("{}→{}", sa.label(), sb.label()));
+    }
+
+    let mut diffs = Vec::new();
+    diff_element("", oa, ob, args.ignore_whitespace, &mut diffs);
+    if diffs.is_empty() {
+        return Ok(());
+    }
+
+    report.rows_differed += 1;
+    for d in &diffs {
+        report.field_diff_counts.increment(&d.path);
+    }
+    if report.rows_differed <= args.max_diffs as u64 {
+        let input = oa
+            .get("input")
+            .and_then(Value::as_str)
+            .or_else(|| ob.get("input").and_then(Value::as_str))
+            .unwrap_or("?");
+        writeln!(
+            diff_sink,
+            "Line {line_a} \"{input}\" (status {} vs {}):",
+            sa.label(),
+            sb.label()
+        )?;
+        for d in &diffs {
+            writeln!(
+                diff_sink,
+                "  {:<44}  {}  →  {}",
+                d.path,
+                abbreviate(&d.left),
+                abbreviate(&d.right)
+            )?;
+        }
+    } else if report.rows_differed == args.max_diffs as u64 + 1 {
+        writeln!(
+            diff_sink,
+            "… further per-row diffs suppressed (--max-diffs={})",
+            args.max_diffs
+        )?;
+    }
+    Ok(())
+}
+
+/// Recursively walks `a`/`b`, appending a [`FieldDiff`] for every leaf where they disagree —
+/// matches the Java CLI's `CompareCli.diffElement`, plus the `warnings`/`notho`/
+/// `epithetQualifier` order-insensitive handling this module's doc comment describes.
+fn diff_element(path: &str, a: &Value, b: &Value, ignore_ws: bool, out: &mut Vec<FieldDiff>) {
+    if json_eq(a, b, ignore_ws) {
+        return;
+    }
+    match (a, b) {
+        (Value::Object(oa), Value::Object(ob)) => {
+            let mut keys: BTreeSet<&String> = BTreeSet::new();
+            keys.extend(oa.keys());
+            keys.extend(ob.keys());
+            for k in keys {
+                let va = oa.get(k).cloned().unwrap_or(Value::Null);
+                let vb = ob.get(k).cloned().unwrap_or(Value::Null);
+                let (va, vb) = canonicalize_for_key(k, va, vb);
+                let child_path = if path.is_empty() {
+                    k.clone()
+                } else {
+                    format!("{path}.{k}")
+                };
+                diff_element(&child_path, &va, &vb, ignore_ws, out);
+            }
+        }
+        (Value::Array(aa), Value::Array(ab)) => {
+            let n = aa.len().max(ab.len());
+            for i in 0..n {
+                let va = aa.get(i).cloned().unwrap_or(Value::Null);
+                let vb = ab.get(i).cloned().unwrap_or(Value::Null);
+                diff_element(&format!("{path}[{i}]"), &va, &vb, ignore_ws, out);
+            }
+        }
+        _ => out.push(FieldDiff {
+            path: path.to_string(),
+            left: render(a),
+            right: render(b),
+        }),
+    }
+}
+
+/// If `key` is one of [`UNORDERED_FIELD_KEYS`] and the corresponding value is a JSON array,
+/// returns both values with that array sorted by each element's rendered JSON text (a JSON
+/// *object* value under one of these keys — `epithetQualifier` — already compares
+/// order-insensitively via the object branch above, so it passes through unchanged here).
+/// Otherwise returns the pair unchanged.
+fn canonicalize_for_key(key: &str, a: Value, b: Value) -> (Value, Value) {
+    if UNORDERED_FIELD_KEYS.contains(&key) {
+        (sort_if_array(a), sort_if_array(b))
+    } else {
+        (a, b)
+    }
+}
+
+fn sort_if_array(v: Value) -> Value {
+    match v {
+        Value::Array(mut items) => {
+            items.sort_by_key(|x| x.to_string());
+            Value::Array(items)
+        }
+        other => other,
+    }
+}
+
+/// Structural equality mirroring the Java CLI's `CompareCli.jsonEquals`: null only equals null;
+/// strings compare (optionally whitespace-stripped); arrays compare positionally (the
+/// order-insensitive handling for `warnings`/`notho` happens one level up, in
+/// [`canonicalize_for_key`], before this function ever sees those arrays); objects compare by
+/// the union of keys regardless of declaration order (so `epithetQualifier` needs no special
+/// casing here); numbers/bools use plain `Value` equality.
+fn json_eq(a: &Value, b: &Value, ignore_ws: bool) -> bool {
+    match (a, b) {
+        (Value::Null, Value::Null) => true,
+        (Value::Null, _) | (_, Value::Null) => false,
+        (Value::String(sa), Value::String(sb)) => {
+            if ignore_ws {
+                strip_ws(sa) == strip_ws(sb)
+            } else {
+                sa == sb
+            }
+        }
+        (Value::Array(aa), Value::Array(ab)) => {
+            aa.len() == ab.len()
+                && aa
+                    .iter()
+                    .zip(ab.iter())
+                    .all(|(x, y)| json_eq(x, y, ignore_ws))
+        }
+        (Value::Object(oa), Value::Object(ob)) => {
+            oa.len() == ob.len()
+                && oa
+                    .iter()
+                    .all(|(k, v)| ob.get(k).is_some_and(|w| json_eq(v, w, ignore_ws)))
+        }
+        (x, y) => x == y,
+    }
+}
+
+fn strip_ws(s: &str) -> String {
+    s.chars().filter(|c| !c.is_whitespace()).collect()
+}
+
+/// Renders one JSON leaf for a per-row diff line — matches the Java CLI's
+/// `CompareCli.render`: strings keep their quotes, numbers/bools print bare, arrays/objects
+/// print their full compact JSON text (only reached here for a top-level type mismatch, e.g.
+/// `parsed` present on one side and absent on the other).
+fn render(v: &Value) -> String {
+    match v {
+        Value::Null => "null".to_string(),
+        Value::String(s) => format!("\"{s}\""),
+        Value::Bool(b) => b.to_string(),
+        Value::Number(n) => n.to_string(),
+        Value::Array(_) | Value::Object(_) => v.to_string(),
+    }
+}
+
+/// Truncates a rendered diff value to 80 characters, matching the Java CLI's
+/// `CompareCli.abbreviate` (counting Java `char`s there; Rust `char`s here — both are a
+/// display-truncation nicety, not a parity-relevant behaviour).
+fn abbreviate(s: &str) -> String {
+    const MAX: usize = 80;
+    if s.chars().count() <= MAX {
+        return s.to_string();
+    }
+    let truncated: String = s.chars().take(MAX - 1).collect();
+    format!("{truncated}…")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -723,5 +1266,228 @@ mod tests {
         let mut buf: Vec<u8> = Vec::new();
         report.print(&mut buf).expect("writing to a Vec<u8> cannot fail");
         assert_eq!(String::from_utf8(buf).unwrap(), "No timings collected.\n");
+    }
+
+    // ---- compare ----
+
+    fn v(json: &str) -> Value {
+        serde_json::from_str(json).expect("test fixture must be valid JSON")
+    }
+
+    #[test]
+    fn row_status_of_classifies_parsed_error_and_empty() {
+        assert_eq!(
+            RowStatus::of(&v(r#"{"parsed":{"rank":"SPECIES"}}"#)),
+            RowStatus::Parsed
+        );
+        assert_eq!(
+            RowStatus::of(&v(r#"{"error":{"type":"OTHER"}}"#)),
+            RowStatus::Error
+        );
+        assert_eq!(RowStatus::of(&v(r#"{"line":1}"#)), RowStatus::Empty);
+        assert_eq!(RowStatus::of(&v(r#"{"error":null}"#)), RowStatus::Empty);
+        // A (pathological) row with both present: error wins, matching Java's if/else-if order.
+        assert_eq!(
+            RowStatus::of(&v(r#"{"parsed":{},"error":{}}"#)),
+            RowStatus::Error
+        );
+    }
+
+    #[test]
+    fn diff_element_finds_a_nested_field_difference() {
+        let a = v(r#"{"parsed":{"genus":"Abies","rank":"SPECIES"}}"#);
+        let b = v(r#"{"parsed":{"genus":"Abia","rank":"SPECIES"}}"#);
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert_eq!(diffs.len(), 1, "{diffs:?}");
+        assert_eq!(diffs[0].path, "parsed.genus");
+        assert_eq!(diffs[0].left, "\"Abies\"");
+        assert_eq!(diffs[0].right, "\"Abia\"");
+    }
+
+    #[test]
+    fn diff_element_reports_no_diffs_for_identical_rows() {
+        let a = v(r#"{"line":1,"input":"x","parsed":{"rank":"SPECIES","genus":"Abies"}}"#);
+        let b = v(r#"{"line":1,"input":"x","parsed":{"rank":"SPECIES","genus":"Abies"}}"#);
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert!(diffs.is_empty(), "{diffs:?}");
+    }
+
+    #[test]
+    fn diff_element_treats_warnings_as_an_order_insensitive_set() {
+        let a = v(r#"{"parsed":{"warnings":["NAME_UNPARSABLE","HOMOGLYPH"]}}"#);
+        let b = v(r#"{"parsed":{"warnings":["HOMOGLYPH","NAME_UNPARSABLE"]}}"#);
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert!(
+            diffs.is_empty(),
+            "warnings differing only in order must not be reported: {diffs:?}"
+        );
+    }
+
+    #[test]
+    fn diff_element_still_flags_a_genuine_warnings_content_difference() {
+        let a = v(r#"{"parsed":{"warnings":["HOMOGLYPH"]}}"#);
+        let b = v(r#"{"parsed":{"warnings":["HOMOGLYPH","NAME_UNPARSABLE"]}}"#);
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert!(
+            !diffs.is_empty(),
+            "a genuine content difference in warnings must still be flagged"
+        );
+        assert!(diffs.iter().any(|d| d.path.starts_with("parsed.warnings")));
+    }
+
+    #[test]
+    fn diff_element_notho_is_also_order_insensitive() {
+        // notho: EnumSet<NamePart> on the Java side, Vec<NamePart> here — same "unordered
+        // collection" shape as warnings, even though (per this crate's own add_notho tests)
+        // it's never actually been observed out of order in practice.
+        let a = v(r#"{"parsed":{"notho":["SPECIFIC","INFRASPECIFIC"]}}"#);
+        let b = v(r#"{"parsed":{"notho":["INFRASPECIFIC","SPECIFIC"]}}"#);
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert!(
+            diffs.is_empty(),
+            "notho differing only in order must not be reported: {diffs:?}"
+        );
+    }
+
+    #[test]
+    fn diff_element_epithet_qualifier_object_is_key_order_insensitive() {
+        let a = v(r#"{"parsed":{"epithetQualifier":{"SPECIFIC":"cf.","INFRASPECIFIC":"aff."}}}"#);
+        let b = v(r#"{"parsed":{"epithetQualifier":{"INFRASPECIFIC":"aff.","SPECIFIC":"cf."}}}"#);
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert!(diffs.is_empty(), "{diffs:?}");
+    }
+
+    #[test]
+    fn diff_element_ignore_whitespace_strips_string_leaves() {
+        let a = v(r#"{"parsed":{"genus":"Abies  alba"}}"#);
+        let b = v(r#"{"parsed":{"genus":"Abiesalba"}}"#);
+
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert_eq!(diffs.len(), 1, "must differ when whitespace is significant");
+
+        let mut diffs_ws = Vec::new();
+        diff_element("", &a, &b, true, &mut diffs_ws);
+        assert!(
+            diffs_ws.is_empty(),
+            "--ignore-whitespace must strip whitespace before comparing"
+        );
+    }
+
+    #[test]
+    fn diff_element_array_path_uses_bracket_index_notation() {
+        let a = v(r#"{"parsed":{"combinationAuthorship":{"authors":["Mill."]}}}"#);
+        let b = v(r#"{"parsed":{"combinationAuthorship":{"authors":["Miller"]}}}"#);
+        let mut diffs = Vec::new();
+        diff_element("", &a, &b, false, &mut diffs);
+        assert_eq!(diffs.len(), 1);
+        assert_eq!(diffs[0].path, "parsed.combinationAuthorship.authors[0]");
+    }
+
+    #[test]
+    fn ordered_counter_sorted_desc_is_stable_on_ties() {
+        let mut c = OrderedCounter::default();
+        c.increment("b");
+        c.increment("a");
+        c.increment("a");
+        c.increment("c");
+        c.increment("c");
+        // "a" and "c" tie at 2; "a" was first-seen before "c", so it must sort first.
+        assert_eq!(c.sorted_desc(), vec![("a", 2), ("c", 2), ("b", 1)]);
+    }
+
+    #[test]
+    fn abbreviate_truncates_long_strings_and_keeps_short_ones() {
+        assert_eq!(abbreviate("short"), "short");
+        let long = "a".repeat(100);
+        let truncated = abbreviate(&long);
+        assert_eq!(truncated.chars().count(), 80);
+        assert!(truncated.ends_with('…'));
+    }
+
+    #[test]
+    fn compare_report_print_summary_matches_the_documented_shape() {
+        let mut report = CompareReport::new("a.jsonl".to_string(), "b.jsonl".to_string(), false);
+        report.rows_compared = 4;
+        report.rows_differed = 1;
+        report.status_transitions.increment("PARSED_TO_ERROR");
+        report.field_diff_counts.increment("genus");
+
+        let mut buf: Vec<u8> = Vec::new();
+        report.print_summary(&mut buf).unwrap();
+        let out = String::from_utf8(buf).unwrap();
+
+        let expected = format!(
+            "=== JSONL comparison summary ===\n\
+             A: a.jsonl\n\
+             B: b.jsonl\n\
+             ignore-whitespace: false\n\
+             Rows compared:      4\n\
+             Rows identical:     3\n\
+             Rows differing:     1 (25.00%)\n\
+             \n\
+             Status transitions (parsed/error/empty):\n\
+             \x20\x20{:<20} 1\n\
+             \n\
+             Top differing fields:\n\
+             \x20\x20{:<44} 1\n",
+            "PARSED_TO_ERROR", "genus"
+        );
+        assert_eq!(out, expected);
+    }
+
+    #[test]
+    fn compare_report_print_summary_omits_optional_sections_when_empty() {
+        let report = CompareReport::new("a.jsonl".to_string(), "b.jsonl".to_string(), true);
+        let mut buf: Vec<u8> = Vec::new();
+        report.print_summary(&mut buf).unwrap();
+        let out = String::from_utf8(buf).unwrap();
+        assert_eq!(
+            out,
+            "=== JSONL comparison summary ===\n\
+             A: a.jsonl\n\
+             B: b.jsonl\n\
+             ignore-whitespace: true\n\
+             Rows compared:      0\n\
+             Rows identical:     0\n\
+             Rows differing:     0 (0.00%)\n"
+        );
+    }
+
+    #[test]
+    fn compare_streams_reports_extra_rows_and_a_status_transition() {
+        use std::io::Cursor;
+
+        let a = Cursor::new(
+            "{\"line\":1,\"input\":\"x\",\"parsed\":{\"rank\":\"SPECIES\"}}\n".as_bytes(),
+        );
+        let b = Cursor::new(
+            "{\"line\":1,\"input\":\"x\",\"error\":{\"type\":\"OTHER\",\"message\":\"m\"}}\n\
+             {\"line\":2,\"input\":\"y\",\"parsed\":{\"rank\":\"SPECIES\"}}\n"
+                .as_bytes(),
+        );
+        let args = CompareArgs {
+            a: "a.jsonl".to_string(),
+            b: "b.jsonl".to_string(),
+            output: None,
+            ignore_whitespace: false,
+            max_diffs: 100,
+        };
+        let mut sink: Vec<u8> = Vec::new();
+        let report = compare_streams(a, b, &args, &mut sink).expect("compare_streams must succeed");
+
+        assert_eq!(report.rows_compared, 1);
+        assert_eq!(report.rows_differed, 1);
+        assert_eq!(report.extra_rows_b, 1);
+        assert_eq!(
+            report.status_transitions.sorted_desc(),
+            vec![("PARSED→ERROR", 1)]
+        );
     }
 }
