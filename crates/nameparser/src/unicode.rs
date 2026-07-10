@@ -98,8 +98,8 @@ mod tests {
 
     #[test]
     fn java_trim_strips_only_up_to_u0020() {
-        assert_eq!(java_trim("  x\t"), "x");      // ASCII space + tab (<=0x20) stripped
-        assert_eq!(java_trim("\n x \r"), "x");    // newline/CR stripped
+        assert_eq!(java_trim("  x\t"), "x"); // ASCII space + tab (<=0x20) stripped
+        assert_eq!(java_trim("\n x \r"), "x"); // newline/CR stripped
         assert_eq!(java_trim("\u{00A0}x\u{00A0}"), "\u{00A0}x\u{00A0}"); // NBSP (>0x20) NOT stripped
         assert_eq!(java_trim("\u{00A0}"), "\u{00A0}"); // NBSP-only stays non-empty, matching Java
     }

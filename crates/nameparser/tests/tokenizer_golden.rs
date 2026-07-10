@@ -33,7 +33,10 @@ fn rust_stream(name: &str) -> String {
 
 #[test]
 fn matches_java_tokenizer_over_corpus() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata/expected-tokens.tsv");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../testdata/expected-tokens.tsv"
+    );
     let data = match std::fs::read_to_string(path) {
         Ok(d) => d,
         Err(_) => {
@@ -59,5 +62,8 @@ fn matches_java_tokenizer_over_corpus() {
         }
     }
     eprintln!("tokenizer golden: {total} names, {mismatches} mismatches");
-    assert_eq!(mismatches, 0, "tokenizer diverges from Java on {mismatches}/{total} names");
+    assert_eq!(
+        mismatches, 0,
+        "tokenizer diverges from Java on {mismatches}/{total} names"
+    );
 }

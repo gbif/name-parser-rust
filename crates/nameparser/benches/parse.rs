@@ -4,7 +4,10 @@ use nameparser::regexes;
 use nameparser::token::tokenize;
 
 fn load_corpus() -> Vec<String> {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata/benchmark-data.txt");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../testdata/benchmark-data.txt"
+    );
     std::fs::read_to_string(path)
         .expect("benchmark-data.txt missing — run Task 3 Step 1")
         .lines()
