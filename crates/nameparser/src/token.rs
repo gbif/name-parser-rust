@@ -70,7 +70,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
     let cs: Vec<(usize, char)> = input.char_indices().collect();
     let n = cs.len();
     let byte_at = |k: usize| -> usize {
-        if k < n { cs[k].0 } else { input.len() }
+        if k < n {
+            cs[k].0
+        } else {
+            input.len()
+        }
     };
     let mut out: Vec<Token> = Vec::with_capacity((n / 4).max(4));
     let mut k = 0usize;
@@ -95,8 +99,15 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 // internal hyphen / apostrophe / underscore / stray '!' glued between letters/digits
                 if matches!(
                     c2,
-                    '-' | '\'' | '\u{2019}' | '_' | '!'
-                        | '\u{2010}' | '\u{2011}' | '\u{2012}' | '\u{2013}' | '\u{2014}'
+                    '-' | '\''
+                        | '\u{2019}'
+                        | '_'
+                        | '!'
+                        | '\u{2010}'
+                        | '\u{2011}'
+                        | '\u{2012}'
+                        | '\u{2013}'
+                        | '\u{2014}'
                 ) && k + 1 < n
                 {
                     let next = cs[k + 1].1;
@@ -116,8 +127,17 @@ pub fn tokenize(input: &str) -> Vec<Token> {
             if char_count == 1 && (first == 'x' || first == 'X') {
                 let left_ok = word_start == 0 || is_whitespace_java(cs[word_start - 1].1);
                 let right_ok = k == n || is_whitespace_java(cs[k].1);
-                let kind = if left_ok && right_ok { TokenKind::HybridMark } else { TokenKind::Word };
-                out.push(Token { kind, text: word.to_string(), start: start_b, end: end_b });
+                let kind = if left_ok && right_ok {
+                    TokenKind::HybridMark
+                } else {
+                    TokenKind::Word
+                };
+                out.push(Token {
+                    kind,
+                    text: word.to_string(),
+                    start: start_b,
+                    end: end_b,
+                });
                 continue;
             } else if char_count >= 2 && (first == 'x' || first == 'X') {
                 let second = word.chars().nth(1).unwrap();
@@ -138,7 +158,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                     continue;
                 }
             }
-            out.push(Token { kind: TokenKind::Word, text: word.to_string(), start: start_b, end: end_b });
+            out.push(Token {
+                kind: TokenKind::Word,
+                text: word.to_string(),
+                start: start_b,
+                end: end_b,
+            });
             continue;
         }
 
@@ -168,12 +193,22 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
                 let s = byte_at(num_start);
                 let e = byte_at(k);
-                out.push(Token { kind: TokenKind::Word, text: input[s..e].to_string(), start: s, end: e });
+                out.push(Token {
+                    kind: TokenKind::Word,
+                    text: input[s..e].to_string(),
+                    start: s,
+                    end: e,
+                });
                 continue;
             }
             let s = byte_at(num_start);
             let e = byte_at(k);
-            out.push(Token { kind: TokenKind::Number, text: input[s..e].to_string(), start: s, end: e });
+            out.push(Token {
+                kind: TokenKind::Number,
+                text: input[s..e].to_string(),
+                start: s,
+                end: e,
+            });
             continue;
         }
 
@@ -196,7 +231,12 @@ pub fn tokenize(input: &str) -> Vec<Token> {
         };
         let s = byte_at(k);
         let e = byte_at(k + 1);
-        out.push(Token { kind, text: input[s..e].to_string(), start: s, end: e });
+        out.push(Token {
+            kind,
+            text: input[s..e].to_string(),
+            start: s,
+            end: e,
+        });
         k += 1;
     }
     out
@@ -206,15 +246,11 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn token_construction() {
-        let t = Token { kind: TokenKind::Word, text: "Aus".into(), start: 0, end: 3 };
-        assert_eq!(t.kind, TokenKind::Word);
-        assert_eq!(t.text, "Aus");
-    }
-
     fn kinds(input: &str) -> Vec<(TokenKind, String)> {
-        tokenize(input).into_iter().map(|t| (t.kind, t.text)).collect()
+        tokenize(input)
+            .into_iter()
+            .map(|t| (t.kind, t.text))
+            .collect()
     }
 
     #[test]
@@ -268,12 +304,20 @@ mod tests {
         // Unicode ×
         assert_eq!(
             kinds("Aus \u{00D7}bus"),
-            vec![(Word, "Aus".into()), (HybridMark, "\u{00D7}".into()), (Word, "bus".into())]
+            vec![
+                (Word, "Aus".into()),
+                (HybridMark, "\u{00D7}".into()),
+                (Word, "bus".into())
+            ]
         );
         // bare ASCII x between spaces
         assert_eq!(
             kinds("Aus x bus"),
-            vec![(Word, "Aus".into()), (HybridMark, "x".into()), (Word, "bus".into())]
+            vec![
+                (Word, "Aus".into()),
+                (HybridMark, "x".into()),
+                (Word, "bus".into())
+            ]
         );
         // xFoo — leading x glued to a capitalised word splits off
         assert_eq!(

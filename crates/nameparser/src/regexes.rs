@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Ported StripAndStash patterns. The 169 possessive quantifiers in the Java sources are
-//! dropped: the `regex` crate is a linear-time automaton, so possessive/greedy is moot.
+//! Ported StripAndStash patterns. The Java sources carry ~20 possessive quantifiers (14 in
+//! Preflight, 6 in StripAndStash); they're dropped here because the `regex` crate is a
+//! linear-time automaton, so possessive/greedy is moot.
 
 use fancy_regex::Regex as FancyRegex;
 use regex::Regex;
@@ -71,12 +72,31 @@ static CORRIG_BRACKETED: LazyLock<Regex> =
 // (e.g. "a b corrig. corrig. c": Java strips both; this strips only the first).
 // strip_corrig_fancy (verbatim lookaround) stays faithful. Realistic name data has no adjacent
 // markers, but this is why lookaround patterns with possible adjacency should prefer fancy-regex.
+// SECOND, DISTINCT adjacency mechanism: a bare "corrig." immediately abutting a bracketed one
+// (e.g. "x corrig.(corrig.) y") over-strips in this restructured variant too — the bracketed
+// pass runs first and its removal manufactures a fresh whitespace boundary that lets the bare
+// pass then match a "corrig." that never had a real boundary in Java's single-pass original;
+// strip_corrig_fancy is unaffected, which is why CORRIG itself should use the fancy variant in
+// Phase 1.
 static CORRIG_BARE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\s)corrig\.?(\s|$)").unwrap());
 
+/// Collapse whitespace runs to a single space and trim — mirrors Java's
+/// `WHITESPACE.matcher(...).replaceAll(" ").trim()` applied around CORRIG.
+fn collapse_ws(s: &str) -> String {
+    s.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
 pub fn strip_corrig_restructured(s: &str) -> String {
-    let s = CORRIG_BRACKETED.replace_all(s, "");
-    // ${1}${2} (braced) so the two group refs can't be misparsed as one name.
-    CORRIG_BARE.replace_all(&s, "${1}${2}").into_owned()
+    // Java applies CORRIG with a LEADING-SPACE PAD (StripAndStash.java:432,1117:
+    // `CORRIG.matcher(" " + s)`) + whitespace-collapse + trim, so a standalone/leading
+    // "corrig." IS stripped. We replicate that harness. The pad is exactly why the left
+    // boundary is (\s) and not ^: the pad guarantees a real preceding whitespace char,
+    // matching Java's (?<=\s). Lesson: lookaround faithfulness depends on the CALL-SITE
+    // harness, not just the pattern — see findings doc §2 and §5.2.
+    let padded = format!(" {s}");
+    let no_bracket = CORRIG_BRACKETED.replace_all(&padded, "");
+    let no_bare = CORRIG_BARE.replace_all(&no_bracket, "${1}${2}");
+    collapse_ws(&no_bare)
 }
 
 // --- CORRIG verbatim via fancy-regex (lookaround supported; backtracking) ---
@@ -87,22 +107,20 @@ static CORRIG_FANCY: LazyLock<FancyRegex> = LazyLock::new(|| {
 });
 
 pub fn strip_corrig_fancy(s: &str) -> String {
-    // fancy-regex does NOT mirror the regex crate's `replace_all`: its match methods return
-    // Result (backtracking can hit a limit). This manual splice — the fancy-regex equivalent of
-    // `replace_all(s, "")` — is itself an ergonomics finding for the doc. An Err or end-of-matches
-    // terminates the loop.
-    let mut result = String::with_capacity(s.len());
+    // Same leading-space-pad + collapse harness as the restructured variant.
+    let padded = format!(" {s}");
+    let mut result = String::with_capacity(padded.len());
     let mut last = 0usize;
-    for m in CORRIG_FANCY.find_iter(s) {
+    for m in CORRIG_FANCY.find_iter(&padded) {
         let m = match m {
             Ok(m) => m,
             Err(_) => break,
         };
-        result.push_str(&s[last..m.start()]);
+        result.push_str(&padded[last..m.start()]);
         last = m.end();
     }
-    result.push_str(&s[last..]);
-    result
+    result.push_str(&padded[last..]);
+    collapse_ws(&result)
 }
 
 #[cfg(test)]
@@ -222,22 +240,15 @@ mod tests {
     }
 
     #[test]
-    fn corrig_bare_requires_a_real_preceding_space() {
-        // Beyond the brief's 3 prescribed tests: a self-review probe found that Java's two
-        // CORRIG boundaries are asymmetric. `(?<=\s)` demands an actual preceding whitespace
-        // *character* — at absolute start-of-input there is none, so Java leaves a leading
-        // "corrig. Rest" untouched, even though `(?=\s|$)` on the right explicitly treats
-        // end-of-input as a valid boundary. Confirmed against the verbatim fancy-regex pattern
-        // (`is_match("corrig. Aus bus")` == false) before fixing CORRIG_BARE to match: the
-        // faithful restructuring is `(\s)corrig\.?(\s|$)`, NOT the tempting-but-wrong
-        // `(^|\s)corrig\.?(\s|$)` (which would over-eagerly strip this case).
+    fn corrig_strips_leading_and_standalone_marker_like_java() {
+        // Java pads with a leading space (StripAndStash.java:432,1117) so a leading or
+        // standalone "corrig." IS stripped. Both variants replicate that.
         assert_eq!(
-            strip_corrig_restructured("corrig. Aus bus"),
-            "corrig. Aus bus"
+            strip_corrig_restructured("corrig. Peters, 1878"),
+            "Peters, 1878"
         );
-        assert_eq!(strip_corrig_fancy("corrig. Aus bus"), "corrig. Aus bus");
-        // A standalone "corrig." with nothing around it at all is untouched for the same reason.
-        assert_eq!(strip_corrig_restructured("corrig."), "corrig.");
-        assert_eq!(strip_corrig_fancy("corrig."), "corrig.");
+        assert_eq!(strip_corrig_fancy("corrig. Peters, 1878"), "Peters, 1878");
+        assert_eq!(strip_corrig_restructured("corrig."), "");
+        assert_eq!(strip_corrig_fancy("corrig."), "");
     }
 }

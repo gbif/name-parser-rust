@@ -17,10 +17,11 @@ Three motivations drive a move to a native Rust core (confirmed with the maintai
 1. **Polyglot reach** — make the parser usable outside the JVM (Python, R, CLI) for the
    wider biodiversity community, the way GNA's `gnparser` (Go) is.
 2. **Performance / throughput** — faster batch parsing of multi-million-name corpora.
-3. **ReDoS / robustness** — the codebase is saturated with **169 possessive quantifiers**
-   hand-fighting Java's backtracking regex engine; comments repeatedly flag
-   catastrophic-backtracking hazards and "the parser has no execution timeout"
-   (observed Max latency 3.3 ms). A linear-time engine ends this structurally.
+3. **ReDoS / robustness** — the codebase carries **~20 possessive quantifiers** (14 in
+   Preflight, 6 in StripAndStash) hand-fighting Java's backtracking regex engine;
+   comments repeatedly flag catastrophic-backtracking hazards and "the parser has no
+   execution timeout" (observed Max latency 3.3 ms). A linear-time engine ends this
+   structurally.
 
 ## 2. Goals & non-goals
 
@@ -148,7 +149,8 @@ in the jar and extract-and-loaded (the netty / sqlite-jdbc pattern).
 ### 6.4 Regex porting strategy
 
 - 146 patterns → `regex` crate, compiled once via `LazyLock`.
-- The **169 possessive quantifiers are dropped** (a linear engine doesn't need them).
+- The **~20 possessive quantifiers** (14 in Preflight, 6 in StripAndStash) are
+  dropped (a linear engine doesn't need them).
 - The **~25 lookarounds + 4 backreferences**: restructure simple boundary assertions into
   match-context checks in code; for the genuinely irreducible ones use **`fancy-regex`**,
   each isolated in `regexes.rs` and doc-commented with *why* it can't be linearized and a
