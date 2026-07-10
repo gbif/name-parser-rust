@@ -34,11 +34,60 @@ pub struct Token {
 /// ones (U+00A0, U+2007, U+202F), plus the ASCII/control whitespace incl. the file/group/
 /// record/unit separators. Rust's `char::is_whitespace` differs: it INCLUDES U+00A0 and
 /// EXCLUDES U+001C–U+001F. This helper matches Java. (Global constraint: Unicode semantics.)
-fn is_whitespace_java(c: char) -> bool {
+/// `pub(crate)`: also used by `pipeline::stripandstash`'s `first_word` (Java
+/// `StripAndStash.firstWord`, Phase 1 Slice 2 Task 3), not just this module's own tokenizer.
+pub(crate) fn is_whitespace_java(c: char) -> bool {
     match c {
         '\u{00A0}' | '\u{2007}' | '\u{202F}' => false,
         '\u{001C}' | '\u{001D}' | '\u{001E}' | '\u{001F}' => true,
         _ => c.is_whitespace(),
+    }
+}
+
+/// Java `org.gbif.nameparser.token.AuthorParticles.PARTICLES` — lower-case particles that
+/// combine with a following capitalised author surname ("de Vriese", "Van Heurck", "von
+/// der Linde"). Full 50-entry set transcribed verbatim from `AuthorParticles.java` (and
+/// verified programmatically against it — an exact set match, no entries dropped or
+/// added), even
+/// though the only current call site (`StripAndStash::apply_missing_genus_placeholder`,
+/// Phase 1 Slice 2 Task 3) only needs the boolean `is_particle` — a later
+/// authorship-parsing slice needs the same table (and Java's own
+/// `isCapitalisedParticle`), so the full set is ported once here rather than a
+/// hand-trimmed subset.
+const PARTICLES: &[&str] = &[
+    "a", "ab", "af", "ap", "auf", "d", "da", "dal", "dalla", "dalle", "dallo", "das", "de",
+    "degli", "dei", "del", "della", "delle", "delli", "dello", "der", "des", "di", "do", "dos",
+    "du", "el", "in", "la", "las", "le", "les", "lo", "los", "of", "ofver", "te", "ten", "ter",
+    "und", "v", "van", "vd", "ven", "vom", "von", "y", "zu", "zum", "zur",
+];
+
+/// Java `AuthorParticles.isParticle(String)`: `PARTICLES.contains(word.toLowerCase())`.
+/// Java's `.toLowerCase()` uses the JVM default locale; Rust's `.to_lowercase()` is the
+/// full-Unicode locale-independent mapping — every entry in `PARTICLES` is pure ASCII, so
+/// the two only-differ-for-Turkish-dotless-I-etc. divergences that exist in principle
+/// cannot change whether any of these ASCII words match (same reasoning already applied to
+/// `Preflight::run`'s `s.to_lowercase()` call).
+pub(crate) fn is_particle(word: &str) -> bool {
+    PARTICLES.contains(&word.to_lowercase().as_str())
+}
+
+#[cfg(test)]
+mod author_particles_tests {
+    use super::is_particle;
+
+    #[test]
+    fn recognises_lowercase_and_mixed_case_particles() {
+        assert!(is_particle("van"));
+        assert!(is_particle("Van"));
+        assert!(is_particle("VAN"));
+        assert!(is_particle("de"));
+    }
+
+    #[test]
+    fn rejects_non_particle_words() {
+        assert!(!is_particle("Smith"));
+        assert!(!is_particle("denheyeri"));
+        assert!(!is_particle(""));
     }
 }
 

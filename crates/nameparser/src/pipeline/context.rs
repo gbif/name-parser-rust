@@ -118,6 +118,33 @@ impl ParseContext {
             pending_generic_author: None,
         }
     }
+
+    /// Java `ParseContext.setPendingImprintYear(String)`: records a stripped imprint year
+    /// on a first-writer-wins basis (Java: `if (pendingImprintYear == null && year != null)
+    /// pendingImprintYear = year;` — the `year != null` half is unreachable here since Rust
+    /// callers pass a non-nullable `&str`). Used by `StripAndStash::strip_imprint_years`.
+    pub(crate) fn set_pending_imprint_year(&mut self, year: &str) {
+        if self.pending_imprint_year.is_none() {
+            self.pending_imprint_year = Some(year.to_string());
+        }
+    }
+
+    /// Java `ParseContext.setPendingUnparsed(String)`: records an unparsed remainder on a
+    /// first-writer-wins basis; a blank (empty or all-whitespace) remainder is ignored.
+    /// `pendingUnparsed` is a single slot written by several `StripAndStash` steps — routing
+    /// every write through here makes precedence deterministic (the earliest strip step in
+    /// `StripAndStash::run` wins) instead of depending on each writer to null-check itself.
+    /// Java's `String.isBlank()` treats a string as blank when every char is
+    /// `Character.isWhitespace` (or the string is empty) — the same predicate as
+    /// `token::is_whitespace_java`, reused here rather than `java_trim`'s narrower
+    /// (`<= U+0020`-only) notion of trimmable whitespace.
+    pub(crate) fn set_pending_unparsed(&mut self, remainder: &str) {
+        if self.pending_unparsed.is_none()
+            && !remainder.chars().all(crate::token::is_whitespace_java)
+        {
+            self.pending_unparsed = Some(remainder.to_string());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -164,5 +191,36 @@ mod tests {
             None,
         );
         assert_eq!(ctx.authorship_input, Some("Mill.".to_string()));
+    }
+
+    #[test]
+    fn set_pending_imprint_year_is_first_writer_wins() {
+        let mut ctx = ParseContext::new("Abies alba".to_string(), None, None, None);
+        ctx.set_pending_imprint_year("1969");
+        assert_eq!(ctx.pending_imprint_year, Some("1969".to_string()));
+        ctx.set_pending_imprint_year("1875");
+        assert_eq!(
+            ctx.pending_imprint_year,
+            Some("1969".to_string()),
+            "the first-written year must win, matching Java's null-guarded setter"
+        );
+    }
+
+    #[test]
+    fn set_pending_unparsed_is_first_writer_wins_and_ignores_blank() {
+        let mut ctx = ParseContext::new("Abies alba".to_string(), None, None, None);
+        ctx.set_pending_unparsed("   ");
+        assert_eq!(
+            ctx.pending_unparsed, None,
+            "a blank remainder must be ignored, matching Java's isBlank() guard"
+        );
+        ctx.set_pending_unparsed("XXZ_21243");
+        assert_eq!(ctx.pending_unparsed, Some("XXZ_21243".to_string()));
+        ctx.set_pending_unparsed("(sic,foo)");
+        assert_eq!(
+            ctx.pending_unparsed,
+            Some("XXZ_21243".to_string()),
+            "the first non-blank write must win"
+        );
     }
 }
