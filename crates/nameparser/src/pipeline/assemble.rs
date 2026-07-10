@@ -35,11 +35,6 @@
 //! 18. a bare phrase (no cultivar) → genus-promotion (below genus) + `INFORMAL`.
 //! 19. a quoted leading monomial is re-wrapped in its quotes.
 
-// Ported ahead of its caller: `Pipeline::run` doesn't call `assemble::finish` yet (Task 4
-// wires it in) — same situation as `pipeline::authorship_parser`/`pipeline::code_inference`.
-// Drop this attribute once Task 4 lands.
-#![allow(dead_code)]
-
 use std::sync::LazyLock;
 
 use regex::Regex;

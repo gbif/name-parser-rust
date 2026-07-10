@@ -9,13 +9,6 @@
 //! [`crate::pipeline::assemble::finish`] calls [`infer`] once, only when the name has no code
 //! yet, and [`apply_rank_code_mismatch`] unconditionally afterwards.
 
-// Ported ahead of its caller: `assemble::finish` (this same Task 3) calls `infer`/
-// `apply_rank_code_mismatch`, but `assemble::finish` itself isn't wired into `Pipeline::run`
-// until Task 4 — so, transitively, nothing outside this module's own `#[cfg(test)]` tests
-// reaches this module in a normal (non-test) build yet. Same situation as
-// `pipeline::authorship_parser` (Task 2). Drop this attribute once Task 4 lands.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 use std::sync::LazyLock;
 

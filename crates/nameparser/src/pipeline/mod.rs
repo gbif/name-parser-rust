@@ -19,7 +19,10 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::model::{warnings, NameType, NomCode, ParseError, ParsedName, Rank};
+use crate::model::{
+    warnings, CombinedAuthorship, NameType, NomCode, ParseError, ParsedName, Rank, State,
+};
+use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
 use crate::unicode::{java_trim, normalize_quotes};
 
@@ -49,10 +52,11 @@ static GLUED_PHRASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)([\p{Lu}]{2,}[\p{Lu}\d_]*)$").unwrap());
 
 /// Java `Pipeline.run`. Orchestrates the staged parsing pipeline: guards → normalize →
-/// build [`ParseContext`] → split-glued-phrase → Preflight → StripAndStash (skeleton
-/// only so far — see the `stripandstash` module) → … Downstream stages (Tokenizer,
-/// AuthorshipSplit, NameTokens, AuthorshipParser, Assemble) are later slices — see the
-/// `TODO` below.
+/// build [`ParseContext`] → split-glued-phrase → Preflight → StripAndStash → Tokenizer →
+/// AuthorshipSplit → NameTokens → AuthorshipParser (embedded / autonym mid-author /
+/// separately-supplied) → CodeInference (via `Assemble::finish`) → Assemble → pending
+/// year/imprint-year/specific-author/generic-author application. Every stage is now
+/// wired in (Phase 1 Slice 4 Task 4).
 pub fn run(
     name: &str,
     authorship: Option<&str>,
@@ -138,11 +142,187 @@ pub fn run(
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
 
-    // TODO: AuthorshipParser → Assemble (later slices) — including the autonym mid-author
-    // application and the trailing-authorship parse when `boundary < ctx.tokens.len()`
-    // (`Pipeline.java:78-95`, the AuthorshipParser slice).
+    // Java `Pipeline.run`, `Pipeline.java:79-185` (the AuthorshipParser → Assemble back
+    // end). Each of the three embedded/mid-author/aux authorship spans is parsed
+    // independently into its own `AuthState`, applied onto `ctx.name` as it's produced,
+    // and also kept around (as `Option<&AuthState>`) so the `codeState` fallback logic
+    // below can pick whichever one actually carries a code signal.
+
+    // Embedded trailing authorship: whatever AuthorshipSplit left after the name-part
+    // tokens. `authState.unparsedFrom >= 0` records a remainder AuthorshipParser itself
+    // couldn't place (Phase A's `hasUpperWord` guard on a malformed leading "(...)") —
+    // specific to this path, since the separately-supplied authorship has no leftover
+    // name material of its own to park.
+    let mut auth_state: Option<AuthState> = None;
+    if boundary < ctx.tokens.len() {
+        let st = authorship_parser::parse(&ctx.tokens, boundary);
+        apply_authorship(&mut ctx.name, &st);
+        if st.unparsed_from >= 0 {
+            ctx.name.state = State::Partial;
+            ctx.name.unparsed = st.unparsed_text.clone();
+        }
+        auth_state = Some(st);
+    }
+
+    // Autonym species author: a "(Bas) Comb" or plain author span recorded mid-name by
+    // NameTokens, sitting between the species epithet and the infraspecific marker. The
+    // autonym's final epithet carries no author of its own (ICN Art. 22.1/26.1), so this
+    // span IS the species author and becomes the name's authorship. Only applied when the
+    // name is an autonym and no trailing authorship was already parsed.
+    let mut autonym_state: Option<AuthState> = None;
+    if ctx.mid_author_from >= 0 && ctx.name.is_autonym() && !ctx.name.has_authorship() {
+        let from = ctx.mid_author_from as usize;
+        let to = ctx.mid_author_to as usize;
+        let st = authorship_parser::parse(&ctx.tokens[from..to], 0);
+        apply_authorship(&mut ctx.name, &st);
+        autonym_state = Some(st);
+    }
+
+    // Separately-supplied authorship: run the same annotation strippers (sic / corrig /
+    // extinct dagger / brackets etc.) on the auxiliary string via `strip_authorship_markers`
+    // so its tokens are clean before parsing, then re-tokenise and parse it independently.
+    // A sanctioning author found here is applied immediately (the embedded path's own
+    // sanctioning author, applied further below, overwrites it — last-write-wins).
+    let mut extra_state: Option<AuthState> = None;
+    if let Some(authorship) = ctx.authorship_input.clone() {
+        if !authorship.chars().all(crate::token::is_whitespace_java) {
+            let auth_clean = stripandstash::strip_authorship_markers(&authorship, &mut ctx.name);
+            let aux = tokenize(&auth_clean);
+            let st = authorship_parser::parse(&aux, 0);
+            apply_authorship(&mut ctx.name, &st);
+            if st.sanctioning_author.is_some() {
+                ctx.name.sanctioning_author = st.sanctioning_author.clone();
+            }
+            extra_state = Some(st);
+        }
+    }
+    if let Some(st) = auth_state.as_ref() {
+        if st.sanctioning_author.is_some() {
+            ctx.name.sanctioning_author = st.sanctioning_author.clone();
+        }
+    }
+
+    // Code inference uses the main scientific name's authState by default. When the main
+    // name had no authorship of its own, fall back to the auxiliary authorship state when
+    // it carries a basionym citation (parens) that tips the code, or (failing that) to the
+    // autonym's species-author state — see `code_state_needs_fallback`'s doc comment.
+    let mut code_state: Option<&AuthState> = auth_state.as_ref();
+    if code_state_needs_fallback(code_state)
+        && extra_state.as_ref().is_some_and(|st| {
+            st.basionym_present && (st.basionym.year.is_some() || st.combination.exists())
+        })
+    {
+        code_state = extra_state.as_ref();
+    }
+    if code_state_needs_fallback(code_state) && autonym_state.is_some() {
+        code_state = autonym_state.as_ref();
+    }
+
+    // Year that came directly off the author span (e.g. "Linnaeus, 1771") is applied
+    // BEFORE code inference because it IS the zoological author-year citation we want to
+    // detect. A year extracted from a stripped publishedIn reference is just the
+    // publication year — code-neutral — so it's applied AFTER inference instead (below),
+    // so the same year on a botanical or bacterial name doesn't get misread as a
+    // zoological author-year.
+    if ctx.pending_year.is_some()
+        && !ctx.pending_year_from_publication
+        && ctx.name.combination_authorship.exists()
+        && ctx.name.combination_authorship.year.is_none()
+    {
+        ctx.name.combination_authorship.year = ctx.pending_year.clone();
+    }
+
+    assemble::finish(&mut ctx, code_state);
+
+    if ctx.pending_year.is_some()
+        && ctx.pending_year_from_publication
+        && ctx.name.combination_authorship.exists()
+        && ctx.name.combination_authorship.year.is_none()
+    {
+        ctx.name.combination_authorship.year = ctx.pending_year.clone();
+    }
+
+    // An imprint year stripped before authorship parsing belongs to the name's combination
+    // authorship (sitting next to its publication year).
+    if ctx.pending_imprint_year.is_some() && ctx.name.combination_authorship.imprint_year.is_none()
+    {
+        ctx.name.combination_authorship.imprint_year = ctx.pending_imprint_year.clone();
+    }
+
+    // Irregular authorships split off during stripping: the species author of a
+    // below-species name ("…L. cv. 'Elsrijk' Broerse") and the genus author of an
+    // infrageneric name ("Cordia (Adans.) Kuntze sect. …"). Parse and attach to their
+    // dedicated slots.
+    if let Some(specific_author) = ctx.pending_specific_author.clone() {
+        let already = ctx
+            .name
+            .specific_authorship
+            .as_ref()
+            .is_some_and(CombinedAuthorship::has_authorship);
+        if !already {
+            if let Some(ca) = parse_combined_authorship(&specific_author) {
+                ctx.name.specific_authorship = Some(ca);
+            }
+        }
+    }
+    if let Some(generic_author) = ctx.pending_generic_author.clone() {
+        let already = ctx
+            .name
+            .generic_authorship
+            .as_ref()
+            .is_some_and(CombinedAuthorship::has_authorship);
+        if !already {
+            if let Some(ca) = parse_combined_authorship(&generic_author) {
+                ctx.name.generic_authorship = Some(ca);
+            }
+        }
+    }
 
     Ok(ctx.name)
+}
+
+/// Java `Pipeline.applyAuthorship(ParsedName, AuthorshipParser.AuthState)`. Applies the
+/// combination + basionym authorship from a parsed [`AuthState`] onto the name. Shared by
+/// the embedded-authorship, autonym-mid-author and separately-supplied-authorship paths.
+/// The sanctioning author and the unparsed remainder are applied by the callers, since
+/// those differ between the paths. (Imprint years travel on the `Authorship` objects
+/// themselves, so setting the authorship above already carries them along — nothing extra
+/// to apply here, matching Java's own comment at this exact spot.)
+fn apply_authorship(name: &mut ParsedName, st: &AuthState) {
+    if st.combination.exists() {
+        name.combination_authorship = st.combination.clone();
+    }
+    if st.basionym.exists() {
+        name.basionym_authorship = st.basionym.clone();
+    }
+}
+
+/// Java's repeated `codeState == null || (!codeState.combination.exists() &&
+/// !codeState.basionymPresent)` guard (`Pipeline.java:132, 141`): true when `state` carries
+/// no code-relevant signal yet (no authorship state picked at all, or one that has neither
+/// a combination authorship nor a basionym) — i.e. the `codeState` fallback chain should
+/// keep looking at the next candidate.
+fn code_state_needs_fallback(state: Option<&AuthState>) -> bool {
+    match state {
+        None => true,
+        Some(s) => !s.combination.exists() && !s.basionym_present,
+    }
+}
+
+/// Java `Pipeline.parseCombinedAuthorship(String)`. Parses a bare author string (e.g. "L."
+/// or "(Adans.) Kuntze") into a [`CombinedAuthorship`] for the generic/specific authorship
+/// slots. Returns `None` when nothing parsable was found.
+fn parse_combined_authorship(authors: &str) -> Option<CombinedAuthorship> {
+    let tokens = tokenize(authors);
+    let st = authorship_parser::parse(&tokens, 0);
+    let mut ca = CombinedAuthorship::default();
+    if st.combination.exists() {
+        ca.combination_authorship = st.combination;
+    }
+    if st.basionym.exists() {
+        ca.basionym_authorship = st.basionym;
+    }
+    ca.has_authorship().then_some(ca)
 }
 
 /// Java `Pipeline.hasLetter(String)`: `Character.isLetter` scanned per Unicode code point.
@@ -313,5 +493,112 @@ mod tests {
         // "B." has exactly one letter, so `has_letter` must let it through — regression
         // guard against an over-eager rewrite of this check.
         assert!(run("B.", None, None, None).is_ok());
+    }
+
+    // =======================================================================================
+    // Back-end wiring (Phase 1 Slice 4 Task 4): AuthorshipParser -> Assemble. The golden
+    // corpus harness (`tests/parse_golden.rs`) always calls `parse(input, None, None, None)`
+    // — it validates the EMBEDDED-authorship, autonym-mid-author, and pendingSpecific/
+    // GenericAuthor paths at full corpus scale (all four are driven by the scientific-name
+    // string alone), but never exercises the SEPARATELY-SUPPLIED-`authorship`-argument path
+    // (`extra_state`/`stripandstash::strip_authorship_markers`) at all, since that parameter
+    // is always `None` there. The tests below close that gap directly.
+    // =======================================================================================
+
+    #[test]
+    fn embedded_authorship_is_applied_to_combination_authorship() {
+        let pn = run("Abies alba Mill.", None, None, None).expect("should parse");
+        assert_eq!(pn.combination_authorship.authors, vec!["Mill.".to_string()]);
+    }
+
+    #[test]
+    fn separately_supplied_authorship_is_applied_to_combination_authorship() {
+        // The separate-authorship counterpart of the test just above: same expected
+        // authorship, but supplied via the `authorship` argument instead of embedded in
+        // `name`, exercising `extra_state`/`apply_authorship` on the aux path.
+        let pn = run("Abies alba", Some("Mill."), None, None).expect("should parse");
+        assert_eq!(pn.combination_authorship.authors, vec!["Mill.".to_string()]);
+        assert_eq!(pn.genus, Some("Abies".to_string()));
+        assert_eq!(pn.specific_epithet, Some("alba".to_string()));
+    }
+
+    #[test]
+    fn separately_supplied_authorship_overwrites_embedded_authorship_when_both_are_given() {
+        // Java's `applyAuthorship(ctx.name, extraState)` on the aux path has NO guard
+        // against `ctx.name` already carrying an embedded/autonym authorship (unlike the
+        // autonym path's own `!ctx.name.hasAuthorship()` guard) — it runs unconditionally
+        // whenever a non-blank `authorship` argument is given, so a separately-supplied
+        // authorship always wins over an embedded one when a caller (unusually) supplies
+        // both, since the aux path runs last among the three.
+        let pn = run("Abies alba Mill.", Some("L."), None, None).expect("should parse");
+        assert_eq!(pn.combination_authorship.authors, vec!["L.".to_string()]);
+    }
+
+    #[test]
+    fn separately_supplied_authorship_runs_through_strip_authorship_markers_first() {
+        // A nom-note tail on the separately-supplied authorship must be stripped (via
+        // `strip_authorship_markers`) before `AuthorshipParser::parse` sees it, exactly as
+        // it would be if it were embedded in `name` and stripped by `run()`'s own
+        // `strip_nom_note` — proving the two strippers are wired to agree.
+        let pn = run("Abies alba", Some("Mill. nom. illeg."), None, None).expect("should parse");
+        assert_eq!(pn.combination_authorship.authors, vec!["Mill.".to_string()]);
+        assert_eq!(pn.nomenclatural_note, Some("nom. illeg.".to_string()));
+    }
+
+    #[test]
+    fn standalone_manuscript_marker_as_the_whole_separate_authorship_sets_manuscript() {
+        // `strip_authorship_markers`'s STANDALONE_MS early return: the aux authorship is
+        // consumed entirely (manuscript=true, no authors), leaving the embedded name's own
+        // (absent) authorship untouched.
+        let pn = run("Abies alba", Some("ined."), None, None).expect("should parse");
+        assert!(pn.manuscript);
+        assert!(!pn.combination_authorship.exists());
+    }
+
+    #[test]
+    fn sanctioning_author_is_last_write_wins_embedded_over_separately_supplied() {
+        // Global Constraint 2 / the codeState-selection doc comment: the aux authorship's
+        // sanctioning author is applied first, the embedded name's own sanctioning author
+        // applied after (and so wins) — both present here to prove the ORDER, not just
+        // that either one alone works.
+        let pn =
+            run("Boletus versicolor L. : Fr.", Some("X. : Y."), None, None).expect("should parse");
+        assert_eq!(pn.sanctioning_author, Some("Fr.".to_string()));
+    }
+
+    #[test]
+    fn code_state_falls_back_to_separately_supplied_authorship_when_embedded_has_none() {
+        // Pipeline.java's own worked example for the codeState fallback, split across the
+        // two arguments instead of embedded in one string: a bare uninomial (no embedded
+        // trailing authorship at all, so `auth_state` stays `None`) with a separately
+        // supplied basionym-only citation with a year — `extraState.basionymPresent &&
+        // extraState.basionym.getYear() != null` — must drive code inference to
+        // ZOOLOGICAL exactly as it would if "Heptacyclus (Vasileyev, 1939)" were one name.
+        let pn = run("Heptacyclus", Some("(Vasileyev, 1939)"), None, None).expect("should parse");
+        assert_eq!(pn.code, Some(NomCode::Zoological));
+        assert_eq!(
+            pn.basionym_authorship.authors,
+            vec!["Vasileyev".to_string()]
+        );
+        assert_eq!(pn.basionym_authorship.year, Some("1939".to_string()));
+    }
+
+    #[test]
+    fn autonym_species_author_drives_code_inference_when_no_other_authorship() {
+        // Pipeline.java's own worked example (Pipeline.java:138-140) for the autonym
+        // codeState fallback: the mid-name "(Klatt) Baker" span IS the species author of
+        // the autonym "spathata subsp. spathata" and infers BOTANICAL from its
+        // basionym+combination authors, with no separately-supplied authorship involved.
+        let pn = run(
+            "Trimezia spathata (Klatt) Baker subsp. spathata",
+            None,
+            None,
+            None,
+        )
+        .expect("should parse");
+        assert!(pn.is_autonym());
+        assert_eq!(pn.code, Some(NomCode::Botanical));
+        assert_eq!(pn.combination_authorship.authors, vec!["Baker".to_string()]);
+        assert_eq!(pn.basionym_authorship.authors, vec!["Klatt".to_string()]);
     }
 }

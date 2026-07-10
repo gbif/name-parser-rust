@@ -73,15 +73,6 @@
 //! Java; neither has any caller outside `AuthorshipParser` in this port, so both stay
 //! private here.
 
-// This entire module is ported ahead of its sole consumer: `Pipeline::run` doesn't call
-// `authorship_parser::parse` yet — that wiring is Phase 1 Slice 4 Task 4. Until then,
-// everything here is only exercised by this module's own `#[cfg(test)]` tests, so a normal
-// (non-test) build sees the whole module as dead code (same situation `ParseContext` hit in
-// `pipeline::context`, handled there the same way). Allowed at the module level rather than
-// per-item since the reason is uniform; drop this attribute once Task 4 wires `parse` into
-// `Pipeline::run`.
-#![allow(dead_code)]
-
 use crate::model::Authorship;
 use crate::token::{is_particle, Token, TokenKind};
 

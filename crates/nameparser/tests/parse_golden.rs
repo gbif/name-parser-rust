@@ -1,51 +1,40 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Full-parse golden harness — error-classification gate (Phase 1, Task 6) + the
-//! downstream-independent-field gate (Phase 1 Slice 2, batch 2e — the FINAL StripAndStash
-//! batch flips this from a baseline print to a permanent `assert_eq!(…, 0)`).
+//! Full-parse golden harness — error-classification gate (Phase 1, Task 6) + full
+//! `ParsedName` field parity (Phase 1 Slice 4 Task 4 — the back end: AuthorshipParser,
+//! CodeInference, Assemble, `stripAuthorshipMarkers` all wired into `Pipeline::run`).
 //!
 //! Diffs Rust `nameparser::parse()` against the real Java CLI oracle
 //! (`testdata/expected-parse.jsonl`) over the ~8017-name benchmark corpus
-//! (`testdata/benchmark-data.txt`). Two independent gates, BOTH now asserted:
+//! (`testdata/benchmark-data.txt`). Two independent gates, BOTH asserted:
 //!
 //!   1. **Error classification (asserted 0, unchanged since Task 6).** The parsed/unparsable
 //!      PARTITION (Java `error` <=> Rust `Err`; Java `parsed` <=> Rust `Ok`), and, for rows
 //!      unparsable on both sides, that the `NameType`/`NomCode` agree.
-//!   2. **Downstream-independent fields (asserted 0, as of Phase 1 Slice 2 batch 2e).** For
-//!      rows both sides parse, diffs the 10 fields that `StripAndStash` (now FULLY ported —
-//!      all 55 steps) exclusively populates — `extinct`, `originalSpelling`,
-//!      `nomenclaturalNote`, `taxonomicNote`, `publishedIn`, `publishedInPage`,
-//!      `publishedInYear`, `manuscript`, `candidatus`, `cultivarEpithet` — via
-//!      `serde_json::Value` on both sides (an absent JSON key means unset/`None`, matching
-//!      the model's `skip_serializing_if`). Batches 2a-2d drove each per-field mismatch
-//!      count down as the steps that set it landed (see
-//!      `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md` for the trajectory);
-//!      batch 2e (steps 53-55, the last 3) brings every one of them to 0, and this gate now
-//!      permanently `assert_eq!`s that count instead of merely printing it. Because these 10
-//!      fields are set ONLY by StripAndStash and never touched again by any later (not yet
-//!      ported) stage, this gate is a full, corpus-scale parity guarantee for them, not a
-//!      snapshot — a regression in ANY of the 55 steps that touches one of these fields
-//!      fails this test.
-//!   3. **Name-part fields (Phase 1 Slice 3 — `AuthorshipSplit` Task 2 + `NameTokens` Task 3,
-//!      both now wired into `pipeline::run`).** For rows both sides parse, diffs the 7
-//!      fields `AuthorshipSplit`/`NameTokens` populate — `genus`, `uninomial`,
-//!      `infragenericEpithet`, `specificEpithet`, `infraspecificEpithet`, `notho`,
-//!      `epithetQualifier`. `notho` (a JSON array) and `epithetQualifier` (a JSON object)
-//!      are compared order-insensitively (as sets/maps — see `json_eq_unordered`), matching
-//!      how `ParsedName::warnings`' own doc comment already documents Java's
-//!      `HashSet`/`EnumSet`/`EnumMap` fields as unordered-on-the-wire.
-//!      **ASSERTED 0 (Task 3, NameTokens-final):** `infraspecificEpithet`, `notho`,
-//!      `epithetQualifier` — set ONLY by `NameTokens` and never touched by any later (not
-//!      yet ported) stage, so this is a full, permanent corpus-scale parity guarantee for
-//!      these 3, same as the `FIELD_KEYS` gate above.
-//!      **MEASURED, not yet asserted (Assemble-rewrite residuals):** `genus`, `uninomial`,
-//!      `infragenericEpithet`, `specificEpithet` — printed per-field with capped examples;
-//!      residual causes triaged and documented at the Task 3 commit (Assemble's
-//!      uninomial<->genus/infragenericEpithet moves for a caller-/StripAndStash-pinned
-//!      infrageneric-strict rank, phrase-promotion when `NameTokens` left a phrase-bearing
-//!      result as a bare uninomial, BOLD-style underscore-splitting, plus one pre-existing
-//!      `replace_homoglyphs` stub gap (Phase 1 Slice 2, step 13) surfacing on
-//!      `specificEpithet` for the first time now that this field is compared at all) —
-//!      asserted 0 only in the later Assemble slice.
+//!   2. **Full `ParsedName` field parity (asserted 0 — as of Task 4, modulo the tiny
+//!      documented allowlist below).** For rows both sides parse, diffs EVERY field of the
+//!      Java `parsed` object — [`ALL_FIELD_KEYS`], the complete 30-field wire shape
+//!      documented on `model::name::ParsedName`'s own field-order doc comment (`rank` ..
+//!      `sanctioningAuthor`) — via `serde_json::Value` on both sides (an absent JSON key
+//!      means unset/`None`, matching the model's `skip_serializing_if`).
+//!
+//!      Three fields are Java `Set`/`Map`-shaped, whose iteration order is not an
+//!      insertion-order guarantee (`warnings`: `HashSet<String>`; `notho`:
+//!      `EnumSet<NamePart>`; `epithetQualifier`: `EnumMap<NamePart, String>`) — these three
+//!      ([`UNORDERED_FIELD_KEYS`]) are compared order-insensitively (as sets/maps — see
+//!      [`json_eq_unordered`]). Every other field — including the nested authorship
+//!      objects (`combinationAuthorship`/`basionymAuthorship`/`genericAuthorship`/
+//!      `specificAuthorship`), whose own `authors`/`exAuthors` are genuinely ordered lists
+//!      — is compared with plain `serde_json::Value` equality (correct here since a JSON
+//!      *object*'s own key order never matters for `==`, this crate's `serde_json` has no
+//!      `preserve_order` feature enabled, and a positional list compare is exactly what an
+//!      ordered author list needs).
+//!
+//!      This is the milestone this task is named for: the Rust parser reproduces Java's
+//!      full `ParsedName` — every parsed field, not just a downstream-independent subset —
+//!      over the whole corpus. [`ALLOWLIST`] documents the (small, root-caused) set of
+//!      fields/counts this gate tolerates rather than asserting a hard 0, e.g. the
+//!      `replace_homoglyphs` stub (StripAndStash step 13, deferred by design since Phase 1
+//!      Slice 2 — porting its backing table is a sizeable sub-project of its own).
 //!
 //! Regenerate the oracle with (see the Task 6 brief for the authoritative command):
 //! ```text
@@ -79,70 +68,100 @@ struct Mismatch {
     detail: String,
 }
 
-/// The 10 downstream-independent fields `StripAndStash` (Phase 1 Slice 2) exclusively
-/// populates — Java JSON key names, in wire order (see `model::name::ParsedName`'s
-/// field-order doc comment: `extinct`..`cultivarEpithet` interleave `ParsedName`'s own
-/// fields with `ParsedAuthorship`'s). Same list as the plan's "Downstream-independent
-/// field set" section.
-const FIELD_KEYS: [&str; 10] = [
-    "extinct",
-    "originalSpelling",
-    "nomenclaturalNote",
-    "taxonomicNote",
-    "publishedIn",
-    "publishedInPage",
-    "publishedInYear",
-    "manuscript",
-    "candidatus",
-    "cultivarEpithet",
-];
-
-/// Cap on how many example mismatches are printed per field (mirrors the `.take(20)` cap
-/// already used for the partition/type-code listings, just smaller since there are 10
-/// fields rather than 2 categories).
-const FIELD_EXAMPLE_CAP: usize = 5;
-
-/// The 7 name-part fields `AuthorshipSplit`/`NameTokens` (Phase 1 Slice 3, Tasks 2-3, both
-/// now wired into `pipeline::run`) populate — Java JSON key names. Printed per-field
-/// unconditionally (see the module doc, gate 3); only the 3 keys in
-/// [`NAME_PART_ASSERTED_FIELD_KEYS`] are actually asserted 0 below.
-const NAME_PART_FIELD_KEYS: [&str; 7] = [
-    "genus",
+/// The complete 30-field wire shape of the Java `parsed` object, in wire order — see
+/// `model::name::ParsedName`'s own field-order doc comment (`ParsedName`'s own 16 fields,
+/// then `ParsedAuthorship`'s 11, then `CombinedAuthorship`'s 3). Every field Java's
+/// `ParsedName` can serialize is diffed here — this is the full-parity gate the module doc
+/// describes.
+const ALL_FIELD_KEYS: [&str; 30] = [
+    "rank",
+    "code",
     "uninomial",
+    "genus",
+    "genericAuthorship",
     "infragenericEpithet",
     "specificEpithet",
+    "specificAuthorship",
     "infraspecificEpithet",
+    "cultivarEpithet",
+    "phrase",
+    "candidatus",
     "notho",
+    "originalSpelling",
     "epithetQualifier",
+    "type",
+    "extinct",
+    "taxonomicNote",
+    "nomenclaturalNote",
+    "publishedIn",
+    "publishedInYear",
+    "publishedInPage",
+    "unparsed",
+    "doubtful",
+    "manuscript",
+    "state",
+    "warnings",
+    "combinationAuthorship",
+    "basionymAuthorship",
+    "sanctioningAuthor",
 ];
 
-/// Subset of [`NAME_PART_FIELD_KEYS`] asserted 0 as of Phase 1 Slice 3 Task 3: these 3 are
-/// set ONLY by `NameTokens` and never touched by any later (not yet ported) stage, so a
-/// mismatch here is necessarily a `find_boundary`/`classify` bug, not a deferred-stage
-/// residual. The other 4 (`genus`/`uninomial`/`infragenericEpithet`/`specificEpithet`) stay
-/// measure-only — see the module doc's gate 3 for the residual causes.
-const NAME_PART_ASSERTED_FIELD_KEYS: [&str; 3] =
-    ["infraspecificEpithet", "notho", "epithetQualifier"];
+/// Cap on how many example mismatches are printed per field.
+const FIELD_EXAMPLE_CAP: usize = 5;
 
-/// Subset of [`NAME_PART_FIELD_KEYS`] that Java serialises as a `Set`/`Map`-shaped value
-/// (`notho`: `EnumSet<NamePart>` -> a JSON array; `epithetQualifier`: `EnumMap<NamePart,
-/// String>` -> a JSON object) whose Java-side iteration order is not guaranteed, so these
-/// two need [`json_eq_unordered`] rather than plain `serde_json::Value` equality — see that
-/// function's own doc comment.
-const UNORDERED_NAME_PART_FIELD_KEYS: [&str; 2] = ["notho", "epithetQualifier"];
+/// Fields Java serialises from a `Set`/`Map`-like collection whose iteration order is not
+/// an insertion-order guarantee: `warnings` (`HashSet<String>`), `notho`
+/// (`EnumSet<NamePart>`), `epithetQualifier` (`EnumMap<NamePart, String>`). Routed through
+/// [`json_eq_unordered`] rather than plain `serde_json::Value` equality — see that
+/// function's own doc comment. Every other field (including the nested authorship
+/// objects, whose `authors`/`exAuthors` arrays ARE genuinely ordered) uses plain equality.
+const UNORDERED_FIELD_KEYS: [&str; 3] = ["warnings", "notho", "epithetQualifier"];
+
+/// A tiny, explicitly documented allowance for a field known to carry a residual count
+/// against the Java oracle for a cause already identified and deferred by design elsewhere
+/// in this port — NOT a general escape hatch. Every entry here must name its root cause.
+/// Checked as `actual <= allowed` (a regression that *increases* the count still fails).
+///
+/// Both entries below trace to the SAME single root cause and the SAME 2 unique corpus
+/// names (each appearing twice in the corpus — lines 4429/5826 "Musca domeſtica Linnaeus
+/// 1758" and 4430/5827 "Amphisbæna fuliginoſa Linnaeus 1758"): `replace_homoglyphs`
+/// (`pipeline::stripandstash`, step 13) is a pre-existing DOCUMENTED no-op stub — see its
+/// own doc comment — because Java's `UnicodeUtils.replaceHomoglyphs` backing table (a
+/// ~175-line codepoint -> canonical-char resource) is a sizeable sub-project of its own,
+/// deferred by design since Phase 1 Slice 2 (StripAndStash), well before this task. Both
+/// names contain U+017F LATIN SMALL LETTER LONG S ("ſ", an 18th-century typographic
+/// variant of "s") in their specific epithet — "domeſtica"/"fuliginoſa" — which Java's table
+/// folds to plain "s" (-> `specificEpithet`) and flags with the (non-gated everywhere else)
+/// `HOMOGLYHPS` warning (-> `warnings`); the stub leaves both untouched. Confirmed
+/// NARROWLY scoped to this one character, not a broader gap: the corpus's other
+/// exotic-script-adjacent row, "Dreyfusia nüßlini" (German eszett "ß", lines 4431/5828),
+/// is untouched by Java's own table too (0 mismatches — `ß` is a legitimate letter, not a
+/// homoglyph) and `genus="Amphisbæna"` (containing the "æ" ligature) is ALSO left alone by
+/// Java on both of the affected rows, so the residual is exactly this one codepoint, not a
+/// systemic divergence. Every other field, and every other one of the corpus's 8017 names,
+/// is full parity — see the Task 4 report for the complete triage log. Porting the real
+/// table is left to a later slice, per the original StripAndStash deferral note.
+const ALLOWLIST: &[(&str, usize)] = &[("specificEpithet", 4), ("warnings", 4)];
+
+fn allowed_mismatches(key: &str) -> usize {
+    ALLOWLIST
+        .iter()
+        .find(|(k, _)| *k == key)
+        .map(|(_, n)| *n)
+        .unwrap_or(0)
+}
 
 /// Order-insensitive equality for a JSON value Java serialises from a `Set`/`Map`-like
-/// collection: `notho`'s `EnumSet<NamePart>` (-> a JSON array) and `epithetQualifier`'s
-/// `EnumMap<NamePart, String>` (-> a JSON object). Java's `HashSet`/`EnumSet` iteration
-/// order is not guaranteed to match insertion order (the same reasoning already documented
-/// on `ParsedName::warnings`, a `HashSet<String>`), and `serde_json::Value`'s own
-/// `PartialEq` for the `Array` variant IS positional — so `notho` needs this explicit
-/// set-shaped comparison. `epithetQualifier` (a JSON *object*) would in practice already
-/// compare order-insensitively via plain `==` given this crate's `serde_json` dependency
-/// has no `preserve_order` feature enabled (its `Map` is `BTreeMap`-backed, canonically
-/// key-ordered regardless of insertion order) — but it's routed through here too rather
-/// than leaning on that feature-flag default, so the comparison stays correct even if that
-/// default ever changes.
+/// collection: `warnings`'s `HashSet<String>`, `notho`'s `EnumSet<NamePart>` (both -> a JSON
+/// array) and `epithetQualifier`'s `EnumMap<NamePart, String>` (-> a JSON object). Java's
+/// `HashSet`/`EnumSet` iteration order is not guaranteed to match insertion order, and
+/// `serde_json::Value`'s own `PartialEq` for the `Array` variant IS positional — so these
+/// fields need this explicit set-shaped comparison. `epithetQualifier` (a JSON *object*)
+/// would in practice already compare order-insensitively via plain `==` given this crate's
+/// `serde_json` dependency has no `preserve_order` feature enabled (its `Map` is
+/// `BTreeMap`-backed, canonically key-ordered regardless of insertion order) — but it's
+/// routed through here too rather than leaning on that feature-flag default, so the
+/// comparison stays correct even if that default ever changes.
 ///
 /// `None`/absent on both sides is equal; one side absent and the other present (even an
 /// empty array/object) is a mismatch, matching plain `Option`/`Value` equality — only the
@@ -179,14 +198,11 @@ fn json_eq_unordered(jv: Option<&serde_json::Value>, rv: Option<&serde_json::Val
     }
 }
 
-/// Dispatches to [`json_eq_unordered`] for [`UNORDERED_NAME_PART_FIELD_KEYS`], plain
-/// `serde_json::Value` equality (same as the [`FIELD_KEYS`] loop) for the rest.
-fn name_part_fields_equal(
-    key: &str,
-    jv: Option<&serde_json::Value>,
-    rv: Option<&serde_json::Value>,
-) -> bool {
-    if UNORDERED_NAME_PART_FIELD_KEYS.contains(&key) {
+/// Dispatches to [`json_eq_unordered`] for [`UNORDERED_FIELD_KEYS`], plain
+/// `serde_json::Value` equality for every other field (including the nested authorship
+/// objects — see the module doc for why plain equality is correct there too).
+fn fields_equal(key: &str, jv: Option<&serde_json::Value>, rv: Option<&serde_json::Value>) -> bool {
+    if UNORDERED_FIELD_KEYS.contains(&key) {
         json_eq_unordered(jv, rv)
     } else {
         jv == rv
@@ -211,24 +227,13 @@ fn matches_java_error_classification_over_corpus() {
     let mut partition_mismatches: Vec<Mismatch> = Vec::new();
     let mut type_code_mismatches: Vec<Mismatch> = Vec::new();
 
-    // ASSERTED (see the module doc): rows where both sides parsed, and per-field mismatch
-    // tallies + capped examples over the 10 downstream-independent fields StripAndStash
-    // (now fully ported) populates.
+    // ASSERTED (see the module doc): rows where both sides parsed, per-field mismatch
+    // tallies + capped examples over the full 30-field `ParsedName` wire shape.
     let mut both_parsed = 0usize;
     let mut field_mismatch_counts: HashMap<&'static str, usize> =
-        FIELD_KEYS.iter().map(|&k| (k, 0)).collect();
+        ALL_FIELD_KEYS.iter().map(|&k| (k, 0)).collect();
     let mut field_mismatch_examples: HashMap<&'static str, Vec<Mismatch>> =
-        FIELD_KEYS.iter().map(|&k| (k, Vec::new())).collect();
-
-    // See the module doc, gate 3: the 7 name-part fields AuthorshipSplit/NameTokens
-    // populate, all tallied here; only NAME_PART_ASSERTED_FIELD_KEYS is actually asserted.
-    let mut name_part_mismatch_counts: HashMap<&'static str, usize> =
-        NAME_PART_FIELD_KEYS.iter().map(|&k| (k, 0)).collect();
-    let mut name_part_mismatch_examples: HashMap<&'static str, Vec<Mismatch>> =
-        NAME_PART_FIELD_KEYS
-            .iter()
-            .map(|&k| (k, Vec::new()))
-            .collect();
+        ALL_FIELD_KEYS.iter().map(|&k| (k, Vec::new())).collect();
 
     for (idx, line) in data.lines().enumerate() {
         if line.trim().is_empty() {
@@ -287,40 +292,19 @@ fn matches_java_error_classification_over_corpus() {
                 }
             }
             (None, Ok(rust_pn)) => {
-                // Both parsed. Diff the 10 downstream-independent fields StripAndStash
-                // (Phase 1 Slice 2, now fully ported) populates — asserted 0 below, see
-                // the module doc; full parsed-name parity (tokenised name parts,
-                // authorship, etc.) stays out of scope until later slices.
+                // Both parsed. Diff every field of the full `ParsedName` wire shape —
+                // asserted 0 below (modulo ALLOWLIST), see the module doc.
                 both_parsed += 1;
                 let java_obj = java_parsed
                     .expect("java_error is None so java_parsed is Some (asserted above)");
                 let rust_value =
                     serde_json::to_value(&rust_pn).expect("ParsedName always serializes to JSON");
-                for &key in FIELD_KEYS.iter() {
+                for &key in ALL_FIELD_KEYS.iter() {
                     let jv = java_obj.get(key);
                     let rv = rust_value.get(key);
-                    if jv != rv {
+                    if !fields_equal(key, jv, rv) {
                         *field_mismatch_counts.get_mut(key).unwrap() += 1;
                         let examples = field_mismatch_examples.get_mut(key).unwrap();
-                        if examples.len() < FIELD_EXAMPLE_CAP {
-                            examples.push(Mismatch {
-                                line: line_no,
-                                input: input.to_string(),
-                                detail: format!("java={jv:?} rust={rv:?}"),
-                            });
-                        }
-                    }
-                }
-
-                // See the module doc, gate 3: AuthorshipSplit/NameTokens are both wired in
-                // now, so this tallies real Java-vs-Rust disagreements over all 7 fields;
-                // only NAME_PART_ASSERTED_FIELD_KEYS's 3 are asserted 0 below.
-                for &key in NAME_PART_FIELD_KEYS.iter() {
-                    let jv = java_obj.get(key);
-                    let rv = rust_value.get(key);
-                    if !name_part_fields_equal(key, jv, rv) {
-                        *name_part_mismatch_counts.get_mut(key).unwrap() += 1;
-                        let examples = name_part_mismatch_examples.get_mut(key).unwrap();
                         if examples.len() < FIELD_EXAMPLE_CAP {
                             examples.push(Mismatch {
                                 line: line_no,
@@ -346,43 +330,14 @@ fn matches_java_error_classification_over_corpus() {
         eprintln!("  TYPE/CODE  line {}: {:?} — {}", m.line, m.input, m.detail);
     }
 
-    // Per-field mismatch counts over the `both_parsed` rows, for the 10
-    // downstream-independent fields StripAndStash (now fully ported, Phase 1 Slice 2
-    // batch 2e) populates. Printed unconditionally (cheap, and useful context even on a
-    // passing run); asserted to all be 0 below.
+    // Per-field mismatch counts over the `both_parsed` rows, for the full 30-field
+    // `ParsedName` wire shape. Printed unconditionally (cheap, and useful context even on
+    // a passing run); asserted to all be 0 (modulo ALLOWLIST) below.
     eprintln!(
-        "parse golden (downstream-independent fields — StripAndStash fully ported, gate ASSERTED): {both_parsed} both-parsed rows"
+        "parse golden (full ParsedName field parity — Task 4 back end wired in): {both_parsed} both-parsed rows"
     );
-    for &key in FIELD_KEYS.iter() {
+    for &key in ALL_FIELD_KEYS.iter() {
         let n = field_mismatch_counts[key];
-        let pct = if both_parsed == 0 {
-            0.0
-        } else {
-            100.0 * n as f64 / both_parsed as f64
-        };
-        eprintln!("  {key:<18} {n:>5} mismatches ({pct:>5.1}% of both-parsed rows)");
-    }
-    for &key in FIELD_KEYS.iter() {
-        let examples = &field_mismatch_examples[key];
-        if !examples.is_empty() {
-            eprintln!("  --- {key} (first {} example(s)) ---", examples.len());
-            for m in examples {
-                eprintln!("    line {}: {:?} — {}", m.line, m.input, m.detail);
-            }
-        }
-    }
-
-    // Per-field mismatch counts over the `both_parsed` rows, for the 7 name-part fields
-    // AuthorshipSplit/NameTokens populate (Phase 1 Slice 3, Tasks 2-3, both now wired into
-    // `pipeline::run`). Printed unconditionally for all 7 (useful context even on a passing
-    // run); only `NAME_PART_ASSERTED_FIELD_KEYS`'s 3 (infraspecificEpithet/notho/
-    // epithetQualifier) are asserted 0 below — see the module doc's gate 3 for why the other
-    // 4 stay measure-only.
-    eprintln!(
-        "parse golden (name-part fields — AuthorshipSplit + NameTokens wired in): {both_parsed} both-parsed rows"
-    );
-    for &key in NAME_PART_FIELD_KEYS.iter() {
-        let n = name_part_mismatch_counts[key];
         let pct = if both_parsed == 0 {
             0.0
         } else {
@@ -390,8 +345,8 @@ fn matches_java_error_classification_over_corpus() {
         };
         eprintln!("  {key:<21} {n:>5} mismatches ({pct:>5.1}% of both-parsed rows)");
     }
-    for &key in NAME_PART_FIELD_KEYS.iter() {
-        let examples = &name_part_mismatch_examples[key];
+    for &key in ALL_FIELD_KEYS.iter() {
+        let examples = &field_mismatch_examples[key];
         if !examples.is_empty() {
             eprintln!("  --- {key} (first {} example(s)) ---", examples.len());
             for m in examples {
@@ -413,45 +368,19 @@ fn matches_java_error_classification_over_corpus() {
         type_code_mismatches.len()
     );
 
-    // GATE (Phase 1 Slice 2 batch 2e — the final StripAndStash batch): every one of the 10
-    // downstream-independent fields must have exactly 0 mismatches against the Java
-    // oracle. StripAndStash (steps 1-55, all now ported) is the ONLY stage that sets these
-    // fields and is never touched again by any later stage, so — unlike full parsed-name
-    // parity, still out of scope until the tokenizer/authorship-parser/Assemble stages are
-    // ported — this is a complete, permanent, corpus-scale parity guarantee for these 10
-    // fields specifically, not a snapshot. Asserted per-field (not as a single pooled
-    // total) so a future regression's failure message names the exact field that broke;
-    // re-run with `--nocapture` for up to `FIELD_EXAMPLE_CAP` concrete failing inputs per
-    // field from the eprintln! block above.
-    for &key in FIELD_KEYS.iter() {
+    // GATE (Phase 1 Slice 4 Task 4 — the milestone): every one of the 30 fields of the full
+    // `ParsedName` wire shape must match the Java oracle, up to the (currently empty, see
+    // its own doc comment) ALLOWLIST. Asserted per-field (not as a single pooled total) so
+    // a future regression's failure message names the exact field that broke; re-run with
+    // `--nocapture` for up to `FIELD_EXAMPLE_CAP` concrete failing inputs per field from the
+    // eprintln! block above.
+    for &key in ALL_FIELD_KEYS.iter() {
         let n = field_mismatch_counts[key];
-        assert_eq!(
-            n, 0,
-            "{n} mismatches on downstream-independent field {key:?} (Java vs Rust, over \
-             {both_parsed} both-parsed rows) — see stderr with --nocapture for example inputs"
-        );
-    }
-
-    // GATE (Phase 1 Slice 3 Task 3 — NameTokens::classify lands): `infraspecificEpithet`,
-    // `notho` and `epithetQualifier` must have exactly 0 mismatches against the Java oracle.
-    // These 3 are set ONLY by NameTokens (never touched by any later, not-yet-ported stage —
-    // AuthorshipParser/Assemble don't rewrite them), so — same reasoning as the
-    // downstream-independent-field gate just above — this is a complete, permanent,
-    // corpus-scale parity guarantee for these 3 specifically, not a snapshot. The other 4
-    // name-part fields (`genus`/`uninomial`/`infragenericEpithet`/`specificEpithet`) are
-    // deliberately NOT asserted here: Assemble (not yet ported) still rewrites them —
-    // uninomial<->genus/infragenericEpithet moves for an infrageneric-strict rank pinned by
-    // the caller or by StripAndStash, phrase-promotion when NameTokens left a phrase-bearing
-    // result as a bare uninomial, and BOLD-style underscore-splitting — plus one pre-existing
-    // `replace_homoglyphs` stub gap (Phase 1 Slice 2, step 13) that happens to surface on
-    // `specificEpithet` now that this field is compared for the first time. See
-    // `NAME_PART_FIELD_KEYS`'s eprintln! block above for the measured (not asserted) counts.
-    for &key in NAME_PART_ASSERTED_FIELD_KEYS.iter() {
-        let n = name_part_mismatch_counts[key];
-        assert_eq!(
-            n, 0,
-            "{n} mismatches on NameTokens-final field {key:?} (Java vs Rust, over \
-             {both_parsed} both-parsed rows) — see stderr with --nocapture for example inputs"
+        let allowed = allowed_mismatches(key);
+        assert!(
+            n <= allowed,
+            "{n} mismatches on field {key:?} (Java vs Rust, over {both_parsed} both-parsed \
+             rows), only {allowed} allowed — see stderr with --nocapture for example inputs"
         );
     }
 }

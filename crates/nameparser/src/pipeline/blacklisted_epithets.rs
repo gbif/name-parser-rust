@@ -26,12 +26,6 @@
 //! `EPITHETS.contains(epithet.toLowerCase())` (the stored side is already lower-case; the
 //! caller's `epithet` argument generally is not).
 
-// Ported ahead of its caller, `pipeline::assemble` (Task 4 wires `assemble::finish` into
-// `Pipeline::run`) — same situation as `pipeline::authorship_parser` (Task 2): a normal
-// (non-test) build sees this module as dead code until then. Drop this attribute once Task 4
-// lands.
-#![allow(dead_code)]
-
 use std::collections::HashSet;
 use std::sync::LazyLock;
 

@@ -313,6 +313,27 @@ impl ParsedName {
             .get_or_insert_with(BTreeMap::new)
             .insert(part, q.to_string());
     }
+
+    /// Java `ParsedName.isAutonym()` (`ParsedName.java:397-399`): true when the specific
+    /// and infraspecific epithets are both set and identical (ICN Art. 26.1's autonym rule
+    /// — e.g. "Rosa gallica var. gallica"). The `Option` equality below already folds
+    /// Java's three-part `specificEpithet != null && infraspecificEpithet != null &&
+    /// specificEpithet.equals(infraspecificEpithet)`: the `is_some()` guard rules out the
+    /// vacuous `None == None` case, and `Some(x) == Some(y)` iff `x == y`.
+    pub fn is_autonym(&self) -> bool {
+        self.specific_epithet.is_some() && self.specific_epithet == self.infraspecific_epithet
+    }
+
+    /// Java `CombinedAuthorshipIF.hasAuthorship()`/`CombinedAuthorship.hasAuthorship()` —
+    /// inherited by `ParsedName` through Java's `ParsedName extends ParsedAuthorship
+    /// extends CombinedAuthorship` chain. Ported directly onto `ParsedName` here since this
+    /// port flattens `CombinedAuthorship`'s fields onto `ParsedName` (see the module doc)
+    /// rather than modeling the inheritance hierarchy. See [`CombinedAuthorship::has_authorship`]
+    /// for the identical logic used by the *nested* `generic_authorship`/
+    /// `specific_authorship` slots.
+    pub fn has_authorship(&self) -> bool {
+        self.combination_authorship.exists() || self.basionym_authorship.exists()
+    }
 }
 
 impl Default for ParsedName {

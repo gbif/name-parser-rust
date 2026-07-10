@@ -3017,6 +3017,202 @@ fn stash_phrase_name(ctx: &mut ParseContext, s: String) -> String {
     }
 }
 
+// ===================================================================================
+// stripAuthorshipMarkers (Phase 1 Slice 4 Task 4): the auxiliary-authorship-path
+// reimplementation. Strips a SUBSET of the annotations `run()` above strips from the
+// embedded scientific name — reusing several of the SAME pattern constants — from a
+// separately-supplied authorship string (the `authorship` parameter of
+// `nameparser::parse`/`Pipeline::run`), applying their flags/notes directly onto a
+// `ParsedName`. Called only from `pipeline::mod`'s aux-authorship path, on the
+// caller-supplied authorship string, before it is tokenised and handed to
+// `AuthorshipParser::parse`.
+//
+// Unlike `run()` above, this path has no `ParseContext` (no working string of its own to
+// thread `pending_unparsed`/`pending_year` state through) — its only output is the
+// cleaned string, plus side effects applied directly onto `name`. It is therefore NOT
+// part of the `run()` dispatcher above and has its own, shorter, ordered list of steps
+// (Java `StripAndStash.stripAuthorshipMarkers`, StripAndStash.java:409-525): standalone
+// manuscript marker (early return) -> sic-with-comment / sic / corrig -> question-mark
+// repair -> win-1252 repair -> hort./hortus ex-placeholder normalisation (CV_EX and the
+// bare "ht." marker are DELIBERATELY omitted — Java's aux version calls only HORT_EX/
+// HORTUS_EX, not the full 4-step `normaliseHortExPlaceholder` chain) -> leading
+// homonym-citation parens (early return) -> parenthesised taxonomic note -> bracketed
+// nom-note -> bare nom-note -> taxonomic-note tail.
+// ===================================================================================
+
+/// Java STANDALONE_MS (StripAndStash.java:39-40): `(?i)^(?:ined|ms|msc|unpublished)\.?$`,
+/// no `UNICODE_CHARACTER_CLASS`. Already fully anchored (`^…$`) so Java's `.matches()`
+/// call is identical to `.find()`/`is_match` here. No `\s`/`\d`/`\w`/`\b`/`\p{...}` atoms
+/// at all -> nothing to scope, ported verbatim. Only used by `strip_authorship_markers`
+/// (a manuscript marker supplied as the WHOLE separate authorship, e.g. authorship="ined."
+/// — a marker glued onto an embedded author, "Monterosato ms.", is a different case,
+/// handled by `strip_manuscript_marker`/`MANUSCRIPT_MARKER` in the main `run()` dispatch).
+static STANDALONE_MS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:ined|ms|msc|unpublished)\.?$").unwrap());
+
+/// Java LEADING_HOMONYM_PAREN (StripAndStash.java:113-114): `^\(\s*(?:non|nec|not)\b`,
+/// `Pattern.CASE_INSENSITIVE`. Has `\s`/`\b`, no `\p{...}`, no unescaped wildcard -> whole
+/// pattern ASCII-scoped (leading `^` left outside the wrap, per convention — same as
+/// `CANDIDATUS_PREFIX`). No lookaround/backreference -> plain `regex` crate.
+static LEADING_HOMONYM_PAREN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?-u:\(\s*(?:non|nec|not)\b)").unwrap());
+
+/// Java PAREN_NOTE (StripAndStash.java:108-109):
+/// `\(\s*((?:auctt?|sensu|sec)\b[^)]*)\)\s*`, `Pattern.CASE_INSENSITIVE`. `[^)]` is a
+/// NEGATED custom class -> stays OUTSIDE any `(?-u:…)` (`BRACKETED_TAX_NOTE`/
+/// `SIC_WITH_COMMENT` precedent) -> atom-only `\s`/`\b` scoping. UNANCHORED (no leading/
+/// trailing `^`/`$`) — unlike its `BRACKETED_TAX_NOTE`/`PAREN_TAX_NOTE` siblings in the
+/// main `run()` dispatch, this note can sit ANYWHERE in the aux authorship string (e.g.
+/// "(auct.) Rolfe" — a leading note with a trailing real author), not just at the end. No
+/// lookaround/backreference -> plain `regex` crate.
+static PAREN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\((?-u:\s*)((?:auctt?|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)").unwrap()
+});
+
+/// Java `StripAndStash.stripAuthorshipMarkers(String authorship, ParsedName name)`
+/// (StripAndStash.java:409-525). See the section doc comment above for the step order.
+/// Strips inline annotations from an externally-supplied authorship string and applies
+/// any flags they imply directly onto `name`. Returns the cleaned authorship, ready for
+/// `Tokenizer::tokenize` (`crate::token::tokenize`).
+pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) -> String {
+    let mut s = java_trim(authorship).to_string();
+    if s.is_empty() {
+        return s;
+    }
+    // A standalone manuscript marker as the WHOLE authorship is a manuscript flag, not an
+    // author.
+    if STANDALONE_MS.is_match(&s) {
+        name.manuscript = true;
+        return String::new();
+    }
+    if let Some(m) = SIC_WITH_COMMENT.find(&s) {
+        name.original_spelling = Some(true);
+        s = format!("{}{}", &s[..m.start()], &s[m.end()..]);
+    }
+    if let Some(m) = SIC.find(&s) {
+        name.original_spelling = Some(true);
+        s = format!("{}{}", &s[..m.start()], &s[m.end()..]);
+    }
+    {
+        let padded = format!(" {s}");
+        if let Ok(Some(_)) = CORRIG.find(&padded) {
+            name.original_spelling = Some(false);
+            let stripped = fancy_replace_all(&CORRIG, &padded, |_| String::new());
+            s = collapse_whitespace(&stripped);
+        }
+    }
+    // "?" inside a word — transcription artefact for a missing letter ("Istv?nffi"). Strip
+    // the ? and glue the surrounding word parts; flag doubtful + warning.
+    if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
+        s = QMARK_BETWEEN_LETTERS.replace_all(&s, "$1$2").into_owned();
+        name.doubtful = true;
+        name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+    }
+    s = repair_win1252_artefacts_name(name, s);
+    // "Hort."/"hortus(a)" horticultural placeholder, lower-cased to the canonical "hort.".
+    // Deliberately omits `CV_EX`/`HT_MARKER` (see the section doc comment).
+    s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
+    s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
+
+    // A leading parenthesised homonym citation "(non/nec/not ...)" makes the whole
+    // authorship a misapplied/taxonomic note rather than a basionym — capture it verbatim,
+    // no author left.
+    if LEADING_HOMONYM_PAREN.is_match(&s) {
+        let norm = collapse_whitespace(&s);
+        name.add_taxonomic_note(&norm);
+        return String::new();
+    }
+
+    // Parenthesised taxonomic note "(auct.)"/"(sensu ...)"/"(sec ...)" — the parens mark a
+    // note, not a basionym. Capture the inner text as the taxonomic note, drop the parens,
+    // and keep any real author beside them: "(auct.) Rolfe" -> author Rolfe + note "auct.";
+    // "(sensu X, 1878) Y, 1992" -> author "Y, 1992" + note "sensu X, 1878".
+    if let Some(caps) = PAREN_NOTE.captures(&s) {
+        let inner = java_trim(caps.get(1).unwrap().as_str());
+        let norm = WHITESPACE.replace_all(inner, " ").into_owned();
+        let norm = normalise_leading_auct(&norm);
+        name.add_taxonomic_note(&norm);
+        let whole = caps.get(0).unwrap();
+        let (start, end) = (whole.start(), whole.end());
+        s = java_trim(&format!("{}{}", &s[..start], &s[end..])).to_string();
+    }
+
+    // Bracketed nom-notes "(nom. nud.)"/"[nom. cons.]" in the auxiliary authorship —
+    // extract into nomenclaturalNote and drop from the string before tokenisation.
+    if let Some(caps) = BRACKETED_NOM_NOTE.captures(&s) {
+        let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        let norm = normalise_nom_note(&raw);
+        name.add_nomenclatural_note(&norm);
+        let match_start = caps.get(0).unwrap().start();
+        s = java_trim(&s[..match_start]).to_string();
+    }
+
+    // Bare nomenclatural notes ("nom. illeg.", "comb. nov.", "sp. nov.", …) in the
+    // auxiliary authorship — same extraction as `run()`'s `strip_nom_note`, so a
+    // separately-supplied authorship behaves like the equivalent tail on a full name.
+    // Matched against a space-padded copy so a note anchored at the very START of the
+    // string ("nom. illeg.") is caught too — NOM_NOTE requires a leading whitespace.
+    let padded_nom = format!(" {s}");
+    if let Ok(Some(caps)) = NOM_NOTE.captures(&padded_nom) {
+        let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        if !raw.is_empty() {
+            let norm = normalise_nom_note(&raw);
+            name.add_nomenclatural_note(&norm);
+            let whole = caps.get(0).unwrap();
+            let before = java_trim(&padded_nom[..whole.start()]).to_string();
+            let after = java_trim(&padded_nom[whole.end()..]).to_string();
+            s = if after.is_empty() {
+                before
+            } else {
+                format!("{before} {after}")
+            };
+            s = java_trim(&s).to_string();
+            while s.ends_with(',') {
+                s.pop();
+                s = java_trim(&s).to_string();
+            }
+            if MANUSCRIPT_KEYWORD.is_match(&raw) {
+                name.manuscript = true;
+            }
+        }
+    }
+
+    // Strip taxonomic-note tails (sensu, emend., auct., etc.) from the auxiliary
+    // authorship string — same patterns `run()`'s `strip_tax_note` applies to the main
+    // working string. Matched against a space-padded copy (same reasoning as NOM_NOTE
+    // above). UNLIKE every other note-setter in this function, this one DEDUPS against an
+    // identical existing taxonomicNote instead of always appending (Java:
+    // `existing.equals(norm) ? existing : existing + " " + norm`).
+    let padded_tax = format!(" {s}");
+    if let Some(caps) = TAX_NOTE.captures(&padded_tax) {
+        let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        if !raw.is_empty() {
+            let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
+            let norm = normalise_leading_auct(&with_dots);
+            name.taxonomic_note = Some(match name.taxonomic_note.take() {
+                None => norm.clone(),
+                Some(existing) if existing == norm => existing,
+                Some(existing) => format!("{existing} {norm}"),
+            });
+            // Cut `s` right before group(1)'s content. Group(1) is a suffix of
+            // `padded_tax` (TAX_NOTE's trailing `)$` anchors it to end-of-padded-string),
+            // and `padded_tax` is `s` with exactly one ASCII-space byte prepended, so
+            // slicing `padded_tax[..group1_start]` (which still carries that one leading
+            // pad byte) and `java_trim`-ing it away yields exactly the same content as
+            // Java's `s.substring(0, s.length() - m.group(1).length()).trim()` — without
+            // needing any UTF-16-vs-UTF-8 length arithmetic or a same-string byte-offset
+            // subtraction that could underflow.
+            let group1_start = caps.get(1).unwrap().start();
+            s = java_trim(&padded_tax[..group1_start]).to_string();
+            while s.ends_with(',') {
+                s.pop();
+                s = java_trim(&s).to_string();
+            }
+        }
+    }
+    java_trim(&s).to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -5850,5 +6046,220 @@ mod tests {
         run(&mut c);
         assert_eq!(c.working, "Prostanthera sp.");
         assert_eq!(c.name.phrase, Some("Somersbey (B.J.Conn 4024)".to_string()));
+    }
+
+    // ===================================================================================
+    // strip_authorship_markers (Phase 1 Slice 4 Task 4) — the aux-authorship-path
+    // reimplementation. `name()` builds a fresh `ParsedName` since this function has no
+    // `ParseContext` of its own.
+    // ===================================================================================
+
+    fn name() -> ParsedName {
+        ParsedName::default()
+    }
+
+    #[test]
+    fn standalone_manuscript_marker_sets_manuscript_and_returns_empty() {
+        let mut n = name();
+        let out = strip_authorship_markers("ined.", &mut n);
+        assert_eq!(out, "");
+        assert!(n.manuscript);
+    }
+
+    #[test]
+    fn standalone_manuscript_marker_matches_case_insensitively_without_the_dot() {
+        let mut n = name();
+        let out = strip_authorship_markers("MS", &mut n);
+        assert_eq!(out, "");
+        assert!(n.manuscript);
+    }
+
+    #[test]
+    fn blank_authorship_returns_empty_without_touching_name() {
+        let mut n = name();
+        let out = strip_authorship_markers("   ", &mut n);
+        assert_eq!(out, "");
+        assert_eq!(n, ParsedName::default());
+    }
+
+    #[test]
+    fn sic_with_comment_strips_and_flags_original_spelling_true() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. (sic, misspelling)", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.original_spelling, Some(true));
+    }
+
+    #[test]
+    fn plain_sic_flags_original_spelling_true() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. (sic)", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.original_spelling, Some(true));
+    }
+
+    #[test]
+    fn corrig_flags_original_spelling_false() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. corrig.", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.original_spelling, Some(false));
+    }
+
+    #[test]
+    fn question_mark_transcription_artefact_glues_and_flags_doubtful() {
+        let mut n = name();
+        let out = strip_authorship_markers("Istv?nffi", &mut n);
+        assert_eq!(out, "Istvnffi");
+        assert!(n.doubtful);
+        assert!(n
+            .warnings
+            .contains(&warnings::QUESTION_MARKS_REMOVED.to_string()));
+    }
+
+    #[test]
+    fn win1252_artefact_is_repaired_with_a_homoglyphs_warning() {
+        let mut n = name();
+        let out = strip_authorship_markers("Plesn\u{00A1}k", &mut n);
+        assert_eq!(out, "Plesnik");
+        assert!(n.warnings.contains(&warnings::HOMOGLYHPS.to_string()));
+    }
+
+    #[test]
+    fn hort_ex_placeholder_is_lowercased() {
+        let mut n = name();
+        let out = strip_authorship_markers("Hort. ex Voss", &mut n);
+        assert_eq!(out, "hort. ex Voss");
+    }
+
+    #[test]
+    fn hortus_ex_placeholder_is_lowercased() {
+        let mut n = name();
+        let out = strip_authorship_markers("hortus ex Someone", &mut n);
+        assert_eq!(out, "hort. ex Someone");
+    }
+
+    #[test]
+    fn cv_ex_is_deliberately_left_untouched() {
+        // Unlike the main `run()` dispatch's `normalise_hort_ex_placeholder` (which also
+        // handles CV_EX/HT_MARKER), the aux path calls ONLY HORT_EX/HORTUS_EX — see the
+        // section doc comment.
+        let mut n = name();
+        let out = strip_authorship_markers("cv. ex Someone", &mut n);
+        assert_eq!(out, "cv. ex Someone");
+    }
+
+    #[test]
+    fn leading_homonym_paren_captures_the_whole_string_as_taxonomic_note() {
+        let mut n = name();
+        let out = strip_authorship_markers("(non Smith, 1900)", &mut n);
+        assert_eq!(out, "");
+        assert_eq!(n.taxonomic_note, Some("(non Smith, 1900)".to_string()));
+    }
+
+    #[test]
+    fn paren_note_splits_off_a_leading_note_and_keeps_the_trailing_author() {
+        let mut n = name();
+        let out = strip_authorship_markers("(auct.) Rolfe", &mut n);
+        assert_eq!(out, "Rolfe");
+        assert_eq!(n.taxonomic_note, Some("auct.".to_string()));
+    }
+
+    #[test]
+    fn paren_note_keeps_a_leading_author_case_intact() {
+        // The Java doc-comment example: "(sensu X, 1878) Y, 1992" -> author "Y, 1992" +
+        // note "sensu X, 1878" (unchanged — only a leading "Auct"/"Auctt" is lower-cased).
+        let mut n = name();
+        let out = strip_authorship_markers("(sensu X, 1878) Y, 1992", &mut n);
+        assert_eq!(out, "Y, 1992");
+        assert_eq!(n.taxonomic_note, Some("sensu X, 1878".to_string()));
+    }
+
+    #[test]
+    fn bracketed_nom_note_is_extracted_and_stripped() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. (nom. cons.)", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.nomenclatural_note, Some("nom. cons.".to_string()));
+    }
+
+    #[test]
+    fn bare_nom_note_is_extracted_and_stripped() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. nom. illeg.", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.nomenclatural_note, Some("nom. illeg.".to_string()));
+    }
+
+    #[test]
+    fn bare_nom_note_anchored_at_the_very_start_is_still_caught() {
+        // NOM_NOTE itself requires a leading whitespace boundary — the space-padded copy
+        // ("`padded_nom`") is what lets a note anchored at position 0 of `s` match at all.
+        let mut n = name();
+        let out = strip_authorship_markers("nom. illeg.", &mut n);
+        assert_eq!(out, "");
+        assert_eq!(n.nomenclatural_note, Some("nom. illeg.".to_string()));
+    }
+
+    #[test]
+    fn bare_nom_note_with_ined_keyword_flags_manuscript() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. sp. nov. ined.", &mut n);
+        assert_eq!(out, "L.");
+        assert!(n.manuscript);
+    }
+
+    #[test]
+    fn tax_note_sensu_is_extracted_and_stripped() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. sensu Smith", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.taxonomic_note, Some("sensu Smith".to_string()));
+    }
+
+    #[test]
+    fn tax_note_initial_dot_space_is_collapsed() {
+        // Doc-comment example on INITIAL_DOT_SPACE: "non F. europaeus" -> "non F.europaeus".
+        let mut n = name();
+        let out = strip_authorship_markers("L. non F. europaeus", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.taxonomic_note, Some("non F.europaeus".to_string()));
+    }
+
+    #[test]
+    fn tax_note_leading_auct_title_case_is_lowercased() {
+        let mut n = name();
+        let out = strip_authorship_markers("L. Auct.", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.taxonomic_note, Some("auct.".to_string()));
+    }
+
+    #[test]
+    fn tax_note_dedups_against_an_identical_existing_note() {
+        // UNLIKE every other note-setter in this function, the final TAX_NOTE step dedups
+        // rather than always appending — calling it twice with the same trailing note must
+        // not double it up.
+        let mut n = name();
+        n.taxonomic_note = Some("sensu Smith".to_string());
+        let out = strip_authorship_markers("L. sensu Smith", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.taxonomic_note, Some("sensu Smith".to_string()));
+    }
+
+    #[test]
+    fn tax_note_appends_a_distinct_existing_note() {
+        let mut n = name();
+        n.taxonomic_note = Some("auct.".to_string());
+        let out = strip_authorship_markers("L. sensu Smith", &mut n);
+        assert_eq!(out, "L.");
+        assert_eq!(n.taxonomic_note, Some("auct. sensu Smith".to_string()));
+    }
+
+    #[test]
+    fn plain_authorship_with_no_markers_is_returned_verbatim() {
+        let mut n = name();
+        let out = strip_authorship_markers("Mill.", &mut n);
+        assert_eq!(out, "Mill.");
+        assert_eq!(n, ParsedName::default());
     }
 }
