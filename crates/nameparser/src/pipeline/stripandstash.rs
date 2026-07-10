@@ -8,17 +8,19 @@
 //! that takes the working string, mutates the [`ParseContext`] as needed, and returns
 //! the (possibly shortened/rewritten) working string.
 //!
-//! **Phase 1 Slice 2, batches 1 + 2b (this batch): steps 1-30 ported.** [`run`] dispatches
-//! all 55 steps in Java's exact `StripAndStash.run(ParseContext)` order — that order is
-//! load-bearing and was locked in by Task 2 — steps 1-19 (leading normalizers + flaggers,
-//! batch 1) and 20-30 (candidatus, cultivar Group/grex/quoted, extinct dagger, t.infr.,
-//! doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare nom-note, batch
-//! 2b) now carry their faithful port; steps 31-55 (batches 2c-2e) remain `// TODO batch N`
-//! no-op passthroughs (see `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md`
-//! for the batch breakdown). One step, `replace_homoglyphs` (step 13), is a DOCUMENTED
-//! stub — see its own doc comment — since porting its backing table is a sizeable
-//! sub-project deferred by design (mirrors `crate::unicode`'s own existing deferral of the
-//! same table).
+//! **Phase 1 Slice 2, batches 1 + 2b + 2c (this batch): steps 1-44 ported.** [`run`]
+//! dispatches all 55 steps in Java's exact `StripAndStash.run(ParseContext)` order — that
+//! order is load-bearing and was locked in by Task 2 — steps 1-19 (leading normalizers +
+//! flaggers, batch 1), 20-30 (candidatus, cultivar Group/grex/quoted, extinct dagger,
+//! t.infr., doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare
+//! nom-note, batch 2b), and 31-44 (authorship placeholders, trailing-species, pro parte /
+//! pro sp. / approved-lists, mihi, anon, the six-step taxonomic-note family, aggregate
+//! suffix, batch 2c) now carry their faithful port; steps 45-55 (batches 2d-2e) remain
+//! `// TODO batch N` no-op passthroughs (see
+//! `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md` for the batch breakdown).
+//! One step, `replace_homoglyphs` (step 13), is a DOCUMENTED stub — see its own doc
+//! comment — since porting its backing table is a sizeable sub-project deferred by design
+//! (mirrors `crate::unicode`'s own existing deferral of the same table).
 
 use std::sync::LazyLock;
 
@@ -35,8 +37,8 @@ use crate::unicode::java_trim;
 /// each step consuming the string by value and returning the (possibly
 /// shortened/rewritten) result; steps also mutate `ctx` (`ctx.name`, `ctx.pending*`, …)
 /// as a side effect for the ones that stash annotations rather than just discard them.
-/// Steps 1-19 (batch 1) are ported; steps 20-55 (batches 2-5) are still `// TODO batch N`
-/// no-op stubs — see the module doc.
+/// Steps 1-44 (batches 1, 2b, 2c) are ported; steps 45-55 (batches 2d-2e) are still
+/// `// TODO batch N` no-op stubs — see the module doc.
 pub(crate) fn run(ctx: &mut ParseContext) {
     let mut s = ctx.working.clone();
     s = flag_uncertain_authorship(ctx, s);
@@ -1677,92 +1679,548 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
 // ---------------------------------------------------------------------------------
 // Batch 3 (steps 31-44): authorship placeholders, trailing-species, pro parte / pro
 // sp. / approved-lists, mihi, anon, the taxonomic-note family, aggregate suffix.
+// Ported (Phase 1 Slice 2, batch 2c). This batch closes `taxonomicNote` — steps 38-42
+// APPEND to it (`ParsedName::add_taxonomic_note`, the Java inline `existing == null ?
+// note : existing + " " + note` idiom); step 43 (`stripTaxNote`, the LAST of the six
+// taxonomic-note steps to run) OVERWRITES it directly (`ctx.name.taxonomic_note =
+// Some(norm)`, mirroring Java's plain `setTaxonomicNote(norm)` call with no
+// null-check) since anything more specific was already peeled off by the steps above
+// it. All worked examples below were spot-checked against the real Java CLI oracle
+// (`name-parser-cli-4.2.0-SNAPSHOT-shaded.jar`), same convention as batches 1-2b.
 // ---------------------------------------------------------------------------------
 
-// TODO batch 3 — Java `stripAuthorshipPlaceholders`: "Not applicable"/"Not given"/
-// "Not known"/… is stripped silently, flagging AUTHORSHIP_REMOVED.
-fn strip_authorship_placeholders(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 31: stripAuthorshipPlaceholders ----
+
+/// Java AUTHORSHIP_PLACEHOLDER (StripAndStash.java:226-228):
+/// `\s+Not\s+(?:applicable|given|known|recorded|found)\s*$`, `Pattern.CASE_INSENSITIVE`.
+/// Has `\s` (x3), no `\p{...}`, no unescaped wildcard -> whole-wrap ASCII scope (`$` left
+/// outside per convention). No lookaround/backreference -> plain `regex` crate.
+static AUTHORSHIP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\s+Not\s+(?:applicable|given|known|recorded|found)\s*)$").unwrap()
+});
+
+/// Java `StripAndStash.stripAuthorshipPlaceholders` (StripAndStash.java:1197-1208). A
+/// trailing "Not applicable"/"Not given"/"Not known"/"Not recorded"/"Not found"
+/// authorship placeholder (any case) is dropped silently, flagging `AUTHORSHIP_REMOVED`
+/// so the bare name (with whatever real author text preceded the placeholder, if any)
+/// still parses — spot-checked: "Aus bus Smith Not given" -> authors=["Smith"],
+/// warnings=["authorship placeholder removed"]; "Aus bus Not applicable" -> no author,
+/// same warning.
+fn strip_authorship_placeholders(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = AUTHORSHIP_PLACEHOLDER.find(&s) {
+        ctx.name.add_warning(warnings::AUTHORSHIP_REMOVED);
+        return java_trim(&s[..m.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripTrailingSpeciesWord`: a trailing " species" on a bare
-// Title-cased uninomial is dropped, producing a plain monomial.
+// ---- Step 32: stripTrailingSpeciesWord ----
+
+/// Java TRAILING_SPECIES_WORD_TEST (StripAndStash.java:354-355):
+/// `^[\p{Lu}][\p{Ll}]+\s+species\s*\.?$`, no flags. Has `\p{Lu}`/`\p{Ll}` (always
+/// Unicode) and `\s` (x2) -> only `\s` ASCII-scoped (atom-only, not whole-wrap). Called
+/// via `.matches()`, but the pattern already opens with `^` and closes with `$` -> no
+/// change needed. Gates the strip to a bare "Title word" + " species[.]" shape only, so a
+/// real binomial ("Genus species alba") is never mistaken for this placeholder form.
+static TRAILING_SPECIES_WORD_TEST: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[\p{Lu}][\p{Ll}]+(?-u:\s+)species(?-u:\s*)\.?$").unwrap());
+
+/// Java TRAILING_SPECIES_WORD (StripAndStash.java:356): `\s+species\s*\.?$`, no flags.
+/// Has `\s` (x2), no `\p{...}`, no unescaped wildcard (the `\.` is an escaped literal) ->
+/// whole-wrap ASCII scope. No lookaround/backreference -> plain `regex` crate.
+static TRAILING_SPECIES_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\s+species\s*)\.?$").unwrap());
+
+/// Java `StripAndStash.stripTrailingSpeciesWord` (StripAndStash.java:1210-1218). A
+/// trailing " species"/" species." on an otherwise-bare Title-cased uninomial ("Abies
+/// species", "Abies species.") drops the word, producing a plain monomial — spot-checked:
+/// both forms -> `uninomial="Abies"` (no rank/INFORMAL marker stashed here; that
+/// classification happens in the not-yet-ported tokenizer/Assemble).
 fn strip_trailing_species_word(_ctx: &mut ParseContext, s: String) -> String {
+    if TRAILING_SPECIES_WORD_TEST.is_match(&s) {
+        if let Some(m) = TRAILING_SPECIES_WORD.find(&s) {
+            return java_trim(&s[..m.start()]).to_string();
+        }
+    }
     s
 }
 
-// TODO batch 3 — Java `stripProParte`: ", pro parte" / ", p.p." is stripped silently,
-// flagging doubtful.
-fn strip_pro_parte(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 33: stripProParte ----
+
+/// Java PRO_PARTE (StripAndStash.java:229-231): `\s*,\s*(?:pro\s+parte|p\.\s*p\.[A-Z]?)\s*$`,
+/// `Pattern.CASE_INSENSITIVE`. Has `\s` (x5), no `\p{...}`, no unescaped wildcard (dots
+/// escaped) -> whole-wrap ASCII scope; the positive class `[A-Z]` sits inside the wrap
+/// too, so under `(?i)` it folds ASCII-only (matching Java's default CASE_INSENSITIVE,
+/// which is ASCII-only unless UNICODE_CASE is also set — it isn't here). No
+/// lookaround/backreference -> plain `regex` crate.
+static PRO_PARTE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\s*,\s*(?:pro\s+parte|p\.\s*p\.[A-Z]?)\s*)$").unwrap());
+
+/// Java `StripAndStash.stripProParte` (StripAndStash.java:1220-1229). A trailing ",
+/// pro parte" / ", p.p." (optionally suffixed by a single capital letter, e.g. "p.p.A")
+/// "in part" taxonomic-concept qualifier is stripped silently, flagging doubtful —
+/// spot-checked: "Aus bus Smith, pro parte" -> authors=["Smith"], doubtful=true, no note
+/// text added (this step never touches `taxonomicNote`).
+fn strip_pro_parte(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = PRO_PARTE.find(&s) {
+        ctx.name.doubtful = true;
+        return java_trim(&s[..m.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripProSpAnnotation`: " (pro sp./spec./syn./hyb.)" is stripped
-// silently.
+// ---- Step 34: stripProSpAnnotation ----
+
+/// Java PRO_SP_ANNOTATION (StripAndStash.java:232-234):
+/// `\s+\(\s*pro\s+(?:sp|spec|syn|hyb)\b\.?\s*\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE`.
+/// Has `\s` (x5) and `\b`, no `\p{...}`, no unescaped wildcard (parens/dots escaped) ->
+/// whole-wrap ASCII scope. No lookaround/backreference -> plain `regex` crate.
+static PRO_SP_ANNOTATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\s+\(\s*pro\s+(?:sp|spec|syn|hyb)\b\.?\s*\)\s*\.?\s*)$").unwrap()
+});
+
+/// Java `StripAndStash.stripProSpAnnotation` (StripAndStash.java:1231-1239). A trailing
+/// " (pro sp.)" / " (pro spec.)" / " (pro syn.)" / " (pro hyb.)" botanical "given as"
+/// annotation is stripped silently, working-string only — spot-checked: "Aus bus (pro
+/// sp.)" -> `specificEpithet="bus"`, no doubtful flag, no warning, no note.
 fn strip_pro_sp_annotation(_ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = PRO_SP_ANNOTATION.find(&s) {
+        return java_trim(&s[..m.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripApprovedLists`: " (Approved Lists YYYY)" is stripped
-// silently.
+// ---- Step 35: stripApprovedLists ----
+
+/// Java APPROVED_LISTS (StripAndStash.java:235-237):
+/// `\s*\(\s*Approved\s+Lists\s+\d{4}\s*\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE`. Has `\s`
+/// (x6) and `\d`, no `\p{...}`, no unescaped wildcard -> whole-wrap ASCII scope. No
+/// lookaround/backreference -> plain `regex` crate.
+static APPROVED_LISTS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\s*\(\s*Approved\s+Lists\s+\d{4}\s*\)\s*\.?\s*)$").unwrap()
+});
+
+/// Java `StripAndStash.stripApprovedLists` (StripAndStash.java:1241-1249). A trailing "
+/// (Approved Lists YYYY)" bacterial-code annotation is stripped silently, working-string
+/// only — spot-checked: "Aus bus Smith (Approved Lists 1980)" -> authors=["Smith"], no
+/// other side effect.
 fn strip_approved_lists(_ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = APPROVED_LISTS.find(&s) {
+        return java_trim(&s[..m.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripMihi`: "mihi"/"Mihi" self-attribution (wherever it occurs)
-// is stripped, flagging AUTHORSHIP_REMOVED when it actually fired.
-fn strip_mihi(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 36: stripMihi ----
+
+/// Java MIHI_TEST (StripAndStash.java:345): `(?i).*\bmihi\b.*`, no
+/// `UNICODE_CHARACTER_CLASS`. RESTRUCTURED: called via `.matches()` on a `.*CORE.*` shape
+/// -> equivalent to an unanchored `is_match` on CORE alone (same restructuring as
+/// `MANUSCRIPT_KEYWORD` in batch 2). `\b` (x2) ASCII-scoped.
+static MIHI_TEST: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(?-u:\bmihi\b)").unwrap());
+
+/// Java MIHI (StripAndStash.java:346): `(?i)\s+mihi\.?(?=\s|$)`, no
+/// `UNICODE_CHARACTER_CLASS`. Trailing lookahead (boundary not consumed, so e.g. "Genus
+/// species mihi var. epithet mihi" strips BOTH occurrences — the separator before "var."
+/// survives the first match to bound the next one) -> `fancy_regex`. `fancy_regex` has no
+/// ASCII mode -> `\s` spelled out as the literal ASCII whitespace set. No possessive
+/// quantifier in this pattern.
+static MIHI: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"(?i)[ \t\n\x0B\f\r]+mihi\.?(?=[ \t\n\x0B\f\r]|$)").unwrap());
+
+/// Java `StripAndStash.stripMihi` (StripAndStash.java:1251-1266). Latin "mihi" ("by me"),
+/// a self-attribution placeholder some authors used in place of a real authorship, is
+/// stripped wherever it occurs (trailing OR mid-string, per `MIHI`'s non-consuming
+/// lookahead) with an `AUTHORSHIP_REMOVED` warning — but ONLY when something actually
+/// changed: Java's `if (!s.equals(before))` structural-equality guard (mirrored here via
+/// `after != before`) means a "mihi" that satisfies `MIHI_TEST`'s loose `\bmihi\b` gate
+/// but doesn't sit in `MIHI`'s required `<whitespace>mihi<whitespace-or-EOS>` position
+/// (e.g. as the very first word, with no leading separator to match `\s+`) leaves the
+/// string untouched and fires no warning — spot-checked: "Aus bus mihi" ->
+/// warnings=["authorship placeholder removed"], "Aus bus mihi. Smith" -> same warning,
+/// authors=["Smith"] (mid-string strip splices the surrounding text back together).
+fn strip_mihi(ctx: &mut ParseContext, s: String) -> String {
+    if MIHI_TEST.is_match(&s) {
+        let before = s.clone();
+        let after = java_trim(&fancy_replace_all(&MIHI, &s, |_| String::new())).to_string();
+        if after != before {
+            ctx.name.add_warning(warnings::AUTHORSHIP_REMOVED);
+        }
+        return after;
+    }
     s
 }
 
-// TODO batch 3 — Java `normaliseAnon`: "Anon."/"Anon"/"anon" is normalised to the
-// canonical lower-case "anon." so it parses as a real (anonymous) authorship.
+// ---- Step 37: normaliseAnon ----
+
+/// Java ANON_UPPER (StripAndStash.java:347): `(?<=\s)Anon\b\.?`, no flags (case-sensitive
+/// literal "Anon", not `(?i)`). LOOKBEHIND -> `fancy_regex`. `\s` spelled out ASCII
+/// (`fancy_regex` has no ASCII mode); `\b` stays `fancy_regex`'s Unicode-default word
+/// boundary (the same forced, vanishingly-rare divergence documented at `STRAIN_DESIGNATION`
+/// in batch 1 — Java's own `\b` here is ASCII-only, `fancy_regex` has no ASCII `\b`
+/// option). No possessive quantifier.
+static ANON_UPPER: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"(?<=[ \t\n\x0B\f\r])Anon\b\.?").unwrap());
+
+/// Java ANON_LOWER (StripAndStash.java:348): `(?<=\s)anon\b(?!\.)`, no flags
+/// (case-sensitive literal "anon"). LOOKBEHIND + trailing NEGATIVE LOOKAHEAD (excludes an
+/// "anon." that's already dotted, so `ANON_UPPER`/this step never double-append a second
+/// dot) -> `fancy_regex`, same ASCII-`\s`-spelled-out / default-`\b` reasoning as
+/// `ANON_UPPER`. No possessive quantifier.
+static ANON_LOWER: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"(?<=[ \t\n\x0B\f\r])anon\b(?!\.)").unwrap());
+
+/// Java `StripAndStash.normaliseAnon` (StripAndStash.java:1268-1274). Working-string-only
+/// (no `ctx.name` mutation, no warnings): TWO sequential, UNCONDITIONAL replacements —
+/// title-case "Anon"/"Anon." and lower-case "anon" (not already followed by a dot) both
+/// normalise to the canonical lower-case "anon." so the (not yet ported) authorship
+/// parser captures it as a real anonymous-author token — spot-checked: "Aus bus Anon." ->
+/// authors=["anon."]; "Aus bus anon" -> authors=["anon."] (same result either input
+/// casing).
 fn normalise_anon(_ctx: &mut ParseContext, s: String) -> String {
+    let s = fancy_replace_all(&ANON_UPPER, &s, |_| "anon.".to_string());
+    fancy_replace_all(&ANON_LOWER, &s, |_| "anon.".to_string())
+}
+
+// ---- Step 38: stripColonConceptReference ----
+
+/// Java COLON_CONCEPT_REFERENCE (StripAndStash.java:238-240):
+/// `\s*:\s+(\p{Lu}[^:]*,\s*\d{3,4})\s*\.?\s*$`, `Pattern.UNICODE_CHARACTER_CLASS` -> keep
+/// default Unicode `\s`/`\d`, ported verbatim. `[^:]` is a negated custom class, but
+/// UNICODE_CHARACTER_CLASS means the whole pattern stays at the crate's Unicode default
+/// anyway (no `(?-u:…)` anywhere), so the "invalid UTF-8 in byte mode" restriction that
+/// forces atom-only scoping elsewhere in this file never comes up here. No
+/// lookaround/backreference -> plain `regex` crate.
+static COLON_CONCEPT_REFERENCE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s*:\s+(\p{Lu}[^:]*,\s*\d{3,4})\s*\.?\s*$").unwrap());
+
+/// Java `StripAndStash.stripColonConceptReference` (StripAndStash.java:1276-1290). A
+/// trailing ": Author, YYYY" botanical taxonomic-concept citation (e.g. "Vespa
+/// emarginata Linnaeus, 1758: Fabricius, 1793" — the Linnaeus year is the original
+/// publication, Fabricius is the sensu author) APPENDS the captured text to
+/// `taxonomicNote`. The explicit ", YYYY" requirement keeps the simpler
+/// ": SanctioningAuthor" form (e.g. "Boletus versicolor L. : Fr.", no year) out of this
+/// strip — spot-checked: the Linnaeus/Fabricius example ->
+/// `taxonomicNote="Fabricius, 1793"`, working string reduces to "Vespa emarginata
+/// Linnaeus, 1758".
+fn strip_colon_concept_reference(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = COLON_CONCEPT_REFERENCE.captures(&s) {
+        let note = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        ctx.name.add_taxonomic_note(&note);
+        let whole = caps.get(0).unwrap();
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripColonConceptReference`: a trailing ": Author, YYYY"
-// botanical taxonomic-concept citation APPENDS to `taxonomicNote`.
-fn strip_colon_concept_reference(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Shared helper: normaliseLeadingAuct (used by steps 39 and 43) ----
+
+/// Java LEADING_AUCT (StripAndStash.java:310): `^(Auct)`, no flags — literal, case-
+/// sensitive "Auct" prefix. No shorthand atoms (`\s`/`\d`/`\w`/`\b`/`\p{...}`) at all ->
+/// nothing to scope, ported verbatim (same as `DAGGER`/`HTML_TAG` in batch 2). No
+/// lookaround/backreference -> plain `regex` crate.
+static LEADING_AUCT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(Auct)").unwrap());
+
+/// Java LEADING_AUCTT (StripAndStash.java:311): `^(Auctt)`, no flags. Same reasoning as
+/// `LEADING_AUCT` -> ported verbatim, plain `regex` crate.
+static LEADING_AUCTT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(Auctt)").unwrap());
+
+/// Java's repeated `LEADING_AUCTT.matcher(LEADING_AUCT.matcher(x).replaceAll("auct"))
+/// .replaceAll("auctt")` idiom (StripAndStash.java:1298, 1360): lower-cases a leading
+/// title-case "Auct"/"Auctt" keyword to the canonical lower-case "auct."/"auctt."
+/// convention (the trailing dot, if any, is untouched — already part of the input text).
+/// Both `LEADING_AUCT`/`LEADING_AUCTT` are case-SENSITIVE, so this only fires on the
+/// EXACT casing "Auct"/"Auctt" (capital A, the rest lower) — an all-lowercase note is
+/// already correct and left alone, an ALL-CAPS note ("AUCTT.") is left untouched too
+/// (neither pattern matches it) — spot-checked against the Java CLI oracle: "Aus bus
+/// Auct." -> `taxonomicNote="auct."`, "Aus bus Auctt." -> `taxonomicNote="auctt."`.
+/// Because the FIRST replacement already consumes (and lower-cases) any "Auct" prefix,
+/// the second regex — which requires a literal capital "Auctt" — can only ever fire on
+/// input that did NOT start with "Auct" in the first place, i.e. effectively never after
+/// the first step runs; both steps are ported verbatim rather than collapsed into one,
+/// since Java itself chains them this way at both call sites (`stripBracketedTaxNote`,
+/// `stripTaxNote`) and a faithful port doesn't get to assume away a redundancy the
+/// oracle itself carries.
+fn normalise_leading_auct(note: &str) -> String {
+    let step1 = LEADING_AUCT.replace(note, "auct");
+    LEADING_AUCTT.replace(&step1, "auctt").into_owned()
+}
+
+// ---- Step 39: stripBracketedTaxNote ----
+
+/// Java BRACKETED_TAX_NOTE (StripAndStash.java:123-125):
+/// `\s*\[\s*((?:auctt?|sensu|sec|non|nec|misspelling|misapplied|misident)\b[^\]]*)\]\s*\.?\s*$`,
+/// `Pattern.CASE_INSENSITIVE`. `[^\]]` is a negated custom class -> stays OUTSIDE any
+/// `(?-u:…)` (`SIC_WITH_COMMENT`/`BRACKETED_NOM_NOTE` precedent from batches 1-2) ->
+/// atom-only `\s`/`\b` scoping, not whole-wrap. No lookaround/backreference -> plain
+/// `regex` crate.
+static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|sensu|sec|non|nec|misspelling|misapplied|misident)(?-u:\b)[^\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripBracketedTaxNote` (StripAndStash.java:1292-1304). A trailing
+/// "[auctt. misspelling for Eunoe]"-style bracket introduced by a taxonomic-concept
+/// keyword — the ENTIRE bracket content becomes the taxonomic note (whitespace-collapsed,
+/// leading/trailing-trimmed, then leading "Auct"/"Auctt" lower-cased via
+/// `normalise_leading_auct`) and APPENDS to `taxonomicNote` — spot-checked: "Eunoa bus
+/// Smith [auctt. misspelling for Eunoe]" -> `taxonomicNote="auctt. misspelling for
+/// Eunoe"`, authors=["Smith"].
+fn strip_bracketed_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = BRACKETED_TAX_NOTE.captures(&s) {
+        let trimmed = java_trim(caps.get(1).unwrap().as_str());
+        let collapsed = WHITESPACE.replace_all(trimmed, " ");
+        let note = normalise_leading_auct(&collapsed);
+        ctx.name.add_taxonomic_note(&note);
+        let whole = caps.get(0).unwrap();
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripBracketedTaxNote`: a trailing "[auctt./sensu/sec/non/nec/
-// misspelling/misapplied/misident ...]" bracket APPENDS to `taxonomicNote`.
-fn strip_bracketed_tax_note(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 40: stripParenTaxNote ----
+
+/// Java PAREN_TAX_NOTE (StripAndStash.java:101-103):
+/// `\s*\(\s*((?:nec|non|not)\s+[^)]+)\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE`. `[^)]` is
+/// a negated custom class -> atom-only `\s` scoping (same precedent as
+/// `BRACKETED_TAX_NOTE` above). No lookaround/backreference -> plain `regex` crate.
+static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+)\)(?-u:\s*)\.?(?-u:\s*)$")
+        .unwrap()
+});
+
+/// Java `StripAndStash.stripParenTaxNote` (StripAndStash.java:1334-1344). A trailing
+/// "(nec/non/not …, YYYY)" parenthesised homonym citation — the WHOLE bracket wraps the
+/// note (unlike step 40's sibling `PAREN_NOTE`/`LEADING_HOMONYM_PAREN`, not yet ported —
+/// those handle a homonym citation embedded inside an authorship span, not this
+/// end-anchored standalone form) — APPENDS the captured text (verbatim, trimmed) to
+/// `taxonomicNote` — spot-checked: "Aus bus Smith (non Foo, 1850)" ->
+/// `taxonomicNote="non Foo, 1850"`, authors=["Smith"].
+fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = PAREN_TAX_NOTE.captures(&s) {
+        let note = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        ctx.name.add_taxonomic_note(&note);
+        let whole = caps.get(0).unwrap();
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripParenTaxNote`: a trailing "(nec/non/not …, YYYY)" homonym
-// citation APPENDS to `taxonomicNote`.
-fn strip_paren_tax_note(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 41: stripSensuLatoRemainder ----
+
+/// Java SENSU_LATO_REMAINDER (StripAndStash.java:91-92):
+/// `\s+(s\.\s*l\.?|s\.\s*lat\.?|s\.\s*str\.?|s\.\s*ampl\.?)\s+(\S.*?)\s*$`, no flags
+/// (deliberately case-sensitive — the Java comment: the marker is lower-case "s", so
+/// uppercase author initials like "S. L. Schultes" are never mistaken for it). Has `\s`
+/// (many) AND an unescaped wildcard `.` (inside the lazy `.*?`) -> atom-only ASCII
+/// scoping (never whole-wrap, matching `MISSING_GENUS_NOTE_KEYWORD`'s precedent: whole-
+/// wrapping would also flip `.`'s Unicode-scalar-vs-byte meaning). `\S` (negated
+/// shorthand) CANNOT be ASCII-scoped at all — `(?-u:\S)` is rejected by `regex-syntax` with
+/// the identical "pattern can match invalid UTF-8" error as a negated custom class (
+/// confirmed empirically; same restriction as `[^…]`, just for the shorthand spelling) ->
+/// `\S` stays at the crate's Unicode default, unscoped, like every other
+/// can't-be-ASCII-scoped atom in this file. The lazy `.*?` needs no `fancy_regex`: the
+/// plain `regex` crate is a Pike's-VM/Thompson-NFA linear-time automaton that natively
+/// supports non-greedy quantifiers (laziness is a match-preference rule the automaton
+/// applies directly, not a backtracking construct) — no lookaround/backreference at all
+/// here -> plain `regex` crate.
+static SENSU_LATO_REMAINDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?-u:\s+)(s\.(?-u:\s*)l\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)ampl\.?)(?-u:\s+)(\S.*?)(?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripSensuLatoRemainder` (StripAndStash.java:1306-1318). A
+/// mid-string "s.l."/"s.lat."/"s.str."/"s.ampl." marker followed by trailing junk that
+/// isn't part of the name (e.g. a truncated re-citation after a dash) — the marker
+/// (whitespace-removed, lower-cased) APPENDS to `taxonomicNote` and the trailing junk
+/// (trimmed) is parked in `ctx.pending_unparsed` (first-writer-wins; NOT validated this
+/// slice, but populated faithfully for later slices to consume) — spot-checked:
+/// "Asplenium trichomanes L. s.lat. - Asplen trich" -> `taxonomicNote="s.lat."`,
+/// `unparsed="- Asplen trich"` (the `unparsed` JSON field itself, like `state=PARTIAL`, is
+/// assembled by the not-yet-ported Pipeline/Assemble from `pending_unparsed` — this step
+/// only needs to stash the pending value).
+fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = SENSU_LATO_REMAINDER.captures(&s) {
+        let marker = caps.get(1).unwrap().as_str();
+        let note = WHITESPACE.replace_all(marker, "").to_lowercase();
+        let remainder = java_trim(caps.get(2).unwrap().as_str()).to_string();
+        ctx.name.add_taxonomic_note(&note);
+        ctx.set_pending_unparsed(&remainder);
+        let whole = caps.get(0).unwrap();
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripSensuLatoRemainder`: mid-string "s.l."/"s.str."/"s.lat."/
-// "s.ampl." followed by trailing junk APPENDS the (lower-cased, whitespace-collapsed)
-// marker to `taxonomicNote` and parks the junk in `ctx.pending_unparsed`.
-fn strip_sensu_lato_remainder(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 42: stripSensuStrictoSS ----
+
+/// Java SENSU_STRICTO_SS (StripAndStash.java:96-97): `\s+s\.\s*s\.?(\s+\S.*?)?\s*$`, no
+/// flags (case-sensitive, same reasoning as `SENSU_LATO_REMAINDER`). Has `\s` (several)
+/// and `\S` plus an unescaped wildcard `.` -> same atom-only scoping as
+/// `SENSU_LATO_REMAINDER` (`\S`/`.` left unscoped, `\s` atoms individually ASCII-scoped).
+/// No lookaround/backreference -> plain `regex` crate.
+static SENSU_STRICTO_SS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\s+)s\.(?-u:\s*)s\.?((?-u:\s+)\S.*?)?(?-u:\s*)$").unwrap());
+
+/// Java `StripAndStash.stripSensuStrictoSS` (StripAndStash.java:1320-1332). A trailing
+/// "s.s." ("s. s." also matches — `\s*` between the two "s."s) sensu-stricto marker
+/// APPENDS the FIXED literal "s.s." (not the captured text, which may have had internal
+/// spacing) to `taxonomicNote` — matching Java's `existing == null ? "s.s." : existing +
+/// " s.s."` inline literal, not a call through `add_taxonomic_note` with a variable.
+/// When followed by trailing junk (group 1 present), that junk (trimmed) is parked in
+/// `ctx.pending_unparsed`, conditionally — Java's `if (m.group(1) != null)` guard, unlike
+/// step 41's sibling where the remainder is unconditionally captured (there, group 2 is
+/// required by the pattern itself; here group 1 is optional) — spot-checked: "Aus bus
+/// s.s." -> `taxonomicNote="s.s."`, no unparsed; "Aus bus s.s. extra text here" ->
+/// `taxonomicNote="s.s."`, `unparsed="extra text here"`.
+fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = SENSU_STRICTO_SS.captures(&s) {
+        ctx.name.add_taxonomic_note("s.s.");
+        if let Some(junk) = caps.get(1) {
+            ctx.set_pending_unparsed(java_trim(junk.as_str()));
+        }
+        let whole = caps.get(0).unwrap();
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 3 — Java `stripSensuStrictoSS`: a trailing "s.s." (optionally followed by
-// junk) APPENDS "s.s." to `taxonomicNote` and parks any junk in `ctx.pending_unparsed`.
-fn strip_sensu_stricto_ss(_ctx: &mut ParseContext, s: String) -> String {
-    s
+// ---- Step 43: stripTaxNote ----
+
+// RULE: patterns on fancy_regex (backtracking) MUST keep Java's possessive/atomic
+// quantifiers — only DROP possessives for patterns on the linear `regex` crate. TAX_NOTE
+// has no possessive quantifier and no lookaround/backreference at all -> plain `regex`
+// crate, nothing to preserve here.
+/// Java TAX_NOTE (StripAndStash.java:68-84), `Pattern.CASE_INSENSITIVE` overall, WITH an
+/// inline `(?-i:…)` case-SENSITIVE carve-out for the trailing s.l./s.str./s.lat./s.ampl.
+/// alternative (lower-case "s", so uppercase author initials "S.L." aren't eaten —
+/// mirrors the sibling `SENSU_LATO_REMAINDER`/`SENSU_STRICTO_SS` patterns' own
+/// case-sensitivity). Has `\s`/`\b` AND `\p{Lu}` AND unescaped wildcards (`.*`, several)
+/// -> atom-only ASCII scoping throughout (never whole-wrap) — `\s`/`\b` individually
+/// `(?-u:…)`-scoped, `\p{Lu}` always Unicode, `.` left at default. The inline `(?-i:…)`
+/// nests independently of the `(?-u:…)` atom scoping (both toggle unrelated flags, freely
+/// combinable). No lookaround/backreference anywhere -> plain `regex` crate. Built via
+/// `concat!` (one alternative per line, matching Java's own `"..." + "..."` source
+/// layout) so it stays directly diffable against StripAndStash.java line-by-line, same
+/// convention as `NOM_NOTE` in batch 2.
+static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"(?i)(?-u:\s+),?(?-u:\s*)(",
+        r"auctt?(?-u:\b)\.?(?:[,.]?(?-u:\s).*)?",
+        r"|sensu(?:(?-u:\s).*)?",
+        r"|sec\.?(?:(?-u:\s).*)?",
+        r"|nec(?-u:\b)(?:(?-u:\s).*)?",
+        r"|nonn?\.?(?-u:\s+)\(?\p{Lu}.*",
+        r"|emend(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
+        r"|fide(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
+        r"|according(?-u:\s+)to(?-u:\s+)\p{Lu}.*",
+        r"|excl\.(?-u:\s+).*",
+        r"|ss(?-u:\b)\.?(?-u:\s+).*",
+        r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?)",
+        r")$",
+    ))
+    .unwrap()
+});
+
+/// Java INITIAL_DOT_SPACE (StripAndStash.java:314-315):
+/// `\b(\p{Lu})\.\s+([\p{Ll}][\p{Ll}]{3,})`, no flags. Has `\b`/`\s` and `\p{Lu}`/`\p{Ll}`
+/// -> atom-only ASCII scoping for `\b`/`\s`. No lookaround/backreference -> plain `regex`
+/// crate; the replacement pulls both captures back via `$1.$2`, the SAME `$N` syntax Java
+/// and the `regex` crate happen to share. IMPORTANT (verified against the real Java CLI
+/// oracle, NOT just the Java source's own paraphrasing comment — see
+/// `strip_tax_note`'s doc below): group 2 requires an ALL-LOWERCASE run of >= 4 letters,
+/// so this only collapses "Initial. word" when the word is a bare lowercase token (e.g. a
+/// species-epithet-shaped word) — a capitalised surname like "F. Schmidt" is NOT
+/// collapsed (`\p{Ll}` rejects the leading capital "S"); "non F. europaeus" -> "non
+/// F.europaeus" IS collapsed.
+static INITIAL_DOT_SPACE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b)(\p{Lu})\.(?-u:\s+)([\p{Ll}][\p{Ll}]{3,})").unwrap());
+
+/// Java `StripAndStash.stripTaxNote` (StripAndStash.java:1346-1367). The general,
+/// end-anchored taxonomic-note anchor (auct./auctt./sensu/sec./nec/non/nonn./emend./
+/// fide/according to/excl./ss/s.l./s.str./s.lat./s.ampl.) — the LAST of the six
+/// taxonomic-note steps to run, so anything more specific was already peeled off by
+/// `strip_colon_concept_reference`/`strip_bracketed_tax_note`/`strip_paren_tax_note`/
+/// `strip_sensu_lato_remainder`/`strip_sensu_stricto_ss` above it. Applies
+/// `INITIAL_DOT_SPACE` (collapses a bare-initial-plus-lowercase-word gap) then
+/// `normalise_leading_auct` (lower-cases a leading title-case "Auct"/"Auctt") to the
+/// captured text, then OVERWRITES `taxonomicNote` directly (`ctx.name.taxonomic_note =
+/// Some(norm)` — Java's plain `setTaxonomicNote(norm)`, NO null-check/append, UNLIKE
+/// steps 38-42 above) — this is deliberately the one taxonomic-note step in this batch
+/// that does NOT call `add_taxonomic_note`. A guard skips entirely when the captured,
+/// trimmed group is empty (Java: `if (!raw.isEmpty())`) — the outer match can still have
+/// fired on pure separator text with nothing captured after trimming, in which case
+/// neither the working string nor `taxonomicNote` should change. After stripping, any
+/// now-trailing comma(s) left dangling are removed in a loop (re-trimming each time,
+/// same idiom as `strip_nom_note` in batch 2) — spot-checked against the Java CLI oracle:
+/// "Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003" ->
+/// `taxonomicNote="emend. Imhoff, 2003"`; "... emend Imhoff, 2003" (no dot) -> `"emend
+/// Imhoff, 2003"`; "Eulima excellens Verkrüzen fide Paetel, 1887" -> `"fide Paetel,
+/// 1887"`; "Procamallanus (Spirocamallanus) soodi Lakshmi & Kumari, 2001 nec (Gupta &
+/// Masood, 1988)" -> `"nec (Gupta & Masood, 1988)"`; "Membranipora minuscula Canu, 1911
+/// non Hincks, 1882" -> `"non Hincks, 1882"`; "Aus bus auct." -> `"auct."`; "Aus bus
+/// Auct."/"Aus bus Auctt." -> `"auct."`/`"auctt."` (title-case lower-cased via
+/// `normalise_leading_auct`); "Aus bus s.l." -> `"s.l."` (case-sensitive `(?-i:…)`
+/// branch); uppercase "Aus bus Mill. S.L." does NOT match at all (author initials, not a
+/// sensu-lato marker).
+fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    let caps = match TAX_NOTE.captures(&s) {
+        Some(c) => c,
+        None => return s,
+    };
+    let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+    if raw.is_empty() {
+        return s;
+    }
+    let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
+    let norm = normalise_leading_auct(&with_dots);
+    ctx.name.taxonomic_note = Some(norm);
+    let match_start = caps.get(0).unwrap().start();
+    let mut result = java_trim(&s[..match_start]).to_string();
+    while result.ends_with(',') {
+        result.pop();
+        result = java_trim(&result).to_string();
+    }
+    result
 }
 
-// TODO batch 3 — Java `stripTaxNote`: the general end-anchored taxonomic-note anchor
-// (auct./sensu/sec./nec/emend./fide/according to/excl./ss/s.l./s.str./…) OVERWRITES
-// `taxonomicNote` (the last of the taxonomic-note family to run, so anything already
-// captured by the more specific steps above it never reaches this one).
-fn strip_tax_note(_ctx: &mut ParseContext, s: String) -> String {
-    s
-}
+// ---- Step 44: stripAggregateSuffix ----
 
-// TODO batch 3 — Java `stripAggregateSuffix`: " agg."/"aggregate"/"species group"/
-// "species complex"/"group"/"complex"/"-group"/"-aggregate" sets `ctx.aggregate = true`.
-fn strip_aggregate_suffix(_ctx: &mut ParseContext, s: String) -> String {
+/// Java AGGREGATE (StripAndStash.java:138-141):
+/// `(?:\s+(?:agg\.?|aggregate|species\s+group|species\s+complex|group|complex)|\s*-\s*group|\s*-\s*aggregate)\s*$`,
+/// `Pattern.CASE_INSENSITIVE`. Has `\s` (many), no `\p{...}`, no unescaped wildcard ->
+/// whole-wrap ASCII scope. No lookaround/backreference -> plain `regex` crate. NOTE:
+/// `regexes::AGGREGATE` (the Phase 0 spike file) already has a same-named pattern, but it
+/// predates this port's per-pattern flag rule and is NOT ASCII-scoped (default Unicode
+/// `\s` throughout) — reusing it here would introduce a `\s`-scope divergence from Java,
+/// so this is a fresh, correctly-scoped definition local to this module, same precedent
+/// as `SIC`/`CORRIG` in batch 2 (`strip_sic_and_corrig`'s doc comment).
+static AGGREGATE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?-u:(?:\s+(?:agg\.?|aggregate|species\s+group|species\s+complex|group|complex)|\s*-\s*group|\s*-\s*aggregate)\s*)$",
+    )
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripAggregateSuffix` (StripAndStash.java:1369-1377). A trailing
+/// " agg."/"aggregate"/"species group"/"species complex"/"group"/"complex"/"-group"/
+/// "-aggregate" suffix marks a species aggregate: sets `ctx.aggregate = true` (a direct
+/// field write, matching Java's package-private `ctx.aggregate = true;` — NOT one of the
+/// 10 downstream-independent gate fields; consumed by the not-yet-ported Assemble to
+/// promote `rank` to `SPECIES_AGGREGATE`) and strips the suffix — spot-checked against
+/// the Java CLI oracle (rank promotion itself is Assemble's job, out of scope this slice,
+/// but confirms the working-string strip leaves a clean binomial in all three shapes):
+/// "Achillea millefolium agg." / "... species group" / "...-group" all reduce the working
+/// string to "Achillea millefolium".
+fn strip_aggregate_suffix(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = AGGREGATE.find(&s) {
+        ctx.aggregate = true;
+        return java_trim(&s[..m.start()]).to_string();
+    }
     s
 }
 
@@ -1865,19 +2323,22 @@ mod tests {
     }
 
     /// Phase 1 Slice 2 Task 2 locked the dispatcher order down with every one of the 55
-    /// steps a pure passthrough. Batches 1 and 2b (steps 1-30) now carry a faithful port,
-    /// but a clean, unremarkable binomial should still round-trip untouched: none of
+    /// steps a pure passthrough. Batches 1, 2b and 2c (steps 1-44) now carry a faithful
+    /// port, but a clean, unremarkable binomial should still round-trip untouched: none of
     /// steps 1-19's guard conditions (a trailing/glued "?", a quoted leading monomial, a
     /// "Missing "/lowercase-epithet prefix, Greek/star markers, a letter-subdivision
     /// marker, "str"/"strain", imprint-year brackets, "null" between epithets, Unicode
     /// hyphen/Win-1252/double-underscore artefacts, a trailing OTU code, serovar/serotype,
-    /// an angle bracket, or HTML) nor steps 20-30's (a "Candidatus"/"Ca." prefix, a
+    /// an angle bracket, or HTML), steps 20-30's (a "Candidatus"/"Ca." prefix, a
     /// horticultural "ex" placeholder, a cultivar Group/grex/quoted epithet, an extinction
     /// dagger, a "t.infr." marker, a bracketed genus, "sic"/"corrig.", a synonymy bracket,
-    /// or a nom/comb/orth/nomen/sp.nov./pro-syn. keyword) fire on "Abies alba Mill.".
-    /// Steps 31-55 remain no-op stubs regardless. This still locks the same invariant
-    /// Task 2 established — a batch landing later can't silently leave a stub half-wired
-    /// — just no longer via literally every step being a no-op.
+    /// or a nom/comb/orth/nomen/sp.nov./pro-syn. keyword), nor steps 31-44's (an
+    /// authorship placeholder, a trailing " species", "pro parte"/"p.p.", a "(pro sp.)"
+    /// annotation, "(Approved Lists YYYY)", "mihi", "Anon"/"anon", or any of the six
+    /// taxonomic-note/aggregate-suffix keywords) fire on "Abies alba Mill.". Steps 45-55
+    /// remain no-op stubs regardless. This still locks the same invariant Task 2
+    /// established — a batch landing later can't silently leave a stub half-wired — just
+    /// no longer via literally every step being a no-op.
     #[test]
     fn run_is_a_complete_noop_until_the_batches_land() {
         let mut c = ParseContext::new("Abies alba Mill.".to_string(), None, None, None);
@@ -3068,5 +3529,725 @@ mod tests {
         // string comes back untouched, no note stashed.
         assert_eq!(out, input);
         assert_eq!(c.name.nomenclatural_note, None);
+    }
+
+    // ---- Step 31: stripAuthorshipPlaceholders ----
+
+    #[test]
+    fn trailing_not_given_is_stripped_and_flags_authorship_removed() {
+        let mut c = ctx("x");
+        let out = strip_authorship_placeholders(&mut c, "Aus bus Smith Not given".to_string());
+        assert_eq!(out, "Aus bus Smith");
+        assert!(c
+            .name
+            .warnings
+            .contains(&warnings::AUTHORSHIP_REMOVED.to_string()));
+    }
+
+    #[test]
+    fn not_applicable_is_case_insensitive() {
+        let mut c = ctx("x");
+        let out = strip_authorship_placeholders(&mut c, "Aus bus not applicable".to_string());
+        assert_eq!(out, "Aus bus");
+        assert!(c
+            .name
+            .warnings
+            .contains(&warnings::AUTHORSHIP_REMOVED.to_string()));
+    }
+
+    #[test]
+    fn no_placeholder_keyword_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_authorship_placeholders(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(c.name.warnings.is_empty());
+    }
+
+    // ---- Step 32: stripTrailingSpeciesWord ----
+
+    #[test]
+    fn trailing_species_word_is_dropped() {
+        let mut c = ctx("x");
+        let out = strip_trailing_species_word(&mut c, "Abies species".to_string());
+        assert_eq!(out, "Abies");
+    }
+
+    #[test]
+    fn trailing_species_word_with_dot_is_dropped() {
+        let mut c = ctx("x");
+        let out = strip_trailing_species_word(&mut c, "Abies species.".to_string());
+        assert_eq!(out, "Abies");
+    }
+
+    #[test]
+    fn real_binomial_ending_in_an_epithet_is_not_mistaken_for_the_placeholder() {
+        // TRAILING_SPECIES_WORD_TEST only fires on a bare "Title word" + " species[.]"
+        // shape — a genuine binomial like "Genus species alba" must be left alone.
+        let mut c = ctx("x");
+        let out = strip_trailing_species_word(&mut c, "Genus species alba".to_string());
+        assert_eq!(out, "Genus species alba");
+    }
+
+    #[test]
+    fn no_trailing_species_word_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_trailing_species_word(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+    }
+
+    // ---- Step 33: stripProParte ----
+
+    #[test]
+    fn trailing_pro_parte_is_stripped_and_flags_doubtful() {
+        let mut c = ctx("x");
+        let out = strip_pro_parte(&mut c, "Aus bus Smith, pro parte".to_string());
+        assert_eq!(out, "Aus bus Smith");
+        assert!(c.name.doubtful);
+    }
+
+    #[test]
+    fn abbreviated_p_p_form_is_also_stripped() {
+        let mut c = ctx("x");
+        let out = strip_pro_parte(&mut c, "Aus bus Smith, p.p.".to_string());
+        assert_eq!(out, "Aus bus Smith");
+        assert!(c.name.doubtful);
+    }
+
+    #[test]
+    fn no_pro_parte_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_pro_parte(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(!c.name.doubtful);
+    }
+
+    // ---- Step 34: stripProSpAnnotation ----
+
+    #[test]
+    fn pro_sp_annotation_is_stripped_silently() {
+        let mut c = ctx("x");
+        let out = strip_pro_sp_annotation(&mut c, "Aus bus (pro sp.)".to_string());
+        assert_eq!(out, "Aus bus");
+        assert!(!c.name.doubtful);
+        assert!(c.name.warnings.is_empty());
+    }
+
+    #[test]
+    fn pro_hyb_variant_without_a_dot_is_also_stripped() {
+        let mut c = ctx("x");
+        let out = strip_pro_sp_annotation(&mut c, "Aus bus (pro hyb)".to_string());
+        assert_eq!(out, "Aus bus");
+    }
+
+    #[test]
+    fn no_pro_sp_annotation_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_pro_sp_annotation(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+    }
+
+    // ---- Step 35: stripApprovedLists ----
+
+    #[test]
+    fn approved_lists_annotation_is_stripped_silently() {
+        let mut c = ctx("x");
+        let out = strip_approved_lists(&mut c, "Aus bus Smith (Approved Lists 1980)".to_string());
+        assert_eq!(out, "Aus bus Smith");
+    }
+
+    #[test]
+    fn no_approved_lists_annotation_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_approved_lists(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+    }
+
+    // ---- Step 36: stripMihi ----
+
+    #[test]
+    fn trailing_mihi_is_stripped_and_flags_authorship_removed() {
+        let mut c = ctx("x");
+        let out = strip_mihi(&mut c, "Aus bus mihi".to_string());
+        assert_eq!(out, "Aus bus");
+        assert!(c
+            .name
+            .warnings
+            .contains(&warnings::AUTHORSHIP_REMOVED.to_string()));
+    }
+
+    #[test]
+    fn mid_string_mihi_is_stripped_and_the_surrounding_text_splices_together() {
+        let mut c = ctx("x");
+        let out = strip_mihi(&mut c, "Aus bus mihi. Smith".to_string());
+        assert_eq!(out, "Aus bus Smith");
+        assert!(c
+            .name
+            .warnings
+            .contains(&warnings::AUTHORSHIP_REMOVED.to_string()));
+    }
+
+    #[test]
+    fn both_occurrences_of_mihi_are_stripped() {
+        let mut c = ctx("x");
+        let out = strip_mihi(&mut c, "Genus species mihi var. epithet mihi".to_string());
+        assert_eq!(out, "Genus species var. epithet");
+    }
+
+    #[test]
+    fn mihi_glued_to_a_preceding_word_is_not_a_false_positive() {
+        // "mihilaris" contains "mihi" as a substring but MIHI_TEST's `\bmihi\b` requires
+        // a word boundary on both sides — a boundary fails mid-word ("mihi"+"laris"), so
+        // this must never be touched, matching the Java CLI oracle's parse of "Aus
+        // mihilaris bus" (specificEpithet="mihilaris", untouched, no warning).
+        let mut c = ctx("x");
+        let out = strip_mihi(&mut c, "Aus mihilaris bus".to_string());
+        assert_eq!(out, "Aus mihilaris bus");
+        assert!(c.name.warnings.is_empty());
+    }
+
+    #[test]
+    fn leading_mihi_with_no_preceding_whitespace_is_not_stripped_by_this_step_in_isolation() {
+        // MIHI_TEST's loose `\bmihi\b` gate matches "mihi Aus bus" (mihi is present as a
+        // whole word), but MIHI itself additionally requires a LEADING `\s+` before
+        // "mihi" — at absolute string-start there is no preceding character at all, so
+        // MIHI never matches here and the structural-equality guard (`after != before`)
+        // correctly suppresses the warning. (In the FULL run() pipeline this exact input
+        // is rewritten by the earlier-running `apply_missing_genus_placeholder`, step 4,
+        // into "? mihi Aus bus" first — which DOES have leading whitespace before "mihi"
+        // and so IS stripped, confirmed against the Java CLI oracle; this test isolates
+        // step 36's own boundary requirement independent of that upstream interaction.)
+        let mut c = ctx("x");
+        let out = strip_mihi(&mut c, "mihi Aus bus".to_string());
+        assert_eq!(out, "mihi Aus bus");
+        assert!(c.name.warnings.is_empty());
+    }
+
+    #[test]
+    fn no_mihi_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_mihi(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(c.name.warnings.is_empty());
+    }
+
+    // ---- Step 37: normaliseAnon ----
+
+    #[test]
+    fn title_case_anon_is_normalised_to_lower_case_with_a_dot() {
+        let mut c = ctx("x");
+        let out = normalise_anon(&mut c, "Aus bus Anon.".to_string());
+        assert_eq!(out, "Aus bus anon.");
+    }
+
+    #[test]
+    fn bare_lower_case_anon_is_also_normalised() {
+        let mut c = ctx("x");
+        let out = normalise_anon(&mut c, "Aus bus anon".to_string());
+        assert_eq!(out, "Aus bus anon.");
+    }
+
+    #[test]
+    fn already_normalised_anon_is_left_alone() {
+        // ANON_LOWER's negative lookahead `(?!\.)` excludes an "anon" already followed
+        // by a dot, and ANON_UPPER requires the literal capital "Anon" — neither fires,
+        // so this is idempotent.
+        let mut c = ctx("x");
+        let out = normalise_anon(&mut c, "Aus bus anon.".to_string());
+        assert_eq!(out, "Aus bus anon.");
+    }
+
+    #[test]
+    fn no_anon_keyword_is_untouched() {
+        let mut c = ctx("x");
+        let out = normalise_anon(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+    }
+
+    // ---- Step 38: stripColonConceptReference ----
+
+    #[test]
+    fn colon_concept_reference_appends_to_taxonomic_note() {
+        let mut c = ctx("x");
+        let out = strip_colon_concept_reference(
+            &mut c,
+            "Vespa emarginata Linnaeus, 1758: Fabricius, 1793".to_string(),
+        );
+        assert_eq!(out, "Vespa emarginata Linnaeus, 1758");
+        assert_eq!(c.name.taxonomic_note, Some("Fabricius, 1793".to_string()));
+    }
+
+    #[test]
+    fn colon_concept_reference_appends_to_an_existing_note() {
+        let mut c = ctx("x");
+        c.name.taxonomic_note = Some("existing".to_string());
+        let out = strip_colon_concept_reference(&mut c, "Aus bus: Fabricius, 1793".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(
+            c.name.taxonomic_note,
+            Some("existing Fabricius, 1793".to_string())
+        );
+    }
+
+    #[test]
+    fn sanctioning_author_colon_form_without_a_year_is_not_a_concept_reference() {
+        // No ", YYYY" after the colon (a sanctioning-author citation, e.g. "Boletus
+        // versicolor L. : Fr.") must NOT be captured here — spot-checked against the
+        // Java CLI oracle: this form surfaces as `sanctioningAuthor`, a wholly different
+        // (not yet ported) mechanism, and StripAndStash leaves it untouched.
+        let mut c = ctx("x");
+        let out = strip_colon_concept_reference(
+            &mut c,
+            "Vespa emarginata Linnaeus, 1758 : Fr.".to_string(),
+        );
+        assert_eq!(out, "Vespa emarginata Linnaeus, 1758 : Fr.");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    #[test]
+    fn no_colon_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_colon_concept_reference(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    // ---- Shared helper: normaliseLeadingAuct ----
+
+    #[test]
+    fn normalise_leading_auct_lowercases_single_t_form() {
+        assert_eq!(normalise_leading_auct("Auct. europ."), "auct. europ.");
+    }
+
+    #[test]
+    fn normalise_leading_auct_lowercases_double_t_form() {
+        assert_eq!(normalise_leading_auct("Auctt. europ."), "auctt. europ.");
+    }
+
+    #[test]
+    fn normalise_leading_auct_leaves_all_caps_form_untouched() {
+        // Both LEADING_AUCT/LEADING_AUCTT are case-sensitive against the EXACT literal
+        // "Auct"/"Auctt" (capital A, lower rest) — an all-caps "AUCTT." matches neither.
+        assert_eq!(normalise_leading_auct("AUCTT. europ."), "AUCTT. europ.");
+    }
+
+    #[test]
+    fn normalise_leading_auct_leaves_already_lower_case_form_untouched() {
+        assert_eq!(normalise_leading_auct("auctt. europ."), "auctt. europ.");
+    }
+
+    // ---- Step 39: stripBracketedTaxNote ----
+
+    #[test]
+    fn bracketed_auctt_note_appends_to_taxonomic_note() {
+        let mut c = ctx("x");
+        let out = strip_bracketed_tax_note(
+            &mut c,
+            "Eunoa bus Smith [auctt. misspelling for Eunoe]".to_string(),
+        );
+        assert_eq!(out, "Eunoa bus Smith");
+        assert_eq!(
+            c.name.taxonomic_note,
+            Some("auctt. misspelling for Eunoe".to_string())
+        );
+    }
+
+    #[test]
+    fn bracketed_tax_note_lowercases_a_leading_title_case_auct() {
+        let mut c = ctx("x");
+        let out = strip_bracketed_tax_note(&mut c, "Aus bus [Auct. europ.]".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("auct. europ.".to_string()));
+    }
+
+    #[test]
+    fn bracketed_tax_note_collapses_internal_whitespace_runs() {
+        let mut c = ctx("x");
+        let out = strip_bracketed_tax_note(&mut c, "Aus bus [sensu   Miller   1990]".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("sensu Miller 1990".to_string()));
+    }
+
+    #[test]
+    fn bracketed_tax_note_appends_to_an_existing_note() {
+        let mut c = ctx("x");
+        c.name.taxonomic_note = Some("existing".to_string());
+        let out = strip_bracketed_tax_note(&mut c, "Aus bus [non Foo]".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("existing non Foo".to_string()));
+    }
+
+    #[test]
+    fn no_bracketed_tax_note_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_bracketed_tax_note(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    // ---- Step 40: stripParenTaxNote ----
+
+    #[test]
+    fn paren_non_homonym_citation_appends_to_taxonomic_note() {
+        let mut c = ctx("x");
+        let out = strip_paren_tax_note(&mut c, "Aus bus Smith (non Foo, 1850)".to_string());
+        assert_eq!(out, "Aus bus Smith");
+        assert_eq!(c.name.taxonomic_note, Some("non Foo, 1850".to_string()));
+    }
+
+    #[test]
+    fn paren_nec_and_not_variants_are_also_captured() {
+        let mut c = ctx("x");
+        let out = strip_paren_tax_note(&mut c, "Aus bus (nec Jones, 1900)".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("nec Jones, 1900".to_string()));
+    }
+
+    #[test]
+    fn paren_tax_note_appends_to_an_existing_note() {
+        let mut c = ctx("x");
+        c.name.taxonomic_note = Some("existing".to_string());
+        let out = strip_paren_tax_note(&mut c, "Aus bus (non Foo, 1850)".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(
+            c.name.taxonomic_note,
+            Some("existing non Foo, 1850".to_string())
+        );
+    }
+
+    #[test]
+    fn no_paren_tax_note_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_paren_tax_note(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    // ---- Step 41: stripSensuLatoRemainder ----
+
+    #[test]
+    fn sensu_lato_marker_with_trailing_junk_appends_note_and_stashes_unparsed() {
+        let mut c = ctx("x");
+        let out = strip_sensu_lato_remainder(
+            &mut c,
+            "Asplenium trichomanes L. s.lat. - Asplen trich".to_string(),
+        );
+        assert_eq!(out, "Asplenium trichomanes L.");
+        assert_eq!(c.name.taxonomic_note, Some("s.lat.".to_string()));
+        assert_eq!(c.pending_unparsed, Some("- Asplen trich".to_string()));
+    }
+
+    #[test]
+    fn sensu_lato_remainder_appends_to_an_existing_note() {
+        let mut c = ctx("x");
+        c.name.taxonomic_note = Some("existing".to_string());
+        let out = strip_sensu_lato_remainder(&mut c, "Aus bus s.str. junk here".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("existing s.str.".to_string()));
+    }
+
+    #[test]
+    fn uppercase_author_initials_are_not_mistaken_for_a_sensu_lato_marker() {
+        let mut c = ctx("x");
+        let out = strip_sensu_lato_remainder(&mut c, "Aus bus Mill. S.L. Schultes".to_string());
+        assert_eq!(out, "Aus bus Mill. S.L. Schultes");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    #[test]
+    fn bare_trailing_sensu_lato_with_no_junk_is_not_matched_here() {
+        // SENSU_LATO_REMAINDER requires a MANDATORY non-empty trailing remainder after
+        // the marker — a bare trailing "s.l." with nothing following is left for
+        // `strip_tax_note` (step 43) instead.
+        let mut c = ctx("x");
+        let out = strip_sensu_lato_remainder(&mut c, "Aus bus s.l.".to_string());
+        assert_eq!(out, "Aus bus s.l.");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    // ---- Step 42: stripSensuStrictoSS ----
+
+    #[test]
+    fn trailing_ss_with_no_junk_appends_literal_note_and_stashes_nothing() {
+        let mut c = ctx("x");
+        let out = strip_sensu_stricto_ss(&mut c, "Aus bus s.s.".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("s.s.".to_string()));
+        assert_eq!(c.pending_unparsed, None);
+    }
+
+    #[test]
+    fn trailing_ss_with_junk_appends_note_and_stashes_the_trimmed_junk() {
+        let mut c = ctx("x");
+        let out = strip_sensu_stricto_ss(&mut c, "Aus bus s.s. extra text here".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("s.s.".to_string()));
+        assert_eq!(c.pending_unparsed, Some("extra text here".to_string()));
+    }
+
+    #[test]
+    fn sensu_stricto_ss_appends_to_an_existing_note() {
+        let mut c = ctx("x");
+        c.name.taxonomic_note = Some("existing".to_string());
+        let out = strip_sensu_stricto_ss(&mut c, "Aus bus s.s.".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("existing s.s.".to_string()));
+    }
+
+    #[test]
+    fn no_sensu_stricto_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_sensu_stricto_ss(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.taxonomic_note, None);
+        assert_eq!(c.pending_unparsed, None);
+    }
+
+    // ---- Step 43: stripTaxNote ----
+
+    #[test]
+    fn emend_with_a_dot_overwrites_taxonomic_note() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(
+            &mut c,
+            "Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003".to_string(),
+        );
+        assert_eq!(out, "Chlorobium phaeobacteroides Pfennig, 1968");
+        assert_eq!(
+            c.name.taxonomic_note,
+            Some("emend. Imhoff, 2003".to_string())
+        );
+    }
+
+    #[test]
+    fn emend_without_a_dot_is_also_matched() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(
+            &mut c,
+            "Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003".to_string(),
+        );
+        assert_eq!(out, "Chlorobium phaeobacteroides Pfennig, 1968");
+        assert_eq!(
+            c.name.taxonomic_note,
+            Some("emend Imhoff, 2003".to_string())
+        );
+    }
+
+    #[test]
+    fn fide_keyword_is_captured() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(
+            &mut c,
+            "Eulima excellens Verkrüzen fide Paetel, 1887".to_string(),
+        );
+        assert_eq!(out, "Eulima excellens Verkrüzen");
+        assert_eq!(c.name.taxonomic_note, Some("fide Paetel, 1887".to_string()));
+    }
+
+    #[test]
+    fn nec_keyword_captures_a_trailing_parenthesised_citation() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(
+            &mut c,
+            "Procamallanus (Spirocamallanus) soodi Lakshmi & Kumari, 2001 nec (Gupta & Masood, 1988)"
+                .to_string(),
+        );
+        assert_eq!(
+            out,
+            "Procamallanus (Spirocamallanus) soodi Lakshmi & Kumari, 2001"
+        );
+        assert_eq!(
+            c.name.taxonomic_note,
+            Some("nec (Gupta & Masood, 1988)".to_string())
+        );
+    }
+
+    #[test]
+    fn non_keyword_is_captured() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(
+            &mut c,
+            "Membranipora minuscula Canu, 1911 non Hincks, 1882".to_string(),
+        );
+        assert_eq!(out, "Membranipora minuscula Canu, 1911");
+        assert_eq!(c.name.taxonomic_note, Some("non Hincks, 1882".to_string()));
+    }
+
+    #[test]
+    fn bare_trailing_auct_is_captured_and_lower_cased() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus auct.".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("auct.".to_string()));
+    }
+
+    #[test]
+    fn title_case_auct_and_auctt_are_lower_cased() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus Auct.".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("auct.".to_string()));
+
+        let mut c2 = ctx("x");
+        let out2 = strip_tax_note(&mut c2, "Aus bus Auctt.".to_string());
+        assert_eq!(out2, "Aus bus");
+        assert_eq!(c2.name.taxonomic_note, Some("auctt.".to_string()));
+    }
+
+    #[test]
+    fn lower_case_sensu_lato_marker_is_matched_case_sensitively() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus s.l.".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("s.l.".to_string()));
+    }
+
+    #[test]
+    fn uppercase_author_initials_do_not_match_the_sensu_lato_branch() {
+        // The inline `(?-i:…)` case-sensitive carve-out means "S.L." (capital, author
+        // initials) is never mistaken for the lower-case sensu-lato marker — spot-checked
+        // against the Java CLI oracle: "Aus bus Mill. S.L." ends up with the initials
+        // folded into the author string (authors=["Mill.S.L."]), no taxonomicNote at all.
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus Mill. S.L.".to_string());
+        assert_eq!(out, "Aus bus Mill. S.L.");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    #[test]
+    fn initial_dot_space_collapses_a_bare_initial_before_a_lowercase_word() {
+        // group 2 of INITIAL_DOT_SPACE requires an ALL-LOWERCASE word (>= 4 letters) —
+        // spot-checked against the Java CLI oracle: "non F. europaeus" collapses the gap
+        // ("F. europaeus" -> "F.europaeus") because "europaeus" is all lower-case.
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus non F. europaeus".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("non F.europaeus".to_string()));
+    }
+
+    #[test]
+    fn initial_dot_space_does_not_collapse_before_a_capitalised_surname() {
+        // Conversely a capitalised surname like "Schmidt" does NOT satisfy `[\p{Ll}]`
+        // (lower-case only) as the word after the dot, so the space survives — spot-
+        // checked against the Java CLI oracle: "sensu F. Schmidt" keeps its space.
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus sensu F. Schmidt".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("sensu F. Schmidt".to_string()));
+    }
+
+    #[test]
+    fn multi_letter_abbreviations_keep_their_space() {
+        // INITIAL_DOT_SPACE only collapses a SINGLE capital letter before the dot (a
+        // genuine author initial) — "ss." (two letters) must keep its trailing space so
+        // abbreviated taxonomic keywords render verbatim, per the Java source's own
+        // comment on `stripTaxNote`.
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus ss. auct. europ.".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("ss. auct. europ.".to_string()));
+    }
+
+    #[test]
+    fn sec_according_to_and_excl_alternatives_are_all_matched() {
+        let mut c1 = ctx("x");
+        assert_eq!(
+            strip_tax_note(&mut c1, "Aus bus sec. Smith 1990".to_string()),
+            "Aus bus"
+        );
+        assert_eq!(c1.name.taxonomic_note, Some("sec. Smith 1990".to_string()));
+
+        let mut c2 = ctx("x");
+        assert_eq!(
+            strip_tax_note(&mut c2, "Aus bus according to Smith".to_string()),
+            "Aus bus"
+        );
+        assert_eq!(
+            c2.name.taxonomic_note,
+            Some("according to Smith".to_string())
+        );
+
+        let mut c3 = ctx("x");
+        assert_eq!(
+            strip_tax_note(&mut c3, "Aus bus excl. var. minor".to_string()),
+            "Aus bus"
+        );
+        assert_eq!(c3.name.taxonomic_note, Some("excl. var. minor".to_string()));
+    }
+
+    #[test]
+    fn overwrites_rather_than_appends_to_an_existing_note() {
+        // The LAST of the six taxonomic-note steps: unlike steps 38-42 above it, this
+        // one calls the plain setter (no null-check) and REPLACES any pre-existing note.
+        let mut c = ctx("x");
+        c.name.taxonomic_note = Some("existing".to_string());
+        let out = strip_tax_note(&mut c, "Aus bus sensu Miller".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("sensu Miller".to_string()));
+    }
+
+    #[test]
+    fn multiple_dangling_commas_before_the_match_are_all_stripped() {
+        // A single dangling comma right before the keyword is consumed by TAX_NOTE's own
+        // leading `,?`; a SECOND comma (e.g. a doubled ",,") is left over and must be
+        // peeled off by the trailing `while (s.endsWith(","))` loop — spot-checked
+        // against the Java CLI oracle: "Aus bus,, sensu Miller" -> taxonomicNote "sensu
+        // Miller" with a clean "Aus bus" genus/species (no comma artefacts survive).
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus,, sensu Miller".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("sensu Miller".to_string()));
+    }
+
+    #[test]
+    fn captured_text_case_is_preserved_verbatim_except_for_the_auct_normalisation() {
+        // TAX_NOTE's `(?i)` only affects MATCHING, not the captured text itself — spot-
+        // checked against the Java CLI oracle: "Aus bus SENSU Smith" keeps "SENSU"
+        // upper-case in the note (only a leading "Auct"/"Auctt" gets normalised).
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Aus bus SENSU Smith".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.name.taxonomic_note, Some("SENSU Smith".to_string()));
+    }
+
+    #[test]
+    fn no_tax_note_keyword_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_tax_note(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.taxonomic_note, None);
+    }
+
+    // ---- Step 44: stripAggregateSuffix ----
+
+    #[test]
+    fn agg_suffix_sets_aggregate_and_strips_the_marker() {
+        let mut c = ctx("x");
+        let out = strip_aggregate_suffix(&mut c, "Achillea millefolium agg.".to_string());
+        assert_eq!(out, "Achillea millefolium");
+        assert!(c.aggregate);
+    }
+
+    #[test]
+    fn species_group_suffix_is_also_recognised() {
+        let mut c = ctx("x");
+        let out = strip_aggregate_suffix(&mut c, "Achillea millefolium species group".to_string());
+        assert_eq!(out, "Achillea millefolium");
+        assert!(c.aggregate);
+    }
+
+    #[test]
+    fn hyphenated_group_suffix_is_also_recognised() {
+        let mut c = ctx("x");
+        let out = strip_aggregate_suffix(&mut c, "Achillea millefolium-group".to_string());
+        assert_eq!(out, "Achillea millefolium");
+        assert!(c.aggregate);
+    }
+
+    #[test]
+    fn no_aggregate_suffix_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_aggregate_suffix(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(!c.aggregate);
     }
 }
