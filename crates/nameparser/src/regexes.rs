@@ -50,7 +50,7 @@ pub static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 // --- CORRIG, restructured onto the linear `regex` engine (no lookaround) ---
 // The bracketed alternative needs no lookaround. The bare alternative replaces Java's
 // zero-width (?<=\s)…(?=\s|$) by CAPTURING the boundaries and putting them back, so the
-// boundary characters are preserved instead of consumed.
+// boundary characters are preserved instead of consumed (for isolated matches; see adjacency caveat below).
 //
 // GOTCHA (found via a manual probe beyond the brief's 3 tests, not by the tests below): Java's
 // two boundaries are NOT symmetric, and the tempting `(^|\s)…(\s|$)` translation silently breaks
@@ -64,6 +64,13 @@ pub static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 // `\s`, full stop:
 static CORRIG_BRACKETED: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\s*[(\[]\s*corrig\.?\s*[)\]]").unwrap());
+
+// KNOWN LIMITATION of this capture-and-splice restructuring: the boundaries are CONSUMED,
+// not zero-width like Java's lookaround. Because regex::replace_all matches are non-overlapping,
+// two ADJACENT bare "corrig." tokens sharing one whitespace boundary diverge from Java
+// (e.g. "a b corrig. corrig. c": Java strips both; this strips only the first).
+// strip_corrig_fancy (verbatim lookaround) stays faithful. Realistic name data has no adjacent
+// markers, but this is why lookaround patterns with possible adjacency should prefer fancy-regex.
 static CORRIG_BARE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\s)corrig\.?(\s|$)").unwrap());
 
 pub fn strip_corrig_restructured(s: &str) -> String {
