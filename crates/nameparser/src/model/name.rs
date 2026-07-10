@@ -40,10 +40,10 @@ pub struct Authorship {
 }
 
 impl Authorship {
-    /// Java `Authorship.exists()` — true if the authors/exAuthors/year carry any actual
-    /// value (the inverse of Java's `isEmpty()`, which only checks authors and year).
+    /// Java `Authorship.exists()` = `!isEmpty()`, and Java `isEmpty()` checks ONLY
+    /// authors and year (NOT exAuthors) — see Authorship.java:145-151.
     pub fn exists(&self) -> bool {
-        !self.authors.is_empty() || !self.ex_authors.is_empty() || self.year.is_some()
+        !self.authors.is_empty() || self.year.is_some()
     }
 }
 
@@ -329,5 +329,24 @@ mod tests {
         assert!(serde_json::to_string(&pn)
             .unwrap()
             .contains(r#""notho":["SPECIFIC"]"#));
+    }
+
+    #[test]
+    fn authorship_exists_ignores_ex_authors_like_java() {
+        let a = Authorship {
+            authors: vec![],
+            ex_authors: vec!["hort.".into()],
+            year: None,
+            imprint_year: None,
+        };
+        assert!(
+            !a.exists(),
+            "only ex-authors present must be exists()==false, matching Java isEmpty()"
+        );
+        let b = Authorship {
+            authors: vec!["L.".into()],
+            ..Default::default()
+        };
+        assert!(b.exists());
     }
 }
