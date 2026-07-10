@@ -261,6 +261,49 @@ impl ParsedName {
             Some(existing) => format!("{existing} {note}"),
         });
     }
+
+    /// Java `ParsedName.addNotho(NamePart)` (`ParsedName.java:306-315`): adds `part` to the
+    /// notho set, a no-op if already present (`EnumSet` dedup semantics). Java's
+    /// `EnumSet` always iterates in ordinal order regardless of insertion order (unlike a
+    /// general `HashSet`) — reproduced here by keeping the backing `Vec` sorted by
+    /// `NamePart`'s `Ord` (declaration order, matching Java's ordinal order — see
+    /// `NamePart`'s own doc comment) after every insert, rather than merely appending in
+    /// call order.
+    pub fn add_notho(&mut self, part: NamePart) {
+        match &mut self.notho {
+            None => self.notho = Some(vec![part]),
+            Some(set) => {
+                if !set.contains(&part) {
+                    set.push(part);
+                    set.sort();
+                }
+            }
+        }
+    }
+
+    /// Java `ParsedName.setNotho(NamePart)` (`ParsedName.java:302-304`): REPLACES the
+    /// whole notho set with a single-element set containing just `part` — an overwrite,
+    /// not an insert like [`Self::add_notho`]. This asymmetry is load-bearing:
+    /// `NameTokens`'s post-loop `if (inlineRankNotho) setNotho(INFRASPECIFIC)` erases any
+    /// earlier `addNotho(GENERIC)` recorded from a `HYBRID_MARK` token — reproduced
+    /// verbatim, not "fixed" into an add. (Java's signature takes a nullable `NamePart`
+    /// and folds a `null` argument to clearing the field entirely; every real call site —
+    /// including `NameTokens`'s own `setNotho(NamePart.INFRASPECIFIC)` — passes a
+    /// non-null literal, so this port's signature takes `part: NamePart` directly.)
+    pub fn set_notho(&mut self, part: NamePart) {
+        self.notho = Some(vec![part]);
+    }
+
+    /// Java `ParsedName.setEpithetQualifier(NamePart, String)` (`ParsedName.java:355-362`):
+    /// inserts into the qualifier map, creating it on first use. (Java guards both
+    /// arguments against `null` before inserting; every real call site passes non-null
+    /// literals, so this port's signature takes `part: NamePart, q: &str` directly,
+    /// matching [`Self::set_notho`]'s same non-nullable-signature rationale.)
+    pub fn set_epithet_qualifier(&mut self, part: NamePart, q: &str) {
+        self.epithet_qualifier
+            .get_or_insert_with(BTreeMap::new)
+            .insert(part, q.to_string());
+    }
 }
 
 impl Default for ParsedName {
@@ -557,5 +600,74 @@ mod tests {
         let mut pn = ParsedName::default();
         pn.set_published_in("Author, 1900, republished ref. 19\u{0668}8 variant");
         assert_eq!(pn.published_in_year, Some(1900));
+    }
+
+    #[test]
+    fn add_notho_inserts_and_dedups_like_javas_enumset() {
+        let mut pn = ParsedName::default();
+        pn.add_notho(NamePart::Specific);
+        assert_eq!(pn.notho, Some(vec![NamePart::Specific]));
+        pn.add_notho(NamePart::Specific);
+        assert_eq!(
+            pn.notho,
+            Some(vec![NamePart::Specific]),
+            "adding the same part twice must not duplicate it"
+        );
+    }
+
+    #[test]
+    fn add_notho_keeps_ordinal_order_regardless_of_insertion_order() {
+        let mut pn = ParsedName::default();
+        pn.add_notho(NamePart::Infraspecific);
+        pn.add_notho(NamePart::Generic);
+        assert_eq!(
+            pn.notho,
+            Some(vec![NamePart::Generic, NamePart::Infraspecific]),
+            "Java's EnumSet always iterates in ordinal order regardless of insertion order"
+        );
+    }
+
+    #[test]
+    fn set_notho_overwrites_rather_than_adds() {
+        let mut pn = ParsedName::default();
+        pn.add_notho(NamePart::Generic);
+        pn.set_notho(NamePart::Infraspecific);
+        assert_eq!(
+            pn.notho,
+            Some(vec![NamePart::Infraspecific]),
+            "set_notho must REPLACE the whole set, erasing the earlier add_notho result — \
+             the load-bearing overwrite asymmetry"
+        );
+    }
+
+    #[test]
+    fn set_epithet_qualifier_creates_the_map_on_first_use() {
+        let mut pn = ParsedName::default();
+        assert_eq!(pn.epithet_qualifier, None);
+        pn.set_epithet_qualifier(NamePart::Specific, "cf.");
+        let mut expected = BTreeMap::new();
+        expected.insert(NamePart::Specific, "cf.".to_string());
+        assert_eq!(pn.epithet_qualifier, Some(expected));
+    }
+
+    #[test]
+    fn set_epithet_qualifier_inserts_additional_parts_into_the_existing_map() {
+        let mut pn = ParsedName::default();
+        pn.set_epithet_qualifier(NamePart::Specific, "cf.");
+        pn.set_epithet_qualifier(NamePart::Infraspecific, "aff.");
+        let mut expected = BTreeMap::new();
+        expected.insert(NamePart::Specific, "cf.".to_string());
+        expected.insert(NamePart::Infraspecific, "aff.".to_string());
+        assert_eq!(pn.epithet_qualifier, Some(expected));
+    }
+
+    #[test]
+    fn set_epithet_qualifier_overwrites_an_existing_part() {
+        let mut pn = ParsedName::default();
+        pn.set_epithet_qualifier(NamePart::Specific, "cf.");
+        pn.set_epithet_qualifier(NamePart::Specific, "aff.");
+        let mut expected = BTreeMap::new();
+        expected.insert(NamePart::Specific, "aff.".to_string());
+        assert_eq!(pn.epithet_qualifier, Some(expected));
     }
 }

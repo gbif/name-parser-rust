@@ -28,16 +28,6 @@
 //! its file footprint to this file, plus the one-line module declaration in
 //! `pipeline/mod.rs`).
 
-// This module's `find_boundary` (+ the two bridges + every private helper) is only
-// exercised by its own unit tests so far — `NameTokens::classify` and `Pipeline::run`
-// (Phase 1 Slice 3 Task 3) are the real call sites and land in the next task. Until then
-// rustc's `dead_code` lint fires for any build that doesn't compile this file's own
-// `#[cfg(test)]` module in (i.e. everything except `cargo test`'s unit-test pass —
-// including the crate's own `tests/*.rs` integration-test binaries, which link the library
-// built without `cfg(test)`), exactly the same situation `rank_markers.rs` already
-// documents for itself. Drop this once Task 3 adds the first non-test caller.
-#![allow(dead_code)]
-
 use crate::model::Rank;
 use crate::pipeline::rank_markers;
 use crate::pipeline::ParseContext;
@@ -414,9 +404,11 @@ fn starts_digit_epithet(t: &Token) -> bool {
 /// enum, the ranks strictly between `GENUS` and `SPECIES_AGGREGATE` are `SUBGENUS`,
 /// `INFRAGENUS`, `DIVISION_BOTANY`, `SUPERSECTION_BOTANY`, `SECTION_BOTANY`,
 /// `SUBSECTION_BOTANY`, `SUPERSERIES_BOTANY`, `SERIES_BOTANY`, `SUBSERIES_BOTANY`,
-/// `INFRAGENERIC_NAME`. Of those, `Infragenus`/`InfragenericName` don't exist yet in this
-/// crate's `Rank` stub (`model/enums.rs`, ~28/117 ranks ported so far) — every other member
-/// of that Java range already exists as a Rust variant and is matched `true` below.
+/// `INFRAGENERIC_NAME` — the last of those was added to this crate's `Rank` stub by Phase 1
+/// Slice 3 Task 3 (`NameTokens` needs it as a bare `Rank.INFRAGENERIC_NAME` literal) and is
+/// matched `true` below alongside the rest; `Infragenus` remains the sole member of that
+/// Java range still absent from the stub (`model/enums.rs`) — every OTHER member already
+/// exists as a Rust variant and is matched `true` below.
 ///
 /// This crate's `Rank` doesn't carry Java's ordinal order in its own declaration order (the
 /// stub's variants are grouped by the task that added them, not by Java ordinal), so this
@@ -435,7 +427,8 @@ fn rank_is_infrageneric_strictly(rank: Rank) -> bool {
         | Rank::SubsectionBotany
         | Rank::SuperseriesBotany
         | Rank::SeriesBotany
-        | Rank::SubseriesBotany => true,
+        | Rank::SubseriesBotany
+        | Rank::InfragenericName => true,
         Rank::Unranked
         | Rank::Family
         | Rank::Genus
@@ -473,7 +466,9 @@ fn rank_is_infrageneric_strictly(rank: Rank) -> bool {
         | Rank::Proles
         | Rank::Aberration
         | Rank::Strain
-        | Rank::InfraspecificName => false,
+        | Rank::InfraspecificName
+        | Rank::FormaSpecialis
+        | Rank::InfrasubspecificName => false,
     }
 }
 

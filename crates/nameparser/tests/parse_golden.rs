@@ -25,20 +25,27 @@
 //!      ported) stage, this gate is a full, corpus-scale parity guarantee for them, not a
 //!      snapshot — a regression in ANY of the 55 steps that touches one of these fields
 //!      fails this test.
-//!   3. **Name-part fields (Phase 1 Slice 3 Task 1 — BASELINE ONLY, not yet asserted).** For
-//!      rows both sides parse, diffs the 7 fields `AuthorshipSplit`/`NameTokens` (not yet
-//!      ported — Tasks 2-3) will populate — `genus`, `uninomial`, `infragenericEpithet`,
-//!      `specificEpithet`, `infraspecificEpithet`, `notho`, `epithetQualifier` — and prints
-//!      a per-field baseline table. Rust sets none of these yet, so each count is simply
-//!      "how many corpus rows Java sets this field on". `notho` (a JSON array) and
-//!      `epithetQualifier` (a JSON object) are compared order-insensitively (as
-//!      sets/maps — see `json_eq_unordered`), matching how `ParsedName::warnings`' own doc
-//!      comment already documents Java's `HashSet`/`EnumSet`/`EnumMap` fields as
-//!      unordered-on-the-wire. DEFERRED: `infraspecificEpithet`/`epithetQualifier`/`notho`
-//!      get `assert_eq!(_, 0)` once NameTokens lands (Task 3); `genus`/`uninomial`/
-//!      `infragenericEpithet`/`specificEpithet` stay print-only even after Task 3 (residual
-//!      Assemble-stage rewrites — genus/uninomial swaps, phrase promotion, etc. — asserted
-//!      0 only in the later Assemble slice).
+//!   3. **Name-part fields (Phase 1 Slice 3 — `AuthorshipSplit` Task 2 + `NameTokens` Task 3,
+//!      both now wired into `pipeline::run`).** For rows both sides parse, diffs the 7
+//!      fields `AuthorshipSplit`/`NameTokens` populate — `genus`, `uninomial`,
+//!      `infragenericEpithet`, `specificEpithet`, `infraspecificEpithet`, `notho`,
+//!      `epithetQualifier`. `notho` (a JSON array) and `epithetQualifier` (a JSON object)
+//!      are compared order-insensitively (as sets/maps — see `json_eq_unordered`), matching
+//!      how `ParsedName::warnings`' own doc comment already documents Java's
+//!      `HashSet`/`EnumSet`/`EnumMap` fields as unordered-on-the-wire.
+//!      **ASSERTED 0 (Task 3, NameTokens-final):** `infraspecificEpithet`, `notho`,
+//!      `epithetQualifier` — set ONLY by `NameTokens` and never touched by any later (not
+//!      yet ported) stage, so this is a full, permanent corpus-scale parity guarantee for
+//!      these 3, same as the `FIELD_KEYS` gate above.
+//!      **MEASURED, not yet asserted (Assemble-rewrite residuals):** `genus`, `uninomial`,
+//!      `infragenericEpithet`, `specificEpithet` — printed per-field with capped examples;
+//!      residual causes triaged and documented at the Task 3 commit (Assemble's
+//!      uninomial<->genus/infragenericEpithet moves for a caller-/StripAndStash-pinned
+//!      infrageneric-strict rank, phrase-promotion when `NameTokens` left a phrase-bearing
+//!      result as a bare uninomial, BOLD-style underscore-splitting, plus one pre-existing
+//!      `replace_homoglyphs` stub gap (Phase 1 Slice 2, step 13) surfacing on
+//!      `specificEpithet` for the first time now that this field is compared at all) —
+//!      asserted 0 only in the later Assemble slice.
 //!
 //! Regenerate the oracle with (see the Task 6 brief for the authoritative command):
 //! ```text
@@ -95,9 +102,10 @@ const FIELD_KEYS: [&str; 10] = [
 /// fields rather than 2 categories).
 const FIELD_EXAMPLE_CAP: usize = 5;
 
-/// The 7 name-part fields `AuthorshipSplit`/`NameTokens` (Phase 1 Slice 3, not yet ported —
-/// Tasks 2-3) will populate — Java JSON key names. BASELINE ONLY this task (see the module
-/// doc): none of these are asserted 0 yet.
+/// The 7 name-part fields `AuthorshipSplit`/`NameTokens` (Phase 1 Slice 3, Tasks 2-3, both
+/// now wired into `pipeline::run`) populate — Java JSON key names. Printed per-field
+/// unconditionally (see the module doc, gate 3); only the 3 keys in
+/// [`NAME_PART_ASSERTED_FIELD_KEYS`] are actually asserted 0 below.
 const NAME_PART_FIELD_KEYS: [&str; 7] = [
     "genus",
     "uninomial",
@@ -107,6 +115,14 @@ const NAME_PART_FIELD_KEYS: [&str; 7] = [
     "notho",
     "epithetQualifier",
 ];
+
+/// Subset of [`NAME_PART_FIELD_KEYS`] asserted 0 as of Phase 1 Slice 3 Task 3: these 3 are
+/// set ONLY by `NameTokens` and never touched by any later (not yet ported) stage, so a
+/// mismatch here is necessarily a `find_boundary`/`classify` bug, not a deferred-stage
+/// residual. The other 4 (`genus`/`uninomial`/`infragenericEpithet`/`specificEpithet`) stay
+/// measure-only — see the module doc's gate 3 for the residual causes.
+const NAME_PART_ASSERTED_FIELD_KEYS: [&str; 3] =
+    ["infraspecificEpithet", "notho", "epithetQualifier"];
 
 /// Subset of [`NAME_PART_FIELD_KEYS`] that Java serialises as a `Set`/`Map`-shaped value
 /// (`notho`: `EnumSet<NamePart>` -> a JSON array; `epithetQualifier`: `EnumMap<NamePart,
@@ -204,8 +220,8 @@ fn matches_java_error_classification_over_corpus() {
     let mut field_mismatch_examples: HashMap<&'static str, Vec<Mismatch>> =
         FIELD_KEYS.iter().map(|&k| (k, Vec::new())).collect();
 
-    // BASELINE ONLY (see the module doc, gate 3): the 7 name-part fields
-    // AuthorshipSplit/NameTokens will populate — not yet ported, so not yet asserted.
+    // See the module doc, gate 3: the 7 name-part fields AuthorshipSplit/NameTokens
+    // populate, all tallied here; only NAME_PART_ASSERTED_FIELD_KEYS is actually asserted.
     let mut name_part_mismatch_counts: HashMap<&'static str, usize> =
         NAME_PART_FIELD_KEYS.iter().map(|&k| (k, 0)).collect();
     let mut name_part_mismatch_examples: HashMap<&'static str, Vec<Mismatch>> =
@@ -296,10 +312,9 @@ fn matches_java_error_classification_over_corpus() {
                     }
                 }
 
-                // BASELINE ONLY (module doc, gate 3): AuthorshipSplit/NameTokens aren't
-                // ported yet, so Rust sets none of the 7 name-part fields — every row
-                // where Java sets one is unconditionally tallied as a mismatch here. Not
-                // asserted this task; see Task 3 for the 3-field gate flip.
+                // See the module doc, gate 3: AuthorshipSplit/NameTokens are both wired in
+                // now, so this tallies real Java-vs-Rust disagreements over all 7 fields;
+                // only NAME_PART_ASSERTED_FIELD_KEYS's 3 are asserted 0 below.
                 for &key in NAME_PART_FIELD_KEYS.iter() {
                     let jv = java_obj.get(key);
                     let rv = rust_value.get(key);
@@ -358,13 +373,13 @@ fn matches_java_error_classification_over_corpus() {
     }
 
     // Per-field mismatch counts over the `both_parsed` rows, for the 7 name-part fields
-    // AuthorshipSplit/NameTokens will populate (Phase 1 Slice 3, Tasks 2-3 — not yet
-    // ported). BASELINE ONLY: printed unconditionally, NOT asserted this task (see the
-    // module doc's gate 3). Since Rust sets none of these 7 fields yet, each count below is
-    // simply "how many of the `both_parsed` corpus rows Java sets this field on".
-    // DEFERRED: infraspecificEpithet/epithetQualifier/notho asserted 0 in slice-3 Task 3.
+    // AuthorshipSplit/NameTokens populate (Phase 1 Slice 3, Tasks 2-3, both now wired into
+    // `pipeline::run`). Printed unconditionally for all 7 (useful context even on a passing
+    // run); only `NAME_PART_ASSERTED_FIELD_KEYS`'s 3 (infraspecificEpithet/notho/
+    // epithetQualifier) are asserted 0 below — see the module doc's gate 3 for why the other
+    // 4 stay measure-only.
     eprintln!(
-        "parse golden (name-part fields — AuthorshipSplit/NameTokens NOT yet ported, BASELINE ONLY): {both_parsed} both-parsed rows"
+        "parse golden (name-part fields — AuthorshipSplit + NameTokens wired in): {both_parsed} both-parsed rows"
     );
     for &key in NAME_PART_FIELD_KEYS.iter() {
         let n = name_part_mismatch_counts[key];
@@ -413,6 +428,29 @@ fn matches_java_error_classification_over_corpus() {
         assert_eq!(
             n, 0,
             "{n} mismatches on downstream-independent field {key:?} (Java vs Rust, over \
+             {both_parsed} both-parsed rows) — see stderr with --nocapture for example inputs"
+        );
+    }
+
+    // GATE (Phase 1 Slice 3 Task 3 — NameTokens::classify lands): `infraspecificEpithet`,
+    // `notho` and `epithetQualifier` must have exactly 0 mismatches against the Java oracle.
+    // These 3 are set ONLY by NameTokens (never touched by any later, not-yet-ported stage —
+    // AuthorshipParser/Assemble don't rewrite them), so — same reasoning as the
+    // downstream-independent-field gate just above — this is a complete, permanent,
+    // corpus-scale parity guarantee for these 3 specifically, not a snapshot. The other 4
+    // name-part fields (`genus`/`uninomial`/`infragenericEpithet`/`specificEpithet`) are
+    // deliberately NOT asserted here: Assemble (not yet ported) still rewrites them —
+    // uninomial<->genus/infragenericEpithet moves for an infrageneric-strict rank pinned by
+    // the caller or by StripAndStash, phrase-promotion when NameTokens left a phrase-bearing
+    // result as a bare uninomial, and BOLD-style underscore-splitting — plus one pre-existing
+    // `replace_homoglyphs` stub gap (Phase 1 Slice 2, step 13) that happens to surface on
+    // `specificEpithet` now that this field is compared for the first time. See
+    // `NAME_PART_FIELD_KEYS`'s eprintln! block above for the measured (not asserted) counts.
+    for &key in NAME_PART_ASSERTED_FIELD_KEYS.iter() {
+        let n = name_part_mismatch_counts[key];
+        assert_eq!(
+            n, 0,
+            "{n} mismatches on NameTokens-final field {key:?} (Java vs Rust, over \
              {both_parsed} both-parsed rows) — see stderr with --nocapture for example inputs"
         );
     }

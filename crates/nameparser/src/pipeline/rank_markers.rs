@@ -23,15 +23,6 @@
 //! left as is here since consolidating it isn't in this task's scope, but a future cleanup
 //! could replace it with [`match_infraspecific`].
 
-// This module's maps/functions are only exercised by their own unit tests so far —
-// `AuthorshipSplit`/`NameTokens` (Phase 1 Slice 3 Tasks 2-3) are the real call sites and
-// land in the next two tasks. Until then rustc's `dead_code` lint fires on every item here
-// (their effective visibility is capped at `pub(crate)` by the enclosing `pub(crate) mod
-// rank_markers` in `pipeline/mod.rs`, same as `context::ParseContext`'s own
-// `#[allow(dead_code)]`, which hit this identical situation — see that struct's doc
-// comment). Drop this once Task 2 adds the first non-test caller.
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::sync::LazyLock;
 

@@ -139,6 +139,27 @@ pub enum Rank {
     Strain,
     InfraspecificName,
     DivisionBotany,
+    // ---- Phase 1 Slice 3 Task 3 additions (NameTokens) ----
+    // Three more `Rank` constants `NameTokens.classify` references by name that weren't
+    // needed by Task 1's `RankMarkers` maps (those two ARE marker-table values; these
+    // three are used as bare `Rank.XXX` literals in `NameTokens.java`'s own control flow):
+    //   - FormaSpecialis (`Rank.FORMA_SPECIALIS`, code BOTANICAL, marker "f.sp.") — the
+    //     microbial "f. sp." -> forma specialis special-case (NameTokens.java:348).
+    //   - InfrasubspecificName (`Rank.INFRASUBSPECIFIC_NAME`, no code, marker
+    //     "infrasubsp.") — assigned when 3+ lower epithets exist with no rank marker
+    //     (NameTokens.java:466); NOT the same constant as `InfraspecificName` above
+    //     (`Rank.INFRASPECIFIC_NAME`, "used for any unspecific rank below species") — Java
+    //     keeps these as two distinct enum constants for "below species" vs "below
+    //     subspecies".
+    //   - InfragenericName (`Rank.INFRAGENERIC_NAME`, no code, marker "infragen.") — the
+    //     default rank for a paren-based subgenus with no explicit rank marker
+    //     (NameTokens.java:501); also the rank this crate's `Rank` stub was still missing
+    //     for `authorship_split::rank_is_infrageneric_strictly`'s own documented gap (see
+    //     that function's doc comment, which explicitly flagged `InfragenericName` as one
+    //     of the two not-yet-added ranks in its Java-range list).
+    FormaSpecialis,
+    InfrasubspecificName,
+    InfragenericName,
 }
 
 impl Rank {
@@ -185,6 +206,9 @@ impl Rank {
             | Rank::Serovar
             | Rank::Morphovar
             | Rank::Phagovar => Some(NomCode::Bacterial),
+            // Phase 1 Slice 3 Task 3: `Rank.FORMA_SPECIALIS(NomCode.BOTANICAL, "f.sp.")` —
+            // joins the `*Botany` section-series group above.
+            Rank::FormaSpecialis => Some(NomCode::Botanical),
             Rank::Unranked
             | Rank::Family
             | Rank::Genus
@@ -202,7 +226,12 @@ impl Rank {
             | Rank::Subvariety
             | Rank::Subform
             | Rank::Strain
-            | Rank::InfraspecificName => None,
+            | Rank::InfraspecificName
+            // Phase 1 Slice 3 Task 3: `INFRASUBSPECIFIC_NAME`/`INFRAGENERIC_NAME` both use
+            // Java's no-code, marker-only constructor (`Rank(String marker)`) — code-agnostic,
+            // same as their `InfraspecificName`/`Other` siblings just above.
+            | Rank::InfrasubspecificName
+            | Rank::InfragenericName => None,
         }
     }
 }
@@ -491,6 +520,27 @@ mod tests {
         );
     }
 
+    /// Phase 1 Slice 3 Task 3 additions (`NameTokens`): the three bare `Rank.XXX` literals
+    /// `NameTokens.classify` references that Task 1's `RankMarkers` maps didn't already pull
+    /// in — verifies the `SCREAMING_SNAKE_CASE` rename produces the exact Java enum constant
+    /// name for each, in particular that `FormaSpecialis`'s two-word boundary renders as the
+    /// underscore-joined `FORMA_SPECIALIS` Java uses.
+    #[test]
+    fn rank_stub_slice3_task3_variants() {
+        assert_eq!(
+            serde_json::to_string(&Rank::FormaSpecialis).unwrap(),
+            "\"FORMA_SPECIALIS\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::InfrasubspecificName).unwrap(),
+            "\"INFRASUBSPECIFIC_NAME\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::InfragenericName).unwrap(),
+            "\"INFRAGENERIC_NAME\""
+        );
+    }
+
     /// `Rank::code()` — spot-checks against `Rank.java`'s own constructor arguments (see
     /// `code()`'s doc comment for the exact source lines): most ranks are code-agnostic
     /// (`None`); `Grex`/`CultivarGroup`/`Cultivar` anchor to `CULTIVARS`; the `*Botany` /
@@ -548,6 +598,17 @@ mod tests {
         assert_eq!(Rank::Subform.code(), None);
         assert_eq!(Rank::Strain.code(), None);
         assert_eq!(Rank::InfraspecificName.code(), None);
+    }
+
+    /// `Rank::code()` — Phase 1 Slice 3 Task 3 additions: `FormaSpecialis` joins the
+    /// `BOTANICAL` group (`Rank.java`'s own `FORMA_SPECIALIS(NomCode.BOTANICAL, "f.sp.")`);
+    /// `InfrasubspecificName`/`InfragenericName` are code-agnostic, like their
+    /// `InfraspecificName`/`Other` siblings (Java's marker-only, no-code constructor).
+    #[test]
+    fn rank_code_matches_java_get_code_slice3_task3_variants() {
+        assert_eq!(Rank::FormaSpecialis.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::InfrasubspecificName.code(), None);
+        assert_eq!(Rank::InfragenericName.code(), None);
     }
 
     #[test]

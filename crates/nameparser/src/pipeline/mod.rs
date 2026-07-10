@@ -4,6 +4,7 @@
 
 pub(crate) mod authorship_split;
 pub(crate) mod context;
+pub(crate) mod name_tokens;
 pub(crate) mod preflight;
 pub(crate) mod rank_markers;
 pub(crate) mod stripandstash;
@@ -15,6 +16,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::model::{warnings, NameType, NomCode, ParseError, ParsedName, Rank};
+use crate::token::tokenize;
 use crate::unicode::{java_trim, normalize_quotes};
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
@@ -122,8 +124,19 @@ pub fn run(
         return Err(ParseError::new(NameType::Other, None, name));
     }
 
-    // TODO: Tokenizer → AuthorshipSplit → NameTokens → AuthorshipParser → Assemble (later
-    // slices). StripAndStash's own 55 step bodies are also still TODO (rest of Slice 2).
+    // Java `Pipeline.run`: `ctx.tokens = Tokenizer.tokenize(ctx.working); int boundary =
+    // AuthorshipSplit.findBoundary(ctx.tokens, ctx); NameTokens.classify(ctx, boundary);`
+    // (`Pipeline.java:73-77`). `find_boundary` is a pure function of `ctx.tokens` +
+    // `ctx.requested_rank` (no side effects); `classify` is the one that mutates `ctx.name`
+    // + `ctx.mid_author_from`/`ctx.mid_author_to` + `ctx.aggregate` with the name-part
+    // fields (Phase 1 Slice 3 Tasks 2-3).
+    ctx.tokens = tokenize(&ctx.working);
+    let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
+    name_tokens::classify(&mut ctx, boundary);
+
+    // TODO: AuthorshipParser → Assemble (later slices) — including the autonym mid-author
+    // application and the trailing-authorship parse when `boundary < ctx.tokens.len()`
+    // (`Pipeline.java:78-95`, the AuthorshipParser slice).
 
     Ok(ctx.name)
 }
@@ -209,9 +222,13 @@ mod tests {
     #[test]
     fn normal_binomial_returns_ok_with_a_seeded_name() {
         let pn = run("Abies alba", None, None, None).expect("should parse");
-        // Downstream stages are still `// TODO` this slice, so most fields stay at their
+        // Tokenizer + AuthorshipSplit + NameTokens are wired in as of Phase 1 Slice 3 Task
+        // 3, so a clean binomial is now fully name-part-classified; only the authorship
+        // fields (AuthorshipParser/Assemble, still `// TODO`) stay at their
         // ParseContext-seeded defaults.
-        assert_eq!(pn.rank, Rank::Unranked);
+        assert_eq!(pn.genus, Some("Abies".to_string()));
+        assert_eq!(pn.specific_epithet, Some("alba".to_string()));
+        assert_eq!(pn.rank, Rank::Species);
         assert_eq!(pn.code, None);
         assert_eq!(pn.type_, NameType::Scientific);
         assert_eq!(pn.state, crate::model::State::Complete);
