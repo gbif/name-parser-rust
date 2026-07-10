@@ -2,10 +2,10 @@
 //! Java `org.gbif.nameparser.pipeline.Pipeline` — orchestrates the staged parsing
 //! pipeline. Each stage mutates the shared [`ParseContext`].
 
-pub mod context;
-pub mod preflight;
+pub(crate) mod context;
+pub(crate) mod preflight;
 
-pub use context::ParseContext;
+pub(crate) use context::ParseContext;
 
 use std::sync::LazyLock;
 
@@ -89,7 +89,7 @@ pub fn run(
 
     let mut ctx = ParseContext::new(trimmed.clone(), authorship, rank, code);
     if trimmed.chars().count() > LONG_NAME_LENGTH {
-        ctx.name.warnings.push(warnings::LONG_NAME.to_string());
+        ctx.name.add_warning(warnings::LONG_NAME);
     }
     split_glued_phrase_name(&mut ctx);
 
@@ -241,13 +241,18 @@ mod tests {
 
     #[test]
     fn quotes_are_normalized_before_preflight_and_storage() {
-        // The context's `original`/`working` should carry the ASCII-folded form, not the
-        // raw curly quotes — exercised indirectly via split_glued_phrase_name's `working`
-        // and directly via a fresh ParseContext-independent check on normalize_quotes
-        // already covered in unicode.rs; here we just confirm run() doesn't choke on
-        // curly-quoted input and still parses.
-        let pn = run("\u{2018}Abies\u{2019} alba", None, None, None).expect("should parse");
-        assert_eq!(pn.type_, NameType::Scientific);
+        // Load-bearing regression check: normalize_quotes must run *before* Preflight, not
+        // just before storage. "Ceylonesmus vector Cham\u{2019}s, 1941" (curly apostrophe,
+        // U+2019) parses Ok only because normalize_quotes folds it to ASCII "'" first, which
+        // lets ZOOLOGICAL_BINOMIAL match the author block "Cham's, 1941" and rescue the
+        // VIRUS-triggering epithet "vector" (mirrors preflight's own
+        // zoological_binomial_with_author_year_overrides_stray_viral_token test, same input
+        // with a plain-ASCII surname). Left un-normalized, the curly apostrophe breaks that
+        // regex match and Preflight rejects the input as OTHER+Virus instead — so, unlike
+        // the old `type_ == Scientific` assertion (true even if normalization were silently
+        // dropped, since that's just ParsedName::default()'s seed value), this assertion
+        // actually fails the moment normalize_quotes stops running ahead of Preflight.
+        assert!(run("Ceylonesmus vector Cham\u{2019}s, 1941", None, None, None).is_ok());
     }
 
     #[test]

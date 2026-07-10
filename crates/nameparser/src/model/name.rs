@@ -179,6 +179,16 @@ pub struct ParsedName {
     pub sanctioning_author: Option<String>,
 }
 
+impl ParsedName {
+    /// Add a warning if not already present — mirrors Java's `warnings` HashSet (deduping).
+    /// (The golden harness sorts warnings before diffing, so order is irrelevant; dedup is what matters.)
+    pub fn add_warning(&mut self, w: &str) {
+        if !self.warnings.iter().any(|x| x == w) {
+            self.warnings.push(w.to_string());
+        }
+    }
+}
+
 impl Default for ParsedName {
     /// Matches Java `ParseContext`'s seeding of a fresh `ParsedName` before any pipeline
     /// stage runs: `rank = Rank.UNRANKED`, `type = NameType.SCIENTIFIC`,
@@ -329,6 +339,17 @@ mod tests {
         assert!(serde_json::to_string(&pn)
             .unwrap()
             .contains(r#""notho":["SPECIFIC"]"#));
+    }
+
+    #[test]
+    fn add_warning_dedups_like_javas_hashset() {
+        // Java's `warnings` field is a `HashSet<String>`, so adding the same warning
+        // constant from multiple pipeline stages must still yield exactly one entry on
+        // the wire — a plain unconditional `Vec::push` would duplicate it instead.
+        let mut pn = ParsedName::default();
+        pn.add_warning("some warning");
+        pn.add_warning("some warning");
+        assert_eq!(pn.warnings, vec!["some warning".to_string()]);
     }
 
     #[test]

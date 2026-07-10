@@ -12,7 +12,17 @@ use crate::token::Token;
 /// reassigned); Rust has no per-field `final` short of splitting the type into two
 /// structs, so they are plain `pub` fields here too — callers should treat them as
 /// read-only after construction, matching the Java contract.
-pub struct ParseContext {
+///
+/// Several fields (`tokens`, `pending_unparsed`, `aggregate`, `pending_year` and friends —
+/// see each field's own doc comment) are written by `new`/Preflight for pipeline stages
+/// (StripAndStash, NameTokens, AuthorshipParser, Assemble, …) that aren't ported yet, so
+/// nothing reads them within the crate for now. While this struct was `pub`, rustc
+/// exempted them from `dead_code` as public API surface; now that it's `pub(crate)`
+/// (Phase 1 foundation review — closes a `MAX_LENGTH`-guard bypass), that exemption no
+/// longer applies. Allowed at the struct level rather than per-field since the reason is
+/// uniform; drop once every field has a real reader.
+#[allow(dead_code)]
+pub(crate) struct ParseContext {
     // ---- Java `final` (conceptually immutable after construction) ----
     pub original: String,
     pub authorship_input: Option<String>,
@@ -76,7 +86,7 @@ impl ParseContext {
     /// `None` to `Rank::Unranked` (matching Java `ParsedName.setRank`'s null→UNRANKED
     /// fold), while `code` passes straight through (matching `setCode`, which has no such
     /// fold — `None`/`null` stays unset).
-    pub fn new(
+    pub(crate) fn new(
         original: String,
         authorship_input: Option<String>,
         requested_rank: Option<Rank>,

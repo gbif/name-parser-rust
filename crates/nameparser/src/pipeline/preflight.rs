@@ -360,6 +360,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     if OTU_BOLD.is_match(&s)
         || OTU_GTDB_UBA.is_match(&s)
         || GEN_NOV.is_match(&s)
+        // Dead-but-faithful (same shape as the PR2_LIKE note above): the `@`-check in the delete-marker gate above (Preflight.java:212) already returns for any `s.starts_with('@')`, so this second one (Preflight.java:278) can never fire — ported verbatim anyway to stay faithful.
         || s.starts_with('@')
     {
         return Err(ParseError::new(NameType::Other, None, s));
