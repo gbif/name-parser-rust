@@ -1545,24 +1545,37 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 
 // ---- Step 30: stripNomNote ----
 
+// RULE: patterns on fancy_regex (backtracking) MUST keep Java's possessive/atomic
+// quantifiers — only DROP possessives for patterns on the linear `regex` crate.
 /// Java NOM_NOTE (StripAndStash.java:45-57), `Pattern.UNICODE_CHARACTER_CLASS` -> keep
 /// default Unicode `\s`/`\b`/`\p{...}` throughout, ported near-verbatim. Internal
 /// NEGATIVE LOOKAHEAD (`(?!\s+in\s+\p{Lu})`) in the first alternative AND a trailing
 /// LOOKAHEAD boundary (`(?=$|,\s*non…|…)`) -> needs `fancy_regex` (the `regex` crate has
 /// no lookaround at all). The one POSSESSIVE quantifier (`*+` on the first alternative's
-/// inner repetition) is ported as plain greedy `*`: the Java source's own comment
-/// (StripAndStash.java:47-51) explains the captured run only ever consumes lowercase
-/// abbreviation words that the trailing lookahead's own required content
-/// (whitespace/uppercase/comma) never overlaps with, so forbidding backtracking is
-/// behaviour-neutral — dropping the possessive marker changes nothing observable, the
-/// same "possessive/greedy is moot" simplification `regexes.rs`'s module doc documents
-/// for every possessive quantifier in this port. Built via `concat!` (compile-time string
-/// concatenation) mirroring the Java source's own `"..." + "..."` layout, one alternative
-/// per line, so it stays directly diffable against StripAndStash.java line-by-line.
+/// inner repetition) is KEPT here as `*+` — UNLIKE every other possessive quantifier in
+/// this port (see the RULE above, and `regexes.rs`'s module doc: those are all on the
+/// linear `regex` crate, a linear-time automaton with no backtracking, where
+/// possessive-vs-greedy can never change whether an overall match exists). `fancy_regex`
+/// IS a backtracking engine, so on THIS pattern the possessive is load-bearing: without
+/// it, an input with a long run of dotted lowercase words after "nomen"/"nom"/"comb"/
+/// "orth" and no valid terminator (e.g. `" nomen " + "a.".repeat(20) + "#"`) makes the
+/// greedy `*` re-partition the run exponentially before giving up, hitting
+/// `fancy_regex`'s backtrack limit (proven: ~11ms and a `BacktrackLimitExceeded` no-match
+/// with plain `*`, microseconds with `*+`). `fancy_regex` 0.14 parses `*+` natively
+/// (compiling it to an atomic group), so restoring it is a straight verbatim port of
+/// Java's own quantifier, not a restructuring. Java's own comment (StripAndStash.java:
+/// 47-51) explains the captured run only ever consumes lowercase abbreviation words that
+/// the trailing lookahead's own required content (whitespace/uppercase/comma) never
+/// overlaps with, so the possessive changes nothing about WHICH strings match (the same
+/// reasoning that lets Java itself use `*+` safely there) — it only forbids the
+/// backtracking search that would otherwise explore every equivalent partition of the
+/// run. Built via `concat!` (compile-time string concatenation) mirroring the Java
+/// source's own `"..." + "..."` layout, one alternative per line, so it stays directly
+/// diffable against StripAndStash.java line-by-line.
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r"\s+(",
-        r"(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*",
+        r"(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
         r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
@@ -3028,5 +3041,32 @@ mod tests {
         assert_eq!(out, "Gen. nov. Foobarus");
         assert_eq!(c.name.nomenclatural_note, None);
         assert_eq!(c.name.rank, Rank::Unranked);
+    }
+
+    #[test]
+    fn nom_note_does_not_redos_on_dotted_abbrev_run() {
+        // NOM_NOTE runs on fancy_regex (backtracking), so Java's possessive quantifier
+        // (restored above, see the RULE comment) is load-bearing. A long run of dotted
+        // lowercase "words" after "nomen" with no valid terminator in sight (no comma, no
+        // uppercase, no closing paren, no end-of-string right after) used to force the
+        // greedy `*` to re-partition the run exponentially before finally giving up —
+        // reintroducing the exact catastrophic-backtracking shape Java's own `*+` exists
+        // to prevent (proven: ~11ms and a backtrack-limit no-match with plain `*` on just
+        // 20 repeats; microseconds with `*+` restored). This must complete promptly
+        // regardless of how long the dotted run is.
+        let mut c = ctx("x");
+        let input = "Aus bus nomen ".to_string() + &"a.".repeat(30) + "#";
+        let start = std::time::Instant::now();
+        let out = strip_nom_note(&mut c, input.clone());
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed.as_millis() < 200,
+            "strip_nom_note took {elapsed:?} on a dotted-abbrev run — possessive quantifier regressed"
+        );
+        // The trailing "#" satisfies none of NOM_NOTE's terminator lookaheads, so the
+        // whole pattern never matches here (same as any other non-matching input) — the
+        // string comes back untouched, no note stashed.
+        assert_eq!(out, input);
+        assert_eq!(c.name.nomenclatural_note, None);
     }
 }
