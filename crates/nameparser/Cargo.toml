@@ -1,0 +1,17 @@
+[package]
+name = "nameparser"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+
+[dependencies]
+regex = "1.11"
+fancy-regex = "0.14"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "parse"
+harness = false
