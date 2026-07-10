@@ -881,4 +881,28 @@ mod tests {
         // tokens: [Centaurea(0), L(1), .(2), subg(3), .(4), Jacea(5)]
         assert_eq!(mid_name_author_end(&tokens, 1), Some(3));
     }
+
+    #[test]
+    fn particle_triggered_mid_name_author() {
+        // "d'Urv." is an apostrophe-particle author followed by an infraspecific rank marker
+        // ("subsp."), so the mid-name-author path (line 246-253) consumes both the particle
+        // author and the rank marker as part of the name span. The boundary is at the end.
+        assert_eq!(boundary("Cirsium creticum d'Urv. subsp. creticum", None), 7);
+    }
+
+    #[test]
+    fn sp_with_strain_code_stays_in_name() {
+        // "sp." + a strain-code-shaped token ("JGP0404") are kept in the name span via the
+        // logic at lines 169-185, which recognises the strain code pattern and skips past it
+        // as part of the informal phrase, not authorship. The boundary is at the end.
+        assert_eq!(boundary("Lepidoptera sp. JGP0404", None), 4);
+    }
+
+    #[test]
+    fn genus_all_caps_shouted_binomial() {
+        // A shouted binomial (all-caps genus + all-caps epithet with no following dot) is kept
+        // in the name via the logic at lines 287-296, which recognises that all-caps epithets
+        // form part of the name when the genus itself is all-caps. The boundary is at the end.
+        assert_eq!(boundary("CHIONE ELEVATA", None), 2);
+    }
 }
