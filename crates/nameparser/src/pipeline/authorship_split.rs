@@ -19,16 +19,17 @@
 //! separate private methods of the same name in two different classes).
 //!
 //! This file also carries a handful of small free functions that exist only to bridge a
-//! capability Java's `Token`/`Rank` types expose as instance methods
-//! (`Token.startsUpper()`/`startsLower()`/`startsDigitEpithet()`,
-//! `Rank.isInfragenericStrictly()`) but this crate's `Token`/`Rank` types don't yet carry as
-//! methods themselves — see [`starts_upper`], [`starts_lower`], [`starts_digit_epithet`] and
-//! [`rank_is_infrageneric_strictly`]'s own doc comments for why they're local free functions
-//! here rather than additions to `token.rs`/`model/enums.rs` (this task's own brief scopes
-//! its file footprint to this file, plus the one-line module declaration in
-//! `pipeline/mod.rs`).
+//! capability Java's `Token` type exposes as instance methods
+//! (`Token.startsUpper()`/`startsLower()`/`startsDigitEpithet()`) but this crate's `Token`
+//! type doesn't yet carry as methods itself — see [`starts_upper`], [`starts_lower`] and
+//! [`starts_digit_epithet`]'s own doc comments for why they're local free functions here
+//! rather than additions to `token.rs` (this task's own brief scopes its file footprint to
+//! this file, plus the one-line module declaration in `pipeline/mod.rs`). `Rank`'s own
+//! ordinal predicates (`Rank.isInfragenericStrictly()`, ported as
+//! [`crate::model::Rank::is_infrageneric_strictly`]) are called directly — Phase 1 Slice 4
+//! Task 1 made the full `Rank` model the single source of truth, replacing this file's
+//! former ad-hoc `rank_is_infrageneric_strictly` free function.
 
-use crate::model::Rank;
 use crate::pipeline::rank_markers;
 use crate::pipeline::ParseContext;
 use crate::token::{self, Token, TokenKind};
@@ -330,7 +331,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                             genus_text.is_some_and(|g| eq_ignore_case(g, &tokens[j].text));
                         let rank_requests_infragen = ctx
                             .requested_rank
-                            .is_some_and(rank_is_infrageneric_strictly);
+                            .is_some_and(|r| r.is_infrageneric_strictly());
                         let subgenus = if trailing_is_epithet {
                             true
                         } else if abbreviated {
@@ -396,80 +397,6 @@ fn starts_digit_epithet(t: &Token) -> bool {
     t.kind == TokenKind::Word
         && t.text.chars().next().is_some_and(|c| c.is_ascii_digit())
         && t.text.chars().any(|c| c.is_alphabetic())
-}
-
-/// Java `Rank.isInfragenericStrictly()` (`Rank.java:500-502`):
-/// `isInfrageneric() && ordinal() < SPECIES_AGGREGATE.ordinal()`, where `isInfrageneric()`
-/// is `ordinal() > GENUS.ordinal() && notOtherOrUnranked()`. In Java's full 117-constant
-/// enum, the ranks strictly between `GENUS` and `SPECIES_AGGREGATE` are `SUBGENUS`,
-/// `INFRAGENUS`, `DIVISION_BOTANY`, `SUPERSECTION_BOTANY`, `SECTION_BOTANY`,
-/// `SUBSECTION_BOTANY`, `SUPERSERIES_BOTANY`, `SERIES_BOTANY`, `SUBSERIES_BOTANY`,
-/// `INFRAGENERIC_NAME` — the last of those was added to this crate's `Rank` stub by Phase 1
-/// Slice 3 Task 3 (`NameTokens` needs it as a bare `Rank.INFRAGENERIC_NAME` literal) and is
-/// matched `true` below alongside the rest; `Infragenus` remains the sole member of that
-/// Java range still absent from the stub (`model/enums.rs`) — every OTHER member already
-/// exists as a Rust variant and is matched `true` below.
-///
-/// This crate's `Rank` doesn't carry Java's ordinal order in its own declaration order (the
-/// stub's variants are grouped by the task that added them, not by Java ordinal), so this
-/// can't be a `<` comparison the way `Rank.java` writes it; an explicit match reproduces the
-/// same rank set instead. Exhaustive (no wildcard arm), matching the precedent set by this
-/// crate's `Rank::code()` (`model/enums.rs`): a future slice adding a `Rank` variant gets a
-/// compile error here forcing an explicit decision, rather than silently defaulting to
-/// `false`. Scoped as a private free function rather than a `Rank` method for the same
-/// file-footprint reason as [`starts_upper`].
-fn rank_is_infrageneric_strictly(rank: Rank) -> bool {
-    match rank {
-        Rank::Subgenus
-        | Rank::DivisionBotany
-        | Rank::SupersectionBotany
-        | Rank::SectionBotany
-        | Rank::SubsectionBotany
-        | Rank::SuperseriesBotany
-        | Rank::SeriesBotany
-        | Rank::SubseriesBotany
-        | Rank::InfragenericName => true,
-        Rank::Unranked
-        | Rank::Family
-        | Rank::Genus
-        | Rank::Species
-        | Rank::Grex
-        | Rank::Subspecies
-        | Rank::CultivarGroup
-        | Rank::Variety
-        | Rank::Form
-        | Rank::Cultivar
-        | Rank::Subfamily
-        | Rank::Tribe
-        | Rank::Subtribe
-        | Rank::Supertribe
-        | Rank::Infratribe
-        | Rank::SectionZoology
-        | Rank::SubsectionZoology
-        | Rank::SupersectionZoology
-        | Rank::SeriesZoology
-        | Rank::SubseriesZoology
-        | Rank::SuperseriesZoology
-        | Rank::Other
-        | Rank::Subvariety
-        | Rank::Subform
-        | Rank::Pathovar
-        | Rank::Biovar
-        | Rank::Chemoform
-        | Rank::Serovar
-        | Rank::Morph
-        | Rank::Morphovar
-        | Rank::Phagovar
-        | Rank::Natio
-        | Rank::Mutatio
-        | Rank::Convariety
-        | Rank::Proles
-        | Rank::Aberration
-        | Rank::Strain
-        | Rank::InfraspecificName
-        | Rank::FormaSpecialis
-        | Rank::InfrasubspecificName => false,
-    }
 }
 
 /// Java `String.equalsIgnoreCase(String)` used on two runtime-derived strings (the genus

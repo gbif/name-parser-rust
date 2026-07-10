@@ -47,11 +47,11 @@
 //! `starts_upper`/`starts_lower`/`starts_digit_epithet` duplicate `authorship_split.rs`'s
 //! own identically-named, identically-behaved private bridges (`Token` doesn't carry these
 //! as methods yet — see that module's doc comment for why they're local free functions
-//! rather than additions to `token.rs`); `rank_is_infraspecific` mirrors
-//! `authorship_split::rank_is_infrageneric_strictly`'s same ordinal-range-as-explicit-match
-//! adaptation for `Rank.isInfraspecific()`; `rank_marker` adapts `Rank.getMarker()` (a Java
-//! `Rank` instance field/getter this crate's `Rank` stub doesn't carry) for the one call
-//! site that needs it (the quadrinomial-override warning's "old marker" text).
+//! rather than additions to `token.rs`). `Rank.isInfraspecific()`/`Rank.getMarker()` are
+//! called directly as [`crate::model::Rank::is_infraspecific`]/
+//! [`crate::model::Rank::marker`] — Phase 1 Slice 4 Task 1 made the full `Rank` model the
+//! single source of truth, replacing this file's former ad-hoc `rank_is_infraspecific`/
+//! `rank_marker` free functions.
 
 use crate::model::{warnings, NamePart, NameType, Rank, State};
 use crate::pipeline::authorship_split;
@@ -444,7 +444,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             marker_idx_in_epithets >= 0
                                 && (marker_idx_in_epithets as usize) < lower_epithets.len()
                         }) {
-                            let old_marker = rank_marker(old_rank);
+                            let old_marker = old_rank.marker();
                             let old_epithet = &lower_epithets[marker_idx_in_epithets as usize];
                             let mut sb = String::from(warnings::REMOVED_PREFIX);
                             if let Some(m) = old_marker {
@@ -704,7 +704,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     // Caller-supplied infraspecific rank on a binomial with no infraspecific epithet ->
     // treat as indeterminate infraspecific (e.g. "Lepidoptera alba DC." + SUBSPECIES)
     if !indet
-        && requested.is_some_and(|r| r != Rank::Unranked && rank_is_infraspecific(r))
+        && requested.is_some_and(|r| r != Rank::Unranked && r.is_infraspecific())
         && specific.is_some()
         && infraspecific.is_none()
     {
@@ -737,108 +737,6 @@ fn starts_digit_epithet(t: &Token) -> bool {
     t.kind == TokenKind::Word
         && t.text.chars().next().is_some_and(|c| c.is_ascii_digit())
         && t.text.chars().any(|c| c.is_alphabetic())
-}
-
-/// Java `Rank.isInfraspecific()` (`Rank.java:479-481`): `ordinal() > SPECIES.ordinal() &&
-/// notOtherOrUnranked()`. Same ordinal-order caveat as
-/// `authorship_split::rank_is_infrageneric_strictly` (this crate's `Rank` stub doesn't
-/// preserve Java's declaration/ordinal order) — ported as an explicit match over the ranks
-/// strictly after `SPECIES` in Java's full 117-constant ordinal order (`INFRASPECIFIC_NAME`
-/// through `STRAIN`), excluding `OTHER`/`UNRANKED` (`notOtherOrUnranked`). Exhaustive over
-/// every variant this stub currently has (no wildcard), matching the crate's established
-/// precedent (`Rank::code`, `authorship_split::rank_is_infrageneric_strictly`): a future
-/// variant addition forces an explicit decision here rather than silently defaulting.
-fn rank_is_infraspecific(rank: Rank) -> bool {
-    match rank {
-        Rank::Grex
-        | Rank::Subspecies
-        | Rank::CultivarGroup
-        | Rank::Variety
-        | Rank::Form
-        | Rank::Cultivar
-        | Rank::Subvariety
-        | Rank::Subform
-        | Rank::Pathovar
-        | Rank::Biovar
-        | Rank::Chemoform
-        | Rank::Serovar
-        | Rank::Morph
-        | Rank::Morphovar
-        | Rank::Phagovar
-        | Rank::Natio
-        | Rank::Mutatio
-        | Rank::Convariety
-        | Rank::Proles
-        | Rank::Aberration
-        | Rank::Strain
-        | Rank::InfraspecificName
-        | Rank::FormaSpecialis
-        | Rank::InfrasubspecificName => true,
-        Rank::Unranked
-        | Rank::Family
-        | Rank::Genus
-        | Rank::Species
-        | Rank::Subfamily
-        | Rank::Tribe
-        | Rank::Subtribe
-        | Rank::Supertribe
-        | Rank::Infratribe
-        | Rank::Subgenus
-        | Rank::SectionBotany
-        | Rank::SubsectionBotany
-        | Rank::SupersectionBotany
-        | Rank::SeriesBotany
-        | Rank::SubseriesBotany
-        | Rank::SuperseriesBotany
-        | Rank::SectionZoology
-        | Rank::SubsectionZoology
-        | Rank::SupersectionZoology
-        | Rank::SeriesZoology
-        | Rank::SubseriesZoology
-        | Rank::SuperseriesZoology
-        | Rank::Other
-        | Rank::DivisionBotany
-        | Rank::InfragenericName => false,
-    }
-}
-
-/// Java `Rank.getMarker()` (`Rank.java:457-459`): the rank's own marker string literal
-/// (e.g. `Rank.SUBSPECIES.getMarker()` == `"subsp."`), or `null` for a rank with none. This
-/// crate's `Rank` stub carries no such field/method yet; rather than adding one for a
-/// single call site (the quadrinomial-override warning's "old marker" text,
-/// `NameTokens.java:328`), this is a local, scoped-down adaptation covering only the ranks
-/// `inline_rank` can actually hold at that call site — every `Rank` value
-/// `RankMarkers::match_infraspecific_allow_notho` can return, plus `Rank::FormaSpecialis`
-/// (the "f. sp." special case just above in the same match arm) — with a wildcard `_ =>
-/// None` fallback for every other `Rank` variant. That fallback is exact, not a
-/// faithfulness compromise: Java's own `getMarker()` likewise returns `null` for every rank
-/// outside this reachable set (most `Rank` constants carry no marker at all).
-fn rank_marker(rank: Rank) -> Option<&'static str> {
-    match rank {
-        Rank::Other => None,
-        Rank::Subspecies => Some("subsp."),
-        Rank::Variety => Some("var."),
-        Rank::Subvariety => Some("subvar."),
-        Rank::Form => Some("f."),
-        Rank::Subform => Some("subf."),
-        Rank::Pathovar => Some("pv."),
-        Rank::Biovar => Some("biovar"),
-        Rank::Chemoform => Some("chemoform"),
-        Rank::Serovar => Some("serovar"),
-        Rank::Morph => Some("morph"),
-        Rank::Morphovar => Some("morphovar"),
-        Rank::Phagovar => Some("phagovar"),
-        Rank::Natio => Some("natio"),
-        Rank::Mutatio => Some("mut."),
-        Rank::Species => Some("sp."),
-        Rank::Convariety => Some("convar."),
-        Rank::Proles => Some("prol."),
-        Rank::Aberration => Some("ab."),
-        Rank::Strain => Some("strain"),
-        Rank::InfraspecificName => Some("infrasp."),
-        Rank::FormaSpecialis => Some("f.sp."),
-        _ => None,
-    }
 }
 
 /// Renders the WORD/DOT tokens in `[from, to)` into the canonical inline author form ("B.
