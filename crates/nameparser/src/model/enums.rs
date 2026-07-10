@@ -51,17 +51,30 @@ pub enum State {
 }
 
 // STUB: full 117-constant port deferred to the rank-handling slice. Only variants
-// referenced by Preflight/ViralSuffix/the skeleton + Unranked default, plus Species and
+// referenced by Preflight/ViralSuffix/the skeleton + Unranked default, Species and
 // Subspecies (needed for the Task 2 wire-format golden-reference tests to be byte-exact —
 // the Java CLI oracle over "Abies alba Mill." / "Vulpes vulpes silaceus Miller, 1907"
-// reports rank SPECIES / SUBSPECIES respectively), exist for now.
+// reports rank SPECIES / SUBSPECIES respectively), plus Genus/Family/Variety/Form (set by
+// `StripAndStash::strip_nom_note`'s NOM_NOTE_RANK_HINT switch, StripAndStash.java:1184-1190)
+// and Cultivar/CultivarGroup/Grex (set by `strip_quoted_cultivar`/`strip_cultivar_group_grex`,
+// StripAndStash.java:998/1018/1029/1061 — Phase 1 Slice 2 batch 2b), exist for now. `rank` is
+// not itself one of this slice's gated downstream-independent fields (it's a shared field
+// also written by later, not-yet-ported stages), but these steps set it as a faithful,
+// observable side effect, so the variants they need are added rather than stubbed out.
 /// Java `org.gbif.nameparser.api.Rank` (STUB — see note above).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Rank {
     Unranked,
+    Family,
+    Genus,
     Species,
+    Grex,
     Subspecies,
+    CultivarGroup,
+    Variety,
+    Form,
+    Cultivar,
 }
 
 /// String constants from `org.gbif.nameparser.api.Warnings`, transcribed verbatim (values, not
@@ -178,6 +191,32 @@ mod tests {
             serde_json::to_string(&Rank::Subspecies).unwrap(),
             "\"SUBSPECIES\""
         );
+    }
+
+    /// Phase 1 Slice 2 batch 2b additions: `StripAndStash::strip_nom_note`'s rank-hint
+    /// switch (Genus/Family/Variety/Form) and `strip_cultivar_group_grex`/
+    /// `strip_quoted_cultivar` (Cultivar/CultivarGroup/Grex) — verifies the
+    /// `SCREAMING_SNAKE_CASE` rename produces the exact Java enum constant name for each,
+    /// in particular that `CultivarGroup`'s two-word boundary renders as the
+    /// underscore-joined `CULTIVAR_GROUP` Java uses (`Rank.CULTIVAR_GROUP`).
+    #[test]
+    fn rank_stub_batch_2b_variants() {
+        assert_eq!(serde_json::to_string(&Rank::Genus).unwrap(), "\"GENUS\"");
+        assert_eq!(serde_json::to_string(&Rank::Family).unwrap(), "\"FAMILY\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Variety).unwrap(),
+            "\"VARIETY\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Form).unwrap(), "\"FORM\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Cultivar).unwrap(),
+            "\"CULTIVAR\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::CultivarGroup).unwrap(),
+            "\"CULTIVAR_GROUP\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Grex).unwrap(), "\"GREX\"");
     }
 
     #[test]

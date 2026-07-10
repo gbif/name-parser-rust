@@ -8,21 +8,24 @@
 //! that takes the working string, mutates the [`ParseContext`] as needed, and returns
 //! the (possibly shortened/rewritten) working string.
 //!
-//! **Phase 1 Slice 2 Task 3 (this batch): steps 1-19 ported.** [`run`] dispatches all 55
-//! steps in Java's exact `StripAndStash.run(ParseContext)` order — that order is
-//! load-bearing and was locked in by Task 2 — steps 1-19 (leading normalizers + flaggers)
-//! now carry their faithful port; steps 20-55 (batches 2-5) remain `// TODO batch N` no-op
-//! passthroughs (see `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md` for the
-//! batch breakdown). One step, `replace_homoglyphs` (step 13), is a DOCUMENTED stub — see
-//! its own doc comment — since porting its backing table is a sizeable sub-project deferred
-//! by design (mirrors `crate::unicode`'s own existing deferral of the same table).
+//! **Phase 1 Slice 2, batches 1 + 2b (this batch): steps 1-30 ported.** [`run`] dispatches
+//! all 55 steps in Java's exact `StripAndStash.run(ParseContext)` order — that order is
+//! load-bearing and was locked in by Task 2 — steps 1-19 (leading normalizers + flaggers,
+//! batch 1) and 20-30 (candidatus, cultivar Group/grex/quoted, extinct dagger, t.infr.,
+//! doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare nom-note, batch
+//! 2b) now carry their faithful port; steps 31-55 (batches 2c-2e) remain `// TODO batch N`
+//! no-op passthroughs (see `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md`
+//! for the batch breakdown). One step, `replace_homoglyphs` (step 13), is a DOCUMENTED
+//! stub — see its own doc comment — since porting its backing table is a sizeable
+//! sub-project deferred by design (mirrors `crate::unicode`'s own existing deferral of the
+//! same table).
 
 use std::sync::LazyLock;
 
 use fancy_regex::Regex as FancyRegex;
 use regex::Regex;
 
-use crate::model::{warnings, NameType, ParsedName};
+use crate::model::{warnings, NameType, NomCode, ParsedName, Rank};
 use crate::pipeline::ParseContext;
 use crate::token;
 use crate::unicode::java_trim;
@@ -985,80 +988,677 @@ fn strip_html(ctx: &mut ParseContext, s: String) -> String {
 // ---------------------------------------------------------------------------------
 // Batch 2 (steps 20-30): candidatus, cultivar Group/grex/quoted, extinct, t.infr.,
 // doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare nom-note.
+// Ported (Phase 1 Slice 2, batch 2b). This batch introduces the first `Rank` variants
+// beyond the Unranked/Species/Subspecies trio (`model::enums::Rank`'s own STUB doc
+// comment has the details) — `rank`/`code` are shared (B) fields also written by later,
+// not-yet-ported stages, so they're not part of THIS slice's gate, but are set here
+// faithfully anyway since later slices consume them.
 // ---------------------------------------------------------------------------------
 
-// TODO batch 2 — Java `stripCandidatus`: a leading "Candidatus "/"Ca. " prefix sets
-// `candidatus = true` and `code = BACTERIAL`, and is stripped from the working string.
-fn strip_candidatus(_ctx: &mut ParseContext, s: String) -> String {
+/// Java WHITESPACE (StripAndStash.java:288): `\s+`, no flags. Has `\s`, no `\p{...}` ->
+/// whole-wrap. Distinct from batch 1's `MULTI_SPACE` (`\s{2,}`, only 2+ runs collapse) —
+/// this pattern ALSO normalises a single non-space whitespace char (tab, newline, …) to a
+/// plain space, which `MULTI_SPACE` alone would leave untouched. Shared by
+/// `strip_extinct_dagger` (step 24), `strip_sic_and_corrig` (step 27, both the
+/// SIC_WITH_COMMENT inner-squish — replacement `""`, not `" "` — and the CORRIG collapse),
+/// and `normalise_nom_note` (steps 29/30).
+static WHITESPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s+)").unwrap());
+
+/// Java's repeated `WHITESPACE.matcher(x).replaceAll(" ").trim()` idiom: collapse every
+/// run of (ASCII) whitespace to a single space, then `java_trim`.
+fn collapse_whitespace(s: &str) -> String {
+    java_trim(&WHITESPACE.replace_all(s, " ")).to_string()
+}
+
+// ---- Step 20: stripCandidatus ----
+
+/// Java CANDIDATUS_PREFIX (StripAndStash.java:198-199): `^["']?(?:Candidatus|Ca\.)\s+`,
+/// `Pattern.CASE_INSENSITIVE`. Has `\s`, no `\p{...}`, no unescaped wildcard (only an
+/// escaped `\.`) -> whole pattern ASCII-scoped (leading `^` left outside the wrap, same
+/// convention as leaving a trailing `$` outside — anchors aren't `u`-sensitive either way).
+static CANDIDATUS_PREFIX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"(?i)^(?-u:["']?(?:Candidatus|Ca\.)\s+)"#).unwrap());
+
+/// Java `StripAndStash.stripCandidatus` (StripAndStash.java:963-973). A leading
+/// "Candidatus "/"Ca. " prefix (optionally quoted, e.g. `"Candidatus Something`) marks a
+/// provisional bacterial taxon name under the *Candidatus* category: stashes
+/// `candidatus = true` and `code = BACTERIAL`, and strips the prefix — plus a trailing
+/// quote character, if one is present, regardless of whether it matches the leading quote
+/// (Java doesn't check for a match, just presence; ported literally) — from the working
+/// string.
+fn strip_candidatus(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = CANDIDATUS_PREFIX.find(&s) {
+        ctx.name.candidatus = true;
+        ctx.name.code = Some(NomCode::Bacterial);
+        let mut rest = s[m.end()..].to_string();
+        if rest.ends_with('"') || rest.ends_with('\'') {
+            rest.pop();
+        }
+        return rest;
+    }
     s
 }
 
-// TODO batch 2 — Java `normaliseHortExPlaceholder`: "cv. ex" / "Hort. ex" /
-// "hortus(a) ex" / "ht." horticultural placeholder variants are normalised to the
-// canonical lower-case "hort.".
+// ---- Step 21: normaliseHortExPlaceholder ----
+
+/// Java CV_EX (StripAndStash.java:332): `\bcv\.(?=\s+ex\s+)`, no flags (ASCII `\s`/`\b` in
+/// Java). Trailing lookahead (not consumed, so the following " ex " text survives
+/// untouched for a possible later match too) -> `fancy_regex`. `fancy_regex` has no ASCII
+/// mode at all -> `\s` spelled out as the literal ASCII whitespace set; `\b` is left as
+/// `fancy_regex`'s only option (Unicode word-boundary), the same forced, vanishingly-rare
+/// divergence documented at `STRAIN_DESIGNATION` in batch 1.
+static CV_EX: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"\bcv\.(?=[ \t\n\x0B\f\r]+ex[ \t\n\x0B\f\r]+)").unwrap());
+
+/// Java HORT_EX (StripAndStash.java:308): `\bHort\.(?=\s+ex\s+)`, no flags — note the
+/// literal capital "Hort" (NOT case-insensitive). Same fancy_regex/ASCII-whitespace
+/// reasoning as `CV_EX`. Shared with the not-yet-ported `stripAuthorshipMarkers`.
+static HORT_EX: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"\bHort\.(?=[ \t\n\x0B\f\r]+ex[ \t\n\x0B\f\r]+)").unwrap());
+
+/// Java HORTUS_EX (StripAndStash.java:309): `\bhortus[a]?\b(?=\s+ex\s+)`, no flags. Same
+/// fancy_regex/ASCII-whitespace reasoning as `CV_EX`. Shared with the not-yet-ported
+/// `stripAuthorshipMarkers`.
+static HORTUS_EX: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(r"\bhortus[a]?\b(?=[ \t\n\x0B\f\r]+ex[ \t\n\x0B\f\r]+)").unwrap()
+});
+
+/// Java HT_MARKER (StripAndStash.java:333): `\bht\.`, no flags. No lookaround or
+/// backreference -> plain `regex` crate. Has `\b`, no `\p{...}`, no unescaped wildcard ->
+/// whole-wrap.
+static HT_MARKER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\bht\.)").unwrap());
+
+/// Java `StripAndStash.normaliseHortExPlaceholder` (StripAndStash.java:975-988).
+/// Working-string-only (no `ctx.name` mutation, no warnings): normalises every spelling
+/// of the horticultural "ex" placeholder author — "cv. ex", "Hort. ex", "hortus(a) ex",
+/// and the bare "ht." abbreviation — to the canonical lower-case "hort.", so the
+/// downstream authorship parser recognises one consistent marker regardless of which
+/// variant the source data used. Four SEQUENTIAL replacements, each against the
+/// (possibly already-rewritten) result of the previous one.
 fn normalise_hort_ex_placeholder(_ctx: &mut ParseContext, s: String) -> String {
+    let s = fancy_replace_all(&CV_EX, &s, |_| "hort.".to_string());
+    let s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
+    let s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
+    HT_MARKER.replace_all(&s, "hort.").into_owned()
+}
+
+// ---- Step 22: stripCultivarGroupGrex ----
+
+/// Java CULTIVAR_GROUP_GREX (StripAndStash.java:200-202),
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.
+static CULTIVAR_GROUP_GREX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\s+([\p{Lu}][\p{L}]+(?:\s+[\p{Lu}][\p{L}]+)*)\s+(Group|grex|gx)\s*$").unwrap()
+});
+
+/// Java `StripAndStash.stripCultivarGroupGrex` (StripAndStash.java:990-1002). A trailing
+/// "... CapWord(s) (Group|grex|gx)" names a Cultivar Group or grex rather than a single
+/// cultivar: the capitalised epithet sequence becomes `cultivarEpithet`, `code` is pinned
+/// to CULTIVARS, and `rank` to CULTIVAR_GROUP for the exact (case-sensitive) literal
+/// "Group" or GREX for either "grex" or "gx" — matching Java's `"Group".equals(...)`
+/// ternary, which folds every OTHER alternative the pattern can capture to GREX.
+fn strip_cultivar_group_grex(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = CULTIVAR_GROUP_GREX.captures(&s) {
+        ctx.name.cultivar_epithet = Some(java_trim(caps.get(1).unwrap().as_str()).to_string());
+        ctx.name.code = Some(NomCode::Cultivars);
+        ctx.name.rank = if caps.get(2).unwrap().as_str() == "Group" {
+            Rank::CultivarGroup
+        } else {
+            Rank::Grex
+        };
+        let whole = caps.get(0).unwrap();
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 2 — Java `stripCultivarGroupGrex`: a trailing "... CapWord(s) (Group|grex|gx)"
-// sets `cultivarEpithet` + `code = CULTIVARS` + rank (CULTIVAR_GROUP or GREX).
-fn strip_cultivar_group_grex(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 23: stripQuotedCultivar ----
+
+/// Java QUOTED_CULTIVAR_END (StripAndStash.java:203-204):
+/// `\s+(cv\.?\s+)?(['"])([^'"]+)\2\s*$`, no flags (ASCII `\s` in Java). BACKREFERENCE
+/// (`\2`, the closing quote must match the opening one) -> `fancy_regex`. `[^'"]` is a
+/// NEGATED custom class; Java's `UNICODE_CHARACTER_CLASS` flag never governs a
+/// literal/custom class anyway, and `fancy_regex` (always Unicode text, no byte/ASCII
+/// mode) has no analogous "matches invalid UTF-8" restriction to worry about here either
+/// way. `fancy_regex` has no ASCII mode for `\s` -> spelled out as the literal ASCII
+/// whitespace set. Group 1 = optional "cv. " prefix, group 2 = quote char, group 3 =
+/// cultivar epithet content.
+static QUOTED_CULTIVAR_END: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(r#"[ \t\n\x0B\f\r]+(cv\.?[ \t\n\x0B\f\r]+)?(['"])([^'"]+)\2[ \t\n\x0B\f\r]*$"#)
+        .unwrap()
+});
+
+/// Java RANK_MARKER_SUFFIX (StripAndStash.java:336-337):
+/// `.*\b(?:sp|spec|subsp|ssp|var|form|f)\.?$`, no flags, called via `.matches()`.
+/// RESTRUCTURED: under `.matches()` the leading `.*` imposes no real constraint (it can
+/// always stretch to cover whatever precedes the `$`-anchored suffix), so an unanchored
+/// `is_match` on the suffix alone is existence-equivalent — the same class of
+/// restructuring as the `.*CORE.*` -> `CORE` cases elsewhere in this file, just one-sided.
+/// Has `\b`, no `\p{...}`, and (after dropping the leading `.*`) no remaining unescaped
+/// wildcard -> whole-wrap (`$` left outside per convention).
+static RANK_MARKER_SUFFIX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b(?:sp|spec|subsp|ssp|var|form|f)\.?)$").unwrap());
+
+/// Java QUOTED_CULTIVAR_MID (StripAndStash.java:205-207):
+/// `\s+(?:cv\.?\s+)?(['"])([^'"]+)\1(\s+[\p{Lu}].*)$`, `Pattern.UNICODE_CHARACTER_CLASS`
+/// -> keep default Unicode `\s` (fancy_regex's own default, so no ASCII spelling-out
+/// needed here, unlike `QUOTED_CULTIVAR_END`). BACKREFERENCE (`\1`) -> `fancy_regex`.
+/// Group 1 = quote char, group 2 = cultivar epithet content, group 3 = the trailing
+/// author span (kept verbatim for splicing back onto the name part).
+static QUOTED_CULTIVAR_MID: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(r#"\s+(?:cv\.?\s+)?(['"])([^'"]+)\1(\s+[\p{Lu}].*)$"#).unwrap()
+});
+
+/// Java AUTHOR_START (StripAndStash.java:283-285):
+/// `^([\p{Lu}][\p{Ll}]+(?:\s+[\p{Ll}]+)?)\s+([\p{Lu}][\p{L}.]+.*)$`,
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim (no
+/// backreference, no lookaround -> plain `regex` crate).
+static AUTHOR_START: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^([\p{Lu}][\p{Ll}]+(?:\s+[\p{Ll}]+)?)\s+([\p{Lu}][\p{L}.]+.*)$").unwrap()
+});
+
+/// Java `StripAndStash.findAuthorStart` (StripAndStash.java:1650-1657): the byte offset of
+/// group 2 (the author span) within a "Genus[ species] Author..." prefix, or `None` when
+/// the prefix doesn't have that shape (Java: `int`, -1 sentinel). The pattern's own `^…$`
+/// anchors make `.captures()` here equivalent to Java's `.matches()`.
+fn find_author_start(prefix: &str) -> Option<usize> {
+    AUTHOR_START
+        .captures(prefix)
+        .map(|caps| caps.get(2).unwrap().start())
+}
+
+/// Java QUOTED_CULTIVAR_OPEN (StripAndStash.java:217-219):
+/// `\s+(cv\.?\s+)?(['"])(\p{Ll}[\p{Ll} ]*)\s*$`, `Pattern.UNICODE_CHARACTER_CLASS` -> keep
+/// default Unicode. No backreference (this is the UNCLOSED-quote fallback: content runs to
+/// end of string, no closing quote required) and no lookaround -> plain `regex` crate.
+/// Group 1 = optional "cv. " prefix, group 2 = quote char, group 3 = epithet content
+/// (lowercase letters/spaces only, so this never swallows a capitalised or
+/// punctuation-carrying apostrophe-author).
+static QUOTED_CULTIVAR_OPEN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"\s+(cv\.?\s+)?(['"])(\p{Ll}[\p{Ll} ]*)\s*$"#).unwrap());
+
+/// Java TRAILING_CV (StripAndStash.java:334): `\s+cv\.?\s*$`, no flags. Has `\s` (x2), no
+/// `\p{...}`, no unescaped wildcard -> whole-wrap (`$` left outside).
+static TRAILING_CV: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s+cv\.?\s*)$").unwrap());
+
+/// Java CV_MARKER (StripAndStash.java:335): `\s+cv\.?(?=\s|$)`, no flags (ASCII `\s`).
+/// Trailing lookahead (boundary not consumed) -> `fancy_regex`, ASCII whitespace spelled
+/// out (no ASCII mode in `fancy_regex`).
+static CV_MARKER: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"[ \t\n\x0B\f\r]+cv\.?(?=[ \t\n\x0B\f\r]|$)").unwrap());
+
+/// Java `StripAndStash.stripQuotedCultivar` (StripAndStash.java:1004-1068). A quoted
+/// cultivar epithet — " 'Name'" / " \"Name\"", optionally preceded by an explicit "cv."
+/// marker — becomes `cultivarEpithet` (`code = CULTIVARS`, `rank = CULTIVAR`). Three
+/// shapes, tried in order (an `if`/else-if/else-if chain in Java; ported here as
+/// sequential checks with early returns for the first two):
+///   1. **At end of input** (`QUOTED_CULTIVAR_END`): "Acer campestre 'Elsrijk'" ->
+///      cultivarEpithet "Elsrijk". Skipped when the quote is immediately preceded by a
+///      bare rank marker with no explicit "cv." (`RANK_MARKER_SUFFIX` on the trimmed
+///      preceding text) — that shape is a phrase name, not a cultivar.
+///   2. **Mid-string, followed by an author span** (`QUOTED_CULTIVAR_MID`, tried only
+///      when shape 1 didn't apply): "Acer campestre L. cv. 'Elsrijk' Broerse" ->
+///      cultivarEpithet "Elsrijk", author "Broerse". Any species author preceding the
+///      epithet is split off via `find_author_start` and stashed as
+///      `ctx.pending_specific_author` (e.g. the "L." above) rather than left attached to
+///      the binomial.
+///   3. **Unclosed trailing quote** (`QUOTED_CULTIVAR_OPEN`, tried only when shapes 1 and
+///      2 didn't apply): " 'albino" (opening quote, no closing one — common in
+///      aquarium/horticultural trade lists), same rank-marker-prefix guard as shape 1.
+///
+/// All three spot-checked against the Java CLI oracle's `cultivarEpithet`/`rank`/`code`/
+/// `specificAuthorship` output shape.
+fn strip_quoted_cultivar(ctx: &mut ParseContext, mut s: String) -> String {
+    let cm = QUOTED_CULTIVAR_END.captures(&s).ok().flatten();
+    let cm_found = cm.is_some();
+    let has_cv_marker = cm.as_ref().is_some_and(|c| c.get(1).is_some());
+    let preceding = cm
+        .as_ref()
+        .map(|c| java_trim(&s[..c.get(0).unwrap().start()]).to_string());
+    let is_rank_marker_prefix = !has_cv_marker
+        && preceding
+            .as_deref()
+            .is_some_and(|p| RANK_MARKER_SUFFIX.is_match(p));
+    if cm_found && !is_rank_marker_prefix {
+        let caps = cm.unwrap();
+        let match_start = caps.get(0).unwrap().start();
+        let epithet = java_trim(caps.get(3).unwrap().as_str()).to_string();
+        ctx.name.cultivar_epithet = Some(epithet);
+        ctx.name.code = Some(NomCode::Cultivars);
+        ctx.name.rank = Rank::Cultivar;
+        s = java_trim(&s[..match_start]).to_string();
+        s = java_trim(&TRAILING_CV.replace_all(&s, "")).to_string();
+        return s;
+    }
+
+    if let Some(caps) = QUOTED_CULTIVAR_MID.captures(&s).ok().flatten() {
+        let match_start = caps.get(0).unwrap().start();
+        let epithet = java_trim(caps.get(2).unwrap().as_str()).to_string();
+        let tail = caps.get(3).unwrap().as_str().to_string();
+        let prefix = java_trim(&s[..match_start]).to_string();
+        ctx.name.cultivar_epithet = Some(epithet);
+        ctx.name.code = Some(NomCode::Cultivars);
+        ctx.name.rank = Rank::Cultivar;
+        let name_part = match find_author_start(&prefix) {
+            Some(author_start) if author_start > 0 => {
+                ctx.pending_specific_author = Some(java_trim(&prefix[author_start..]).to_string());
+                java_trim(&prefix[..author_start]).to_string()
+            }
+            _ => prefix,
+        };
+        s = java_trim(&format!("{name_part}{tail}")).to_string();
+        s = java_trim(&fancy_replace_all(&CV_MARKER, &s, |_| String::new())).to_string();
+        return s;
+    }
+
+    if let Some(caps) = QUOTED_CULTIVAR_OPEN.captures(&s) {
+        let has_cv = caps.get(1).is_some();
+        let match_start = caps.get(0).unwrap().start();
+        let epithet = java_trim(caps.get(3).unwrap().as_str()).to_string();
+        let preceding_open = java_trim(&s[..match_start]).to_string();
+        let is_rank_prefix = !has_cv && RANK_MARKER_SUFFIX.is_match(&preceding_open);
+        if !is_rank_prefix {
+            ctx.name.cultivar_epithet = Some(epithet);
+            ctx.name.code = Some(NomCode::Cultivars);
+            ctx.name.rank = Rank::Cultivar;
+            s = java_trim(&s[..match_start]).to_string();
+            s = java_trim(&TRAILING_CV.replace_all(&s, "")).to_string();
+        }
+    }
     s
 }
 
-// TODO batch 2 — Java `stripQuotedCultivar`: a quoted cultivar epithet, at end of
-// string or mid-string before a trailing author span, sets `cultivarEpithet` +
-// `code = CULTIVARS` + `rank = CULTIVAR` (splitting off a preceding species author into
-// `ctx.pending_specific_author` for the mid-string form).
-fn strip_quoted_cultivar(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 24: stripExtinctDagger ----
+
+/// Java DAGGER (StripAndStash.java:330): `[†✝]`, no flags. A custom class holding
+/// non-ASCII literals — Java's `UNICODE_CHARACTER_CLASS` flag never governs a
+/// literal/custom class anyway (only predefined shorthand classes), and a non-ASCII
+/// literal inside a `regex` crate `(?-u:…)` group is a hard parse error regardless (see
+/// `IMPRINT_YEAR_QUOTED` in batch 1) — no shorthand atoms to scope here either, so this
+/// ports verbatim with no scoping at all.
+static DAGGER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"[†✝]").unwrap());
+
+/// Java `StripAndStash.stripExtinctDagger` (StripAndStash.java:1070-1077). An extinction
+/// dagger ("†" or "✝") anywhere in the string — possibly more than one — marks the taxon
+/// extinct; ALL occurrences are stripped (replaced by a space, then whitespace
+/// collapsed+trimmed, so e.g. "Foo †bar" doesn't leave a glued "Foobar").
+fn strip_extinct_dagger(ctx: &mut ParseContext, s: String) -> String {
+    if s.contains('†') || s.contains('✝') {
+        ctx.name.extinct = true;
+        let no_dagger = DAGGER.replace_all(&s, " ");
+        return collapse_whitespace(&no_dagger);
+    }
     s
 }
 
-// TODO batch 2 — Java `stripExtinctDagger`: "†"/"✝" anywhere in the string set
-// `extinct = true` and are stripped.
-fn strip_extinct_dagger(_ctx: &mut ParseContext, s: String) -> String {
-    s
-}
+// ---- Step 25: stripTinfrMarker ----
 
-// TODO batch 2 — Java `stripTinfrMarker`: the "t.infr." infraspecific abbreviation
-// (Hieracium notation) is stripped so the trailing epithet parses as a normal
-// infraspecific name.
+/// Java TINFR_MARKER (StripAndStash.java:331): `\b[tT]\.?\s*infr\.?\s+`, no flags. Has
+/// `\b`/`\s` (x2), no `\p{...}`, no unescaped wildcard (dots are escaped) -> whole-wrap.
+static TINFR_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b[tT]\.?\s*infr\.?\s+)").unwrap());
+
+/// Java `StripAndStash.stripTinfrMarker` (StripAndStash.java:1079-1087). The Hieracium
+/// "t.infr." infraspecific-epithet notation (e.g. "Hieracium alpinum t.infr. foobarum")
+/// is stripped so downstream tokenisation sees a plain space-separated word run instead
+/// of the marker — spot-checked against the Java CLI oracle: with a genus+species BEFORE
+/// the marker, the trailing word is later read as a rankless `INFRASPECIFIC_NAME`
+/// epithet ("Hieracium alpinum t.infr. foobarum" -> infraspecificEpithet "foobarum");
+/// with only a bare genus before it, the trailing word instead reads as an ordinary
+/// specific epithet ("Hieracium t.infr. foobarum" -> specificEpithet "foobarum") — this
+/// step itself does neither classification, it only removes the marker text.
 fn strip_tinfr_marker(_ctx: &mut ParseContext, s: String) -> String {
+    if s.contains("infr") {
+        return TINFR_MARKER.replace_all(&s, "").into_owned();
+    }
     s
 }
 
-// TODO batch 2 — Java `stripDoubtfulGenusBrackets`: a leading bracketed genus
-// ("[Acontia] chia ...") has its brackets dropped, flagging doubtful + DOUBTFUL_GENUS.
-fn strip_doubtful_genus_brackets(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 26: stripDoubtfulGenusBrackets ----
+
+/// Java DOUBTFUL_GENUS_BRACKET (StripAndStash.java:220-222):
+/// `^\[\s*([\p{Lu}][\p{L}\-]+)\s*\](\s|$)`, `Pattern.UNICODE_CHARACTER_CLASS` -> keep
+/// default Unicode, ported verbatim.
+static DOUBTFUL_GENUS_BRACKET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\[\s*([\p{Lu}][\p{L}\-]+)\s*\](\s|$)").unwrap());
+
+/// Java `StripAndStash.stripDoubtfulGenusBrackets` (StripAndStash.java:1089-1099). A
+/// leading bracketed genus ("[Acontia] chia ..." or just "[Dexia]") marks the genus
+/// assignment as doubtful — the source questions whether the specimen truly belongs to
+/// that genus. Drops the brackets (keeping the genus text and the single separator
+/// char/end-of-string that followed them), flags doubtful + `DOUBTFUL_GENUS`.
+fn strip_doubtful_genus_brackets(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = DOUBTFUL_GENUS_BRACKET.captures(&s) {
+        ctx.name.doubtful = true;
+        ctx.name.add_warning(warnings::DOUBTFUL_GENUS);
+        let whole = caps.get(0).unwrap();
+        let g1 = caps.get(1).unwrap().as_str();
+        let g2 = caps.get(2).unwrap().as_str();
+        return java_trim(&format!("{g1}{g2}{}", &s[whole.end()..])).to_string();
+    }
     s
 }
 
-// TODO batch 2 — Java `stripSicAndCorrig`: "[sic]"/"(sic)"/"[sic, comment]" set
-// `originalSpelling = true` (the comment form also stashes the comment into
-// `ctx.pending_unparsed`); "corrig."/"(corrig.)" sets `originalSpelling = false`.
-fn strip_sic_and_corrig(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 27: stripSicAndCorrig ----
+
+/// Java SIC_WITH_COMMENT (StripAndStash.java:32-33): `\s*[\(\[]\s*sic\s*,([^)\]]+)[\)\]]`,
+/// no flags. `[^)\]]` is a NEGATED custom class -> must stay OUTSIDE any `(?-u:…)` (a
+/// negated class in byte/ASCII mode could match a stray continuation byte of a multi-byte
+/// UTF-8 sequence, rejected by `regex-syntax` as "pattern can match invalid UTF-8" — the
+/// `SEROVAR_PAREN` precedent from batch 1) -> atom-only `\s` scoping, not the whole-wrap
+/// this port's rule would otherwise prefer. No backreference, no lookaround -> plain
+/// `regex` crate.
+static SIC_WITH_COMMENT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\s*)[(\[](?-u:\s*)sic(?-u:\s*),([^)\]]+)[)\]]").unwrap());
+
+/// Java SIC (StripAndStash.java:29-30): `\s*[\(\[]\s*sic\s*!?\s*[)\]]`, no flags. Has `\s`
+/// (x4), no `\p{...}`, no unescaped wildcard, and the custom classes `[(\[]`/`[)\]]` are
+/// POSITIVE (list specific ASCII literals, not negated) so they're safe inside a
+/// `(?-u:…)` group (unlike `SIC_WITH_COMMENT`'s negated class above) -> whole-pattern
+/// ASCII-scope.
+static SIC: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\s*[(\[]\s*sic\s*!?\s*[)\]])").unwrap());
+
+/// Java CORRIG (StripAndStash.java:35-36):
+/// `\s*[\(\[]\s*corrig\.?\s*[\)\]]|(?<=\s)corrig\.?(?=\s|$)`, no flags. The bracketed
+/// alternative alone needs no lookaround, but it's OR'd with a bare alternative using
+/// BOTH a lookbehind and a lookahead -> the whole pattern needs `fancy_regex`. No ASCII
+/// mode in `fancy_regex` -> `\s` spelled out as the literal ASCII whitespace set. Same
+/// pattern text as the Phase 0 spike (`regexes::CORRIG_FANCY`) that first identified the
+/// call-site harness below — re-defined here (rather than imported) to stay
+/// self-contained like every other pattern in this file, and because `regexes::SIC`/
+/// `CORRIG` are NOT ASCII-scoped per this port's flag rule (they predate it), so reusing
+/// them directly would introduce a `\s`-scope divergence from Java.
+static CORRIG: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(
+        r"[ \t\n\x0B\f\r]*[(\[][ \t\n\x0B\f\r]*corrig\.?[ \t\n\x0B\f\r]*[)\]]|(?<=[ \t\n\x0B\f\r])corrig\.?(?=[ \t\n\x0B\f\r]|$)",
+    )
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripSicAndCorrig` (StripAndStash.java:1101-1124). Three
+/// SEQUENTIAL checks (not else-if — each runs against the possibly-already-updated `s`,
+/// and a later one can overwrite an earlier one's flag if the input somehow carries both):
+///   1. `[sic, comment]` / `(sic, comment)` -> `originalSpelling = true`; the inner
+///      comment (trimmed, then had ALL internal whitespace removed — not just collapsed —
+///      matching Java's `WHITESPACE.replaceAll("")`, replacement `""` not `" "`) is
+///      parked in `ctx.pending_unparsed` as `"(sic,<comment>)"`.
+///   2. Plain `[sic]` / `(sic)` / `[sic!]` (no inner comma) -> `originalSpelling = true`.
+///   3. `corrig.` / `(corrig.)` / `[corrig.]` -> `originalSpelling = false`. Applied with
+///      the Java call-site harness (StripAndStash.java:1117-1121, and its twin
+///      `stripAuthorshipMarkers` call at line 432): a LEADING-SPACE PAD before matching
+///      (so a leading/standalone "corrig." is stripped too — `CORRIG`'s bare alternative
+///      needs an actual preceding whitespace char, which the pad supplies at position 0),
+///      then a whitespace-collapse + trim after removing every match — the exact lesson
+///      `regexes::strip_corrig_fancy` documents at length (Phase 0).
+fn strip_sic_and_corrig(ctx: &mut ParseContext, mut s: String) -> String {
+    if let Some(caps) = SIC_WITH_COMMENT.captures(&s) {
+        ctx.name.original_spelling = Some(true);
+        let inner = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        let squished = WHITESPACE.replace_all(&inner, "").into_owned();
+        ctx.set_pending_unparsed(&format!("(sic,{squished})"));
+        let whole = caps.get(0).unwrap();
+        let (start, end) = (whole.start(), whole.end());
+        s = format!("{}{}", &s[..start], &s[end..]);
+    }
+    if let Some(m) = SIC.find(&s) {
+        ctx.name.original_spelling = Some(true);
+        let (start, end) = (m.start(), m.end());
+        s = format!("{}{}", &s[..start], &s[end..]);
+    }
+    let padded = format!(" {s}");
+    if let Ok(Some(_)) = CORRIG.find(&padded) {
+        ctx.name.original_spelling = Some(false);
+        let stripped = fancy_replace_all(&CORRIG, &padded, |_| String::new());
+        s = collapse_whitespace(&stripped);
+    }
     s
 }
 
-// TODO batch 2 — Java `stashSynonymBracket`: a trailing "[= Grislea L. 1753]" synonymy
-// reference is parked in `ctx.pending_unparsed`, flagging doubtful.
-fn stash_synonym_bracket(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 28: stashSynonymBracket ----
+
+/// Java SYNONYM_BRACKET (StripAndStash.java:117-118): `\s*\[\s*=\s*[^\]]+\]\s*\.?\s*$`, no
+/// flags. `[^\]]` is a negated custom class -> must stay outside `(?-u:…)` (same reasoning
+/// as `SIC_WITH_COMMENT`) -> atom-only `\s` scoping.
+static SYNONYM_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s*)\[(?-u:\s*)=(?-u:\s*)[^\]]+\](?-u:\s*)\.?(?-u:\s*)$").unwrap()
+});
+
+/// Java `StripAndStash.stashSynonymBracket` (StripAndStash.java:1126-1138). A trailing
+/// synonymy reference in square brackets ("[= Grislea L. 1753]") is parked verbatim (with
+/// surrounding whitespace trimmed) as `ctx.pending_unparsed` — first-writer-wins, so an
+/// earlier strip step's stash (e.g. a trailing OTU code) takes precedence — flags
+/// doubtful, and strips both the bracket AND any now-trailing comma(s) left dangling
+/// before it (a `while` loop: Java strips one comma, re-trims, and repeats, UNLIKE
+/// `strip_bracketed_nom_note`'s single `if`).
+fn stash_synonym_bracket(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = SYNONYM_BRACKET.find(&s) {
+        let tail = java_trim(&s[m.start()..]).to_string();
+        ctx.set_pending_unparsed(&tail);
+        ctx.name.doubtful = true;
+        let mut kept = java_trim(&s[..m.start()]).to_string();
+        while kept.ends_with(',') {
+            kept.pop();
+            kept = java_trim(&kept).to_string();
+        }
+        return kept;
+    }
     s
 }
 
-// TODO batch 2 — Java `stripBracketedNomNote`: a trailing bracketed/parenthesised
-// nom-note ("[nom. et typ. cons.]", "(nom. nud.)") OVERWRITES `nomenclaturalNote`
-// (not an append — this is the first step that can populate the field, so there is
-// nothing to append to yet in Java's own call order either).
-fn strip_bracketed_nom_note(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Shared helper: normaliseNomNote (used by steps 29 and 30) ----
+
+/// Java ET_WORD (StripAndStash.java:290): `\bet\b`, no flags. Whole-wrap (has `\b`, no
+/// `\p{...}`, no unescaped wildcard).
+static ET_WORD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\bet\b)").unwrap());
+
+/// Java AND_WORD (StripAndStash.java:291): `\band\b`, no flags. Whole-wrap.
+static AND_WORD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\band\b)").unwrap());
+
+/// Java SPACE_AROUND_DOT (StripAndStash.java:292): `\s*\.\s*`, no flags. Whole-wrap (the
+/// `\.` is an escaped literal, not an unescaped wildcard).
+static SPACE_AROUND_DOT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s*\.\s*)").unwrap());
+
+/// Java DOT_BEFORE_ALNUM (StripAndStash.java:293): `\.(?=[\p{L}\d])`, no flags. Trailing
+/// lookahead (not consumed, so the letter/digit that follows the period survives
+/// untouched, allowing a following period elsewhere to independently reuse the same
+/// adjacency reasoning as `GREEK_MARKER` in batch 1) -> `fancy_regex`. `\d` is ASCII-only
+/// in Java here (no `UNICODE_CHARACTER_CLASS`) -> spelled out as `[0-9]` (`fancy_regex`
+/// has no ASCII mode); `\p{L}` always Unicode.
+static DOT_BEFORE_ALNUM: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"\.(?=[\p{L}0-9])").unwrap());
+
+/// Java SPACE_AROUND_AMP (StripAndStash.java:294): `\s*&\s*`, no flags. Whole-wrap.
+static SPACE_AROUND_AMP: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s*&\s*)").unwrap());
+
+/// Java `FULL_WORD_NOM_NOTES` (StripAndStash.java:406-407): `Set.of("correct", "error")`
+/// — suffix words that are complete English/Latin forms; a nomenclatural note ending in
+/// one of these (lower-cased) does NOT get a trailing dot appended.
+const FULL_WORD_NOM_NOTES: &[&str] = &["correct", "error"];
+
+/// Java `StripAndStash.normaliseNomNote` (StripAndStash.java:373-402). Canonical form for
+/// nomenclatural notes, shared by `strip_bracketed_nom_note` (step 29) and
+/// `strip_nom_note` (step 30): collapse whitespace, normalise "et"/"and" connectives to
+/// "&", ensure a single space follows every interior period, add spaces around a bare
+/// "&". Abbreviated notes ("nom. nud.", "Spec nov") get a closing dot if missing;
+/// spelled-out "nomen …" forms have any trailing dot(s) stripped instead (sentence
+/// punctuation, not part of the abbreviation); a note ending in a complete word
+/// (`FULL_WORD_NOM_NOTES`) is left without an added dot either way.
+fn normalise_nom_note(raw: &str) -> String {
+    let mut s = collapse_whitespace(raw);
+    let et_replaced = ET_WORD.replace_all(&s, "&");
+    s = AND_WORD.replace_all(&et_replaced, "&").into_owned();
+    s = SPACE_AROUND_DOT.replace_all(&s, ".").into_owned();
+    s = fancy_replace_all(&DOT_BEFORE_ALNUM, &s, |_| ". ".to_string());
+    s = SPACE_AROUND_AMP.replace_all(&s, " & ").into_owned();
+    s = java_trim(&MULTI_SPACE.replace_all(&s, " ")).to_string();
+    if s.len() >= 5 && s.as_bytes()[..5].eq_ignore_ascii_case(b"nomen") {
+        while s.ends_with('.') {
+            s.pop();
+        }
+        return java_trim(&s).to_string();
+    }
+    if !s.is_empty() && !s.ends_with('.') {
+        let last_word = match s.rfind(' ') {
+            Some(idx) => &s[idx + 1..],
+            None => s.as_str(),
+        };
+        if !FULL_WORD_NOM_NOTES.contains(&last_word.to_lowercase().as_str()) {
+            s.push('.');
+        }
+    }
     s
 }
 
-// TODO batch 2 — Java `stripNomNote`: a nom/comb/orth/sp.nov./pro-syn. keyword tail
-// APPENDS to `nomenclaturalNote` (via `ctx.name.add_nomenclatural_note` once ported),
-// plus manuscript-flag and rank-hint side effects.
-fn strip_nom_note(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 29: stripBracketedNomNote ----
+
+/// Java BRACKETED_NOM_NOTE (StripAndStash.java:61-63):
+/// `\s*[\[\(]\s*((?:nom|comb|orth|typ)\b[^\]\)]*)[\]\)]\s*$`, `Pattern.CASE_INSENSITIVE`.
+/// `[^\]\)]` is a negated custom class -> stays outside `(?-u:…)` -> atom-only `\s`/`\b`
+/// scoping (not whole-wrap).
+static BRACKETED_NOM_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?-u:\s*)[\[\(](?-u:\s*)((?:nom|comb|orth|typ)(?-u:\b)[^\]\)]*)[\]\)](?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripBracketedNomNote` (StripAndStash.java:1140-1150). A trailing
+/// bracketed/parenthesised nom-note ("[nom. et typ. cons.]", "(nom. nud.)",
+/// "[orth. error]") OVERWRITES `nomenclaturalNote` — Java calls the plain setter here
+/// (`ctx.name.setNomenclaturalNote(...)`, no null-check/append), UNLIKE `strip_nom_note`
+/// (step 30, later in run-order) which appends. Also strips at most ONE trailing comma
+/// left dangling before the bracket — a single `if`, not the `while` loop
+/// `stash_synonym_bracket` uses.
+fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = BRACKETED_NOM_NOTE.captures(&s) {
+        let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        ctx.name.nomenclatural_note = Some(normalise_nom_note(&raw));
+        let match_start = caps.get(0).unwrap().start();
+        let mut kept = java_trim(&s[..match_start]).to_string();
+        if kept.ends_with(',') {
+            kept = java_trim(&kept[..kept.len() - 1]).to_string();
+        }
+        return kept;
+    }
     s
+}
+
+// ---- Step 30: stripNomNote ----
+
+/// Java NOM_NOTE (StripAndStash.java:45-57), `Pattern.UNICODE_CHARACTER_CLASS` -> keep
+/// default Unicode `\s`/`\b`/`\p{...}` throughout, ported near-verbatim. Internal
+/// NEGATIVE LOOKAHEAD (`(?!\s+in\s+\p{Lu})`) in the first alternative AND a trailing
+/// LOOKAHEAD boundary (`(?=$|,\s*non…|…)`) -> needs `fancy_regex` (the `regex` crate has
+/// no lookaround at all). The one POSSESSIVE quantifier (`*+` on the first alternative's
+/// inner repetition) is ported as plain greedy `*`: the Java source's own comment
+/// (StripAndStash.java:47-51) explains the captured run only ever consumes lowercase
+/// abbreviation words that the trailing lookahead's own required content
+/// (whitespace/uppercase/comma) never overlaps with, so forbidding backtracking is
+/// behaviour-neutral — dropping the possessive marker changes nothing observable, the
+/// same "possessive/greedy is moot" simplification `regexes.rs`'s module doc documents
+/// for every possessive quantifier in this port. Built via `concat!` (compile-time string
+/// concatenation) mirroring the Java source's own `"..." + "..."` layout, one alternative
+/// per line, so it stays directly diffable against StripAndStash.java line-by-line.
+static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(concat!(
+        r"\s+(",
+        r"(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*",
+        r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
+        r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
+        r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
+        r")\s*(?=$|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
+    ))
+    .unwrap()
+});
+
+/// Java SP_NOV_PREFIX (StripAndStash.java:338-339): `(?i)^(?:sp|spec)\b\.?\s+nov.*`, no
+/// `UNICODE_CHARACTER_CLASS`. Has `\b`/`\s` and an unescaped wildcard `.*` -> atom-only
+/// scoping (not whole-wrap). Called via `.matches()` -> trailing `$` added.
+static SP_NOV_PREFIX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:sp|spec)(?-u:\b)\.?(?-u:\s+)nov.*$").unwrap());
+
+/// Java SINGLE_TITLE_WORD (StripAndStash.java:340): `^[\p{Lu}][\p{Ll}]+$`, no flags.
+/// `\p{Lu}`/`\p{Ll}` always Unicode, no ASCII atoms at all -> nothing to scope. Its own
+/// `^…$` anchors make `.is_match()` here equivalent to Java's `.matches()`.
+static SINGLE_TITLE_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[\p{Lu}][\p{Ll}]+$").unwrap());
+
+/// Java MANUSCRIPT_KEYWORD (StripAndStash.java:312-313):
+/// `(?i).*\b(?:ined|ms|msc|unpublished)\b.*`, no `UNICODE_CHARACTER_CLASS`. RESTRUCTURED:
+/// called via `.matches()` on a `.*CORE.*` shape -> equivalent to an unanchored `is_match`
+/// on CORE alone (same restructuring as `GREEK_MARKER_TEST`/`SEROVAR_TEST` in batch 1).
+/// `\b` (x2) ASCII-scoped. Shared with the not-yet-ported `stripAuthorshipMarkers` and
+/// `stripManuscriptMarker` (batch 4) — defined once here, reusable file-wide.
+static MANUSCRIPT_KEYWORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:ined|ms|msc|unpublished)(?-u:\b)").unwrap());
+
+/// Java NOM_NOTE_RANK_HINT (StripAndStash.java:223-225): `^(gen|fam|var|form|sp|spec)\b\.?`,
+/// `Pattern.CASE_INSENSITIVE`. Has `\b`, no `\p{...}`, no unescaped wildcard -> whole
+/// pattern ASCII-scoped (leading `^` left outside the wrap).
+static NOM_NOTE_RANK_HINT: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?-u:(gen|fam|var|form|sp|spec)\b\.?)").unwrap());
+
+/// Java `StripAndStash.stripNomNote` (StripAndStash.java:1152-1195). The general
+/// nom/comb/orth/nomen/sp.nov./pro-syn. keyword tail — the LAST-resort, most general
+/// nomenclatural-note anchor (everything more specific was already peeled off by earlier
+/// steps, e.g. `strip_bracketed_nom_note`). Unlike step 29, this APPENDS to
+/// `nomenclaturalNote` (`ctx.name.add_nomenclatural_note`, matching Java's inline
+/// `existing == null ? norm : existing + " " + norm`). Three further side effects, all
+/// conditioned on the SAME captured `raw` (group 1, trimmed) and/or `before` (the
+/// pre-match text, trimmed) — independent `if`s, not else-if:
+///   - a bare "sp. nov."/"spec. nov." tail on an otherwise-single-Title-Word monomial
+///     REPLACES the reconstructed working string with "`before` sp." (re-adding a bare
+///     rank marker so the not-yet-ported indet/INFORMAL handling still recognises a
+///     species-indet name, rather than leaving a bare uninomial with the marker fully
+///     gone);
+///   - a captured note containing "ined"/"ms"/"msc"/"unpublished" sets `manuscript = true`
+///     (the note text itself already consumed the keyword, so the separate standalone
+///     manuscript-marker step, batch 4, won't see it there anymore);
+///   - when the name doesn't already carry a rank (`Rank::Unranked`), a gen/fam/var/form
+///     prefix on `raw` pins the rank accordingly ("sp"/"spec" is left alone — SPECIES is
+///     assigned later, by the not-yet-ported Assemble, for binomials).
+fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
+    let caps = match NOM_NOTE.captures(&s) {
+        Ok(Some(c)) => c,
+        _ => return s,
+    };
+    let match_start = caps.get(0).unwrap().start();
+    let match_end = caps.get(0).unwrap().end();
+    let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+    let norm = normalise_nom_note(&raw);
+    ctx.name.add_nomenclatural_note(&norm);
+
+    let before = java_trim(&s[..match_start]).to_string();
+    let after = java_trim(&s[match_end..]).to_string();
+    let mut result = if after.is_empty() {
+        before.clone()
+    } else {
+        format!("{before} {after}")
+    };
+    result = java_trim(&result).to_string();
+    while result.ends_with(',') {
+        result.pop();
+        result = java_trim(&result).to_string();
+    }
+
+    if SP_NOV_PREFIX.is_match(&raw) && SINGLE_TITLE_WORD.is_match(&before) {
+        result = format!("{before} sp.");
+    }
+    if MANUSCRIPT_KEYWORD.is_match(&raw) {
+        ctx.name.manuscript = true;
+    }
+    if ctx.name.rank == Rank::Unranked {
+        if let Some(hint) = NOM_NOTE_RANK_HINT.captures(&raw) {
+            match hint.get(1).unwrap().as_str().to_lowercase().as_str() {
+                "gen" => ctx.name.rank = Rank::Genus,
+                "fam" => ctx.name.rank = Rank::Family,
+                "var" => ctx.name.rank = Rank::Variety,
+                "form" => ctx.name.rank = Rank::Form,
+                _ => {}
+            }
+        }
+    }
+    result
 }
 
 // ---------------------------------------------------------------------------------
@@ -1252,16 +1852,19 @@ mod tests {
     }
 
     /// Phase 1 Slice 2 Task 2 locked the dispatcher order down with every one of the 55
-    /// steps a pure passthrough. Batch 1 (steps 1-19, Task 3) now carries a faithful port,
+    /// steps a pure passthrough. Batches 1 and 2b (steps 1-30) now carry a faithful port,
     /// but a clean, unremarkable binomial should still round-trip untouched: none of
     /// steps 1-19's guard conditions (a trailing/glued "?", a quoted leading monomial, a
     /// "Missing "/lowercase-epithet prefix, Greek/star markers, a letter-subdivision
     /// marker, "str"/"strain", imprint-year brackets, "null" between epithets, Unicode
     /// hyphen/Win-1252/double-underscore artefacts, a trailing OTU code, serovar/serotype,
-    /// an angle bracket, or HTML) fire on "Abies alba Mill.". Steps 20-55 remain no-op
-    /// stubs regardless. This still locks the same invariant Task 2 established — a batch
-    /// landing later can't silently leave a stub half-wired — just no longer via literally
-    /// every step being a no-op.
+    /// an angle bracket, or HTML) nor steps 20-30's (a "Candidatus"/"Ca." prefix, a
+    /// horticultural "ex" placeholder, a cultivar Group/grex/quoted epithet, an extinction
+    /// dagger, a "t.infr." marker, a bracketed genus, "sic"/"corrig.", a synonymy bracket,
+    /// or a nom/comb/orth/nomen/sp.nov./pro-syn. keyword) fire on "Abies alba Mill.".
+    /// Steps 31-55 remain no-op stubs regardless. This still locks the same invariant
+    /// Task 2 established — a batch landing later can't silently leave a stub half-wired
+    /// — just no longer via literally every step being a no-op.
     #[test]
     fn run_is_a_complete_noop_until_the_batches_land() {
         let mut c = ParseContext::new("Abies alba Mill.".to_string(), None, None, None);
@@ -1862,5 +2465,568 @@ mod tests {
         let out = strip_html(&mut c, "Abies alba Mill.".to_string());
         assert_eq!(out, "Abies alba Mill.");
         assert!(c.name.warnings.is_empty());
+    }
+
+    // ---- Step 20: stripCandidatus ----
+    // All step-20/21/22/23/24/25/26/27/28/29/30 examples below spot-checked against the
+    // Java CLI oracle (`name-parser-cli-4.2.0-SNAPSHOT-shaded.jar`), not just traced by
+    // hand — same rigor batch 1's module doc describes.
+
+    #[test]
+    fn candidatus_prefix_is_stripped_and_flags_bacterial() {
+        let mut c = ctx("x");
+        let out = strip_candidatus(&mut c, "Candidatus Amesbacteria bacterium".to_string());
+        assert_eq!(out, "Amesbacteria bacterium");
+        assert!(c.name.candidatus);
+        assert_eq!(c.name.code, Some(NomCode::Bacterial));
+    }
+
+    #[test]
+    fn ca_abbreviation_prefix_is_stripped() {
+        let mut c = ctx("x");
+        let out = strip_candidatus(&mut c, "Ca. Halobonum".to_string());
+        assert_eq!(out, "Halobonum");
+        assert!(c.name.candidatus);
+        assert_eq!(c.name.code, Some(NomCode::Bacterial));
+    }
+
+    #[test]
+    fn quoted_candidatus_prefix_strips_leading_and_trailing_quote() {
+        let mut c = ctx("x");
+        let out = strip_candidatus(&mut c, "\"Candidatus Foo bar\"".to_string());
+        assert_eq!(out, "Foo bar");
+        assert!(c.name.candidatus);
+    }
+
+    #[test]
+    fn no_candidatus_prefix_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_candidatus(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(!c.name.candidatus);
+        assert_eq!(c.name.code, None);
+    }
+
+    // ---- Step 21: normaliseHortExPlaceholder ----
+
+    #[test]
+    fn cv_ex_placeholder_is_normalised() {
+        let mut c = ctx("x");
+        let out = normalise_hort_ex_placeholder(&mut c, "Rosa foo cv. ex Smith".to_string());
+        assert_eq!(out, "Rosa foo hort. ex Smith");
+    }
+
+    #[test]
+    fn hort_ex_placeholder_is_normalised() {
+        let mut c = ctx("x");
+        let out = normalise_hort_ex_placeholder(&mut c, "Rosa foo Hort. ex Smith".to_string());
+        assert_eq!(out, "Rosa foo hort. ex Smith");
+    }
+
+    #[test]
+    fn hortus_ex_placeholder_is_normalised() {
+        let mut c = ctx("x");
+        let out = normalise_hort_ex_placeholder(&mut c, "Rosa foo hortus ex Smith".to_string());
+        assert_eq!(out, "Rosa foo hort. ex Smith");
+    }
+
+    #[test]
+    fn ht_marker_is_normalised() {
+        let mut c = ctx("x");
+        let out =
+            normalise_hort_ex_placeholder(&mut c, "Gymnogramma alstoni ht.Birkenh.".to_string());
+        assert_eq!(out, "Gymnogramma alstoni hort.Birkenh.");
+    }
+
+    #[test]
+    fn no_hort_ex_placeholder_is_untouched() {
+        let mut c = ctx("x");
+        let out = normalise_hort_ex_placeholder(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+    }
+
+    // ---- Step 22: stripCultivarGroupGrex ----
+
+    #[test]
+    fn trailing_group_marker_sets_cultivar_group_rank() {
+        let mut c = ctx("x");
+        let out = strip_cultivar_group_grex(&mut c, "Brassica oleracea Capitata Group".to_string());
+        assert_eq!(out, "Brassica oleracea");
+        assert_eq!(c.name.cultivar_epithet, Some("Capitata".to_string()));
+        assert_eq!(c.name.code, Some(NomCode::Cultivars));
+        assert_eq!(c.name.rank, Rank::CultivarGroup);
+    }
+
+    #[test]
+    fn trailing_grex_marker_sets_grex_rank() {
+        let mut c = ctx("x");
+        let out = strip_cultivar_group_grex(&mut c, "Paphiopedilum Maudiae grex".to_string());
+        assert_eq!(out, "Paphiopedilum");
+        assert_eq!(c.name.cultivar_epithet, Some("Maudiae".to_string()));
+        assert_eq!(c.name.code, Some(NomCode::Cultivars));
+        assert_eq!(c.name.rank, Rank::Grex);
+    }
+
+    #[test]
+    fn trailing_gx_marker_also_sets_grex_rank() {
+        let mut c = ctx("x");
+        let out = strip_cultivar_group_grex(&mut c, "Paphiopedilum Maudiae gx".to_string());
+        assert_eq!(out, "Paphiopedilum");
+        assert_eq!(c.name.rank, Rank::Grex);
+    }
+
+    #[test]
+    fn no_group_grex_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_cultivar_group_grex(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.cultivar_epithet, None);
+    }
+
+    // ---- Step 23: stripQuotedCultivar ----
+
+    #[test]
+    fn quoted_cultivar_at_end_with_explicit_cv_marker_is_captured() {
+        let mut c = ctx("x");
+        let out = strip_quoted_cultivar(&mut c, "Acer campestre L. cv. 'nanum'".to_string());
+        assert_eq!(out, "Acer campestre L.");
+        assert_eq!(c.name.cultivar_epithet, Some("nanum".to_string()));
+        assert_eq!(c.name.code, Some(NomCode::Cultivars));
+        assert_eq!(c.name.rank, Rank::Cultivar);
+        // Shape 1 never splits off a specific author (only shape 2/MID does) — the
+        // Java oracle keeps "L." in the main combinationAuthorship for this shape.
+        assert_eq!(c.pending_specific_author, None);
+    }
+
+    #[test]
+    fn quoted_cultivar_at_end_without_cv_marker_is_captured() {
+        let mut c = ctx("x");
+        let out = strip_quoted_cultivar(&mut c, "Acer pseudoplatanus L. 'Negenia'".to_string());
+        assert_eq!(out, "Acer pseudoplatanus L.");
+        assert_eq!(c.name.cultivar_epithet, Some("Negenia".to_string()));
+    }
+
+    #[test]
+    fn quoted_cultivar_mid_string_splits_off_preceding_specific_author() {
+        let mut c = ctx("x");
+        let out = strip_quoted_cultivar(
+            &mut c,
+            "Acer campestre L. cv. 'Elsrijk' Broerse".to_string(),
+        );
+        // Spot-checked against the Java CLI oracle: genus=Acer, specificEpithet=campestre,
+        // specificAuthorship.combinationAuthorship=["L."], cultivarEpithet=Elsrijk,
+        // combinationAuthorship=["Broerse"] — i.e. the reduced working string must read as
+        // "Genus species CombinationAuthor" with "L." split off separately.
+        assert_eq!(out, "Acer campestre Broerse");
+        assert_eq!(c.name.cultivar_epithet, Some("Elsrijk".to_string()));
+        assert_eq!(c.name.code, Some(NomCode::Cultivars));
+        assert_eq!(c.name.rank, Rank::Cultivar);
+        assert_eq!(c.pending_specific_author, Some("L.".to_string()));
+    }
+
+    #[test]
+    fn quoted_cultivar_mid_string_without_cv_marker_and_without_preceding_author() {
+        // No "cv." marker required for shape 2 — MID's own prefix is optional. No author
+        // precedes the epithet here (just "Genus species"), so `find_author_start` finds
+        // nothing to split off. Spot-checked: combinationAuthorship=["Pils."], no
+        // specificAuthorship.
+        let mut c = ctx("x");
+        let out = strip_quoted_cultivar(&mut c, "Verpericola megasoma \"Dall\" Pils.".to_string());
+        assert_eq!(out, "Verpericola megasoma Pils.");
+        assert_eq!(c.name.cultivar_epithet, Some("Dall".to_string()));
+        assert_eq!(c.pending_specific_author, None);
+    }
+
+    #[test]
+    fn unclosed_trailing_cultivar_quote_is_captured() {
+        let mut c = ctx("x");
+        let out = strip_quoted_cultivar(&mut c, "Genus species 'albino".to_string());
+        assert_eq!(out, "Genus species");
+        assert_eq!(c.name.cultivar_epithet, Some("albino".to_string()));
+        assert_eq!(c.name.code, Some(NomCode::Cultivars));
+        assert_eq!(c.name.rank, Rank::Cultivar);
+    }
+
+    #[test]
+    fn quote_preceded_by_bare_rank_marker_is_not_a_cultivar() {
+        // "var." right before the quote with no explicit "cv." is a phrase-name shape,
+        // not a cultivar — RANK_MARKER_SUFFIX guard must suppress the strip.
+        let mut c = ctx("x");
+        let out = strip_quoted_cultivar(&mut c, "Genus species var. 'foo'".to_string());
+        assert_eq!(out, "Genus species var. 'foo'");
+        assert_eq!(c.name.cultivar_epithet, None);
+    }
+
+    #[test]
+    fn no_quoted_cultivar_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_quoted_cultivar(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.cultivar_epithet, None);
+    }
+
+    // ---- Step 24: stripExtinctDagger ----
+
+    #[test]
+    fn dagger_glued_to_genus_is_stripped_and_flags_extinct() {
+        let mut c = ctx("x");
+        let out = strip_extinct_dagger(
+            &mut c,
+            "Henriksenopterix\u{2020} paucistriata (Henriksen, 1922)".to_string(),
+        );
+        assert_eq!(out, "Henriksenopterix paucistriata (Henriksen, 1922)");
+        assert!(c.name.extinct);
+    }
+
+    #[test]
+    fn alternate_dagger_glyph_is_also_stripped() {
+        let mut c = ctx("x");
+        let out = strip_extinct_dagger(&mut c, "Foo \u{271D}bar".to_string());
+        assert_eq!(out, "Foo bar");
+        assert!(c.name.extinct);
+    }
+
+    #[test]
+    fn no_dagger_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_extinct_dagger(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(!c.name.extinct);
+    }
+
+    // ---- Step 25: stripTinfrMarker ----
+
+    #[test]
+    fn tinfr_marker_between_species_and_infraspecific_epithet_is_stripped() {
+        let mut c = ctx("x");
+        let out = strip_tinfr_marker(&mut c, "Hieracium alpinum t.infr. foobarum".to_string());
+        assert_eq!(out, "Hieracium alpinum foobarum");
+    }
+
+    #[test]
+    fn tinfr_marker_directly_after_a_bare_genus_is_also_stripped() {
+        let mut c = ctx("x");
+        let out = strip_tinfr_marker(&mut c, "Hieracium t.infr. foobarum".to_string());
+        assert_eq!(out, "Hieracium foobarum");
+    }
+
+    #[test]
+    fn no_tinfr_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_tinfr_marker(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+    }
+
+    // ---- Step 26: stripDoubtfulGenusBrackets ----
+
+    #[test]
+    fn bracketed_genus_followed_by_epithet_is_unbracketed_and_flags_doubtful() {
+        let mut c = ctx("x");
+        let out = strip_doubtful_genus_brackets(&mut c, "[Acontia] chia".to_string());
+        assert_eq!(out, "Acontia chia");
+        assert!(c.name.doubtful);
+        assert!(c
+            .name
+            .warnings
+            .contains(&warnings::DOUBTFUL_GENUS.to_string()));
+    }
+
+    #[test]
+    fn bracketed_genus_alone_is_unbracketed() {
+        let mut c = ctx("x");
+        let out = strip_doubtful_genus_brackets(&mut c, "[Dexia]".to_string());
+        assert_eq!(out, "Dexia");
+        assert!(c.name.doubtful);
+    }
+
+    #[test]
+    fn no_leading_bracket_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_doubtful_genus_brackets(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(!c.name.doubtful);
+    }
+
+    // ---- Step 27: stripSicAndCorrig ----
+
+    #[test]
+    fn bracketed_sic_with_comment_flags_true_and_stashes_squished_comment() {
+        let mut c = ctx("x");
+        let out = strip_sic_and_corrig(&mut c, "Aus bus Storr [sic, porphyria]".to_string());
+        assert_eq!(out, "Aus bus Storr");
+        assert_eq!(c.name.original_spelling, Some(true));
+        assert_eq!(c.pending_unparsed, Some("(sic,porphyria)".to_string()));
+    }
+
+    #[test]
+    fn multi_word_sic_comment_has_all_internal_whitespace_removed_not_just_collapsed() {
+        // Spot-checked against the Java CLI oracle: "multiple words here" squishes to
+        // "multiplewordshere" — Java's WHITESPACE.replaceAll("") here, replacement "",
+        // NOT collapsed to single spaces.
+        let mut c = ctx("x");
+        let out = strip_sic_and_corrig(&mut c, "Foo bar [sic, multiple words here]".to_string());
+        assert_eq!(out, "Foo bar");
+        assert_eq!(
+            c.pending_unparsed,
+            Some("(sic,multiplewordshere)".to_string())
+        );
+    }
+
+    #[test]
+    fn plain_sic_without_comment_flags_true() {
+        let mut c = ctx("x");
+        let out = strip_sic_and_corrig(
+            &mut c,
+            "Ameiva plei (sic) Duméril & Bibron, 1839".to_string(),
+        );
+        assert_eq!(out, "Ameiva plei Duméril & Bibron, 1839");
+        assert_eq!(c.name.original_spelling, Some(true));
+        assert_eq!(c.pending_unparsed, None);
+    }
+
+    #[test]
+    fn bare_corrig_marker_flags_false() {
+        let mut c = ctx("x");
+        let out = strip_sic_and_corrig(&mut c, "Aus bus corrig. Peters, 1878".to_string());
+        assert_eq!(out, "Aus bus Peters, 1878");
+        assert_eq!(c.name.original_spelling, Some(false));
+    }
+
+    #[test]
+    fn bracketed_corrig_marker_flags_false() {
+        let mut c = ctx("x");
+        let out = strip_sic_and_corrig(&mut c, "Aus bus (corrig.) Smith".to_string());
+        assert_eq!(out, "Aus bus Smith");
+        assert_eq!(c.name.original_spelling, Some(false));
+    }
+
+    #[test]
+    fn leading_standalone_corrig_is_stripped_via_the_pad_harness() {
+        // The exact Phase 0 lesson: CORRIG's bare alternative needs an actual preceding
+        // whitespace char, supplied by the call site's leading-space pad — a leading
+        // "corrig." with nothing before it must still strip.
+        let mut c = ctx("x");
+        let out = strip_sic_and_corrig(&mut c, "corrig. Peters, 1878".to_string());
+        assert_eq!(out, "Peters, 1878");
+        assert_eq!(c.name.original_spelling, Some(false));
+    }
+
+    #[test]
+    fn no_sic_or_corrig_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_sic_and_corrig(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.original_spelling, None);
+    }
+
+    // ---- Step 28: stashSynonymBracket ----
+
+    #[test]
+    fn trailing_synonym_bracket_is_stashed_verbatim_with_brackets() {
+        let mut c = ctx("x");
+        let out = stash_synonym_bracket(&mut c, "Aus bus [= Grislea L. 1753]".to_string());
+        assert_eq!(out, "Aus bus");
+        assert_eq!(c.pending_unparsed, Some("[= Grislea L. 1753]".to_string()));
+        assert!(c.name.doubtful);
+    }
+
+    #[test]
+    fn dangling_commas_before_the_bracket_are_all_stripped() {
+        let mut c = ctx("x");
+        let out = stash_synonym_bracket(&mut c, "Aus bus,, [= Grislea L. 1753]".to_string());
+        assert_eq!(out, "Aus bus");
+    }
+
+    #[test]
+    fn no_synonym_bracket_is_untouched() {
+        let mut c = ctx("x");
+        let out = stash_synonym_bracket(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.pending_unparsed, None);
+        assert!(!c.name.doubtful);
+    }
+
+    // ---- Shared helper: normaliseNomNote ----
+
+    #[test]
+    fn normalise_nom_note_adds_a_closing_dot_to_an_abbreviated_note() {
+        assert_eq!(normalise_nom_note("nom nud"), "nom nud.");
+    }
+
+    #[test]
+    fn normalise_nom_note_leaves_a_full_word_suffix_without_an_added_dot() {
+        assert_eq!(normalise_nom_note("orth error"), "orth error");
+    }
+
+    #[test]
+    fn normalise_nom_note_strips_trailing_dots_from_spelled_out_nomen_forms() {
+        assert_eq!(normalise_nom_note("nomen nudum..."), "nomen nudum");
+    }
+
+    #[test]
+    fn normalise_nom_note_normalises_et_and_and_to_ampersand() {
+        assert_eq!(
+            normalise_nom_note("nom. cons. et typ. cons"),
+            "nom. cons. & typ. cons."
+        );
+    }
+
+    // ---- Step 29: stripBracketedNomNote ----
+
+    #[test]
+    fn bracketed_nom_nud_note_overwrites_nomenclatural_note() {
+        let mut c = ctx("x");
+        let out = strip_bracketed_nom_note(
+            &mut c,
+            "Baccharis microphylla var. rhomboidea (nom. nud.)".to_string(),
+        );
+        assert_eq!(out, "Baccharis microphylla var. rhomboidea");
+        assert_eq!(c.name.nomenclatural_note, Some("nom. nud.".to_string()));
+    }
+
+    #[test]
+    fn bracketed_nom_illeg_note_overwrites_nomenclatural_note() {
+        let mut c = ctx("x");
+        let out =
+            strip_bracketed_nom_note(&mut c, "Barbula obscura Sull. (nom. illeg.)".to_string());
+        assert_eq!(out, "Barbula obscura Sull.");
+        assert_eq!(c.name.nomenclatural_note, Some("nom. illeg.".to_string()));
+    }
+
+    #[test]
+    fn preexisting_note_is_overwritten_not_appended() {
+        // Java calls the plain setter here (no null-check) — an already-populated note
+        // (as could happen via a directly-constructed ParsedName, or a future reordering)
+        // must be REPLACED, not appended to, unlike `strip_nom_note` (step 30).
+        let mut c = ctx("x");
+        c.name.nomenclatural_note = Some("existing".to_string());
+        let out = strip_bracketed_nom_note(&mut c, "Foo bar (nom. nud.)".to_string());
+        assert_eq!(out, "Foo bar");
+        assert_eq!(c.name.nomenclatural_note, Some("nom. nud.".to_string()));
+    }
+
+    #[test]
+    fn no_bracketed_nom_note_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_bracketed_nom_note(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.nomenclatural_note, None);
+    }
+
+    // ---- Step 30: stripNomNote ----
+
+    #[test]
+    fn sp_nov_on_a_bare_monomial_appends_note_and_keeps_a_bare_sp_marker() {
+        // Spot-checked against the Java CLI oracle: genus=Abies (no specificEpithet),
+        // type=INFORMAL, nomenclaturalNote="sp. nov." — the SP_NOV_PREFIX +
+        // SINGLE_TITLE_WORD override reduces the working string to "Abies sp." so the
+        // (not yet ported) indet-species handling still recognises it downstream.
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Abies sp. nov.".to_string());
+        assert_eq!(out, "Abies sp.");
+        assert_eq!(c.name.nomenclatural_note, Some("sp. nov.".to_string()));
+        assert!(!c.name.manuscript);
+    }
+
+    #[test]
+    fn sp_nov_ined_also_sets_manuscript_true() {
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Abies sp. nov. ined.".to_string());
+        assert_eq!(out, "Abies sp.");
+        assert_eq!(
+            c.name.nomenclatural_note,
+            Some("sp. nov. ined.".to_string())
+        );
+        assert!(c.name.manuscript);
+    }
+
+    #[test]
+    fn sp_nov_on_a_full_binomial_does_not_trigger_the_bare_sp_override() {
+        // `before` is "Abies alba" (two words) — SINGLE_TITLE_WORD must fail, so the
+        // override does not fire; the note is still appended normally.
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Abies alba Sp. nov.".to_string());
+        assert_eq!(out, "Abies alba");
+        assert_eq!(c.name.nomenclatural_note, Some("Sp. nov.".to_string()));
+    }
+
+    #[test]
+    fn gen_nov_pins_genus_rank_when_unranked() {
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Fooxus gen. nov.".to_string());
+        assert_eq!(out, "Fooxus");
+        assert_eq!(c.name.nomenclatural_note, Some("gen. nov.".to_string()));
+        assert_eq!(c.name.rank, Rank::Genus);
+    }
+
+    #[test]
+    fn var_nov_pins_variety_rank() {
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Foovar var. nov.".to_string());
+        assert_eq!(out, "Foovar");
+        assert_eq!(c.name.rank, Rank::Variety);
+    }
+
+    #[test]
+    fn fam_nov_pins_family_rank() {
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Foofam fam. nov.".to_string());
+        assert_eq!(out, "Foofam");
+        assert_eq!(c.name.rank, Rank::Family);
+    }
+
+    #[test]
+    fn form_nov_pins_form_rank() {
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Fooform form. nov.".to_string());
+        assert_eq!(out, "Fooform");
+        assert_eq!(c.name.rank, Rank::Form);
+    }
+
+    #[test]
+    fn rank_hint_does_not_override_an_already_set_rank() {
+        let mut c = ctx("x");
+        c.name.rank = Rank::Species;
+        let out = strip_nom_note(&mut c, "Fooxus gen. nov.".to_string());
+        assert_eq!(out, "Fooxus");
+        assert_eq!(
+            c.name.rank,
+            Rank::Species,
+            "an already-set rank must not be clobbered by the hint"
+        );
+    }
+
+    #[test]
+    fn nom_note_appends_to_an_existing_nomenclatural_note() {
+        let mut c = ctx("x");
+        c.name.nomenclatural_note = Some("existing".to_string());
+        let out = strip_nom_note(&mut c, "Foo bar comb. nov.".to_string());
+        assert_eq!(out, "Foo bar");
+        assert_eq!(
+            c.name.nomenclatural_note,
+            Some("existing comb. nov.".to_string())
+        );
+    }
+
+    #[test]
+    fn no_nom_note_keyword_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.nomenclatural_note, None);
+        assert!(!c.name.manuscript);
+    }
+
+    #[test]
+    fn nom_note_requires_a_leading_whitespace_and_does_not_fire_at_string_start() {
+        // NOM_NOTE's leading `\s+` means a marker glued to the very start of the string
+        // (no preceding name text at all) can never match — spot-checked: "Gen. nov.
+        // Foobarus" parses "Gen." as an abbreviated genus, "nov" as a specific epithet,
+        // NOT as a nom-note (rank stays SPECIES, not GENUS, on the Java oracle).
+        let mut c = ctx("x");
+        let out = strip_nom_note(&mut c, "Gen. nov. Foobarus".to_string());
+        assert_eq!(out, "Gen. nov. Foobarus");
+        assert_eq!(c.name.nomenclatural_note, None);
+        assert_eq!(c.name.rank, Rank::Unranked);
     }
 }
