@@ -24,6 +24,18 @@ const DOUBLE_QUOTES: &[char] = &[
     '\u{275D}', '\u{275E}', '\u{301D}', '\u{301E}', '\u{301F}', '\u{FF02}',
 ];
 
+/// Faithful port of Java `String.trim()`: strips only leading/trailing chars whose
+/// codepoint is <= U+0020 (NOT the full Unicode White_Space set that Rust's str::trim uses).
+/// Use this everywhere the Java source calls `.trim()`.
+///
+/// Java's `String.trim()` only removes characters with codepoint values 0–32 (space through
+/// control chars), while Rust's `str::trim()` removes the entire Unicode `White_Space` category.
+/// This means non-breaking space (U+00A0) and other Unicode spaces are trimmed by Rust but NOT
+/// by Java, causing empty/length guard logic to diverge.
+pub fn java_trim(s: &str) -> &str {
+    s.trim_matches(|c: char| (c as u32) <= 0x20)
+}
+
 /// Normalises the many unicode apostrophe / single-quote variants to the ASCII apostrophe
 /// (') and the unicode double-quote variants to the ASCII double quote ("). Author names
 /// and quoted/provisional names routinely arrive with curly, prime, modifier-letter,
@@ -82,5 +94,13 @@ mod tests {
         assert_eq!(normalize_quotes("O'Brien"), "O'Brien");
         assert_eq!(normalize_quotes("\"Aus bus\" Smith"), "\"Aus bus\" Smith");
         assert_eq!(normalize_quotes("Abies alba Mill."), "Abies alba Mill.");
+    }
+
+    #[test]
+    fn java_trim_strips_only_up_to_u0020() {
+        assert_eq!(java_trim("  x\t"), "x");      // ASCII space + tab (<=0x20) stripped
+        assert_eq!(java_trim("\n x \r"), "x");    // newline/CR stripped
+        assert_eq!(java_trim("\u{00A0}x\u{00A0}"), "\u{00A0}x\u{00A0}"); // NBSP (>0x20) NOT stripped
+        assert_eq!(java_trim("\u{00A0}"), "\u{00A0}"); // NBSP-only stays non-empty, matching Java
     }
 }

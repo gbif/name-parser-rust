@@ -12,7 +12,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::model::{warnings, NameType, NomCode, ParseError, ParsedName, Rank};
-use crate::unicode::normalize_quotes;
+use crate::unicode::{java_trim, normalize_quotes};
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -52,7 +52,7 @@ pub fn run(
     // Java also null-checks `scientificName` here (`throw new
     // UnparsableNameException(NameType.OTHER, null)`); unreachable in Rust since `&str`
     // can never be null — only the empty-after-trim case below can actually occur.
-    let trimmed = name.trim();
+    let trimmed = java_trim(name);
     if trimmed.is_empty() {
         return Err(ParseError::new(NameType::Other, None, name));
     }
@@ -72,7 +72,7 @@ pub fn run(
     // (overlong) authorship string — Java's guard throws
     // `new UnparsableNameException(NameType.OTHER, scientificName)` here too.
     if let Some(a) = authorship {
-        if a.trim().chars().count() > MAX_LENGTH {
+        if java_trim(a).chars().count() > MAX_LENGTH {
             return Err(ParseError::new(NameType::Other, None, name));
         }
     }
