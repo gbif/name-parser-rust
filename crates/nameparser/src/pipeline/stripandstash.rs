@@ -8,15 +8,17 @@
 //! that takes the working string, mutates the [`ParseContext`] as needed, and returns
 //! the (possibly shortened/rewritten) working string.
 //!
-//! **Phase 1 Slice 2, batches 1 + 2b + 2c (this batch): steps 1-44 ported.** [`run`]
+//! **Phase 1 Slice 2, batches 1 + 2b + 2c + 2d (this batch): steps 1-52 ported.** [`run`]
 //! dispatches all 55 steps in Java's exact `StripAndStash.run(ParseContext)` order — that
 //! order is load-bearing and was locked in by Task 2 — steps 1-19 (leading normalizers +
 //! flaggers, batch 1), 20-30 (candidatus, cultivar Group/grex/quoted, extinct dagger,
 //! t.infr., doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare
-//! nom-note, batch 2b), and 31-44 (authorship placeholders, trailing-species, pro parte /
+//! nom-note, batch 2b), 31-44 (authorship placeholders, trailing-species, pro parte /
 //! pro sp. / approved-lists, mihi, anon, the six-step taxonomic-note family, aggregate
-//! suffix, batch 2c) now carry their faithful port; steps 45-55 (batches 2d-2e) remain
-//! `// TODO batch N` no-op passthroughs (see
+//! suffix, batch 2c), and 45-52 (published-in page/in-press/in-author-in-parens/
+//! in-author-citation/IPNI/period-separated-reference/comma-prefixed-reference/
+//! manuscript-marker, batch 2d) now carry their faithful port; steps 53-55 (batch 2e)
+//! remain `// TODO batch N` no-op passthroughs (see
 //! `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md` for the batch breakdown).
 //! One step, `replace_homoglyphs` (step 13), is a DOCUMENTED stub — see its own doc
 //! comment — since porting its backing table is a sizeable sub-project deferred by design
@@ -2226,62 +2228,461 @@ fn strip_aggregate_suffix(ctx: &mut ParseContext, s: String) -> String {
 
 // ---------------------------------------------------------------------------------
 // Batch 4 (steps 45-52): published-in family (page, in-press, in-author variants,
-// IPNI, period-/comma-separated references) + manuscript marker.
+// IPNI, period-/comma-separated references) + manuscript marker. Ported (Phase 1
+// Slice 2, batch 2d). This batch closes `publishedIn`/`publishedInPage`/
+// `publishedInYear`/`manuscript` and (jointly with batch 2b's already-ported
+// `stripNomNote`/`stripBracketedNomNote`, steps 29/30) `nomenclaturalNote`. Steps 47/
+// 48 (`stripInAuthorInParens`/`stripInAuthorCitation`) APPEND to `publishedIn` via the
+// new `ParsedName::add_published_in` — Java's inline `existing == null ? ref :
+// existing + " " + ref` immediately followed by `setPublishedIn(combined)`; appending
+// and re-deriving `publishedInYear` from the COMBINED string are the SAME Java call,
+// not two. Steps 49/50/51 (`stripIpniCitation`/`stripPeriodSeparatedReference`/
+// `stripCommaPrefixedReference`) OVERWRITE it directly via `set_published_in` (Java's
+// plain `setPublishedIn(ref)`, no null-check — nothing upstream of any of them can
+// have already populated a reference). Steps 46/49/52 APPEND to `nomenclaturalNote`
+// via `add_nomenclatural_note`. New `ParseContext::set_pending_publication_year`
+// (first-writer-wins, mirrors `set_pending_imprint_year`) is threaded through from
+// steps 48/49/50 — not yet consumed by anything downstream (Pipeline/Assemble aren't
+// ported), same port-ahead-of-the-consumer precedent already set by
+// `pending_generic_author`/`pending_specific_author`. All worked examples below were
+// spot-checked against the real Java CLI oracle, same convention as batches 1-2c.
 // ---------------------------------------------------------------------------------
 
-// TODO batch 4 — Java `stripPublishedPage`: a trailing ": 377" / ": 12-18" page
-// reference is pulled into `publishedInPage`.
-fn strip_published_page(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 45: stripPublishedPage ----
+
+/// Java PUBLISHED_PAGE (StripAndStash.java:157-158): `\s*:\s*(\d+(?:[-–]\d+)?)\s*$`, no
+/// flags. Has `\s`/`\d`, no `\p{...}`, no unescaped wildcard — but embeds a non-ASCII literal
+/// (the en dash, `–`) inside the custom class `[-–]` -> same `IMPRINT_YEAR_QUOTED`/
+/// `IMPRINT_YEAR_KEYWORD` precedent from batch 1: only the individual `\s`/`\d` atoms are
+/// ASCII-scoped, `[-\x{2013}]` left outside any `(?-u:…)` group (`regex-syntax` rejects a
+/// non-ASCII literal inside one — "Unicode not allowed here"). No lookaround/backreference ->
+/// plain `regex` crate.
+static PUBLISHED_PAGE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s*):(?-u:\s*)((?-u:\d+)(?:[-\x{2013}](?-u:\d+))?)(?-u:\s*)$").unwrap()
+});
+
+/// Java `StripAndStash.stripPublishedPage` (StripAndStash.java:1379-1388). A trailing page
+/// reference (": 377", ": 12-18", or with the colon glued/spaced either side, e.g. ":29" /
+/// " : 29") is pulled directly into `publishedInPage` (a plain field write —
+/// `ParsedAuthorship.setPublishedInPage` has no side effect, unlike `setPublishedIn`) and
+/// stripped — spot-checked against the Java CLI oracle: "Anolis marmoratus girafus LAZELL
+/// 1964: 377" -> `publishedInPage="377"`, working string "Anolis marmoratus girafus LAZELL
+/// 1964"; "Recilia truncatus Dash & Viraktamath, 1998a: 29" (and its glued/extra-spaced
+/// variants ":29" / " : 29") all -> `publishedInPage="29"`. Runs BEFORE
+/// `strip_in_author_citation` (step 48) so a "Smith, 1900: 12 in Editor" tail strips both
+/// cleanly (Java's own comment).
+fn strip_published_page(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = PUBLISHED_PAGE.captures(&s) {
+        let whole = caps.get(0).unwrap();
+        ctx.name.published_in_page = Some(caps[1].to_string());
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
-// TODO batch 4 — Java `stripInPress`: " in press" sets `manuscript = true` and APPENDS
-// "in press" to `nomenclaturalNote`.
-fn strip_in_press(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 46: stripInPress ----
+
+/// Java IN_PRESS (StripAndStash.java:144-145): `\s+in\s+press\b\.?`,
+/// `Pattern.CASE_INSENSITIVE`. Has `\s` (x2) and `\b`, no `\p{...}`, no unescaped wildcard ->
+/// whole pattern ASCII-scoped. No lookaround/backreference -> plain `regex` crate. NOT
+/// end-anchored in Java (no trailing `$`), so this can in principle match anywhere in the
+/// string, not just at the very end — ported as-is (see the function doc below for why that
+/// matters to how the strip is applied).
+static IN_PRESS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\s+in\s+press\b\.?)").unwrap());
+
+/// Java `StripAndStash.stripInPress` (StripAndStash.java:1390-1400). A bare " in press"
+/// marker sets `manuscript = true` and APPENDS the literal "in press" to `nomenclaturalNote`
+/// (`ParsedName::add_nomenclatural_note`, Java's inline `existing == null ? "in press" :
+/// existing + " in press"`) — spot-checked against the Java CLI oracle: "Abies alba Mill. in
+/// press" -> `manuscript=true`, `nomenclaturalNote="in press"`, working string "Abies alba
+/// Mill.". Java's `Matcher.replaceFirst("")` splices out exactly the matched span (which
+/// already includes the leading whitespace via the pattern's own `\s+`) with NO subsequent
+/// `.trim()` — ported as a direct mid-string splice rather than a truncate-to-match-start, to
+/// stay faithful to that (the pattern isn't `$`-anchored, so it need not sit at the very end).
+fn strip_in_press(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(m) = IN_PRESS.find(&s) {
+        ctx.name.manuscript = true;
+        ctx.name.add_nomenclatural_note("in press");
+        return format!("{}{}", &s[..m.start()], &s[m.end()..]);
+    }
     s
 }
 
-// TODO batch 4 — Java `stripInAuthorInParens`: an "in <publication>" citation INSIDE a
-// parenthesised basionym ("(Geoffroy in Fourcroy, 1785)") rewrites the parens to just
-// the basionym author (+ year, moved over when the basionym itself had none) and
-// APPENDS the publication reference to `publishedIn`.
-fn strip_in_author_in_parens(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 47: stripInAuthorInParens ----
+
+/// Java IN_AUTHOR_IN_PARENS (StripAndStash.java:152-154):
+/// `\(([^()]*?)\s+(?:in|apud)\s+(\p{Lu}[^()]*?)\)`, `Pattern.UNICODE_CHARACTER_CLASS` -> keep
+/// default Unicode `\s`, ported verbatim. Both capture groups are LAZY (`[^()]*?`) — NO
+/// lookaround, NO backreference -> the plain `regex` crate suffices (its leftmost-first match
+/// semantics reproduce Java's backtracking result exactly for this lookaround-free,
+/// backreference-free shape; confirmed empirically in an isolated scratch-crate spike against
+/// the exact worked example below, not just assumed). group(1) = basionym author span,
+/// group(2) = publication reference.
+static IN_AUTHOR_IN_PARENS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\(([^()]*?)\s+(?:in|apud)\s+(\p{Lu}[^()]*?)\)").unwrap());
+
+/// Java IN_AUTHOR_YEAR (StripAndStash.java:241-242): `,?\s*(\d{3,4})\s*\.?\s*$`, no flags. Has
+/// `\s`/`\d`, no `\p{...}`, no unescaped wildcard -> whole pattern ASCII-scoped. Shared between
+/// `strip_in_author_in_parens` (this step) and `strip_in_author_citation` (step 48, below),
+/// same as Java's own single static field.
+static IN_AUTHOR_YEAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:,?\s*(\d{3,4})\s*\.?\s*)$").unwrap());
+
+/// Java `StripAndStash.stripInAuthorInParens` (StripAndStash.java:1402-1428). An "in
+/// <publication>" citation INSIDE a parenthesised basionym ("Hypsicera femoralis (Geoffroy in
+/// Fourcroy, 1785)") is rewritten to just the basionym author, MOVING the publication's own
+/// year onto the basionym when the basionym didn't already carry one — so it survives as a
+/// normal "(Author, year)" basionym for the not-yet-ported authorship parser and code
+/// inference — and the publication text APPENDS to `publishedIn` (`add_published_in`, same
+/// append-is-setPublishedIn-on-the-combined-string semantics described on that method). Spot-
+/// checked against the Java CLI oracle: -> "Hypsicera femoralis (Geoffroy, 1785)" with
+/// `publishedIn="Fourcroy, 1785"`, `publishedInYear=1785`. When the basionym ALREADY has its
+/// own year ("(Smith, 1780 in Jones, 1900)"), that year is left alone — no double year is
+/// appended, matching the `!YEAR_4DIGIT.matcher(basPart).find()` guard (`YEAR_4DIGIT`, batch
+/// 1). A MID-STRING SPLICE (`s[..start] + newParens + s[end..]`), NOT a truncation — this can
+/// fire on a basionym that isn't at the very end of the input, unlike most other steps in this
+/// file. Guarded on a non-empty basionym author AND a reference at least 2 chars long (Java
+/// `String.length()`, ported as `.chars().count()` — no astral characters expected in
+/// bibliographic reference text).
+fn strip_in_author_in_parens(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = IN_AUTHOR_IN_PARENS.captures(&s) {
+        let whole = caps.get(0).unwrap();
+        let bas_part = java_trim(&caps[1]).to_string();
+        let reference = java_trim(&caps[2]).to_string();
+        if !bas_part.is_empty() && reference.chars().count() >= 2 {
+            ctx.name.add_published_in(&reference);
+            let new_parens = match IN_AUTHOR_YEAR.captures(&reference) {
+                Some(ym) if !YEAR_4DIGIT.is_match(&bas_part) => {
+                    format!("({bas_part}, {})", &ym[1])
+                }
+                _ => format!("({bas_part})"),
+            };
+            return format!("{}{}{}", &s[..whole.start()], new_parens, &s[whole.end()..]);
+        }
+    }
     s
 }
 
-// TODO batch 4 — Java `stripInAuthorCitation`: a trailing " in <Author>" / " apud
-// <Author>" tail APPENDS to `publishedIn` and records a code-neutral
-// `ctx.pending_year`/`pending_year_from_publication`.
-fn strip_in_author_citation(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 48: stripInAuthorCitation ----
+
+/// Java IN_AUTHOR (StripAndStash.java:148-149): `\s+(?:in|apud)\s+([\p{Lu}][^\s].*)$`, no
+/// flags. `\s` (x2) ASCII-only (no `UNICODE_CHARACTER_CLASS`); `\p{Lu}` always Unicode;
+/// `[^\s]` is a negated PREDEFINED shorthand class (same as a bare `\S`) — under Java's default
+/// (non-Unicode) flags this means "not one of the 6 ASCII whitespace chars", spelled out here
+/// as the literal negated ASCII whitespace class `[^\t\n\x0B\f\r ]` at the crate's
+/// Unicode-default scope (same `SEROVAR_BARE` precedent from batch 1 — `(?-u:[^\s])`/
+/// `(?-u:\S)` are both rejected by `regex-syntax` as "pattern can match invalid UTF-8"); `.*`
+/// unescaped wildcard, Unicode default. No lookaround/backreference -> plain `regex` crate.
+static IN_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s+)(?:in|apud)(?-u:\s+)(\p{Lu}[^\t\n\x0B\f\r ].*)$").unwrap()
+});
+
+/// Java IN_AUTHOR_PAREN_YEAR (StripAndStash.java:243): `\((\d{4})\)`, no flags. Has `\d`, no
+/// `\p{...}`, no unescaped wildcard (the parens are literal, escaped) -> whole pattern
+/// ASCII-scoped.
+static IN_AUTHOR_PAREN_YEAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\((\d{4})\))").unwrap());
+
+/// Java `StripAndStash.stripInAuthorCitation` (StripAndStash.java:1430-1462). A trailing " in
+/// <Author>" / " apud <Author>" tail ("Cantharus lineolatus Valenciennes in Cuvier &
+/// Valenciennes, 1830", "Busk in Chimonides, 1987", "Small apud Britton & Wilson") is the
+/// publication reference for the name — APPENDS to `publishedIn` (`add_published_in`) and
+/// records a code-neutral `ctx.pending_year`/`pending_year_from_publication` via
+/// `ParseContext::set_pending_publication_year` (first-writer-wins; a PARENTHESISED year is
+/// tried FIRST so it takes precedence over a bare trailing year when both are present in the
+/// same reference, e.g. "Kirchner (1988), Taxon 37: 5" pins 1988, not 5). Runs BEFORE the IPNI
+/// / period-/comma-separated-reference patterns (steps 49-51) so an "Author in Source, Title
+/// (Year)" tail is fully consumed here rather than partially matched by one of those. A
+/// trailing sentence-final period after a closing paren is dropped (`ref.endsWith(").")`); a
+/// period after anything else (an author abbreviation like "Fleisch.") is kept. Guarded on the
+/// reference being at least 2 chars (Java `String.length()` -> `.chars().count()`, same as
+/// step 47). All example refs above spot-checked against the Java CLI oracle, including the
+/// "de"-particle author-list negative case ("Yin, Z.W. de Beer & Wingf." must NOT itself be
+/// swallowed here — it isn't, since `IN_AUTHOR` requires a literal " in "/" apud " word, which
+/// "de Beer" doesn't contain).
+fn strip_in_author_citation(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = IN_AUTHOR.captures(&s) {
+        let whole = caps.get(0).unwrap();
+        let mut reference = java_trim(&caps[1]).to_string();
+        if reference.ends_with(").") {
+            reference.pop();
+            reference = java_trim(&reference).to_string();
+        }
+        if reference.chars().count() >= 2 {
+            ctx.name.add_published_in(&reference);
+            if let Some(pyear) = IN_AUTHOR_PAREN_YEAR.captures(&reference) {
+                ctx.set_pending_publication_year(&pyear[1]);
+            }
+            if let Some(ym) = IN_AUTHOR_YEAR.captures(&reference) {
+                ctx.set_pending_publication_year(&ym[1]);
+            }
+            return java_trim(&s[..whole.start()]).to_string();
+        }
+    }
     s
 }
 
-// TODO batch 4 — Java `stripIpniCitation`: an IPNI-style "Author., Title (Year)."
-// citation OVERWRITES `publishedIn` (extracting any embedded nom-note first, which
-// APPENDS to `nomenclaturalNote`) and records the pending publication year.
-fn strip_ipni_citation(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 49: stripIpniCitation ----
+
+/// Java IPNI_CITATION (StripAndStash.java:244-246):
+/// `(?<=\s)[\p{Lu}][\p{L}.]+,\s+(.+\(\d{4}\))\.?\s*$`, `Pattern.UNICODE_CHARACTER_CLASS` -> keep
+/// default Unicode `\s`, no ASCII scoping needed. LOOKBEHIND `(?<=\s)` (the author span must be
+/// preceded by whitespace, checked but not consumed) -> needs `fancy_regex` (the `regex` crate
+/// has no lookaround at all). Ported verbatim.
+static IPNI_CITATION: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"(?<=\s)[\p{Lu}][\p{L}.]+,\s+(.+\(\d{4}\))\.?\s*$").unwrap());
+
+/// Java IPNI_EMBEDDED_NOM_NOTE (StripAndStash.java:247-251), `Pattern.CASE_INSENSITIVE` (no
+/// `UNICODE_CHARACTER_CLASS`, so Java's own `\s`/`\b`/`\d` here are ASCII-only). Trailing
+/// LOOKAHEAD `(?=\(\d{4}\))` (the year parens are checked but not consumed) -> needs
+/// `fancy_regex`. `fancy_regex` has no ASCII mode at all (`(?-u:…)` is a hard parse error,
+/// unconditionally — see `GREEK_MARKER`'s doc comment in batch 1) -> `\s` spelled out as the
+/// literal ASCII whitespace set `[ \t\n\x0B\f\r]`; `\d` spelled out as `[0-9]`
+/// (`DOT_BEFORE_ALNUM` precedent, batch 2b — a literal class is unaffected by Unicode mode
+/// either way, unlike a shorthand); `\b` left as `fancy_regex`'s only option (Unicode
+/// word-boundary), the same rare, forced (not faithfulness-lapse) divergence as
+/// `STRAIN_DESIGNATION` (batch 1). Built via `concat!` mirroring Java's own `"..." + "..."`
+/// layout, one alternative per line, so it stays directly diffable against StripAndStash.java.
+static IPNI_EMBEDDED_NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(concat!(
+        r"(?i)[ \t\n\x0B\f\r]+((?:in[ \t\n\x0B\f\r]+obs\b\.?,?[ \t\n\x0B\f\r]*)?pro[ \t\n\x0B\f\r]+syn\b\.?",
+        r"|nom\b\.?(?:[ \t\n\x0B\f\r]+[a-zA-Z][a-zA-Z.]*)*",
+        r"|comb\b\.?(?:[ \t\n\x0B\f\r]+[a-zA-Z][a-zA-Z.]*)*",
+        r"|orth\b\.?(?:[ \t\n\x0B\f\r]+[a-zA-Z][a-zA-Z.]*)*)[ \t\n\x0B\f\r]*(?=\([0-9]{4}\))",
+    ))
+    .unwrap()
+});
+
+/// Java IPNI_YEAR (StripAndStash.java:252): `\((\d{4})\)\s*\.?\s*$`, no flags -> whole pattern
+/// ASCII-scoped.
+static IPNI_YEAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\((\d{4})\)\s*\.?\s*)$").unwrap());
+
+/// Java `StripAndStash.stripIpniCitation` (StripAndStash.java:1464-1490). An IPNI-style
+/// citation ("Kirchn., Annals and Magazine of Natural History (1988).") — an author span,
+/// comma, then a publication title ending in a parenthesised year — OVERWRITES `publishedIn`
+/// (`set_published_in`, Java's plain `setPublishedIn(ref)` with no null-check, since nothing
+/// upstream can have already populated a reference by the time this step's pattern can match)
+/// and records the pending publication year. Before overwriting, any nom-note keyword EMBEDDED
+/// in the reference text just before the year parens ("Taxon nom. illeg. (1988)", "Taxon pro
+/// syn. (1988)", "Taxon in obs., pro syn. (1988)", "Taxon comb. nov. (1988)") is spliced out
+/// into `nomenclaturalNote` (APPEND, `add_nomenclatural_note`) and the reference is
+/// re-squished (collapse the resulting double space via `MULTI_SPACE`, batch 1, then
+/// `java_trim`) — all four spot-checked against the Java CLI oracle. Truncates the working
+/// string to `pm.start(1)` (the START OF GROUP 1, NOT the whole match — the lookbehind makes
+/// group 0 start at the author's own first letter, so truncating there would drop the author
+/// too) then a dangling comma left over from "Author., " is explicitly stripped.
+fn strip_ipni_citation(ctx: &mut ParseContext, s: String) -> String {
+    let caps = match IPNI_CITATION.captures(&s) {
+        Ok(Some(c)) => c,
+        _ => return s,
+    };
+    let group1 = caps.get(1).unwrap();
+    let mut reference = java_trim(group1.as_str()).to_string();
+    if let Ok(Some(nm)) = IPNI_EMBEDDED_NOM_NOTE.captures(&reference) {
+        let note_match = nm.get(1).unwrap();
+        ctx.name
+            .add_nomenclatural_note(java_trim(note_match.as_str()));
+        let spliced = format!(
+            "{} {}",
+            &reference[..note_match.start()],
+            &reference[note_match.end()..]
+        );
+        reference = java_trim(&MULTI_SPACE.replace_all(&spliced, " ")).to_string();
+    }
+    ctx.name.set_published_in(&reference);
+    if let Some(ym) = IPNI_YEAR.captures(&reference) {
+        ctx.set_pending_publication_year(&ym[1]);
+    }
+    let mut result = java_trim(&s[..group1.start()]).to_string();
+    if result.ends_with(',') {
+        result.pop();
+        result = java_trim(&result).to_string();
+    }
+    result
+}
+
+// ---- Step 50: stripPeriodSeparatedReference ----
+
+// RULE: patterns on fancy_regex (backtracking) MUST keep Java's possessive/atomic
+// quantifiers — only DROP possessives for patterns on the linear `regex` crate.
+/// Java PERIOD_SEPARATED_REFERENCE (StripAndStash.java:253-266),
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode `\s`/`\p{...}` throughout, no
+/// ASCII scoping needed. Internal NEGATIVE LOOKAHEAD (`(?!(?:of|in|de|et|the|und|für)\b)`,
+/// excluding the connector words from the filler run) -> needs `fancy_regex` (the `regex`
+/// crate has no lookaround at all). The POSSESSIVE quantifier (`*+`) wrapping that same
+/// lookahead-guarded group is KEPT here as `*+` (see the RULE above): `fancy_regex` IS a
+/// backtracking engine, and Java's own comment (StripAndStash.java:255-257) says the
+/// possessive exists so "this can't blow up on a long connector-free run", so keeping it is
+/// the faithful port of Java's own quantifier plus defence-in-depth. `fancy_regex` 0.14
+/// parses `*+` natively (compiling it to an atomic group), so restoring it is a straight
+/// verbatim port, not a restructuring.
+///
+/// NOTE — unlike `NOM_NOTE` (batch 2b), the possessive here is NOT strictly load-bearing:
+/// this pattern's filler group is `\s+ <word>` (each iteration must consume one or more
+/// whitespace chars THEN a letter-led word, and the following mandatory tail also opens
+/// with `\s+`), so every partition of a whitespace-delimited run is unambiguous and plain
+/// greedy `*` cannot backtrack exponentially. Measured directly (isolated scratch-crate
+/// spike): `*+` and plain `*` are BOTH linear and near-identical here — ~735µs each on a
+/// 640-word connector-free run, growing linearly, no cliff. Contrast `NOM_NOTE`, whose
+/// inner `[\s.&]*[a-z][a-z.]*` genuinely allows ambiguous partitions: there greedy `*`
+/// explodes to ~18ms (backtrack-limit no-match) while `*+` stays microseconds — THAT is a
+/// load-bearing possessive. So `*+` is retained here for faithfulness + defence-in-depth,
+/// not because dropping it would ReDoS; the regression test below is a linearity guard, not
+/// proof of an averted cliff. Built via `concat!` mirroring Java's own `"..." + "..."`
+/// layout.
+static PERIOD_SEPARATED_REFERENCE: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(concat!(
+        r"\s+[\p{Lu}][\p{L}]{2,}\.\s+",
+        r"([\p{Lu}][\p{Ll}]{2,}[\p{L}.]*(?:\s+(?!(?:of|in|de|et|the|und|f\x{fc}r)\b)(?:[\p{Lu}][\p{L}.]+|[\p{Ll}][\p{L}]+))*+",
+        r"\s+(?:of|in|de|et|the|und|f\x{fc}r)\s+.*)$",
+    ))
+    .unwrap()
+});
+
+/// Java PAGE_RANGE_TEST (StripAndStash.java:351): `.*\b\d{3,}-\d{3,}\b.*`, no flags. Has `\b`/
+/// `\d` (x2 each), unescaped wildcard `.*` bookends -> only `\b`/`\d` ASCII-scoped. Called via
+/// `.matches()` on a `.*CORE.*` shape -> RESTRUCTURED to an unanchored `is_match` on the core
+/// alone (same precedent as `GREEK_MARKER_TEST`/`MANUSCRIPT_KEYWORD`/… — no name string embeds
+/// a newline, so `.` matching "any non-newline char" makes the `.*` bookends a no-op either
+/// way).
+static PAGE_RANGE_TEST: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b\d{3,}-\d{3,}\b)").unwrap());
+
+/// Java PERIOD_REF_YEAR (StripAndStash.java:267): `\b(\d{4})\b`, no flags -> whole pattern
+/// ASCII-scoped. `.find()` takes the FIRST (leftmost) match. Distinct from `ParsedName::
+/// set_published_in`'s OWN separate year derivation (which takes the LAST year-shaped match in
+/// the full `publishedIn` string) — this extraction only ever feeds `ctx.pending_year`, not
+/// `publishedInYear` directly.
+static PERIOD_REF_YEAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b(\d{4})\b)").unwrap());
+
+/// Java `StripAndStash.stripPeriodSeparatedReference` (StripAndStash.java:1492-1521). A
+/// "Surname. <Reference Title> ... <year> ..." citation — recognised by an English/Latin
+/// preposition ("of"/"in"/"de"/"et"/"the"/"und"/"für") inside the title, rare inside author
+/// names — OVERWRITES `publishedIn` (`set_published_in`, Java's plain `setPublishedIn(ref)`,
+/// no null-check). A reference containing a numeric PAGE RANGE ("1658-1662") is a full
+/// bibliographic citation whose trailing number is ambiguous with pagination, so the year is
+/// NOT propagated and the strip is flagged `NOMENCLATURAL_REFERENCE` instead; a reference
+/// without a page range propagates the first 4-digit year it contains as the pending
+/// publication year, no warning. Truncates the working string to `pm.start(1)` (group 1's
+/// start, keeping the leading "Surname." span — mirrors `strip_ipni_citation`'s identical
+/// group(1)-not-group(0) truncation), then strips a trailing period LEFT OVER from the
+/// surname's own abbreviation dot (`if (s.endsWith(".")) … .trim()` — WITH a re-trim here,
+/// unlike the earlier `ref`-side period strip below, which has none: Java's own
+/// `ref.substring(0, ref.length() - 1)` with no following `.trim()`). All three shapes
+/// (page-range / clean-year / author-particle false-positive) spot-checked against the Java
+/// CLI oracle.
+fn strip_period_separated_reference(ctx: &mut ParseContext, s: String) -> String {
+    let caps = match PERIOD_SEPARATED_REFERENCE.captures(&s) {
+        Ok(Some(c)) => c,
+        _ => return s,
+    };
+    let group1 = caps.get(1).unwrap();
+    let mut reference = java_trim(group1.as_str()).to_string();
+    if reference.ends_with('.') {
+        reference.pop();
+    }
+    ctx.name.set_published_in(&reference);
+    if PAGE_RANGE_TEST.is_match(&reference) {
+        ctx.name.add_warning(warnings::NOMENCLATURAL_REFERENCE);
+    } else if let Some(ym) = PERIOD_REF_YEAR.captures(&reference) {
+        ctx.set_pending_publication_year(&ym[1]);
+    }
+    let mut result = java_trim(&s[..group1.start()]).to_string();
+    if result.ends_with('.') {
+        result.pop();
+        result = java_trim(&result).to_string();
+    }
+    result
+}
+
+// ---- Step 51: stripCommaPrefixedReference ----
+
+/// Java COMMA_PREFIXED_REFERENCE (StripAndStash.java:268-276),
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode `\s`/`\p{...}` throughout, no
+/// ASCII scoping needed. NO lookaround, NO backreference anywhere (unlike its
+/// `PERIOD_SEPARATED_REFERENCE` sibling above: the connector words are excluded from the
+/// filler via an explicit alternation branch — `on|and|for` are allowed lowercase filler
+/// words, `of|in|de|et|the|und|für` are not — rather than a negative lookahead) -> the plain
+/// `regex` crate suffices. Java's possessive quantifier (`*+`) is DROPPED here (ported as
+/// plain `*`) per this port's RULE (see `strip_period_separated_reference`'s doc comment
+/// above): the `regex` crate is an automaton (Thompson NFA/DFA simulation) with NO
+/// backtracking at all, so it is always linear-time in the input length regardless of
+/// possessive-or-not — there is categorically no catastrophic-backtracking failure mode
+/// possible on this engine, so the possessive carries no meaning and dropping it is a
+/// provably-safe restructuring (whereas `PERIOD_SEPARATED_REFERENCE`, on the backtracking
+/// `fancy_regex` engine, keeps its `*+` for faithfulness even though — as that static's own
+/// NOTE measures — its particular shape also happens to stay linear). (Confirmed empirically
+/// during this step's TDD spike that the `regex` crate does not even reject a literal `*+` —
+/// it silently reinterprets it as nested repetition `(X*)+`, which happens to match the same
+/// language as plain `X*` for this shape but is a confusing way to spell "no possessive
+/// semantics exist on this engine"; writing plain `*` is the honest, idiomatic port. A
+/// 200-word connector-free run completes in well under 1ms either way — there was never a
+/// ReDoS risk to begin with on this engine.) Built via `concat!` mirroring Java's own
+/// `"..." + "..."` layout.
+static COMMA_PREFIXED_REFERENCE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"\s+[\p{Lu}][\p{L}.]+,\s+",
+        r"([\p{Lu}][\p{Ll}]{2,}[\p{L}.]*(?:\s+(?:[\p{Lu}][\p{L}.]+|on|and|for))*",
+        r"\s+(?:of|in|de|et|the|und|f\x{fc}r)\s+.*)$",
+    ))
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripCommaPrefixedReference` (StripAndStash.java:1523-1540). An
+/// "Author(s), <Reference Title> …" citation with NO period after the author span (unlike step
+/// 50's `PERIOD_SEPARATED_REFERENCE`) — the title must contain a recognisable connector
+/// ("of"/"in"/"de"/"et"/"the"/"und"/"für") so a comma-separated co-author list isn't mistaken
+/// for a reference — OVERWRITES `publishedIn` (`set_published_in`) and ALWAYS flags
+/// `NOMENCLATURAL_REFERENCE` (unlike step 50, the year is never propagated onto the
+/// combination authorship for this form — Java's own comment: the title's year is the
+/// publication year of the article, not a zoological/botanical author-year citation).
+/// Truncates to `pm.start(1)` (group 1's start, same "keep the author prefix" reasoning as
+/// steps 49/50) then strips a dangling trailing comma.
+fn strip_comma_prefixed_reference(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = COMMA_PREFIXED_REFERENCE.captures(&s) {
+        let group1 = caps.get(1).unwrap();
+        let reference = java_trim(group1.as_str()).to_string();
+        ctx.name.set_published_in(&reference);
+        let mut result = java_trim(&s[..group1.start()]).to_string();
+        if result.ends_with(',') {
+            result.pop();
+            result = java_trim(&result).to_string();
+        }
+        ctx.name.add_warning(warnings::NOMENCLATURAL_REFERENCE);
+        return result;
+    }
     s
 }
 
-// TODO batch 4 — Java `stripPeriodSeparatedReference`: a "Surname. <Reference Title>
-// ... year ..." citation OVERWRITES `publishedIn`; a page-range ref flags
-// NOMENCLATURAL_REFERENCE instead of propagating the year, a clean one propagates the
-// pending publication year.
-fn strip_period_separated_reference(_ctx: &mut ParseContext, s: String) -> String {
-    s
-}
+// ---- Step 52: stripManuscriptMarker ----
 
-// TODO batch 4 — Java `stripCommaPrefixedReference`: an "Author(s), <Reference Title>
-// …" citation OVERWRITES `publishedIn` and flags NOMENCLATURAL_REFERENCE (the year is
-// never propagated for this form).
-fn strip_comma_prefixed_reference(_ctx: &mut ParseContext, s: String) -> String {
-    s
-}
+/// Java MANUSCRIPT_MARKER (StripAndStash.java:277-279):
+/// `\s*,?\s+(ined\.?|ms\.?|msc\.?|unpublished)\s*$`, `Pattern.CASE_INSENSITIVE` (no
+/// `UNICODE_CHARACTER_CLASS`) -> `\s` ASCII-only. No `\p{...}`, no unescaped wildcard -> whole
+/// pattern ASCII-scoped. No lookaround/backreference -> plain `regex` crate.
+static MANUSCRIPT_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\s*,?\s+(ined\.?|ms\.?|msc\.?|unpublished)\s*)$").unwrap()
+});
 
-// TODO batch 4 — Java `stripManuscriptMarker`: a trailing "ined."/"ms."/"msc."/
-// "unpublished" sets `manuscript = true` and APPENDS the (lower-cased) tag to
-// `nomenclaturalNote`.
-fn strip_manuscript_marker(_ctx: &mut ParseContext, s: String) -> String {
+/// Java `StripAndStash.stripManuscriptMarker` (StripAndStash.java:1542-1555). A trailing
+/// manuscript marker ("ined."/"ms."/"msc."/"unpublished", any case, with an optional leading
+/// comma) sets `manuscript = true` and APPENDS the LOWER-CASED tag to `nomenclaturalNote`
+/// (`add_nomenclatural_note`) — spot-checked against the Java CLI oracle: "Acacia bicolor
+/// Bojer ms." -> `manuscript=true`, `nomenclaturalNote="ms."`, working string "Acacia bicolor
+/// Bojer". Runs AFTER `strip_in_author_citation` (step 48) so a trailing "Busk ms in
+/// Chimonides, 1987" cleanly strips both (the in-author tail first, leaving "Busk ms" for this
+/// step to finish).
+fn strip_manuscript_marker(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = MANUSCRIPT_MARKER.captures(&s) {
+        let whole = caps.get(0).unwrap();
+        let tag = caps[1].to_lowercase();
+        ctx.name.manuscript = true;
+        ctx.name.add_nomenclatural_note(&tag);
+        return java_trim(&s[..whole.start()]).to_string();
+    }
     s
 }
 
@@ -2323,7 +2724,7 @@ mod tests {
     }
 
     /// Phase 1 Slice 2 Task 2 locked the dispatcher order down with every one of the 55
-    /// steps a pure passthrough. Batches 1, 2b and 2c (steps 1-44) now carry a faithful
+    /// steps a pure passthrough. Batches 1, 2b, 2c and 2d (steps 1-52) now carry a faithful
     /// port, but a clean, unremarkable binomial should still round-trip untouched: none of
     /// steps 1-19's guard conditions (a trailing/glued "?", a quoted leading monomial, a
     /// "Missing "/lowercase-epithet prefix, Greek/star markers, a letter-subdivision
@@ -2332,13 +2733,15 @@ mod tests {
     /// an angle bracket, or HTML), steps 20-30's (a "Candidatus"/"Ca." prefix, a
     /// horticultural "ex" placeholder, a cultivar Group/grex/quoted epithet, an extinction
     /// dagger, a "t.infr." marker, a bracketed genus, "sic"/"corrig.", a synonymy bracket,
-    /// or a nom/comb/orth/nomen/sp.nov./pro-syn. keyword), nor steps 31-44's (an
-    /// authorship placeholder, a trailing " species", "pro parte"/"p.p.", a "(pro sp.)"
-    /// annotation, "(Approved Lists YYYY)", "mihi", "Anon"/"anon", or any of the six
-    /// taxonomic-note/aggregate-suffix keywords) fire on "Abies alba Mill.". Steps 45-55
-    /// remain no-op stubs regardless. This still locks the same invariant Task 2
-    /// established — a batch landing later can't silently leave a stub half-wired — just
-    /// no longer via literally every step being a no-op.
+    /// or a nom/comb/orth/nomen/sp.nov./pro-syn. keyword), steps 31-44's (an authorship
+    /// placeholder, a trailing " species", "pro parte"/"p.p.", a "(pro sp.)" annotation,
+    /// "(Approved Lists YYYY)", "mihi", "Anon"/"anon", or any of the six
+    /// taxonomic-note/aggregate-suffix keywords), nor steps 45-52's (a trailing page
+    /// reference, "in press", a parenthesised or trailing "in"/"apud" citation, an IPNI/
+    /// period-/comma-separated reference, or a manuscript marker) fire on "Abies alba
+    /// Mill.". Steps 53-55 remain no-op stubs regardless. This still locks the same
+    /// invariant Task 2 established — a batch landing later can't silently leave a stub
+    /// half-wired — just no longer via literally every step being a no-op.
     #[test]
     fn run_is_a_complete_noop_until_the_batches_land() {
         let mut c = ParseContext::new("Abies alba Mill.".to_string(), None, None, None);
@@ -4249,5 +4652,626 @@ mod tests {
         let out = strip_aggregate_suffix(&mut c, "Abies alba Mill.".to_string());
         assert_eq!(out, "Abies alba Mill.");
         assert!(!c.aggregate);
+    }
+
+    // ---- Step 45: stripPublishedPage ----
+    // Every case below spot-checked against the Java CLI oracle via the full parse pipeline
+    // (the field values StripAndStash alone contributes match one-for-one).
+
+    #[test]
+    fn published_page_colon_space_digits_is_stashed() {
+        let mut c = ctx("x");
+        let out = strip_published_page(
+            &mut c,
+            "Anolis marmoratus girafus LAZELL 1964: 377".to_string(),
+        );
+        assert_eq!(out, "Anolis marmoratus girafus LAZELL 1964");
+        assert_eq!(c.name.published_in_page, Some("377".to_string()));
+    }
+
+    #[test]
+    fn published_page_glued_colon_is_also_recognised() {
+        let mut c = ctx("x");
+        let out = strip_published_page(
+            &mut c,
+            "Recilia truncatus Dash & Viraktamath, 1998a:29".to_string(),
+        );
+        assert_eq!(out, "Recilia truncatus Dash & Viraktamath, 1998a");
+        assert_eq!(c.name.published_in_page, Some("29".to_string()));
+    }
+
+    #[test]
+    fn published_page_extra_spaced_colon_is_also_recognised() {
+        let mut c = ctx("x");
+        let out = strip_published_page(
+            &mut c,
+            "Recilia truncatus Dash & Viraktamath, 1998a : 29".to_string(),
+        );
+        assert_eq!(out, "Recilia truncatus Dash & Viraktamath, 1998a");
+        assert_eq!(c.name.published_in_page, Some("29".to_string()));
+    }
+
+    #[test]
+    fn published_page_range_with_en_dash_is_kept_verbatim() {
+        let mut c = ctx("x");
+        let out = strip_published_page(&mut c, "Foo bar Author, 1900: 12\u{2013}18".to_string());
+        assert_eq!(out, "Foo bar Author, 1900");
+        assert_eq!(c.name.published_in_page, Some("12\u{2013}18".to_string()));
+    }
+
+    #[test]
+    fn no_published_page_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_published_page(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.published_in_page, None);
+    }
+
+    // ---- Step 46: stripInPress ----
+
+    #[test]
+    fn documented_example_in_press_sets_manuscript_and_appends_nomenclatural_note() {
+        let mut c = ctx("x");
+        let out = strip_in_press(&mut c, "Abies alba Mill. in press".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, Some("in press".to_string()));
+    }
+
+    #[test]
+    fn in_press_is_case_insensitive_and_always_stashes_the_lowercase_literal() {
+        let mut c = ctx("x");
+        let out = strip_in_press(&mut c, "Abies alba Mill. In Press.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, Some("in press".to_string()));
+    }
+
+    #[test]
+    fn in_press_appends_to_an_existing_nomenclatural_note() {
+        let mut c = ctx("x");
+        c.name.nomenclatural_note = Some("nom. illeg.".to_string());
+        let out = strip_in_press(&mut c, "Abies alba Mill. in press".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(
+            c.name.nomenclatural_note,
+            Some("nom. illeg. in press".to_string())
+        );
+    }
+
+    #[test]
+    fn no_in_press_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_in_press(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(!c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, None);
+    }
+
+    // ---- Step 47: stripInAuthorInParens ----
+
+    #[test]
+    fn in_author_in_parens_moves_the_publication_year_onto_a_yearless_basionym() {
+        let mut c = ctx("x");
+        let out = strip_in_author_in_parens(
+            &mut c,
+            "Hypsicera femoralis (Geoffroy in Fourcroy, 1785)".to_string(),
+        );
+        assert_eq!(out, "Hypsicera femoralis (Geoffroy, 1785)");
+        assert_eq!(c.name.published_in, Some("Fourcroy, 1785".to_string()));
+        assert_eq!(c.name.published_in_year, Some(1785));
+    }
+
+    #[test]
+    fn in_author_in_parens_apud_variant_is_also_recognised() {
+        let mut c = ctx("x");
+        let out =
+            strip_in_author_in_parens(&mut c, "Foo bar (Smith apud Jones, 1900) Mill.".to_string());
+        assert_eq!(out, "Foo bar (Smith, 1900) Mill.");
+        assert_eq!(c.name.published_in, Some("Jones, 1900".to_string()));
+    }
+
+    #[test]
+    fn in_author_in_parens_does_not_double_up_a_year_the_basionym_already_has() {
+        let mut c = ctx("x");
+        let out =
+            strip_in_author_in_parens(&mut c, "Foo bar (Smith, 1780 in Jones, 1900)".to_string());
+        assert_eq!(out, "Foo bar (Smith, 1780)");
+        assert_eq!(c.name.published_in, Some("Jones, 1900".to_string()));
+    }
+
+    #[test]
+    fn in_author_in_parens_appends_to_an_existing_published_in() {
+        let mut c = ctx("x");
+        c.name.set_published_in("Earlier ref, 1700");
+        let out = strip_in_author_in_parens(
+            &mut c,
+            "Hypsicera femoralis (Geoffroy in Fourcroy, 1785)".to_string(),
+        );
+        assert_eq!(out, "Hypsicera femoralis (Geoffroy, 1785)");
+        assert_eq!(
+            c.name.published_in,
+            Some("Earlier ref, 1700 Fourcroy, 1785".to_string())
+        );
+        assert_eq!(
+            c.name.published_in_year,
+            Some(1785),
+            "the year must be re-derived from the full COMBINED publishedIn string"
+        );
+    }
+
+    #[test]
+    fn plain_parenthesised_basionym_without_in_author_is_untouched() {
+        let mut c = ctx("x");
+        let out =
+            strip_in_author_in_parens(&mut c, "Hypsicera femoralis (Geoffroy, 1785)".to_string());
+        assert_eq!(out, "Hypsicera femoralis (Geoffroy, 1785)");
+        assert_eq!(c.name.published_in, None);
+    }
+
+    // ---- Step 48: stripInAuthorCitation ----
+
+    #[test]
+    fn documented_example_busk_in_chimonides_sets_published_in_and_year() {
+        let mut c = ctx("x");
+        let out = strip_in_author_citation(&mut c, "Busk in Chimonides, 1987".to_string());
+        assert_eq!(out, "Busk");
+        assert_eq!(c.name.published_in, Some("Chimonides, 1987".to_string()));
+        assert_eq!(c.name.published_in_year, Some(1987));
+        assert_eq!(c.pending_year, Some("1987".to_string()));
+        assert!(c.pending_year_from_publication);
+    }
+
+    #[test]
+    fn apud_variant_is_also_recognised() {
+        let mut c = ctx("x");
+        let out = strip_in_author_citation(&mut c, "Small apud Britton & Wilson".to_string());
+        assert_eq!(out, "Small");
+        assert_eq!(c.name.published_in, Some("Britton & Wilson".to_string()));
+    }
+
+    #[test]
+    fn trailing_sentence_period_after_closing_paren_is_dropped() {
+        let mut c = ctx("x");
+        let out =
+            strip_in_author_citation(&mut c, "Foo bar Author in Kirchner (1988).".to_string());
+        assert_eq!(out, "Foo bar Author");
+        assert_eq!(c.name.published_in, Some("Kirchner (1988)".to_string()));
+    }
+
+    #[test]
+    fn period_after_an_author_abbreviation_is_kept_not_dropped() {
+        let mut c = ctx("x");
+        let out = strip_in_author_citation(
+            &mut c,
+            "Papillaria  fuscescens (Hook.) Jaeg. fo. gracilis Card. in Fleisch.".to_string(),
+        );
+        assert_eq!(
+            out,
+            "Papillaria  fuscescens (Hook.) Jaeg. fo. gracilis Card."
+        );
+        assert_eq!(c.name.published_in, Some("Fleisch.".to_string()));
+    }
+
+    #[test]
+    fn paren_year_takes_precedence_for_pending_year_while_published_in_year_takes_the_last_match() {
+        // publishedInYear and pending_year are DISTINCT extractions (see IN_AUTHOR_PAREN_YEAR/
+        // IN_AUTHOR_YEAR's doc comments): the former is set_published_in's own "last
+        // year-shaped match in the combined string" rule, the latter is
+        // set_pending_publication_year's "parenthesised year tried first" rule. Oracle-verified
+        // this input yields publishedInYear=1990 but a combinationAuthorship year of 1988 (the
+        // pending_year, applied by the not-yet-ported Pipeline stage).
+        let mut c = ctx("x");
+        let out = strip_in_author_citation(
+            &mut c,
+            "Foo bar Author in Kirchner (1988), 1990".to_string(),
+        );
+        assert_eq!(out, "Foo bar Author");
+        assert_eq!(
+            c.name.published_in,
+            Some("Kirchner (1988), 1990".to_string())
+        );
+        assert_eq!(c.name.published_in_year, Some(1990));
+        assert_eq!(
+            c.pending_year,
+            Some("1988".to_string()),
+            "the parenthesised year must win over the trailing bare year for pending_year"
+        );
+    }
+
+    #[test]
+    fn no_in_author_tail_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_in_author_citation(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.published_in, None);
+        assert_eq!(c.pending_year, None);
+    }
+
+    #[test]
+    fn lowercase_word_after_in_is_not_mistaken_for_an_author() {
+        // "in obscurity" — the word after "in"/"apud" must start with an uppercase letter;
+        // oracle-verified this whole string survives untouched into the raw authorship text.
+        let mut c = ctx("x");
+        let out = strip_in_author_citation(&mut c, "Foo bar Smith in obscurity".to_string());
+        assert_eq!(out, "Foo bar Smith in obscurity");
+        assert_eq!(c.name.published_in, None);
+    }
+
+    // ---- Step 49: stripIpniCitation ----
+
+    #[test]
+    fn documented_ipni_example_sets_published_in_and_year() {
+        let mut c = ctx("x");
+        let out = strip_ipni_citation(
+            &mut c,
+            "Foo bar Kirchn., Annals and Magazine of Natural History (1988).".to_string(),
+        );
+        assert_eq!(out, "Foo bar Kirchn.");
+        assert_eq!(
+            c.name.published_in,
+            Some("Annals and Magazine of Natural History (1988)".to_string())
+        );
+        assert_eq!(c.name.published_in_year, Some(1988));
+        assert_eq!(c.pending_year, Some("1988".to_string()));
+    }
+
+    #[test]
+    fn embedded_nom_illeg_note_is_extracted_and_the_reference_is_resquished() {
+        let mut c = ctx("x");
+        let out = strip_ipni_citation(
+            &mut c,
+            "Foo bar Kirchn., Taxon nom. illeg. (1988).".to_string(),
+        );
+        assert_eq!(out, "Foo bar Kirchn.");
+        assert_eq!(c.name.nomenclatural_note, Some("nom. illeg.".to_string()));
+        assert_eq!(c.name.published_in, Some("Taxon (1988)".to_string()));
+    }
+
+    #[test]
+    fn embedded_pro_syn_note_with_in_obs_prefix_is_extracted() {
+        let mut c = ctx("x");
+        let out = strip_ipni_citation(
+            &mut c,
+            "Foo bar Kirchn., Taxon in obs., pro syn. (1988).".to_string(),
+        );
+        assert_eq!(out, "Foo bar Kirchn.");
+        assert_eq!(
+            c.name.nomenclatural_note,
+            Some("in obs., pro syn.".to_string())
+        );
+        assert_eq!(c.name.published_in, Some("Taxon (1988)".to_string()));
+    }
+
+    #[test]
+    fn embedded_comb_nov_note_is_extracted() {
+        let mut c = ctx("x");
+        let out = strip_ipni_citation(
+            &mut c,
+            "Foo bar Kirchn., Taxon comb. nov. (1988).".to_string(),
+        );
+        assert_eq!(out, "Foo bar Kirchn.");
+        assert_eq!(c.name.nomenclatural_note, Some("comb. nov.".to_string()));
+        assert_eq!(c.name.published_in, Some("Taxon (1988)".to_string()));
+    }
+
+    #[test]
+    fn ipni_appends_the_embedded_note_to_an_existing_nomenclatural_note() {
+        let mut c = ctx("x");
+        c.name.nomenclatural_note = Some("earlier note".to_string());
+        let out = strip_ipni_citation(
+            &mut c,
+            "Foo bar Kirchn., Taxon nom. illeg. (1988).".to_string(),
+        );
+        assert_eq!(out, "Foo bar Kirchn.");
+        assert_eq!(
+            c.name.nomenclatural_note,
+            Some("earlier note nom. illeg.".to_string())
+        );
+    }
+
+    #[test]
+    fn ipni_overwrites_rather_than_appends_an_existing_published_in() {
+        let mut c = ctx("x");
+        c.name.set_published_in("Stale ref, 1700");
+        let out = strip_ipni_citation(
+            &mut c,
+            "Foo bar Kirchn., Annals and Magazine of Natural History (1988).".to_string(),
+        );
+        assert_eq!(out, "Foo bar Kirchn.");
+        assert_eq!(
+            c.name.published_in,
+            Some("Annals and Magazine of Natural History (1988)".to_string()),
+            "stripIpniCitation calls the plain setPublishedIn — it must OVERWRITE, not append"
+        );
+    }
+
+    #[test]
+    fn no_ipni_citation_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_ipni_citation(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.published_in, None);
+    }
+
+    // ---- Step 50: stripPeriodSeparatedReference ----
+
+    #[test]
+    fn clean_year_reference_overwrites_published_in_and_propagates_the_year() {
+        let mut c = ctx("x");
+        let out = strip_period_separated_reference(
+            &mut c,
+            "Foo bar Smith. Annals of Botany 1988".to_string(),
+        );
+        assert_eq!(out, "Foo bar Smith");
+        assert_eq!(
+            c.name.published_in,
+            Some("Annals of Botany 1988".to_string())
+        );
+        assert_eq!(c.name.published_in_year, Some(1988));
+        assert_eq!(c.pending_year, Some("1988".to_string()));
+        assert!(!c
+            .name
+            .warnings
+            .contains(&warnings::NOMENCLATURAL_REFERENCE.to_string()));
+    }
+
+    #[test]
+    fn page_range_reference_flags_nomenclatural_reference_and_does_not_propagate_the_year() {
+        // Oracle-verified: the reference must ALSO contain a connector word ("of" here) —
+        // "Zootaxa 4759: 1658-1662" alone (no connector) never matches PERIOD_SEPARATED_
+        // REFERENCE at all, since the pattern's trailing `\s+(?:of|in|...)#\s+.*` suffix is
+        // mandatory, not optional.
+        let mut c = ctx("x");
+        let out = strip_period_separated_reference(
+            &mut c,
+            "Foo bar Smith. Annals of Zootaxa 1658-1662, 1988".to_string(),
+        );
+        assert_eq!(out, "Foo bar Smith");
+        assert_eq!(
+            c.name.published_in,
+            Some("Annals of Zootaxa 1658-1662, 1988".to_string())
+        );
+        assert_eq!(c.name.published_in_year, Some(1988));
+        assert!(c
+            .name
+            .warnings
+            .contains(&warnings::NOMENCLATURAL_REFERENCE.to_string()));
+        assert_eq!(
+            c.pending_year, None,
+            "a page-range reference must NOT propagate a pending year"
+        );
+    }
+
+    #[test]
+    fn author_particle_list_is_not_mistaken_for_a_reference() {
+        // "Yin, Z.W. de Beer & Wingf." — a comma (not a period) follows "Yin", so this never
+        // reaches PERIOD_SEPARATED_REFERENCE's leading `[\p{Lu}][\p{L}]{2,}\.` anchor at all;
+        // oracle-verified the whole string survives into the raw (if mangled) authorship text.
+        let mut c = ctx("x");
+        let out = strip_period_separated_reference(
+            &mut c,
+            "Foo bar Yin, Z.W. de Beer & Wingf. Mycologia 2004".to_string(),
+        );
+        assert_eq!(out, "Foo bar Yin, Z.W. de Beer & Wingf. Mycologia 2004");
+        assert_eq!(c.name.published_in, None);
+    }
+
+    #[test]
+    fn no_period_separated_reference_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_period_separated_reference(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.published_in, None);
+    }
+
+    #[test]
+    fn period_separated_reference_stays_linear_on_a_long_connector_free_run() {
+        // PERIOD_SEPARATED_REFERENCE runs on fancy_regex (backtracking). A long run of
+        // capitalised "words" after "Smith. " with NO connector word anywhere (so the
+        // pattern's mandatory trailing `\s+(?:of|in|...)\s+.*` suffix never matches) forces
+        // the filler `*+` group to consume the whole run and then fail the suffix. This is a
+        // LINEARITY guard, not proof of an averted cliff: as the static's doc NOTE explains
+        // and a scratch-crate spike measured directly, this pattern's `\s+ <word>` filler
+        // makes every partition unambiguous, so plain greedy `*` is ALSO linear here (~735µs
+        // vs `*+`'s ~735µs on a 640-word run) — unlike NOM_NOTE, where the possessive is
+        // genuinely load-bearing. The `*+` is kept for faithfulness + defence-in-depth; this
+        // test simply pins that the step stays fast regardless of run length.
+        let mut c = ctx("x");
+        let mut input = "Foo bar Smith.".to_string();
+        for i in 0..60 {
+            input.push_str(&format!(" Wordxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx{i}"));
+        }
+        let start = std::time::Instant::now();
+        let out = strip_period_separated_reference(&mut c, input.clone());
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed.as_millis() < 500,
+            "strip_period_separated_reference took {elapsed:?} on a connector-free run"
+        );
+        // No connector word anywhere -> the pattern's mandatory suffix never matches, so the
+        // string comes back untouched, same as any other non-matching input.
+        assert_eq!(out, input);
+        assert_eq!(c.name.published_in, None);
+    }
+
+    // ---- Step 51: stripCommaPrefixedReference ----
+
+    #[test]
+    fn documented_comma_prefixed_reference_overwrites_published_in_and_flags_the_warning() {
+        let mut c = ctx("x");
+        let out = strip_comma_prefixed_reference(
+            &mut c,
+            "Foo bar Smith, Journal of Botany 1988".to_string(),
+        );
+        assert_eq!(out, "Foo bar Smith");
+        assert_eq!(
+            c.name.published_in,
+            Some("Journal of Botany 1988".to_string())
+        );
+        assert!(c
+            .name
+            .warnings
+            .contains(&warnings::NOMENCLATURAL_REFERENCE.to_string()));
+    }
+
+    #[test]
+    fn comma_prefixed_reference_does_not_propagate_a_pending_year() {
+        let mut c = ctx("x");
+        strip_comma_prefixed_reference(&mut c, "Foo bar Smith, Journal of Botany 1988".to_string());
+        assert_eq!(
+            c.pending_year, None,
+            "a comma-prefixed reference's year must never be propagated onto the authorship"
+        );
+    }
+
+    #[test]
+    fn comma_prefixed_reference_overwrites_rather_than_appends_an_existing_published_in() {
+        let mut c = ctx("x");
+        c.name.set_published_in("Stale ref, 1700");
+        let out = strip_comma_prefixed_reference(
+            &mut c,
+            "Foo bar Miller & Jones, Annals and Magazine of Natural History (1988)".to_string(),
+        );
+        assert_eq!(out, "Foo bar Miller & Jones");
+        assert_eq!(
+            c.name.published_in,
+            Some("Annals and Magazine of Natural History (1988)".to_string())
+        );
+    }
+
+    #[test]
+    fn author_particle_list_is_not_mistaken_for_a_comma_prefixed_reference_either() {
+        // Same negative example as step 50's sibling test — "Z.W." can't open the captured
+        // reference title (fails `[\p{Lu}][\p{Ll}]{2,}`), so this is never mistaken for a ref
+        // by this step either.
+        let mut c = ctx("x");
+        let out = strip_comma_prefixed_reference(
+            &mut c,
+            "Foo bar Yin, Z.W. de Beer & Wingf. Mycologia 2004".to_string(),
+        );
+        assert_eq!(out, "Foo bar Yin, Z.W. de Beer & Wingf. Mycologia 2004");
+        assert_eq!(c.name.published_in, None);
+    }
+
+    #[test]
+    fn no_comma_prefixed_reference_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_comma_prefixed_reference(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.published_in, None);
+        assert!(c.name.warnings.is_empty());
+    }
+
+    #[test]
+    fn comma_prefixed_reference_does_not_redos_on_a_long_connector_free_run() {
+        // COMMA_PREFIXED_REFERENCE runs on the plain `regex` crate (automaton-based, no
+        // backtracking at all), so — unlike step 50's fancy_regex-based sibling — there is no
+        // possessive quantifier to preserve and no ReDoS failure mode to guard against. Same
+        // pathological input shape as step 50's regression test, so a future reader can see
+        // both engines were checked, not just assumed.
+        let mut c = ctx("x");
+        let mut input = "Foo bar Smith,".to_string();
+        for i in 0..300 {
+            input.push_str(&format!(" Wordxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx{i}"));
+        }
+        let start = std::time::Instant::now();
+        let out = strip_comma_prefixed_reference(&mut c, input.clone());
+        let elapsed = start.elapsed();
+        assert!(
+            elapsed.as_millis() < 200,
+            "strip_comma_prefixed_reference took {elapsed:?} on a connector-free run"
+        );
+        assert_eq!(out, input);
+    }
+
+    // ---- Step 52: stripManuscriptMarker ----
+
+    #[test]
+    fn trailing_ms_marker_sets_manuscript_and_appends_the_lowercased_tag() {
+        let mut c = ctx("x");
+        let out = strip_manuscript_marker(&mut c, "Acacia bicolor Bojer ms.".to_string());
+        assert_eq!(out, "Acacia bicolor Bojer");
+        assert!(c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, Some("ms.".to_string()));
+    }
+
+    #[test]
+    fn ined_marker_with_leading_comma_is_also_recognised() {
+        let mut c = ctx("x");
+        let out = strip_manuscript_marker(&mut c, "Foo bar Author, ined.".to_string());
+        assert_eq!(out, "Foo bar Author");
+        assert!(c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, Some("ined.".to_string()));
+    }
+
+    #[test]
+    fn unpublished_and_msc_markers_are_also_recognised() {
+        let mut c1 = ctx("x");
+        let out1 = strip_manuscript_marker(&mut c1, "Foo bar Author unpublished".to_string());
+        assert_eq!(out1, "Foo bar Author");
+        assert_eq!(c1.name.nomenclatural_note, Some("unpublished".to_string()));
+
+        let mut c2 = ctx("x");
+        let out2 = strip_manuscript_marker(&mut c2, "Foo bar Author msc".to_string());
+        assert_eq!(out2, "Foo bar Author");
+        assert_eq!(c2.name.nomenclatural_note, Some("msc".to_string()));
+    }
+
+    #[test]
+    fn marker_case_is_lowercased_in_the_stashed_tag() {
+        let mut c = ctx("x");
+        let out = strip_manuscript_marker(&mut c, "Foo bar Author MS.".to_string());
+        assert_eq!(out, "Foo bar Author");
+        assert_eq!(c.name.nomenclatural_note, Some("ms.".to_string()));
+    }
+
+    #[test]
+    fn manuscript_marker_appends_to_an_existing_nomenclatural_note() {
+        let mut c = ctx("x");
+        c.name.nomenclatural_note = Some("earlier note".to_string());
+        let out = strip_manuscript_marker(&mut c, "Foo bar Author ms.".to_string());
+        assert_eq!(out, "Foo bar Author");
+        assert_eq!(
+            c.name.nomenclatural_note,
+            Some("earlier note ms.".to_string())
+        );
+    }
+
+    #[test]
+    fn manuscript_marker_after_in_author_strip_still_matches() {
+        // "Busk ms in Chimonides, 1987" — in the real pipeline, strip_in_author_citation
+        // (step 48) already consumed " in Chimonides, 1987" before this step runs, leaving
+        // "Busk ms" for this step alone to finish (see the full-run test below).
+        let mut c = ctx("x");
+        let out = strip_manuscript_marker(&mut c, "Busk ms".to_string());
+        assert_eq!(out, "Busk");
+        assert!(c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, Some("ms".to_string()));
+    }
+
+    #[test]
+    fn no_manuscript_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_manuscript_marker(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert!(!c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, None);
+    }
+
+    // ---- Batch 2d cross-step interaction (full `run()`) ----
+
+    #[test]
+    fn full_run_strips_both_in_author_citation_and_manuscript_marker_in_order() {
+        // Oracle-verified end-to-end (StripAndStash's own contribution): "Aus bus Busk ms in
+        // Chimonides, 1987" must have the in-author tail stripped first (step 48), leaving
+        // "Aus bus Busk ms" for the manuscript marker (step 52) to finish.
+        let mut c = ctx("Aus bus Busk ms in Chimonides, 1987");
+        run(&mut c);
+        assert_eq!(c.working, "Aus bus Busk");
+        assert!(c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, Some("ms".to_string()));
+        assert_eq!(c.name.published_in, Some("Chimonides, 1987".to_string()));
+        assert_eq!(c.name.published_in_year, Some(1987));
     }
 }

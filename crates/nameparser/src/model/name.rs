@@ -216,6 +216,25 @@ impl ParsedName {
             .and_then(|m| m.as_str().parse::<i32>().ok());
     }
 
+    /// Java's inline `publishedIn` APPEND idiom, repeated verbatim at both `StripAndStash`
+    /// `stripInAuthorInParens` (step 47) and `stripInAuthorCitation` (step 48): `existing ==
+    /// null ? ref : existing + " " + ref` immediately followed by `setPublishedIn(combined)`.
+    /// Unlike [`Self::add_nomenclatural_note`]/[`Self::add_taxonomic_note`] (plain
+    /// concatenation with no further side effect), appending to `publishedIn` and re-deriving
+    /// `publishedInYear` are the SAME Java call, not two — Java never appends to `publishedIn`
+    /// without immediately re-running its year extraction over the full combined string, so
+    /// this delegates to [`Self::set_published_in`] rather than touching the field directly.
+    /// Steps that overwrite instead of appending (`stripIpniCitation`,
+    /// `stripPeriodSeparatedReference`, `stripCommaPrefixedReference`) call
+    /// [`Self::set_published_in`] directly rather than this.
+    pub fn add_published_in(&mut self, reference: &str) {
+        let combined = match self.published_in.take() {
+            None => reference.to_string(),
+            Some(existing) => format!("{existing} {reference}"),
+        };
+        self.set_published_in(&combined);
+    }
+
     /// Java's inline nomenclatural-note APPEND pattern, repeated verbatim at every
     /// `StripAndStash` step that adds to (rather than replaces) the note: `existing == null
     /// ? note : existing + " " + note` (e.g. `StripAndStash.stripNomNote`,
@@ -454,6 +473,43 @@ mod tests {
             pn.published_in_year, None,
             "must be cleared, not left stale from the previous call"
         );
+    }
+
+    #[test]
+    fn add_published_in_stores_verbatim_and_derives_the_year_on_first_call() {
+        let mut pn = ParsedName::default();
+        pn.add_published_in("Fourcroy, 1785");
+        assert_eq!(pn.published_in, Some("Fourcroy, 1785".to_string()));
+        assert_eq!(pn.published_in_year, Some(1785));
+    }
+
+    #[test]
+    fn add_published_in_appends_with_a_space_separator_and_rederives_the_year() {
+        // Regression guard for the "append IS setPublishedIn on the combined string, not two
+        // separate operations" semantics: the year must come from the LAST year-shaped match
+        // in the COMBINED string, not be left over from the first call or derived from only
+        // the newly-appended part.
+        let mut pn = ParsedName::default();
+        pn.add_published_in("Fourcroy, 1785");
+        pn.add_published_in("Smith, 1900");
+        assert_eq!(
+            pn.published_in,
+            Some("Fourcroy, 1785 Smith, 1900".to_string())
+        );
+        assert_eq!(pn.published_in_year, Some(1900));
+    }
+
+    #[test]
+    fn add_published_in_on_a_reference_with_no_year_clears_a_stale_year() {
+        let mut pn = ParsedName::default();
+        pn.set_published_in("Author, 1988");
+        assert_eq!(pn.published_in_year, Some(1988));
+        // A fresh ParsedName (no prior publishedIn) appending a year-free reference: the
+        // combined string is just the new reference, so the year must be None, not stale.
+        let mut pn2 = ParsedName::default();
+        pn2.add_published_in("Fleisch.");
+        assert_eq!(pn2.published_in, Some("Fleisch.".to_string()));
+        assert_eq!(pn2.published_in_year, None);
     }
 
     #[test]

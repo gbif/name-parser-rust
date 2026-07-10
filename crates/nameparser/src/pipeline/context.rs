@@ -145,6 +145,22 @@ impl ParseContext {
             self.pending_unparsed = Some(remainder.to_string());
         }
     }
+
+    /// Java `ParseContext.setPendingPublicationYear(String)`: records a publication-derived
+    /// year on a first-writer-wins basis and marks it code-neutral (see
+    /// `pending_year_from_publication`'s own doc comment). Every current writer of
+    /// `pending_year` (`StripAndStash::strip_in_author_citation`, `strip_ipni_citation`,
+    /// `strip_period_separated_reference`) sets it from a stripped `publishedIn` reference, so
+    /// the two fields are always set together — bundling them here keeps them in lock-step,
+    /// matching Java's `if (pendingYear == null && year != null) { pendingYear = year;
+    /// pendingYearFromPublication = true; }` (the `year != null` half is unreachable here
+    /// since Rust callers pass a non-nullable `&str`, same as `set_pending_imprint_year`).
+    pub(crate) fn set_pending_publication_year(&mut self, year: &str) {
+        if self.pending_year.is_none() {
+            self.pending_year = Some(year.to_string());
+            self.pending_year_from_publication = true;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -221,6 +237,25 @@ mod tests {
             ctx.pending_unparsed,
             Some("XXZ_21243".to_string()),
             "the first non-blank write must win"
+        );
+    }
+
+    #[test]
+    fn set_pending_publication_year_is_first_writer_wins_and_marks_code_neutral() {
+        let mut ctx = ParseContext::new("Abies alba".to_string(), None, None, None);
+        assert_eq!(ctx.pending_year, None);
+        assert!(!ctx.pending_year_from_publication);
+        ctx.set_pending_publication_year("1988");
+        assert_eq!(ctx.pending_year, Some("1988".to_string()));
+        assert!(
+            ctx.pending_year_from_publication,
+            "a publication-derived year must be marked code-neutral"
+        );
+        ctx.set_pending_publication_year("1900");
+        assert_eq!(
+            ctx.pending_year,
+            Some("1988".to_string()),
+            "the first-written year must win, matching Java's null-guarded setter"
         );
     }
 }
