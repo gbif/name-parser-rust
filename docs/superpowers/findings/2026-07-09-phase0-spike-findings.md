@@ -60,15 +60,23 @@ regex pattern in the pipeline, not just these two. See §5, requirement 1.
   characters and re-inserting them (`${1}${2}`) instead of asserting them with zero
   width. That splice mechanic itself was simple once the capture groups were right, but
   getting them right surfaced two real gotchas:
-  1. **Boundary asymmetry.** The obvious-looking translation
-     `(^|\s)corrig\.?(\s|$)` — adding `^` "for symmetry" with the `$` already on the
-     right — is **wrong**. Java's `(?<=\s)` demands an actual preceding whitespace
-     *character*; at start-of-input there is none, so Java leaves a leading
-     "corrig. Rest" untouched, whereas `(^|\s)…` would strip it. This is a real,
-     demonstrated bug (confirmed via a differential probe against the verbatim
-     fancy-regex pattern: `is_match("corrig. Aus bus")` is `false` in Java/fancy-regex),
-     found during self-review and **fixed** before commit — `CORRIG_BARE` is
-     `(\s)corrig\.?(\s|$)`, with no `^` alternative.
+  1. **Call-site harness dependence (the deeper lesson).** Testing the bare pattern in
+     isolation is a trap. On its own, Java's `(?<=\s)corrig\.?(?=\s|$)` cannot match at
+     start-of-input (a lookbehind needs a real preceding character), which *suggests* Java
+     would leave a leading "corrig. Rest" untouched. But that is **not** how Java uses it:
+     both real call sites (`StripAndStash.java:432` and `:1117`) apply CORRIG with a
+     leading-space pad — `CORRIG.matcher(" " + s)`, commented *"prepend a space so a leading
+     'corrig.' also matches"* — plus a whitespace-collapse and trim. So the real pipeline
+     **does strip** a leading/standalone marker (`"corrig. Peters, 1878"` → `"Peters, 1878"`;
+     `"corrig."` → `""`). The spike's first pass drew the opposite conclusion by validating
+     the isolated pattern (via fancy-regex as oracle); the final whole-branch review caught
+     it against the actual Java source. The probe functions now replicate the pad + collapse
+     + trim harness, so both variants strip leading markers. The lesson: **lookaround
+     faithfulness depends on the call-site harness, not just the pattern** — which is exactly
+     why §5.2 (a corpus-level golden diff against the real Java pipeline output, not unit
+     tests on isolated patterns) is a hard Phase-1 requirement. With the pad in place the
+     `(\s)`-vs-`(^|\s)` boundary question is moot — the pad guarantees a preceding whitespace
+     character, so `(\s)corrig…` is correct.
   2. **Shared-boundary non-overlap.** `replace_all`'s matches are non-overlapping, so
      they cannot reuse a consumed boundary character. Two **adjacent** bare "corrig."
      tokens sharing one whitespace boundary therefore diverge from Java's zero-width
