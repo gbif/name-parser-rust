@@ -16,7 +16,9 @@
 //! / `specific_authorship`.
 
 use std::collections::BTreeMap;
+use std::sync::LazyLock;
 
+use regex::Regex;
 use serde::Serialize;
 
 use crate::model::enums::{NamePart, NameType, NomCode, Rank, State};
@@ -179,6 +181,14 @@ pub struct ParsedName {
     pub sanctioning_author: Option<String>,
 }
 
+/// Java `ParsedAuthorship`'s private `PUBLISHED_IN_YEAR` pattern (`ParsedAuthorship.java`):
+/// `\b(1[5-9]\d{2}|20\d{2}|2100)\b`, compiled with no `Pattern.UNICODE_CHARACTER_CLASS`
+/// flag — Java's `\b` is therefore ASCII-only there, ported here as `(?-u:\b)` on both
+/// sides rather than the crate's Unicode-default `\b` (this port's per-pattern flag rule;
+/// see `pipeline::preflight`'s module doc for the rule spelled out in full).
+static PUBLISHED_IN_YEAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b)(1[5-9]\d{2}|20\d{2}|2100)(?-u:\b)").unwrap());
+
 impl ParsedName {
     /// Add a warning if not already present — mirrors Java's `warnings` HashSet (deduping).
     /// (The golden harness sorts warnings before diffing, so order is irrelevant; dedup is what matters.)
@@ -186,6 +196,51 @@ impl ParsedName {
         if !self.warnings.iter().any(|x| x == w) {
             self.warnings.push(w.to_string());
         }
+    }
+
+    /// Java `ParsedAuthorship.setPublishedIn(String)`. Sets `published_in` verbatim and, as
+    /// a side effect, derives `published_in_year` from it: the LAST year-shaped
+    /// (1500-2100) match anywhere in the string, replicating `ParsedAuthorship.extractYear`'s
+    /// `while (m.find()) year = …;` loop — publication references often list page numbers
+    /// (which can themselves look like years, e.g. "1658") before the trailing publication
+    /// year, so the last match wins, not the first. No match clears `published_in_year` to
+    /// `None`; the field is always recomputed from scratch, never left stale from a
+    /// previous call, matching Java's unconditional `this.publishedInYear =
+    /// extractYear(publishedIn);`.
+    pub fn set_published_in(&mut self, s: &str) {
+        self.published_in = Some(s.to_string());
+        self.published_in_year = PUBLISHED_IN_YEAR
+            .captures_iter(s)
+            .last()
+            .and_then(|caps| caps.get(1))
+            .and_then(|m| m.as_str().parse::<i32>().ok());
+    }
+
+    /// Java's inline nomenclatural-note APPEND pattern, repeated verbatim at every
+    /// `StripAndStash` step that adds to (rather than replaces) the note: `existing == null
+    /// ? note : existing + " " + note` (e.g. `StripAndStash.stripNomNote`,
+    /// `stripManuscriptMarker`, `stripInPress`). Deliberately NOT the same as the
+    /// `ParsedAuthorship.addNomenclaturalNote(String)` Java *method*, which additionally
+    /// blank-checks and trims — those guards live at each Java call site instead (e.g.
+    /// `if (!raw.isEmpty()) …`), so callers here are likewise expected to pre-filter blank
+    /// notes themselves. Steps that overwrite instead of appending (`stripBracketedNomNote`,
+    /// `stripTaxNote`, …) assign the plain `nomenclatural_note`/`taxonomic_note` field
+    /// directly rather than calling this.
+    pub fn add_nomenclatural_note(&mut self, note: &str) {
+        self.nomenclatural_note = Some(match self.nomenclatural_note.take() {
+            None => note.to_string(),
+            Some(existing) => format!("{existing} {note}"),
+        });
+    }
+
+    /// Same append semantics as [`Self::add_nomenclatural_note`] (see its doc comment for
+    /// the full rationale), for `taxonomic_note` — e.g. `StripAndStash.stripParenTaxNote`,
+    /// `stripBracketedTaxNote`, `stripColonConceptReference`.
+    pub fn add_taxonomic_note(&mut self, note: &str) {
+        self.taxonomic_note = Some(match self.taxonomic_note.take() {
+            None => note.to_string(),
+            Some(existing) => format!("{existing} {note}"),
+        });
     }
 }
 
@@ -350,6 +405,75 @@ mod tests {
         pn.add_warning("some warning");
         pn.add_warning("some warning");
         assert_eq!(pn.warnings, vec!["some warning".to_string()]);
+    }
+
+    #[test]
+    fn set_published_in_stores_the_reference_verbatim_and_derives_the_year() {
+        let mut pn = ParsedName::default();
+        pn.set_published_in("Annals and Magazine of Natural History 1988");
+        assert_eq!(
+            pn.published_in,
+            Some("Annals and Magazine of Natural History 1988".to_string())
+        );
+        assert_eq!(pn.published_in_year, Some(1988));
+    }
+
+    #[test]
+    fn set_published_in_with_no_year_leaves_published_in_year_none() {
+        let mut pn = ParsedName::default();
+        pn.set_published_in("no year here");
+        assert_eq!(pn.published_in, Some("no year here".to_string()));
+        assert_eq!(pn.published_in_year, None);
+    }
+
+    #[test]
+    fn set_published_in_takes_the_last_year_shaped_match_not_a_page_number() {
+        // "1658" and "1662" are a page range, but both happen to be shaped like years
+        // (1500-1999) too. Java's extractYear keeps overwriting through every match of
+        // its `while (m.find())` loop, so the true trailing publication year (1988) must
+        // win over the earlier page-range numbers — this is the whole reason "last match"
+        // rather than "first match" is the correct semantics.
+        let mut pn = ParsedName::default();
+        pn.set_published_in("75: 1658-1662 fig. 1988");
+        assert_eq!(pn.published_in_year, Some(1988));
+    }
+
+    #[test]
+    fn set_published_in_recomputes_the_year_on_every_call_not_just_the_first() {
+        // Regression guard: a naive "only set if currently None" implementation would
+        // leave a stale year from an earlier call. Java always recomputes from scratch.
+        let mut pn = ParsedName::default();
+        pn.set_published_in("Author, 1988");
+        assert_eq!(pn.published_in_year, Some(1988));
+        pn.set_published_in("Author, no year this time");
+        assert_eq!(
+            pn.published_in,
+            Some("Author, no year this time".to_string())
+        );
+        assert_eq!(
+            pn.published_in_year, None,
+            "must be cleared, not left stale from the previous call"
+        );
+    }
+
+    #[test]
+    fn add_nomenclatural_note_appends_with_a_space_separator() {
+        let mut pn = ParsedName::default();
+        assert_eq!(pn.nomenclatural_note, None);
+        pn.add_nomenclatural_note("a");
+        assert_eq!(pn.nomenclatural_note, Some("a".to_string()));
+        pn.add_nomenclatural_note("b");
+        assert_eq!(pn.nomenclatural_note, Some("a b".to_string()));
+    }
+
+    #[test]
+    fn add_taxonomic_note_appends_with_a_space_separator() {
+        let mut pn = ParsedName::default();
+        assert_eq!(pn.taxonomic_note, None);
+        pn.add_taxonomic_note("a");
+        assert_eq!(pn.taxonomic_note, Some("a".to_string()));
+        pn.add_taxonomic_note("b");
+        assert_eq!(pn.taxonomic_note, Some("a b".to_string()));
     }
 
     #[test]

@@ -4,6 +4,7 @@
 
 pub(crate) mod context;
 pub(crate) mod preflight;
+pub(crate) mod stripandstash;
 
 pub(crate) use context::ParseContext;
 
@@ -40,9 +41,10 @@ static GLUED_PHRASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)([\p{Lu}]{2,}[\p{Lu}\d_]*)$").unwrap());
 
 /// Java `Pipeline.run`. Orchestrates the staged parsing pipeline: guards → normalize →
-/// build [`ParseContext`] → split-glued-phrase → Preflight → … Downstream stages
-/// (StripAndStash, Tokenizer, AuthorshipSplit, NameTokens, AuthorshipParser, Assemble)
-/// are later slices — see the `TODO` below.
+/// build [`ParseContext`] → split-glued-phrase → Preflight → StripAndStash (skeleton
+/// only so far — see the `stripandstash` module) → … Downstream stages (Tokenizer,
+/// AuthorshipSplit, NameTokens, AuthorshipParser, Assemble) are later slices — see the
+/// `TODO` below.
 pub fn run(
     name: &str,
     authorship: Option<&str>,
@@ -98,25 +100,28 @@ pub fn run(
     // Java `Pipeline.run`: `StripAndStash.run(ctx); if (!hasLetter(ctx.working)) throw new
     // UnparsableNameException(NameType.OTHER, scientificName);` (Pipeline.java:70-73) — a
     // 4th inline guard, distinct from Preflight and from the 3 guards at the top of this
-    // function, sitting between StripAndStash and the Tokenizer. StripAndStash isn't ported
-    // yet (later slice), so this checks `ctx.working` as Preflight left it rather than as
-    // StripAndStash would leave it. That stand-in is sound for THIS slice's error-partition
-    // gate in the direction that matters: StripAndStash only ever strips characters out of
-    // `ctx.working` (stashing annotation spans elsewhere on `ctx`), it never adds any — so
-    // "no letters left after Preflight" already guarantees "no letters left after
-    // StripAndStash" too, meaning every input this guard rejects, Java would also reject
-    // post-strip. Found via the Task 6 golden corpus (`-,.#` — Java `Err(OTHER)`, this
-    // pipeline previously returned `Ok` since nothing between Preflight and the `TODO`
-    // downstream stages ever inspected `ctx.working` for name-shaped content at all). Known
-    // deferred gap, not yet reachable by the corpus: an input WITH a letter now, all of
-    // whose letters StripAndStash would strip away (e.g. a bracketed "[sic]"-only comment)
-    // — that case needs StripAndStash itself to be caught faithfully.
+    // function, sitting between StripAndStash and the Tokenizer.
+    stripandstash::run(&mut ctx);
+
+    // StripAndStash's skeleton is wired in above, in Java's exact position (Phase 1 Slice 2
+    // Task 2), but every one of its 55 steps is still a `// TODO batch N` no-op stub —
+    // later Slice 2 batches replace them — so `ctx.working` here is still byte-for-byte
+    // what Preflight left it. That already makes this guard sound in the direction that
+    // matters: StripAndStash only ever strips characters out of `ctx.working` (stashing
+    // annotation spans elsewhere on `ctx`), it never adds any, so "no letters left after
+    // Preflight" already guarantees "no letters left after a fully-ported StripAndStash"
+    // too — every input this guard rejects, Java would also reject post-strip. Known
+    // deferred gap, not yet reachable by the corpus, that resolves itself automatically as
+    // the batches land (no further change needed at this call site): an input WITH a
+    // letter now, all of whose letters a *completed* StripAndStash would strip away (e.g. a
+    // bracketed "[sic]"-only comment), isn't caught here yet. (Originally found via the
+    // Task 6 golden corpus: `-,.#` — Java `Err(OTHER)` — before this guard existed at all.)
     if !has_letter(&ctx.working) {
         return Err(ParseError::new(NameType::Other, None, name));
     }
 
-    // TODO: StripAndStash → Tokenizer → AuthorshipSplit → NameTokens → AuthorshipParser
-    // → Assemble (later slices).
+    // TODO: Tokenizer → AuthorshipSplit → NameTokens → AuthorshipParser → Assemble (later
+    // slices). StripAndStash's own 55 step bodies are also still TODO (rest of Slice 2).
 
     Ok(ctx.name)
 }
