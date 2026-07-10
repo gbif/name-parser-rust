@@ -756,18 +756,70 @@ mod tests {
 
     #[test]
     fn hard_virus_word_is_rescued_by_separately_supplied_zoological_authorship() {
-        // Bucket B hard rescue: "vector" (a HARD_WORD, since "clean" here refers to the
-        // scientificName alone) has no inline author+year, but a separately supplied
-        // authorship string that itself looks like a zoological author+year citation
-        // rescues it. Mirrors Java's `virusFalsePositiveAnimals` two-argument `assertName`
-        // calls (e.g. "Aspilota vector" / "Belokobylskij, 2007").
+        // Bucket B hard rescue (`apply_virus_gate`'s `clean && HARD_WORD.is_match(last_word)`
+        // branch): "virus" IS a HARD_WORD (unlike the previous version of this test, which
+        // used "vector" — a SOFT_WORD only, rescued several branches earlier and so never
+        // actually reaching this one). "Exochus virus" is a clean binomial with no inline
+        // author+year, but a separately supplied authorship string that itself looks like a
+        // zoological author+year citation rescues it. Mirrors Java's
+        // `virusFalsePositiveAnimals` two-argument `assertName` calls.
         let mut ctx = ParseContext::new(
-            "Aspilota vector".to_string(),
-            Some("Belokobylskij, 2007".to_string()),
+            "Exochus virus".to_string(),
+            Some("Gauld & Sithole, 2002".to_string()),
             None,
             None,
         );
-        assert!(run("Aspilota vector", &mut ctx).is_ok());
+        assert!(run("Exochus virus", &mut ctx).is_ok());
+
+        // Proof the rescue above is load-bearing rather than the input already passing at an
+        // earlier branch: the identical clean-binomial-with-HARD_WORD input, minus the
+        // rescuing authorship, must be rejected as OTHER + Virus.
+        let mut ctx_no_auth = ParseContext::new("Exochus virus".to_string(), None, None, None);
+        let err = run("Exochus virus", &mut ctx_no_auth).unwrap_err();
+        assert_eq!(err.type_, NameType::Other);
+        assert_eq!(err.code, Some(NomCode::Virus));
+    }
+
+    #[test]
+    fn clean_binomial_with_hard_virus_word_and_requested_non_virus_code_parses() {
+        // `apply_virus_gate`'s `clean && req.is_some()` branch: the caller asserting ANY
+        // non-virus code for a clean binomial is, by itself, enough to let a HARD_WORD-ending
+        // epithet through — no authorship rescue needed at all. Same "Exochus virus" input as
+        // the rule-H test above, this time with no authorship but an explicit requested code.
+        let mut ctx = ParseContext::new(
+            "Exochus virus".to_string(),
+            None,
+            None,
+            Some(NomCode::Zoological),
+        );
+        assert!(run("Exochus virus", &mut ctx).is_ok());
+    }
+
+    #[test]
+    fn requested_virus_code_sets_viral_shape_for_clean_input_and_rejects_non_clean_input() {
+        // `apply_virus_gate`'s `req == Some(NomCode::Virus)` branch, both arms. (a) A clean
+        // uni/binomial parses and records `viral_shape` for Assemble to turn into
+        // `NomCode::Virus` later. (b) Non-clean (three-word vernacular) input is rejected as
+        // OTHER + Virus regardless — the requested code cannot rescue a shape that was never
+        // even a plausible uni/binomial.
+        let mut ctx = ParseContext::new(
+            "Exochus virus".to_string(),
+            None,
+            None,
+            Some(NomCode::Virus),
+        );
+        assert!(run("Exochus virus", &mut ctx).is_ok());
+        assert!(ctx.viral_shape);
+
+        let mut ctx2 = ParseContext::new(
+            "Tobacco mosaic virus".to_string(),
+            None,
+            None,
+            Some(NomCode::Virus),
+        );
+        let err = run("Tobacco mosaic virus", &mut ctx2).unwrap_err();
+        assert_eq!(err.type_, NameType::Other);
+        assert_eq!(err.code, Some(NomCode::Virus));
     }
 
     #[test]
