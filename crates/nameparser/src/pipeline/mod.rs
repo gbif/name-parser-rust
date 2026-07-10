@@ -4,6 +4,7 @@
 
 pub(crate) mod context;
 pub(crate) mod preflight;
+pub(crate) mod rank_markers;
 pub(crate) mod stripandstash;
 
 pub(crate) use context::ParseContext;

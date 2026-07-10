@@ -25,6 +25,20 @@
 //!      ported) stage, this gate is a full, corpus-scale parity guarantee for them, not a
 //!      snapshot — a regression in ANY of the 55 steps that touches one of these fields
 //!      fails this test.
+//!   3. **Name-part fields (Phase 1 Slice 3 Task 1 — BASELINE ONLY, not yet asserted).** For
+//!      rows both sides parse, diffs the 7 fields `AuthorshipSplit`/`NameTokens` (not yet
+//!      ported — Tasks 2-3) will populate — `genus`, `uninomial`, `infragenericEpithet`,
+//!      `specificEpithet`, `infraspecificEpithet`, `notho`, `epithetQualifier` — and prints
+//!      a per-field baseline table. Rust sets none of these yet, so each count is simply
+//!      "how many corpus rows Java sets this field on". `notho` (a JSON array) and
+//!      `epithetQualifier` (a JSON object) are compared order-insensitively (as
+//!      sets/maps — see `json_eq_unordered`), matching how `ParsedName::warnings`' own doc
+//!      comment already documents Java's `HashSet`/`EnumSet`/`EnumMap` fields as
+//!      unordered-on-the-wire. DEFERRED: `infraspecificEpithet`/`epithetQualifier`/`notho`
+//!      get `assert_eq!(_, 0)` once NameTokens lands (Task 3); `genus`/`uninomial`/
+//!      `infragenericEpithet`/`specificEpithet` stay print-only even after Task 3 (residual
+//!      Assemble-stage rewrites — genus/uninomial swaps, phrase promotion, etc. — asserted
+//!      0 only in the later Assemble slice).
 //!
 //! Regenerate the oracle with (see the Task 6 brief for the authoritative command):
 //! ```text
@@ -81,6 +95,88 @@ const FIELD_KEYS: [&str; 10] = [
 /// fields rather than 2 categories).
 const FIELD_EXAMPLE_CAP: usize = 5;
 
+/// The 7 name-part fields `AuthorshipSplit`/`NameTokens` (Phase 1 Slice 3, not yet ported —
+/// Tasks 2-3) will populate — Java JSON key names. BASELINE ONLY this task (see the module
+/// doc): none of these are asserted 0 yet.
+const NAME_PART_FIELD_KEYS: [&str; 7] = [
+    "genus",
+    "uninomial",
+    "infragenericEpithet",
+    "specificEpithet",
+    "infraspecificEpithet",
+    "notho",
+    "epithetQualifier",
+];
+
+/// Subset of [`NAME_PART_FIELD_KEYS`] that Java serialises as a `Set`/`Map`-shaped value
+/// (`notho`: `EnumSet<NamePart>` -> a JSON array; `epithetQualifier`: `EnumMap<NamePart,
+/// String>` -> a JSON object) whose Java-side iteration order is not guaranteed, so these
+/// two need [`json_eq_unordered`] rather than plain `serde_json::Value` equality — see that
+/// function's own doc comment.
+const UNORDERED_NAME_PART_FIELD_KEYS: [&str; 2] = ["notho", "epithetQualifier"];
+
+/// Order-insensitive equality for a JSON value Java serialises from a `Set`/`Map`-like
+/// collection: `notho`'s `EnumSet<NamePart>` (-> a JSON array) and `epithetQualifier`'s
+/// `EnumMap<NamePart, String>` (-> a JSON object). Java's `HashSet`/`EnumSet` iteration
+/// order is not guaranteed to match insertion order (the same reasoning already documented
+/// on `ParsedName::warnings`, a `HashSet<String>`), and `serde_json::Value`'s own
+/// `PartialEq` for the `Array` variant IS positional — so `notho` needs this explicit
+/// set-shaped comparison. `epithetQualifier` (a JSON *object*) would in practice already
+/// compare order-insensitively via plain `==` given this crate's `serde_json` dependency
+/// has no `preserve_order` feature enabled (its `Map` is `BTreeMap`-backed, canonically
+/// key-ordered regardless of insertion order) — but it's routed through here too rather
+/// than leaning on that feature-flag default, so the comparison stays correct even if that
+/// default ever changes.
+///
+/// `None`/absent on both sides is equal; one side absent and the other present (even an
+/// empty array/object) is a mismatch, matching plain `Option`/`Value` equality — only the
+/// *internal* ordering of a doubly-present array/object is ignored.
+fn json_eq_unordered(jv: Option<&serde_json::Value>, rv: Option<&serde_json::Value>) -> bool {
+    match (jv, rv) {
+        (None, None) => true,
+        (Some(a), Some(b)) => match (a, b) {
+            (serde_json::Value::Array(a), serde_json::Value::Array(b)) => {
+                if a.len() != b.len() {
+                    return false;
+                }
+                let mut a_sorted: Vec<String> = a.iter().map(|v| v.to_string()).collect();
+                let mut b_sorted: Vec<String> = b.iter().map(|v| v.to_string()).collect();
+                a_sorted.sort();
+                b_sorted.sort();
+                a_sorted == b_sorted
+            }
+            (serde_json::Value::Object(a), serde_json::Value::Object(b)) => {
+                if a.len() != b.len() {
+                    return false;
+                }
+                let mut a_pairs: Vec<(String, String)> =
+                    a.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
+                let mut b_pairs: Vec<(String, String)> =
+                    b.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
+                a_pairs.sort();
+                b_pairs.sort();
+                a_pairs == b_pairs
+            }
+            _ => a == b,
+        },
+        _ => false,
+    }
+}
+
+/// Dispatches to [`json_eq_unordered`] for [`UNORDERED_NAME_PART_FIELD_KEYS`], plain
+/// `serde_json::Value` equality (same as the [`FIELD_KEYS`] loop) for the rest.
+fn name_part_fields_equal(
+    key: &str,
+    jv: Option<&serde_json::Value>,
+    rv: Option<&serde_json::Value>,
+) -> bool {
+    if UNORDERED_NAME_PART_FIELD_KEYS.contains(&key) {
+        json_eq_unordered(jv, rv)
+    } else {
+        jv == rv
+    }
+}
+
 #[test]
 fn matches_java_error_classification_over_corpus() {
     let path = concat!(
@@ -107,6 +203,16 @@ fn matches_java_error_classification_over_corpus() {
         FIELD_KEYS.iter().map(|&k| (k, 0)).collect();
     let mut field_mismatch_examples: HashMap<&'static str, Vec<Mismatch>> =
         FIELD_KEYS.iter().map(|&k| (k, Vec::new())).collect();
+
+    // BASELINE ONLY (see the module doc, gate 3): the 7 name-part fields
+    // AuthorshipSplit/NameTokens will populate — not yet ported, so not yet asserted.
+    let mut name_part_mismatch_counts: HashMap<&'static str, usize> =
+        NAME_PART_FIELD_KEYS.iter().map(|&k| (k, 0)).collect();
+    let mut name_part_mismatch_examples: HashMap<&'static str, Vec<Mismatch>> =
+        NAME_PART_FIELD_KEYS
+            .iter()
+            .map(|&k| (k, Vec::new()))
+            .collect();
 
     for (idx, line) in data.lines().enumerate() {
         if line.trim().is_empty() {
@@ -189,6 +295,26 @@ fn matches_java_error_classification_over_corpus() {
                         }
                     }
                 }
+
+                // BASELINE ONLY (module doc, gate 3): AuthorshipSplit/NameTokens aren't
+                // ported yet, so Rust sets none of the 7 name-part fields — every row
+                // where Java sets one is unconditionally tallied as a mismatch here. Not
+                // asserted this task; see Task 3 for the 3-field gate flip.
+                for &key in NAME_PART_FIELD_KEYS.iter() {
+                    let jv = java_obj.get(key);
+                    let rv = rust_value.get(key);
+                    if !name_part_fields_equal(key, jv, rv) {
+                        *name_part_mismatch_counts.get_mut(key).unwrap() += 1;
+                        let examples = name_part_mismatch_examples.get_mut(key).unwrap();
+                        if examples.len() < FIELD_EXAMPLE_CAP {
+                            examples.push(Mismatch {
+                                line: line_no,
+                                input: input.to_string(),
+                                detail: format!("java={jv:?} rust={rv:?}"),
+                            });
+                        }
+                    }
+                }
             }
         }
     }
@@ -223,6 +349,34 @@ fn matches_java_error_classification_over_corpus() {
     }
     for &key in FIELD_KEYS.iter() {
         let examples = &field_mismatch_examples[key];
+        if !examples.is_empty() {
+            eprintln!("  --- {key} (first {} example(s)) ---", examples.len());
+            for m in examples {
+                eprintln!("    line {}: {:?} — {}", m.line, m.input, m.detail);
+            }
+        }
+    }
+
+    // Per-field mismatch counts over the `both_parsed` rows, for the 7 name-part fields
+    // AuthorshipSplit/NameTokens will populate (Phase 1 Slice 3, Tasks 2-3 — not yet
+    // ported). BASELINE ONLY: printed unconditionally, NOT asserted this task (see the
+    // module doc's gate 3). Since Rust sets none of these 7 fields yet, each count below is
+    // simply "how many of the `both_parsed` corpus rows Java sets this field on".
+    // DEFERRED: infraspecificEpithet/epithetQualifier/notho asserted 0 in slice-3 Task 3.
+    eprintln!(
+        "parse golden (name-part fields — AuthorshipSplit/NameTokens NOT yet ported, BASELINE ONLY): {both_parsed} both-parsed rows"
+    );
+    for &key in NAME_PART_FIELD_KEYS.iter() {
+        let n = name_part_mismatch_counts[key];
+        let pct = if both_parsed == 0 {
+            0.0
+        } else {
+            100.0 * n as f64 / both_parsed as f64
+        };
+        eprintln!("  {key:<21} {n:>5} mismatches ({pct:>5.1}% of both-parsed rows)");
+    }
+    for &key in NAME_PART_FIELD_KEYS.iter() {
+        let examples = &name_part_mismatch_examples[key];
         if !examples.is_empty() {
             eprintln!("  --- {key} (first {} example(s)) ---", examples.len());
             for m in examples {
@@ -272,4 +426,41 @@ fn java_name_matches_the_plans_reference_error_rows() {
     assert_eq!(java_name(&NameType::Other), "OTHER");
     assert_eq!(java_name(&NameType::Formula), "FORMULA");
     assert_eq!(java_name(&NomCode::Virus), "VIRUS");
+}
+
+/// Direct unit check of `json_eq_unordered`'s own logic, independent of whatever the
+/// corpus currently contains: an array/object differing only in element/key order must
+/// compare equal (unlike plain `serde_json::Value` equality, which — for the `Array`
+/// variant — IS positional); differing content, length, or one-sided presence must not.
+#[test]
+fn json_eq_unordered_ignores_ordering_but_not_content() {
+    use serde_json::json;
+
+    // Arrays (`notho`'s shape): same elements, different order -> equal under this helper,
+    // even though plain `Value` equality disagrees (sanity-checked below).
+    let a = json!(["SPECIFIC", "GENERIC"]);
+    let b = json!(["GENERIC", "SPECIFIC"]);
+    assert_ne!(
+        a, b,
+        "sanity check: plain equality IS positional for JSON arrays"
+    );
+    assert!(json_eq_unordered(Some(&a), Some(&b)));
+
+    // Objects (`epithetQualifier`'s shape): same pairs, different insertion order -> equal.
+    let c = json!({"GENERIC": "aff.", "SPECIFIC": "cf."});
+    let d = json!({"SPECIFIC": "cf.", "GENERIC": "aff."});
+    assert!(json_eq_unordered(Some(&c), Some(&d)));
+
+    // Differing content, length, or presence must still mismatch.
+    assert!(!json_eq_unordered(
+        Some(&json!(["SPECIFIC"])),
+        Some(&json!(["GENERIC"]))
+    ));
+    assert!(!json_eq_unordered(
+        Some(&json!(["SPECIFIC"])),
+        Some(&json!(["SPECIFIC", "GENERIC"]))
+    ));
+    assert!(json_eq_unordered(None, None));
+    assert!(!json_eq_unordered(Some(&json!(["SPECIFIC"])), None));
+    assert!(!json_eq_unordered(None, Some(&json!(["SPECIFIC"]))));
 }

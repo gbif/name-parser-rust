@@ -108,6 +108,37 @@ pub enum Rank {
     SeriesZoology,
     SubseriesZoology,
     SuperseriesZoology,
+    // ---- Phase 1 Slice 3 Task 1 additions (RankMarkers, `pipeline::rank_markers`) ----
+    // Every `Rank` value the two `RankMarkers` maps (`INFRASPECIFIC`/`INFRAGENERIC`,
+    // RankMarkers.java:23-90) reference that isn't already present above. Cross-checked
+    // one-for-one against each map value in `RankMarkers.java` and against `Rank.java`'s own
+    // constructor argument for each (which nomenclatural code, if any, it anchors to — see
+    // `code()` below).
+    //   - `RankMarkers.INFRASPECIFIC` values not already present: Other (the
+    //     `LETTER_SUBDIVISION` synthetic marker's unmappable rank), Subvariety, Subform,
+    //     Pathovar, Biovar, Chemoform, Serovar, Morph, Morphovar, Phagovar, Natio, Mutatio,
+    //     Convariety, Proles, Aberration, Strain, InfraspecificName.
+    //   - `RankMarkers.INFRAGENERIC` values not already present: DivisionBotany (the
+    //     botanical "div."/"divisio" marker — distinct from the zoological division rank,
+    //     which this stub doesn't carry at all yet).
+    Other,
+    Subvariety,
+    Subform,
+    Pathovar,
+    Biovar,
+    Chemoform,
+    Serovar,
+    Morph,
+    Morphovar,
+    Phagovar,
+    Natio,
+    Mutatio,
+    Convariety,
+    Proles,
+    Aberration,
+    Strain,
+    InfraspecificName,
+    DivisionBotany,
 }
 
 impl Rank {
@@ -125,19 +156,35 @@ impl Rank {
     /// ctx.name.setCode(r.getCode());`).
     pub fn code(&self) -> Option<NomCode> {
         match self {
-            Rank::Grex | Rank::CultivarGroup | Rank::Cultivar => Some(NomCode::Cultivars),
+            Rank::Grex | Rank::CultivarGroup | Rank::Cultivar | Rank::Convariety => {
+                Some(NomCode::Cultivars)
+            }
             Rank::SectionBotany
             | Rank::SubsectionBotany
             | Rank::SupersectionBotany
             | Rank::SeriesBotany
             | Rank::SubseriesBotany
-            | Rank::SuperseriesBotany => Some(NomCode::Botanical),
+            | Rank::SuperseriesBotany
+            | Rank::DivisionBotany
+            | Rank::Proles => Some(NomCode::Botanical),
             Rank::SectionZoology
             | Rank::SubsectionZoology
             | Rank::SupersectionZoology
             | Rank::SeriesZoology
             | Rank::SubseriesZoology
-            | Rank::SuperseriesZoology => Some(NomCode::Zoological),
+            | Rank::SuperseriesZoology
+            | Rank::Morph
+            | Rank::Natio
+            | Rank::Mutatio
+            | Rank::Aberration => Some(NomCode::Zoological),
+            // New Phase 1 Slice 3 Task 1 group: the microbial (bacteriological-code)
+            // infrasubspecific ranks — `Rank.java`'s own `NomCode.BACTERIAL` constructor arg.
+            Rank::Pathovar
+            | Rank::Biovar
+            | Rank::Chemoform
+            | Rank::Serovar
+            | Rank::Morphovar
+            | Rank::Phagovar => Some(NomCode::Bacterial),
             Rank::Unranked
             | Rank::Family
             | Rank::Genus
@@ -150,7 +197,12 @@ impl Rank {
             | Rank::Subtribe
             | Rank::Supertribe
             | Rank::Infratribe
-            | Rank::Subgenus => None,
+            | Rank::Subgenus
+            | Rank::Other
+            | Rank::Subvariety
+            | Rank::Subform
+            | Rank::Strain
+            | Rank::InfraspecificName => None,
         }
     }
 }
@@ -376,6 +428,69 @@ mod tests {
         );
     }
 
+    /// Phase 1 Slice 3 Task 1 additions: every `Rank` value the two `RankMarkers` maps
+    /// (`pipeline::rank_markers`) reference that wasn't already present — verifies the
+    /// `SCREAMING_SNAKE_CASE` rename produces the exact Java enum constant name for each,
+    /// in particular the two-word `InfraspecificName`/`DivisionBotany` (`INFRASPECIFIC_NAME`
+    /// / `DIVISION_BOTANY`, matching Java's own multi-word constants).
+    #[test]
+    fn rank_stub_slice3_task1_variants() {
+        assert_eq!(serde_json::to_string(&Rank::Other).unwrap(), "\"OTHER\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Subvariety).unwrap(),
+            "\"SUBVARIETY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Subform).unwrap(),
+            "\"SUBFORM\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Pathovar).unwrap(),
+            "\"PATHOVAR\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Biovar).unwrap(), "\"BIOVAR\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Chemoform).unwrap(),
+            "\"CHEMOFORM\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Serovar).unwrap(),
+            "\"SEROVAR\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Morph).unwrap(), "\"MORPH\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Morphovar).unwrap(),
+            "\"MORPHOVAR\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Phagovar).unwrap(),
+            "\"PHAGOVAR\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Natio).unwrap(), "\"NATIO\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Mutatio).unwrap(),
+            "\"MUTATIO\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Convariety).unwrap(),
+            "\"CONVARIETY\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Proles).unwrap(), "\"PROLES\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Aberration).unwrap(),
+            "\"ABERRATION\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Strain).unwrap(), "\"STRAIN\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::InfraspecificName).unwrap(),
+            "\"INFRASPECIFIC_NAME\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::DivisionBotany).unwrap(),
+            "\"DIVISION_BOTANY\""
+        );
+    }
+
     /// `Rank::code()` — spot-checks against `Rank.java`'s own constructor arguments (see
     /// `code()`'s doc comment for the exact source lines): most ranks are code-agnostic
     /// (`None`); `Grex`/`CultivarGroup`/`Cultivar` anchor to `CULTIVARS`; the `*Botany` /
@@ -402,6 +517,37 @@ mod tests {
         assert_eq!(Rank::SeriesZoology.code(), Some(NomCode::Zoological));
         assert_eq!(Rank::SubseriesZoology.code(), Some(NomCode::Zoological));
         assert_eq!(Rank::SuperseriesZoology.code(), Some(NomCode::Zoological));
+    }
+
+    /// `Rank::code()` — Phase 1 Slice 3 Task 1 additions: the new `BACTERIAL` group
+    /// (`Pathovar`/`Biovar`/`Chemoform`/`Serovar`/`Morphovar`/`Phagovar`, all microbial
+    /// ranks under the Bacteriological Code), the legacy `ZOOLOGICAL` ranks
+    /// (`Morph`/`Natio`/`Mutatio`/`Aberration`), `Convariety` (`CULTIVARS`, joining
+    /// `Grex`/`CultivarGroup`/`Cultivar`), `Proles`/`DivisionBotany` (`BOTANICAL`, joining
+    /// the `*Botany` section-series group), and the code-agnostic stragglers
+    /// (`Other`/`Subvariety`/`Subform`/`Strain`/`InfraspecificName`) — each cross-checked
+    /// against `Rank.java`'s own constructor argument (see `RankMarkers.java`'s ported
+    /// values in `pipeline::rank_markers` for where each of these is actually looked up).
+    #[test]
+    fn rank_code_matches_java_get_code_slice3_task1_variants() {
+        assert_eq!(Rank::Pathovar.code(), Some(NomCode::Bacterial));
+        assert_eq!(Rank::Biovar.code(), Some(NomCode::Bacterial));
+        assert_eq!(Rank::Chemoform.code(), Some(NomCode::Bacterial));
+        assert_eq!(Rank::Serovar.code(), Some(NomCode::Bacterial));
+        assert_eq!(Rank::Morphovar.code(), Some(NomCode::Bacterial));
+        assert_eq!(Rank::Phagovar.code(), Some(NomCode::Bacterial));
+        assert_eq!(Rank::Morph.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::Natio.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::Mutatio.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::Aberration.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::Convariety.code(), Some(NomCode::Cultivars));
+        assert_eq!(Rank::Proles.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::DivisionBotany.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::Other.code(), None);
+        assert_eq!(Rank::Subvariety.code(), None);
+        assert_eq!(Rank::Subform.code(), None);
+        assert_eq!(Rank::Strain.code(), None);
+        assert_eq!(Rank::InfraspecificName.code(), None);
     }
 
     #[test]
