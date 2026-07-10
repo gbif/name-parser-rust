@@ -1,0 +1,333 @@
+// SPDX-License-Identifier: Apache-2.0
+
+//! Java `org.gbif.nameparser.api.{Authorship, CombinedAuthorship, ParsedAuthorship,
+//! ParsedName}`, ported as Gson-wire-faithful Rust structs.
+//!
+//! Java models a class hierarchy `ParsedName extends ParsedAuthorship extends
+//! CombinedAuthorship`. Gson's default reflective serialization walks that hierarchy
+//! **most-derived class first**, emitting each class's own declared fields (in
+//! declaration order) before moving up to the superclass. To reproduce that exact key
+//! order with a plain `#[derive(Serialize)]` struct (whose fields always serialize in
+//! declaration order), `ParsedAuthorship` is not given its own Rust type: its 11 fields,
+//! and `CombinedAuthorship`'s 3, are flattened directly onto a single [`ParsedName`]
+//! struct, in the order: ParsedName's own 16 fields, then ParsedAuthorship's 11, then
+//! CombinedAuthorship's 3. `CombinedAuthorship` itself still exists as a Rust type,
+//! because Java also uses it standalone as the type of `ParsedName::generic_authorship`
+//! / `specific_authorship`.
+
+use std::collections::BTreeMap;
+
+use serde::Serialize;
+
+use crate::model::enums::{NamePart, NameType, NomCode, Rank, State};
+
+/// Java `org.gbif.nameparser.api.Authorship`. Authorship of a name (recombination) or
+/// basionym: authors, ex-authors and the year, but no "in" authors (those are part of
+/// the `publishedIn` citation).
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct Authorship {
+    /// Eagerly-initialized `List<String>` in Java (`= new ArrayList<>()`) — never
+    /// omitted, serializes as `[]` when empty.
+    pub authors: Vec<String>,
+    /// Eagerly-initialized `List<String>` in Java — never omitted, serializes as `[]`
+    /// when empty.
+    #[serde(rename = "exAuthors")]
+    pub ex_authors: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub year: Option<String>,
+    #[serde(rename = "imprintYear", skip_serializing_if = "Option::is_none")]
+    pub imprint_year: Option<String>,
+}
+
+impl Authorship {
+    /// Java `Authorship.exists()` — true if the authors/exAuthors/year carry any actual
+    /// value (the inverse of Java's `isEmpty()`, which only checks authors and year).
+    pub fn exists(&self) -> bool {
+        !self.authors.is_empty() || !self.ex_authors.is_empty() || self.year.is_some()
+    }
+}
+
+/// Java `org.gbif.nameparser.api.CombinedAuthorship`. Bundles the combination
+/// authorship, the basionym authorship, and the (fungal) sanctioning author.
+///
+/// Used standalone as the type of [`ParsedName::generic_authorship`] /
+/// [`ParsedName::specific_authorship`]. Its own three fields are, in addition,
+/// flattened directly onto `ParsedName` (see the module doc) to reproduce Java's Gson
+/// class-hierarchy field order for the outermost `ParsedName` object itself.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
+pub struct CombinedAuthorship {
+    /// Eagerly-initialized `Authorship` in Java (`= new Authorship()`) — never omitted.
+    #[serde(rename = "combinationAuthorship")]
+    pub combination_authorship: Authorship,
+    /// Eagerly-initialized `Authorship` in Java — never omitted.
+    #[serde(rename = "basionymAuthorship")]
+    pub basionym_authorship: Authorship,
+    #[serde(rename = "sanctioningAuthor", skip_serializing_if = "Option::is_none")]
+    pub sanctioning_author: Option<String>,
+}
+
+impl CombinedAuthorship {
+    /// Java `CombinedAuthorship.hasAuthorship()` — true if either the combination or the
+    /// basionym authorship carries any actual value.
+    pub fn has_authorship(&self) -> bool {
+        self.combination_authorship.exists() || self.basionym_authorship.exists()
+    }
+}
+
+/// Java `org.gbif.nameparser.api.ParsedName` (flattened with its `ParsedAuthorship` and
+/// `CombinedAuthorship` superclasses — see the module doc for why).
+///
+/// **Field order below is the wire contract, not incidental.** Gson serializes in
+/// declaration order, most-derived class first:
+///   1. `ParsedName`'s own 16 fields: `rank` .. `type_` (JSON `type`).
+///   2. `ParsedAuthorship`'s own 11 fields: `extinct` .. `warnings`.
+///   3. `CombinedAuthorship`'s own 3 fields: `combination_authorship` (JSON
+///      `combinationAuthorship`) .. `sanctioning_author` (JSON `sanctioningAuthor`).
+///
+/// Do not reorder these fields without re-checking the plan's Reference section.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ParsedName {
+    // ---- ParsedName's own 16 fields ----
+    /// `@Nonnull` in Java, defaulting to `Rank.UNRANKED` — never omitted.
+    pub rank: Rank,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<NomCode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uninomial: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub genus: Option<String>,
+    #[serde(rename = "genericAuthorship", skip_serializing_if = "Option::is_none")]
+    pub generic_authorship: Option<CombinedAuthorship>,
+    #[serde(
+        rename = "infragenericEpithet",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub infrageneric_epithet: Option<String>,
+    #[serde(rename = "specificEpithet", skip_serializing_if = "Option::is_none")]
+    pub specific_epithet: Option<String>,
+    #[serde(rename = "specificAuthorship", skip_serializing_if = "Option::is_none")]
+    pub specific_authorship: Option<CombinedAuthorship>,
+    #[serde(
+        rename = "infraspecificEpithet",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub infraspecific_epithet: Option<String>,
+    #[serde(rename = "cultivarEpithet", skip_serializing_if = "Option::is_none")]
+    pub cultivar_epithet: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub phrase: Option<String>,
+    /// Primitive `boolean` in Java — always serializes, including `false`.
+    pub candidatus: bool,
+    /// `EnumSet<NamePart>` in Java (null when unset) — omitted when `None`, else an
+    /// array in ordinal order, e.g. `["SPECIFIC"]`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub notho: Option<Vec<NamePart>>,
+    /// Boxed `Boolean` in Java — omitted when `None`, unlike the primitive `bool`
+    /// fields above/below.
+    #[serde(rename = "originalSpelling", skip_serializing_if = "Option::is_none")]
+    pub original_spelling: Option<bool>,
+    /// `Map<NamePart, String>` in Java (an `EnumMap`, iterating in ordinal order) — a
+    /// `BTreeMap` reproduces that order on the wire since `NamePart` derives `Ord` in
+    /// declaration (== ordinal) order. `serde_json` renders enum map keys as their
+    /// `.name()` via `serialize_unit_variant`, matching Gson's `.name()` enum keys.
+    #[serde(rename = "epithetQualifier", skip_serializing_if = "Option::is_none")]
+    pub epithet_qualifier: Option<BTreeMap<NamePart, String>>,
+    /// Java field name is `type`, a Rust keyword — renamed on the wire, not renamed on
+    /// the Rust struct (which uses the trailing-underscore convention, matching
+    /// `ParseError::type_` elsewhere in this crate).
+    #[serde(rename = "type")]
+    pub type_: NameType,
+
+    // ---- ParsedAuthorship's own 11 fields ----
+    /// Primitive `boolean` in Java — always serializes, including `false`.
+    pub extinct: bool,
+    #[serde(rename = "taxonomicNote", skip_serializing_if = "Option::is_none")]
+    pub taxonomic_note: Option<String>,
+    #[serde(rename = "nomenclaturalNote", skip_serializing_if = "Option::is_none")]
+    pub nomenclatural_note: Option<String>,
+    #[serde(rename = "publishedIn", skip_serializing_if = "Option::is_none")]
+    pub published_in: Option<String>,
+    /// Boxed `Integer` in Java — a bare JSON number when present, omitted when `None`.
+    #[serde(rename = "publishedInYear", skip_serializing_if = "Option::is_none")]
+    pub published_in_year: Option<i32>,
+    #[serde(rename = "publishedInPage", skip_serializing_if = "Option::is_none")]
+    pub published_in_page: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unparsed: Option<String>,
+    /// Primitive `boolean` in Java — always serializes, including `false`.
+    pub doubtful: bool,
+    /// Primitive `boolean` in Java — always serializes, including `false`.
+    pub manuscript: bool,
+    /// Never null in Java: the field initializer defaults it to `NONE`, and
+    /// `ParseContext` unconditionally promotes it to `COMPLETE` before any stage runs —
+    /// always serializes.
+    pub state: State,
+    /// Java `Set<String>` (a `HashSet`, eagerly initialized to `new HashSet<>()`) —
+    /// never omitted, serializes as `[]` when empty. Do NOT add
+    /// `skip_serializing_if` here. Java's `HashSet` iteration order is not insertion
+    /// order; diff this field as a set (sort both sides), never positionally.
+    pub warnings: Vec<String>,
+
+    // ---- CombinedAuthorship's own 3 fields, flattened ----
+    /// Eagerly-initialized `Authorship` in Java (`= new Authorship()`) — never omitted.
+    #[serde(rename = "combinationAuthorship")]
+    pub combination_authorship: Authorship,
+    /// Eagerly-initialized `Authorship` in Java — never omitted.
+    #[serde(rename = "basionymAuthorship")]
+    pub basionym_authorship: Authorship,
+    #[serde(rename = "sanctioningAuthor", skip_serializing_if = "Option::is_none")]
+    pub sanctioning_author: Option<String>,
+}
+
+impl Default for ParsedName {
+    /// Matches Java `ParseContext`'s seeding of a fresh `ParsedName` before any pipeline
+    /// stage runs: `rank = Rank.UNRANKED`, `type = NameType.SCIENTIFIC`,
+    /// `state = ParsedName.State.COMPLETE`. Every other field takes Rust's natural zero
+    /// value (`None` / empty `Vec` / `false`), matching Java's `null` fields and
+    /// eagerly-initialized-empty-collection fields respectively.
+    fn default() -> Self {
+        ParsedName {
+            rank: Rank::Unranked,
+            code: None,
+            uninomial: None,
+            genus: None,
+            generic_authorship: None,
+            infrageneric_epithet: None,
+            specific_epithet: None,
+            specific_authorship: None,
+            infraspecific_epithet: None,
+            cultivar_epithet: None,
+            phrase: None,
+            candidatus: false,
+            notho: None,
+            original_spelling: None,
+            epithet_qualifier: None,
+            type_: NameType::Scientific,
+            extinct: false,
+            taxonomic_note: None,
+            nomenclatural_note: None,
+            published_in: None,
+            published_in_year: None,
+            published_in_page: None,
+            unparsed: None,
+            doubtful: false,
+            manuscript: false,
+            state: State::Complete,
+            warnings: Vec::new(),
+            combination_authorship: Authorship::default(),
+            basionym_authorship: Authorship::default(),
+            sanctioning_author: None,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Wire-format golden test — reference row 1 (plan's Reference section, copied
+    /// verbatim): the Java CLI oracle's `parsed` object for
+    /// `Vulpes vulpes silaceus Miller, 1907`. This is the wire-format contract: if any
+    /// field's presence, order, or omission differs, this assertion fails byte-exactly
+    /// rather than approximately.
+    #[test]
+    fn wire_matches_reference_row_1_vulpes_vulpes_silaceus() {
+        let pn = ParsedName {
+            rank: Rank::Subspecies,
+            code: Some(NomCode::Zoological),
+            genus: Some("Vulpes".to_string()),
+            specific_epithet: Some("vulpes".to_string()),
+            infraspecific_epithet: Some("silaceus".to_string()),
+            combination_authorship: Authorship {
+                authors: vec!["Miller".to_string()],
+                year: Some("1907".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907"},"basionymAuthorship":{"authors":[],"exAuthors":[]}}"#;
+        assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
+    }
+
+    /// Wire-format golden test — reference row 2: the Java CLI oracle's `parsed` object
+    /// for `Abies alba Mill.`. Not printed verbatim in the plan's Reference section
+    /// text, so generated directly from the Java oracle (the shaded CLI jar) to stay
+    /// authoritative: `java -jar name-parser-cli-4.2.0-SNAPSHOT-shaded.jar parse
+    /// --input=<2-line file with row 1 then this row> --output=- --format=jsonl`, whose
+    /// row-1 output was first confirmed byte-identical to the plan's printed reference
+    /// before trusting this row's freshly-generated output as ground truth.
+    #[test]
+    fn wire_matches_reference_row_2_abies_alba() {
+        let pn = ParsedName {
+            rank: Rank::Species,
+            genus: Some("Abies".to_string()),
+            specific_epithet: Some("alba".to_string()),
+            combination_authorship: Authorship {
+                authors: vec!["Mill.".to_string()],
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}"#;
+        assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
+    }
+
+    #[test]
+    fn parsed_name_default_seeds_match_parse_context() {
+        let pn = ParsedName::default();
+        assert_eq!(pn.rank, Rank::Unranked);
+        assert_eq!(pn.type_, NameType::Scientific);
+        assert_eq!(pn.state, State::Complete);
+        // Every remaining field is Rust's natural zero value.
+        assert_eq!(pn.code, None);
+        assert!(!pn.candidatus);
+        assert!(!pn.extinct);
+        assert!(!pn.doubtful);
+        assert!(!pn.manuscript);
+        assert!(pn.warnings.is_empty());
+        assert_eq!(pn.combination_authorship, Authorship::default());
+        assert_eq!(pn.basionym_authorship, Authorship::default());
+    }
+
+    #[test]
+    fn default_parsed_name_serializes_with_all_optionals_omitted() {
+        // Sanity check independent of the two golden rows above: a bare `default()`
+        // must omit every Option field and every nested-struct Option, while still
+        // emitting the always-on primitives/collections/enums.
+        let expected = r#"{"rank":"UNRANKED","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}"#;
+        assert_eq!(
+            serde_json::to_string(&ParsedName::default()).unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn epithet_qualifier_btreemap_key_renders_as_name_and_sorts_ordinally() {
+        // Not one of the two golden rows (both leave epithetQualifier unset) — this
+        // only defines and exercises the *shape* of the populated case; full parity
+        // with Java's populated output is validated in a later slice.
+        let mut map = BTreeMap::new();
+        map.insert(NamePart::Specific, "cf.".to_string());
+        map.insert(NamePart::Generic, "aff.".to_string());
+        let pn = ParsedName {
+            epithet_qualifier: Some(map),
+            ..Default::default()
+        };
+        let json = serde_json::to_string(&pn).unwrap();
+        assert!(json.contains(r#""epithetQualifier":{"GENERIC":"aff.","SPECIFIC":"cf."}"#));
+    }
+
+    #[test]
+    fn notho_serializes_as_array_when_present_and_is_omitted_when_none() {
+        assert!(!serde_json::to_string(&ParsedName::default())
+            .unwrap()
+            .contains("notho"));
+        let pn = ParsedName {
+            notho: Some(vec![NamePart::Specific]),
+            ..Default::default()
+        };
+        assert!(serde_json::to_string(&pn)
+            .unwrap()
+            .contains(r#""notho":["SPECIFIC"]"#));
+    }
+}

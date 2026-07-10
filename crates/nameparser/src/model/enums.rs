@@ -27,7 +27,12 @@ pub enum NomCode {
 }
 
 /// Java `org.gbif.nameparser.api.NamePart`. Indicates a part of a canonical scientific name.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+///
+/// Declaration order below matches Java's ordinal order (verified against
+/// `NamePart.java`), and carries `PartialOrd, Ord` so it can be used as a `BTreeMap` key
+/// for `ParsedName::epithet_qualifier` — Java's own `EnumMap<NamePart, String>` there
+/// iterates in the same ordinal order, so a `BTreeMap` reproduces it on the wire.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum NamePart {
     Generic,
@@ -46,12 +51,17 @@ pub enum State {
 }
 
 // STUB: full 117-constant port deferred to the rank-handling slice. Only variants
-// referenced by Preflight/ViralSuffix/the skeleton + Unranked default exist for now.
+// referenced by Preflight/ViralSuffix/the skeleton + Unranked default, plus Species and
+// Subspecies (needed for the Task 2 wire-format golden-reference tests to be byte-exact —
+// the Java CLI oracle over "Abies alba Mill." / "Vulpes vulpes silaceus Miller, 1907"
+// reports rank SPECIES / SUBSPECIES respectively), exist for now.
 /// Java `org.gbif.nameparser.api.Rank` (STUB — see note above).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Rank {
     Unranked,
+    Species,
+    Subspecies,
 }
 
 /// String constants from `org.gbif.nameparser.api.Warnings`, transcribed verbatim (values, not
@@ -155,6 +165,38 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&Rank::Unranked).unwrap(),
             "\"UNRANKED\""
+        );
+    }
+
+    #[test]
+    fn rank_stub_species_and_subspecies() {
+        assert_eq!(
+            serde_json::to_string(&Rank::Species).unwrap(),
+            "\"SPECIES\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Subspecies).unwrap(),
+            "\"SUBSPECIES\""
+        );
+    }
+
+    #[test]
+    fn name_part_ord_matches_java_ordinal_order() {
+        let mut parts = vec![
+            NamePart::Infraspecific,
+            NamePart::Generic,
+            NamePart::Specific,
+            NamePart::Infrageneric,
+        ];
+        parts.sort();
+        assert_eq!(
+            parts,
+            vec![
+                NamePart::Generic,
+                NamePart::Infrageneric,
+                NamePart::Specific,
+                NamePart::Infraspecific,
+            ]
         );
     }
 }

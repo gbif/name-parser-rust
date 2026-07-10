@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 pub mod enums;
 pub use enums::*;
+pub mod name;
+pub use name::*;
 
 /// Java `Enum.name()` — the exact SCREAMING_SNAKE_CASE identifier (e.g. `OTHER`), as opposed to
 /// Rust's `{:?}` (e.g. `Other`). Reuses each wire enum's own `Serialize` impl — which already
@@ -58,5 +60,15 @@ mod tests {
         let _: crate::model::NamePart = crate::model::NamePart::Generic;
         let _: crate::model::State = crate::model::State::Complete;
         let _: crate::model::Rank = crate::model::Rank::Unranked;
+    }
+
+    /// `model::{Authorship, CombinedAuthorship, ParsedName}` are likewise reached directly
+    /// under `model::`, via the `pub use name::*;` re-export above, not only via
+    /// `model::name::…`.
+    #[test]
+    fn wire_name_structs_are_reachable_at_model_top_level() {
+        let _: crate::model::Authorship = crate::model::Authorship::default();
+        let _: crate::model::CombinedAuthorship = crate::model::CombinedAuthorship::default();
+        let _: crate::model::ParsedName = crate::model::ParsedName::default();
     }
 }
