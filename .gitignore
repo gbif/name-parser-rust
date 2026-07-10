@@ -1,5 +1,6 @@
 /target
 Cargo.lock
 testdata/expected-tokens.tsv
+testdata/expected-parse.jsonl
 tools/out/
 *.class

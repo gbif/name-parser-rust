@@ -95,10 +95,38 @@ pub fn run(
 
     preflight::run(name, &mut ctx)?;
 
+    // Java `Pipeline.run`: `StripAndStash.run(ctx); if (!hasLetter(ctx.working)) throw new
+    // UnparsableNameException(NameType.OTHER, scientificName);` (Pipeline.java:70-73) — a
+    // 4th inline guard, distinct from Preflight and from the 3 guards at the top of this
+    // function, sitting between StripAndStash and the Tokenizer. StripAndStash isn't ported
+    // yet (later slice), so this checks `ctx.working` as Preflight left it rather than as
+    // StripAndStash would leave it. That stand-in is sound for THIS slice's error-partition
+    // gate in the direction that matters: StripAndStash only ever strips characters out of
+    // `ctx.working` (stashing annotation spans elsewhere on `ctx`), it never adds any — so
+    // "no letters left after Preflight" already guarantees "no letters left after
+    // StripAndStash" too, meaning every input this guard rejects, Java would also reject
+    // post-strip. Found via the Task 6 golden corpus (`-,.#` — Java `Err(OTHER)`, this
+    // pipeline previously returned `Ok` since nothing between Preflight and the `TODO`
+    // downstream stages ever inspected `ctx.working` for name-shaped content at all). Known
+    // deferred gap, not yet reachable by the corpus: an input WITH a letter now, all of
+    // whose letters StripAndStash would strip away (e.g. a bracketed "[sic]"-only comment)
+    // — that case needs StripAndStash itself to be caught faithfully.
+    if !has_letter(&ctx.working) {
+        return Err(ParseError::new(NameType::Other, None, name));
+    }
+
     // TODO: StripAndStash → Tokenizer → AuthorshipSplit → NameTokens → AuthorshipParser
     // → Assemble (later slices).
 
     Ok(ctx.name)
+}
+
+/// Java `Pipeline.hasLetter(String)`: `Character.isLetter` scanned per Unicode code point.
+/// Same `is_alphabetic` approximation used throughout this port for `Character.isLetter`
+/// (see `token.rs::is_letter`, `preflight.rs::count_letters`) — slightly broader than
+/// Java's L*-only category; divergences would be surfaced by the golden corpus diff.
+fn has_letter(s: &str) -> bool {
+    s.chars().any(|c| c.is_alphabetic())
 }
 
 /// Java `Pipeline.splitGluedPhraseName`. BOLD/specimen-style phrase names with no
@@ -234,5 +262,23 @@ mod tests {
         let pn = run("Odontellidae GEN", None, None, None).expect("should parse");
         assert_eq!(pn.phrase, None);
         assert_eq!(pn.type_, NameType::Scientific);
+    }
+
+    #[test]
+    fn input_with_no_letters_at_all_is_rejected_as_other() {
+        // Task 6 golden-corpus find (line 5048 of the benchmark data): none of Preflight's
+        // 33 patterns fire on pure punctuation, but Java's `Pipeline.run` rejects it via the
+        // separate `hasLetter` guard that sits after Preflight (Pipeline.java:71-73).
+        let err = run("-,.#", None, None, None).unwrap_err();
+        assert_eq!(err.type_, NameType::Other);
+        assert_eq!(err.code, None);
+        assert_eq!(err.name, "-,.#");
+    }
+
+    #[test]
+    fn single_letter_abbreviation_survives_the_has_letter_guard() {
+        // "B." has exactly one letter, so `has_letter` must let it through — regression
+        // guard against an over-eager rewrite of this check.
+        assert!(run("B.", None, None, None).is_ok());
     }
 }
