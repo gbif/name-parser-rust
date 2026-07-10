@@ -41,17 +41,28 @@ mod tests {
 
     #[test]
     fn sic_removed() {
-        assert_eq!(SIC.replace_all("Ameiva plei (sic) Bibron", "").as_ref(), "Ameiva plei Bibron");
+        assert_eq!(
+            SIC.replace_all("Ameiva plei (sic) Bibron", "").as_ref(),
+            "Ameiva plei Bibron"
+        );
     }
 
     #[test]
     fn aggregate_trimmed() {
-        assert_eq!(AGGREGATE.replace_all("Achillea millefolium agg.", "").as_ref(), "Achillea millefolium");
+        assert_eq!(
+            AGGREGATE
+                .replace_all("Achillea millefolium agg.", "")
+                .as_ref(),
+            "Achillea millefolium"
+        );
     }
 
     #[test]
     fn in_press_removed() {
-        assert_eq!(IN_PRESS.replace_all("Aus bus Smith in press", "").as_ref(), "Aus bus Smith");
+        assert_eq!(
+            IN_PRESS.replace_all("Aus bus Smith in press", "").as_ref(),
+            "Aus bus Smith"
+        );
     }
 
     #[test]
@@ -62,8 +73,41 @@ mod tests {
 
     #[test]
     fn tax_note_stripped() {
-        assert_eq!(TAX_NOTE.replace_all("Aus bus sensu Smith", "").as_ref(), "Aus bus");
+        assert_eq!(
+            TAX_NOTE.replace_all("Aus bus sensu Smith", "").as_ref(),
+            "Aus bus"
+        );
         // case-sensitive s.l. marker still matches lower-case
         assert_eq!(TAX_NOTE.replace_all("Aus bus s.l.", "").as_ref(), "Aus bus");
+    }
+
+    #[test]
+    fn case_insensitive_flag_is_active() {
+        // (?i) patterns must match UPPER-cased keywords, matching Java's Pattern.CASE_INSENSITIVE.
+        assert_eq!(
+            AGGREGATE
+                .replace_all("Achillea millefolium AGG.", "")
+                .as_ref(),
+            "Achillea millefolium"
+        );
+        assert_eq!(
+            TAX_NOTE.replace_all("Aus bus SENSU Smith", "").as_ref(),
+            "Aus bus"
+        );
+    }
+
+    #[test]
+    fn tax_note_sl_marker_is_case_sensitive() {
+        // The (?-i:…) carve-out means UPPER-case author initials "S.L." are NOT the sensu-lato
+        // marker (StripAndStash.java:79-81), while lower-case "s.l." IS. This is the whole point
+        // of the scoped case-sensitivity toggle, so it must be tested directly.
+        assert!(
+            !TAX_NOTE.is_match("Aus bus Mill. S.L."),
+            "uppercase S.L. must not match the sensu-lato marker"
+        );
+        assert!(
+            TAX_NOTE.is_match("Aus bus s.l."),
+            "lower-case s.l. must match the marker"
+        );
     }
 }
