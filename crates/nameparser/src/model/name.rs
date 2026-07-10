@@ -187,7 +187,7 @@ pub struct ParsedName {
 /// sides rather than the crate's Unicode-default `\b` (this port's per-pattern flag rule;
 /// see `pipeline::preflight`'s module doc for the rule spelled out in full).
 static PUBLISHED_IN_YEAR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?-u:\b)(1[5-9]\d{2}|20\d{2}|2100)(?-u:\b)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?-u:\b(1[5-9]\d{2}|20\d{2}|2100)\b)").unwrap());
 
 impl ParsedName {
     /// Add a warning if not already present — mirrors Java's `warnings` HashSet (deduping).
@@ -493,5 +493,13 @@ mod tests {
             ..Default::default()
         };
         assert!(b.exists());
+    }
+
+    #[test]
+    fn published_in_year_ignores_non_ascii_digits_like_java() {
+        // ASCII \d only (Java parity): a stray non-ASCII digit run must not shadow the real year.
+        let mut pn = ParsedName::default();
+        pn.set_published_in("Author, 1900, republished ref. 19\u{0668}8 variant");
+        assert_eq!(pn.published_in_year, Some(1900));
     }
 }
