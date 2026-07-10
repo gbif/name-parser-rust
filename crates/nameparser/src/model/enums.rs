@@ -61,6 +61,20 @@ pub enum State {
 // not itself one of this slice's gated downstream-independent fields (it's a shared field
 // also written by later, not-yet-ported stages), but these steps set it as a faithful,
 // observable side effect, so the variants they need are added rather than stubbed out.
+//
+// Phase 1 Slice 2 batch 2e (steps 53-55, `StripAndStash.java` line numbers) adds 18 more:
+//   - Subfamily/Tribe/Subtribe/Supertribe/Infratribe: `SUPRA_RANK_MARKERS` (1693-1701),
+//     step 53 `stripSupraRankPrefix`.
+//   - Subgenus/SectionBotany/SubsectionBotany/SupersectionBotany/SeriesBotany/
+//     SubseriesBotany: the `RankUtils.RANK_MARKER_MAP_INFRAGENERIC` (RankUtils.java:90-106)
+//     SUBSET reachable via `LEADING_INFRAGEN_MARKER`'s 13-word alternation (1716-1719),
+//     step 54 `stripLeadingInfragenericMarker`.
+//   - SectionZoology/SubsectionZoology/SupersectionZoology/SeriesZoology/SubseriesZoology/
+//     SuperseriesZoology/SuperseriesBotany: `BOT_TO_ZOOL` (1706-1712), ported as the
+//     complete 6-pair map (step 54's own literal), one pair (Superseries) unreachable via
+//     the current regex but kept for faithfulness — see `bot_to_zool`'s own doc comment.
+// Step 55 (`stashPhraseName`) needs no new variants: SPECIES/SUBSPECIES/VARIETY/FORM
+// already exist above.
 /// Java `org.gbif.nameparser.api.Rank` (STUB — see note above).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -75,6 +89,70 @@ pub enum Rank {
     Variety,
     Form,
     Cultivar,
+    // ---- Phase 1 Slice 2 batch 2e additions (StripAndStash steps 53-55) ----
+    Subfamily,
+    Tribe,
+    Subtribe,
+    Supertribe,
+    Infratribe,
+    Subgenus,
+    SectionBotany,
+    SubsectionBotany,
+    SupersectionBotany,
+    SeriesBotany,
+    SubseriesBotany,
+    SuperseriesBotany,
+    SectionZoology,
+    SubsectionZoology,
+    SupersectionZoology,
+    SeriesZoology,
+    SubseriesZoology,
+    SuperseriesZoology,
+}
+
+impl Rank {
+    /// Java `Rank.getCode()` (`Rank.java:472-474`): the single nomenclatural code a rank
+    /// constant is anchored to (set via that constant's own constructor argument), or
+    /// `None` for a code-agnostic rank — most of them (`Rank`'s own class doc: "The ranks
+    /// listed are code agnostic" unless stated otherwise). Exhaustive `match`, not a
+    /// wildcard fallback, over every variant this STUB enum currently has: a future slice
+    /// adding more `Rank` variants will get a compile error here until it decides each new
+    /// variant's code explicitly, rather than silently defaulting it to `None`.
+    ///
+    /// Used by `StripAndStash::strip_leading_infrageneric_marker` (step 54, batch 2e) to
+    /// backfill `ParsedName::code` from a recognised infrageneric rank marker when the
+    /// caller supplied none (Java: `if (r.getCode() != null && ctx.name.getCode() == null)
+    /// ctx.name.setCode(r.getCode());`).
+    pub fn code(&self) -> Option<NomCode> {
+        match self {
+            Rank::Grex | Rank::CultivarGroup | Rank::Cultivar => Some(NomCode::Cultivars),
+            Rank::SectionBotany
+            | Rank::SubsectionBotany
+            | Rank::SupersectionBotany
+            | Rank::SeriesBotany
+            | Rank::SubseriesBotany
+            | Rank::SuperseriesBotany => Some(NomCode::Botanical),
+            Rank::SectionZoology
+            | Rank::SubsectionZoology
+            | Rank::SupersectionZoology
+            | Rank::SeriesZoology
+            | Rank::SubseriesZoology
+            | Rank::SuperseriesZoology => Some(NomCode::Zoological),
+            Rank::Unranked
+            | Rank::Family
+            | Rank::Genus
+            | Rank::Species
+            | Rank::Subspecies
+            | Rank::Variety
+            | Rank::Form
+            | Rank::Subfamily
+            | Rank::Tribe
+            | Rank::Subtribe
+            | Rank::Supertribe
+            | Rank::Infratribe
+            | Rank::Subgenus => None,
+        }
+    }
 }
 
 /// String constants from `org.gbif.nameparser.api.Warnings`, transcribed verbatim (values, not
@@ -217,6 +295,113 @@ mod tests {
             "\"CULTIVAR_GROUP\""
         );
         assert_eq!(serde_json::to_string(&Rank::Grex).unwrap(), "\"GREX\"");
+    }
+
+    /// Phase 1 Slice 2 batch 2e additions: `StripAndStash` steps 53-55's suprageneric
+    /// family-group ranks (step 53) and the infrageneric botany/zoology section-series
+    /// pairs (step 54's `RANK_MARKER_MAP_INFRAGENERIC` subset + `BOT_TO_ZOOL`) — verifies
+    /// the `SCREAMING_SNAKE_CASE` rename produces the exact Java enum constant name for
+    /// each, in particular that the two-word `*Botany`/`*Zoology` variants render with the
+    /// underscore Java uses (`Rank.SECTION_BOTANY`, `Rank.SUPERSERIES_ZOOLOGY`).
+    #[test]
+    fn rank_stub_batch_2e_variants() {
+        assert_eq!(
+            serde_json::to_string(&Rank::Subfamily).unwrap(),
+            "\"SUBFAMILY\""
+        );
+        assert_eq!(serde_json::to_string(&Rank::Tribe).unwrap(), "\"TRIBE\"");
+        assert_eq!(
+            serde_json::to_string(&Rank::Subtribe).unwrap(),
+            "\"SUBTRIBE\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Supertribe).unwrap(),
+            "\"SUPERTRIBE\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Infratribe).unwrap(),
+            "\"INFRATRIBE\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::Subgenus).unwrap(),
+            "\"SUBGENUS\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SectionBotany).unwrap(),
+            "\"SECTION_BOTANY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SubsectionBotany).unwrap(),
+            "\"SUBSECTION_BOTANY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SupersectionBotany).unwrap(),
+            "\"SUPERSECTION_BOTANY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SeriesBotany).unwrap(),
+            "\"SERIES_BOTANY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SubseriesBotany).unwrap(),
+            "\"SUBSERIES_BOTANY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SuperseriesBotany).unwrap(),
+            "\"SUPERSERIES_BOTANY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SectionZoology).unwrap(),
+            "\"SECTION_ZOOLOGY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SubsectionZoology).unwrap(),
+            "\"SUBSECTION_ZOOLOGY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SupersectionZoology).unwrap(),
+            "\"SUPERSECTION_ZOOLOGY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SeriesZoology).unwrap(),
+            "\"SERIES_ZOOLOGY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SubseriesZoology).unwrap(),
+            "\"SUBSERIES_ZOOLOGY\""
+        );
+        assert_eq!(
+            serde_json::to_string(&Rank::SuperseriesZoology).unwrap(),
+            "\"SUPERSERIES_ZOOLOGY\""
+        );
+    }
+
+    /// `Rank::code()` — spot-checks against `Rank.java`'s own constructor arguments (see
+    /// `code()`'s doc comment for the exact source lines): most ranks are code-agnostic
+    /// (`None`); `Grex`/`CultivarGroup`/`Cultivar` anchor to `CULTIVARS`; the `*Botany` /
+    /// `*Zoology` section-series pairs anchor to `BOTANICAL` / `ZOOLOGICAL` respectively;
+    /// `Subgenus` (unlike its `*Botany` siblings) carries no code at all in Java.
+    #[test]
+    fn rank_code_matches_java_get_code() {
+        assert_eq!(Rank::Unranked.code(), None);
+        assert_eq!(Rank::Species.code(), None);
+        assert_eq!(Rank::Subgenus.code(), None);
+        assert_eq!(Rank::Tribe.code(), None);
+        assert_eq!(Rank::Grex.code(), Some(NomCode::Cultivars));
+        assert_eq!(Rank::CultivarGroup.code(), Some(NomCode::Cultivars));
+        assert_eq!(Rank::Cultivar.code(), Some(NomCode::Cultivars));
+        assert_eq!(Rank::SectionBotany.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::SubsectionBotany.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::SupersectionBotany.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::SeriesBotany.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::SubseriesBotany.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::SuperseriesBotany.code(), Some(NomCode::Botanical));
+        assert_eq!(Rank::SectionZoology.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::SubsectionZoology.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::SupersectionZoology.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::SeriesZoology.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::SubseriesZoology.code(), Some(NomCode::Zoological));
+        assert_eq!(Rank::SuperseriesZoology.code(), Some(NomCode::Zoological));
     }
 
     #[test]

@@ -8,21 +8,30 @@
 //! that takes the working string, mutates the [`ParseContext`] as needed, and returns
 //! the (possibly shortened/rewritten) working string.
 //!
-//! **Phase 1 Slice 2, batches 1 + 2b + 2c + 2d (this batch): steps 1-52 ported.** [`run`]
-//! dispatches all 55 steps in Java's exact `StripAndStash.run(ParseContext)` order — that
-//! order is load-bearing and was locked in by Task 2 — steps 1-19 (leading normalizers +
-//! flaggers, batch 1), 20-30 (candidatus, cultivar Group/grex/quoted, extinct dagger,
-//! t.infr., doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare
+//! **Phase 1 Slice 2, batches 1 + 2b + 2c + 2d + 2e (this batch, FINAL): all 55 steps
+//! ported.** [`run`] dispatches all 55 steps in Java's exact `StripAndStash.run(ParseContext)`
+//! order — that order is load-bearing and was locked in by Task 2 — steps 1-19 (leading
+//! normalizers + flaggers, batch 1), 20-30 (candidatus, cultivar Group/grex/quoted, extinct
+//! dagger, t.infr., doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare
 //! nom-note, batch 2b), 31-44 (authorship placeholders, trailing-species, pro parte /
 //! pro sp. / approved-lists, mihi, anon, the six-step taxonomic-note family, aggregate
-//! suffix, batch 2c), and 45-52 (published-in page/in-press/in-author-in-parens/
+//! suffix, batch 2c), 45-52 (published-in page/in-press/in-author-in-parens/
 //! in-author-citation/IPNI/period-separated-reference/comma-prefixed-reference/
-//! manuscript-marker, batch 2d) now carry their faithful port; steps 53-55 (batch 2e)
-//! remain `// TODO batch N` no-op passthroughs (see
+//! manuscript-marker, batch 2d), and 53-55 (suprarank prefix, leading infrageneric marker,
+//! phrase name, batch 2e) all now carry their faithful port (see
 //! `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md` for the batch breakdown).
+//! Landing batch 2e flips the golden harness (`tests/parse_golden.rs`) from a deferred
+//! baseline print to an asserted-0 gate over the 10 downstream-independent fields — see
+//! that file's own module doc.
+//!
 //! One step, `replace_homoglyphs` (step 13), is a DOCUMENTED stub — see its own doc
 //! comment — since porting its backing table is a sizeable sub-project deferred by design
-//! (mirrors `crate::unicode`'s own existing deferral of the same table).
+//! (mirrors `crate::unicode`'s own existing deferral of the same table). Separately, Java's
+//! `stripAuthorshipMarkers` — an auxiliary-authorship reimplementation that duplicates a
+//! handful of this file's own strip steps but is NOT part of this ordered `run()` dispatch
+//! at all — is DEFERRED to the AuthorshipParser slice: it is only ever invoked on the
+//! caller-supplied `authorship` string via the not-yet-ported AuthorshipParser path, so it
+//! is unreachable/untestable from this crate's current entry points.
 
 use std::sync::LazyLock;
 
@@ -39,8 +48,8 @@ use crate::unicode::java_trim;
 /// each step consuming the string by value and returning the (possibly
 /// shortened/rewritten) result; steps also mutate `ctx` (`ctx.name`, `ctx.pending*`, …)
 /// as a side effect for the ones that stash annotations rather than just discard them.
-/// Steps 1-44 (batches 1, 2b, 2c) are ported; steps 45-55 (batches 2d-2e) are still
-/// `// TODO batch N` no-op stubs — see the module doc.
+/// All 55 steps (batches 1, 2b, 2c, 2d, 2e) now carry a faithful port — see the module
+/// doc.
 pub(crate) fn run(ctx: &mut ParseContext) {
     let mut s = ctx.working.clone();
     s = flag_uncertain_authorship(ctx, s);
@@ -1163,7 +1172,10 @@ static AUTHOR_START: LazyLock<Regex> = LazyLock::new(|| {
 /// Java `StripAndStash.findAuthorStart` (StripAndStash.java:1650-1657): the byte offset of
 /// group 2 (the author span) within a "Genus[ species] Author..." prefix, or `None` when
 /// the prefix doesn't have that shape (Java: `int`, -1 sentinel). The pattern's own `^…$`
-/// anchors make `.captures()` here equivalent to Java's `.matches()`.
+/// anchors make `.captures()` here equivalent to Java's `.matches()`. Shared, in Java
+/// itself, by TWO call sites: `stripQuotedCultivar` (this batch, 2b, StripAndStash.java:
+/// 1035) and `stashPhraseName` (step 55, batch 2e, StripAndStash.java:1609) — ported once
+/// here and reused by both, matching Java's own one-method-two-callers shape.
 fn find_author_start(prefix: &str) -> Option<usize> {
     AUTHOR_START
         .captures(prefix)
@@ -2687,31 +2699,322 @@ fn strip_manuscript_marker(ctx: &mut ParseContext, s: String) -> String {
 }
 
 // ---------------------------------------------------------------------------------
-// Batch 5 (steps 53-55): suprarank prefix, leading infrageneric marker, phrase name.
-// (Plus the separate `stripAuthorshipMarkers` auxiliary-authorship reimplementation,
-// not part of this ordered dispatch — see the investigation §4.)
+// Batch 5 / 2e (steps 53-55, THE FINAL StripAndStash batch): suprarank prefix, leading
+// infrageneric marker, phrase name. Landing this batch flips the golden-harness gate
+// (`tests/parse_golden.rs`) from a deferred baseline print to a real `assert_eq!(…, 0)`
+// over the 10 downstream-independent fields — see that file's own module doc.
+//
+// DEFERRED to the AuthorshipParser slice: Java's separate `stripAuthorshipMarkers`
+// auxiliary-authorship reimplementation is NOT part of this ordered `run()` dispatch at
+// all (see the investigation §4) — it is only ever invoked on the caller-supplied
+// `authorship` string via the not-yet-ported AuthorshipParser path, so it is
+// unreachable/untestable from this crate's current entry points and is not ported here.
+//
+// This batch also extends `model::enums::Rank` with 18 new variants these three steps
+// reference — the suprageneric family-group ranks for step 53, plus SUBGENUS and the
+// botanical/zoological section/series pairs for step 54's `RANK_MARKER_MAP_INFRAGENERIC`
+// subset + `BOT_TO_ZOOL` remap (see `Rank`'s own doc comment for the itemised list and
+// exact Java source line references). Step 55 needs no new variants: SPECIES/SUBSPECIES/
+// VARIETY/FORM already exist from earlier batches.
 // ---------------------------------------------------------------------------------
 
-// TODO batch 5 — Java `stripSupraRankPrefix`: a leading "<Family> <suprageneric-rank-
-// marker>" (or a bare suprageneric marker with no family) strips the prefix/marker and
-// pins the rank.
-fn strip_supra_rank_prefix(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 53: stripSupraRankPrefix ----
+
+/// Java `SUPRA_RANK_MARKERS` (StripAndStash.java:1693-1701): the suprageneric
+/// family-group rank markers `SUPRA_RANK_PREFIX` (below) can capture as its group 1,
+/// mapped to the `Rank` they pin. MINIMAL port covering exactly the 8 distinct words the
+/// regex's own alternation (`subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?`)
+/// can produce — a case-folded `match`, not a `HashMap`, following
+/// `is_known_infraspecific_marker`'s (batch 1) precedent for a small fixed
+/// string-to-value lookup. `word` must already be lower-cased by the caller (mirrors
+/// Java's own `pm.group(1).toLowerCase()` immediately before the map lookup).
+fn supra_rank_marker(word: &str) -> Option<Rank> {
+    match word {
+        "subfam" | "subfamily" => Some(Rank::Subfamily),
+        "trib" | "tribe" => Some(Rank::Tribe),
+        "subtrib" | "subtribe" => Some(Rank::Subtribe),
+        "supertrib" => Some(Rank::Supertribe),
+        "infratrib" => Some(Rank::Infratribe),
+        _ => None,
+    }
+}
+
+/// Java SUPRA_RANK_PREFIX (StripAndStash.java:1725-1729):
+/// `^(?:[\p{Lu}][\p{L}]{2,}\s+)?(subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?)\.?\s+(?=[\p{Lu}])`,
+/// `Pattern.UNICODE_CHARACTER_CLASS | Pattern.CASE_INSENSITIVE` -> keep default Unicode
+/// `\s`, add `(?i)`. Trailing LOOKAHEAD `(?=[\p{Lu}])` (the following capitalised name is
+/// checked but not consumed, so it stays in the returned remainder) -> needs `fancy_regex`
+/// (the `regex` crate has no lookaround at all). No nested/ambiguous quantifiers anywhere
+/// in this pattern (the leading family-group is merely optional, not repeated) — no ReDoS
+/// exposure to weigh, unlike some of the batch 2d fancy_regex patterns.
+static SUPRA_RANK_PREFIX: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(
+        r"(?i)^(?:[\p{Lu}][\p{L}]{2,}\s+)?(subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?)\.?\s+(?=[\p{Lu}])",
+    )
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripSupraRankPrefix` (StripAndStash.java:1557-1570). A leading
+/// "<Family> <suprageneric-rank-marker> <Name> [Author …]" ("Poaceae subtrib.
+/// Scolochloinae Soreng") — or a bare marker with no family prefix ("subtrib.
+/// Scolochloinae Soreng") — pins `ctx.name.rank` from the marker and strips BOTH the
+/// optional family prefix and the marker itself (`s[whole.end()..]`, not just past the
+/// marker), leaving the inner uninomial (plus any trailing author) for the rest of the
+/// pipeline to parse. Unconditional overwrite: Java's `ctx.name.setRank(r)` here carries
+/// no "only if unset" guard, unlike step 54's `code` handling below. Both the bare-marker
+/// and family-prefixed forms spot-checked against the Java CLI oracle: "subtrib.
+/// Scolochloinae Soreng" and "Poaceae subtrib. Scolochloinae Soreng" both come back
+/// `rank=SUBTRIBE`, `uninomial=Scolochloinae` (the family prefix, when present, is
+/// discarded entirely, not preserved anywhere in the parsed output).
+fn strip_supra_rank_prefix(ctx: &mut ParseContext, s: String) -> String {
+    if let Ok(Some(caps)) = SUPRA_RANK_PREFIX.captures(&s) {
+        let marker = caps.get(1).unwrap().as_str().to_lowercase();
+        if let Some(r) = supra_rank_marker(&marker) {
+            ctx.name.rank = r;
+            let whole = caps.get(0).unwrap();
+            return java_trim(&s[whole.end()..]).to_string();
+        }
+    }
     s
 }
 
-// TODO batch 5 — Java `stripLeadingInfragenericMarker`: a leading infrageneric rank
-// marker with no genus prefix ("subgen. Trematostoma Sacc.") strips the marker and pins
-// the rank (swapped to its zoological counterpart under a caller-supplied ZOOLOGICAL
-// code).
-fn strip_leading_infrageneric_marker(_ctx: &mut ParseContext, s: String) -> String {
+// ---- Step 54: stripLeadingInfragenericMarker ----
+
+/// Java `RankUtils.RANK_MARKER_MAP_INFRAGENERIC` (RankUtils.java:90-106) — MINIMAL subset
+/// port covering exactly the 13 distinct words `LEADING_INFRAGEN_MARKER` (below) can
+/// capture as its group 1. The full Java map also auto-derives an entry for every
+/// non-GENUS `Rank::isGenusGroup()` constant's own marker text
+/// (`RankUtils.buildRankMarkerMap`) plus a handful of unrelated explicit aliases
+/// (`supraser`, …) that this regex's own alternation can never produce — out of scope
+/// here per this port's "add only what these steps need" brief. Case-folded `match`, same
+/// style as `supra_rank_marker` above; `word` must already be lower-cased by the caller.
+fn infrageneric_marker_rank(word: &str) -> Option<Rank> {
+    match word {
+        "subg" | "subgen" | "subgenus" => Some(Rank::Subgenus),
+        "sect" | "section" => Some(Rank::SectionBotany),
+        "subsect" | "subsection" => Some(Rank::SubsectionBotany),
+        "supersect" | "suprasect" => Some(Rank::SupersectionBotany),
+        "ser" | "series" => Some(Rank::SeriesBotany),
+        "subser" | "subseries" => Some(Rank::SubseriesBotany),
+        _ => None,
+    }
+}
+
+/// Java `BOT_TO_ZOOL` (StripAndStash.java:1706-1712): botanical-flavoured infrageneric
+/// ranks that have a same-NAMED zoological counterpart at a DIFFERENT nominal level
+/// (zoological "section"/"series" sit between order and family, not inside a genus — see
+/// `Rank.java`'s own placement of `SECTION_ZOOLOGY`/`SERIES_ZOOLOGY` right after
+/// suborder, versus `SECTION_BOTANY`/`SERIES_BOTANY` down in the genus-group block).
+/// Applied when a leading rank marker is parsed under a caller-supplied ZOOLOGICAL code.
+/// Ported as the COMPLETE 6-pair `match`, faithful to the Java literal even though
+/// `SuperseriesBotany` (only reachable via a "supraser"/"superser" word — neither is one
+/// of `LEADING_INFRAGEN_MARKER`'s 13 alternatives) can never actually be produced by THIS
+/// step's own regex — same "port the whole literal, not a call-site-trimmed-down version"
+/// precedent as `is_known_infraspecific_marker` (batch 1) and `DIGITS_ONLY` in
+/// `stash_trailing_strain_code` (batch 1). The wildcard fallback is exact here, not a
+/// faithfulness compromise: Java's own `Map.get()` likewise returns `null` for any `Rank`
+/// key it doesn't list (i.e. `Subgenus`, which has no zoological counterpart at all).
+fn bot_to_zool(rank: Rank) -> Option<Rank> {
+    match rank {
+        Rank::SectionBotany => Some(Rank::SectionZoology),
+        Rank::SubsectionBotany => Some(Rank::SubsectionZoology),
+        Rank::SupersectionBotany => Some(Rank::SupersectionZoology),
+        Rank::SeriesBotany => Some(Rank::SeriesZoology),
+        Rank::SubseriesBotany => Some(Rank::SubseriesZoology),
+        Rank::SuperseriesBotany => Some(Rank::SuperseriesZoology),
+        _ => None,
+    }
+}
+
+/// Java LEADING_INFRAGEN_MARKER (StripAndStash.java:1716-1719):
+/// `^(subg|subgen|subgenus|sect|section|subsect|subsection|supersect|suprasect|ser|series|subser|subseries)\.?\s+(?=[\p{Lu}])`,
+/// `Pattern.UNICODE_CHARACTER_CLASS | Pattern.CASE_INSENSITIVE` -> keep default Unicode
+/// `\s`, add `(?i)`. Trailing LOOKAHEAD (same reasoning as `SUPRA_RANK_PREFIX` above) ->
+/// needs `fancy_regex`. No nested/ambiguous quantifiers -> no ReDoS exposure.
+static LEADING_INFRAGEN_MARKER: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(
+        r"(?i)^(subg|subgen|subgenus|sect|section|subsect|subsection|supersect|suprasect|ser|series|subser|subseries)\.?\s+(?=[\p{Lu}])",
+    )
+    .unwrap()
+});
+
+/// Java `StripAndStash.stripLeadingInfragenericMarker` (StripAndStash.java:1572-1593). A
+/// leading infrageneric rank marker with NO genus prefix ("subgen. Trematostoma Sacc.",
+/// "sect. Taeda") pins `ctx.name.rank` — remapped to its zoological counterpart via
+/// `bot_to_zool` when `ctx.requested_code == ZOOLOGICAL` — and backfills `ctx.name.code`
+/// from the (possibly-remapped) rank's own `Rank::code()` ONLY when no code was already
+/// set: unlike step 53's unconditional rank overwrite just above, this mirrors Java's own
+/// `if (r.getCode() != null && ctx.name.getCode() == null)` guard exactly. All three
+/// shapes spot-checked against the Java CLI oracle: "subgen. Trematostoma Sacc." (no
+/// caller code) -> `rank=SUBGENUS`, no `code` key at all (Subgenus carries none); "sect.
+/// Foo Bar" (no caller code) -> `rank=SECTION_BOTANY`, `code=BOTANICAL` (backfilled from
+/// `Rank::code()`); "sect. Taeda" WITH a caller-supplied ZOOLOGICAL code -> `rank=
+/// SECTION_ZOOLOGY` (remapped, not SECTION_BOTANY).
+fn strip_leading_infrageneric_marker(ctx: &mut ParseContext, s: String) -> String {
+    if let Ok(Some(caps)) = LEADING_INFRAGEN_MARKER.captures(&s) {
+        let marker = caps.get(1).unwrap().as_str().to_lowercase();
+        if let Some(mut r) = infrageneric_marker_rank(&marker) {
+            if ctx.requested_code == Some(NomCode::Zoological) {
+                if let Some(zool) = bot_to_zool(r) {
+                    r = zool;
+                }
+            }
+            ctx.name.rank = r;
+            if let Some(code) = r.code() {
+                if ctx.name.code.is_none() {
+                    ctx.name.code = Some(code);
+                }
+            }
+            let whole = caps.get(0).unwrap();
+            return java_trim(&s[whole.end()..]).to_string();
+        }
+    }
     s
 }
 
-// TODO batch 5 — Java `stashPhraseName`: BOLD/specimen-style phrase-name forms
-// ("Prostanthera sp. Somersbey (B.J.Conn 4024)") set `ctx.name.phrase` and rewrite the
-// working string to "Genus[ species] marker. [Author]" so NameTokens sees an indet name.
-fn stash_phrase_name(_ctx: &mut ParseContext, s: String) -> String {
-    s
+// ---- Step 55: stashPhraseName ----
+
+/// Java `PHRASE_RANK_MARKERS` (StripAndStash.java:1661-1668): recognised infraspecific
+/// markers that introduce a phrase name, mapped to the `Rank` they pin. Complete port —
+/// unlike its two siblings above, every key this (small, `Map.of`-literal) map lists is
+/// directly reachable, no call-site-unreachable subset to trim. Case-folded `match`;
+/// `word` must already be lower-cased by the caller.
+fn phrase_rank_marker(word: &str) -> Option<Rank> {
+    match word {
+        "sp" | "spec" => Some(Rank::Species),
+        "subsp" | "ssp" => Some(Rank::Subspecies),
+        "var" => Some(Rank::Variety),
+        "form" | "f" => Some(Rank::Form),
+        _ => None,
+    }
+}
+
+/// Java GENUS_SUBGENUS_TEST (StripAndStash.java:352-353):
+/// `^[\p{Lu}][\p{Ll}]+\s+\([\p{Lu}][\p{Ll}]+\)$`, NO flags (so Java's own `\s` here is
+/// ASCII-only, unlike its Unicode-flagged `PHRASE_GENUS_SUBGENUS` sibling right below).
+/// Has `\p{Lu}`/`\p{Ll}` -> only the `\s` atom is ASCII-scoped (not the whole pattern).
+static GENUS_SUBGENUS_TEST: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[\p{Lu}][\p{Ll}]+(?-u:\s+)\([\p{Lu}][\p{Ll}]+\)$").unwrap());
+
+/// Java PHRASE_GENUS_SUBGENUS (StripAndStash.java:280-282):
+/// `^([\p{Lu}][\p{Ll}]+)\s+\(([\p{Lu}][\p{Ll}]+)\)$`, `Pattern.UNICODE_CHARACTER_CLASS` ->
+/// keep default Unicode `\s`, ported verbatim.
+static PHRASE_GENUS_SUBGENUS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)\s+\(([\p{Lu}][\p{Ll}]+)\)$").unwrap());
+
+// `AUTHOR_START`/`find_author_start` (Java StripAndStash.java:283-285 / 1650-1657) are
+// NOT redeclared here: Java's own `findAuthorStart` is already SHARED between an earlier
+// step (`stripQuotedCultivar`, StripAndStash.java:1035, batch 2b) and this step
+// (StripAndStash.java:1609) — both call the exact same method — so batch 2b's port of
+// both already lives earlier in this file and is reused verbatim below.
+
+/// Java PHRASE_NAME (StripAndStash.java:1677-1689), `Pattern.UNICODE_CHARACTER_CLASS` ->
+/// keep default Unicode `\s`/`\d` throughout, no ASCII scoping needed anywhere in this
+/// pattern.
+///
+/// **THE LAST remaining Java possessive quantifier in `StripAndStash`** (`[^(]*+`, meant
+/// to lock the phrase's leading non-paren run so a greedy `[^(]*` can't backtrack past the
+/// first '(' looking for a balanced-parens match that isn't there). Determination: this
+/// pattern has NO lookaround and NO backreference anywhere — unlike every other
+/// possessive-bearing pattern ported so far (`STRAIN_DESIGNATION`,
+/// `PERIOD_SEPARATED_REFERENCE`, …), which all needed `fancy_regex` for an unrelated
+/// reason (a backreference or lookaround elsewhere in the same pattern) and so kept their
+/// possessive/atomic quantifiers verbatim on that backtracking engine — so this pattern
+/// needs only the plain `regex` crate. Per this port's rule (see
+/// `strip_comma_prefixed_reference`'s doc comment, batch 2d): possessive quantifiers are
+/// DROPPED on patterns that live on the linear `regex` crate, since that engine has no
+/// backtracking at all and so cannot exhibit the catastrophic-backtracking failure mode a
+/// possessive quantifier guards against — **the possessive is DROPPED here too** (`[^(]*+`
+/// ported as plain `[^(]*`). This is not merely "safe because this engine doesn't
+/// backtrack": the quantified class itself (`[^(]`, "any char but a literal '('") has
+/// exactly ONE possible stopping point for greedy OR possessive alike — right before the
+/// first literal '(' remaining in the string, since the class can never itself consume
+/// that '(' — so there is no ambiguous partition here for ANY engine, even a backtracking
+/// one, to waste time re-trying. Dropping `*+` to `*` is a provably meaning- AND
+/// performance-preserving restructuring, stronger than "merely safe on this engine".
+/// Built via `concat!` mirroring Java's own `"..." + "..."` layout, one alternative per
+/// line, so it stays directly diffable against `StripAndStash.java`.
+static PHRASE_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"^([\p{Lu}][\p{Ll}]+(?:\s+\([\p{Lu}][\p{Ll}]+\))?(?:\s+[\p{Ll}]+)?(?:\s+[\p{Lu}][\p{L}.]+)*)",
+        r"\s+(sp|spec|subsp|ssp|var|form|f)\.?",
+        r"\s+(",
+        r#"[\p{Lu}A-Z\d'"][^(]*\(.+\)[^$]*?"#,
+        r#"|['"][^'"]+['"]"#,
+        r")\s*$",
+    ))
+    .unwrap()
+});
+
+/// Java `StripAndStash.stashPhraseName` (StripAndStash.java:1595-1644). BOLD/specimen-style
+/// "phrase names" name an unidentified/undescribed taxon by a genus (optionally a species)
+/// plus a rank marker plus a free-text "phrase" distinguishing the specimen/population,
+/// e.g. "Prostanthera sp. Somersbey (B.J.Conn 4024)" — the phrase (here "Somersbey
+/// (B.J.Conn 4024)") is stashed on `ctx.name.phrase` UNCONDITIONALLY once a recognised
+/// rank marker is found, and the working string is rewritten into one of four shapes
+/// depending on the Latin prefix, so the not-yet-ported NameTokens sees a clean indet
+/// name. All four shapes spot-checked against the Java CLI oracle:
+///   - a trailing author span after the epithet(s) ("Baeckea Benth. sp. Bygalorie (ABC
+///     123)" -> working "Baeckea sp. Benth.") -> the marker is spliced BEFORE that author
+///     span so the author still trails as the species author for AuthorshipParser (not
+///     yet ported); rank is NOT pinned here — oracle confirms the eventual `rank=SPECIES`
+///     comes from downstream re-reading the reinserted "sp." marker, not from this step.
+///   - a bare genus (no species) with a marker OTHER than "sp."/"spec." ("Grevillea
+///     subsp. 'Short Leaf'" -> `rank=SUBSPECIES`, working "Grevillea") -> rank pinned
+///     directly, marker dropped entirely.
+///   - a "Genus (Subgenus)" prefix ("Acacia (Botrycephalae) sp. Bygalorie (P.G.Wilson
+///     2585)" -> `rank=SPECIES`, `infragenericEpithet=Botrycephalae`, working "Acacia")
+///     -> rank pinned, the subgenus extracted directly onto
+///     `ctx.name.infrageneric_epithet` and dropped from the working string, leaving the
+///     bare genus for AuthorshipSplit's own subgenus-defaulting.
+///   - anything else, i.e. a bare genus with a "sp."/"spec." marker, or a full "Genus
+///     species" prefix ("Prostanthera sp. Somersbey (B.J.Conn 4024)" -> working
+///     "Prostanthera sp.", rank left untouched by this step) -> the marker is appended
+///     back verbatim ("Genus[ species] marker.").
+fn stash_phrase_name(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = PHRASE_NAME.captures(&s) else {
+        return s;
+    };
+    let prefix = collapse_whitespace(caps.get(1).unwrap().as_str());
+    let marker = caps.get(2).unwrap().as_str();
+    let phrase = collapse_whitespace(caps.get(3).unwrap().as_str());
+    let Some(rank) = phrase_rank_marker(&marker.to_lowercase()) else {
+        return s;
+    };
+    ctx.name.phrase = Some(phrase);
+
+    // Java re-trims `prefix` via `.trim()` at each of the three call sites below
+    // (`.contains(" ")`, `GENUS_SUBGENUS_TEST`, `PHRASE_GENUS_SUBGENUS`) even though
+    // `prefix` was already fully collapsed-and-trimmed by `collapse_whitespace` above — a
+    // defensive no-op given that, so it is not repeated at each site here.
+    let author_start = find_author_start(&prefix);
+    let prefix_is_genus_only = !prefix.contains(' ');
+    let prefix_is_genus_plus_subgenus = GENUS_SUBGENUS_TEST.is_match(&prefix);
+
+    if let Some(author_start) = author_start {
+        // Splice the marker BEFORE the author span so it trails as the species author for
+        // AuthorshipParser (not yet ported) to pick up; rank is intentionally left
+        // untouched here — the reinserted "marker." drives the rank downstream instead.
+        format!(
+            "{} {marker}. {}",
+            java_trim(&prefix[..author_start]),
+            java_trim(&prefix[author_start..]),
+        )
+    } else if prefix_is_genus_only && rank != Rank::Species {
+        ctx.name.rank = rank;
+        prefix
+    } else if prefix_is_genus_plus_subgenus {
+        ctx.name.rank = rank;
+        match PHRASE_GENUS_SUBGENUS.captures(&prefix) {
+            Some(gm) => {
+                ctx.name.infrageneric_epithet = Some(gm.get(2).unwrap().as_str().to_string());
+                gm.get(1).unwrap().as_str().to_string()
+            }
+            None => prefix,
+        }
+    } else {
+        format!("{prefix} {marker}.")
+    }
 }
 
 #[cfg(test)]
@@ -2724,26 +3027,27 @@ mod tests {
     }
 
     /// Phase 1 Slice 2 Task 2 locked the dispatcher order down with every one of the 55
-    /// steps a pure passthrough. Batches 1, 2b, 2c and 2d (steps 1-52) now carry a faithful
-    /// port, but a clean, unremarkable binomial should still round-trip untouched: none of
-    /// steps 1-19's guard conditions (a trailing/glued "?", a quoted leading monomial, a
-    /// "Missing "/lowercase-epithet prefix, Greek/star markers, a letter-subdivision
-    /// marker, "str"/"strain", imprint-year brackets, "null" between epithets, Unicode
-    /// hyphen/Win-1252/double-underscore artefacts, a trailing OTU code, serovar/serotype,
-    /// an angle bracket, or HTML), steps 20-30's (a "Candidatus"/"Ca." prefix, a
-    /// horticultural "ex" placeholder, a cultivar Group/grex/quoted epithet, an extinction
-    /// dagger, a "t.infr." marker, a bracketed genus, "sic"/"corrig.", a synonymy bracket,
-    /// or a nom/comb/orth/nomen/sp.nov./pro-syn. keyword), steps 31-44's (an authorship
-    /// placeholder, a trailing " species", "pro parte"/"p.p.", a "(pro sp.)" annotation,
-    /// "(Approved Lists YYYY)", "mihi", "Anon"/"anon", or any of the six
-    /// taxonomic-note/aggregate-suffix keywords), nor steps 45-52's (a trailing page
-    /// reference, "in press", a parenthesised or trailing "in"/"apud" citation, an IPNI/
-    /// period-/comma-separated reference, or a manuscript marker) fire on "Abies alba
-    /// Mill.". Steps 53-55 remain no-op stubs regardless. This still locks the same
-    /// invariant Task 2 established — a batch landing later can't silently leave a stub
-    /// half-wired — just no longer via literally every step being a no-op.
+    /// steps a pure passthrough. Batches 1, 2b, 2c, 2d and 2e (steps 1-55, ALL of them as
+    /// of this batch) now carry a faithful port, but a clean, unremarkable binomial should
+    /// still round-trip untouched: none of steps 1-19's guard conditions (a trailing/glued
+    /// "?", a quoted leading monomial, a "Missing "/lowercase-epithet prefix, Greek/star
+    /// markers, a letter-subdivision marker, "str"/"strain", imprint-year brackets, "null"
+    /// between epithets, Unicode hyphen/Win-1252/double-underscore artefacts, a trailing
+    /// OTU code, serovar/serotype, an angle bracket, or HTML), steps 20-30's (a
+    /// "Candidatus"/"Ca." prefix, a horticultural "ex" placeholder, a cultivar
+    /// Group/grex/quoted epithet, an extinction dagger, a "t.infr." marker, a bracketed
+    /// genus, "sic"/"corrig.", a synonymy bracket, or a nom/comb/orth/nomen/sp.nov./
+    /// pro-syn. keyword), steps 31-44's (an authorship placeholder, a trailing " species",
+    /// "pro parte"/"p.p.", a "(pro sp.)" annotation, "(Approved Lists YYYY)", "mihi",
+    /// "Anon"/"anon", or any of the six taxonomic-note/aggregate-suffix keywords), steps
+    /// 45-52's (a trailing page reference, "in press", a parenthesised or trailing
+    /// "in"/"apud" citation, an IPNI/period-/comma-separated reference, or a manuscript
+    /// marker), nor steps 53-55's (a suprarank/leading-infrageneric-rank prefix, or a
+    /// phrase-name shape) fire on "Abies alba Mill.". This still locks the same invariant
+    /// Task 2 established — a batch landing later can't silently leave a step half-wired —
+    /// just now over the complete, fully-ported 55-step dispatcher rather than 55 no-ops.
     #[test]
-    fn run_is_a_complete_noop_until_the_batches_land() {
+    fn run_leaves_a_clean_binomial_untouched() {
         let mut c = ParseContext::new("Abies alba Mill.".to_string(), None, None, None);
         let before_working = c.working.clone();
         let before_name = c.name.clone();
@@ -5273,5 +5577,278 @@ mod tests {
         assert_eq!(c.name.nomenclatural_note, Some("ms".to_string()));
         assert_eq!(c.name.published_in, Some("Chimonides, 1987".to_string()));
         assert_eq!(c.name.published_in_year, Some(1987));
+    }
+
+    // ---- Step 53: stripSupraRankPrefix ----
+
+    #[test]
+    fn bare_suprageneric_marker_pins_rank_and_strips_the_marker() {
+        // Oracle-verified: "subtrib. Scolochloinae Soreng" -> rank=SUBTRIBE,
+        // uninomial=Scolochloinae, authors=[Soreng].
+        let mut c = ctx("x");
+        let out = strip_supra_rank_prefix(&mut c, "subtrib. Scolochloinae Soreng".to_string());
+        assert_eq!(out, "Scolochloinae Soreng");
+        assert_eq!(c.name.rank, Rank::Subtribe);
+    }
+
+    #[test]
+    fn family_prefixed_suprageneric_marker_strips_both_family_and_marker() {
+        // Oracle-verified: "Poaceae subtrib. Scolochloinae Soreng" -> IDENTICAL parse to
+        // the bare-marker form above (rank=SUBTRIBE, uninomial=Scolochloinae) — the
+        // family prefix "Poaceae" is discarded entirely, not preserved anywhere.
+        let mut c = ctx("x");
+        let out =
+            strip_supra_rank_prefix(&mut c, "Poaceae subtrib. Scolochloinae Soreng".to_string());
+        assert_eq!(out, "Scolochloinae Soreng");
+        assert_eq!(c.name.rank, Rank::Subtribe);
+    }
+
+    #[test]
+    fn tribe_and_subfamily_markers_are_also_recognised() {
+        // Oracle-verified: "trib. Triticeae Dumort." -> rank=TRIBE; "subfam. Pooideae" ->
+        // rank=SUBFAMILY.
+        let mut c1 = ctx("x");
+        let out1 = strip_supra_rank_prefix(&mut c1, "trib. Triticeae Dumort.".to_string());
+        assert_eq!(out1, "Triticeae Dumort.");
+        assert_eq!(c1.name.rank, Rank::Tribe);
+
+        let mut c2 = ctx("x");
+        let out2 = strip_supra_rank_prefix(&mut c2, "subfam. Pooideae".to_string());
+        assert_eq!(out2, "Pooideae");
+        assert_eq!(c2.name.rank, Rank::Subfamily);
+    }
+
+    #[test]
+    fn no_supra_rank_prefix_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_supra_rank_prefix(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.rank, Rank::Unranked);
+    }
+
+    // ---- Step 54: stripLeadingInfragenericMarker ----
+
+    #[test]
+    fn leading_infragen_marker_pins_rank_and_strips_the_marker() {
+        // Oracle-verified: "subgen. Trematostoma Sacc." -> rank=SUBGENUS, no `code` key at
+        // all in the wire output (Subgenus carries none — no backfill).
+        let mut c = ctx("x");
+        let out =
+            strip_leading_infrageneric_marker(&mut c, "subgen. Trematostoma Sacc.".to_string());
+        assert_eq!(out, "Trematostoma Sacc.");
+        assert_eq!(c.name.rank, Rank::Subgenus);
+        assert_eq!(c.name.code, None);
+    }
+
+    #[test]
+    fn leading_infragen_marker_backfills_unset_code_from_the_ranks_own_code() {
+        // Oracle-verified: "sect. Foo Bar" (no caller-supplied code) -> rank=SECTION_BOTANY,
+        // code=BOTANICAL (backfilled — Subgenus above has no code, but SectionBotany does).
+        let mut c = ctx("x");
+        let out = strip_leading_infrageneric_marker(&mut c, "sect. Foo Bar".to_string());
+        assert_eq!(out, "Foo Bar");
+        assert_eq!(c.name.rank, Rank::SectionBotany);
+        assert_eq!(c.name.code, Some(NomCode::Botanical));
+    }
+
+    #[test]
+    fn leading_infragen_marker_no_trailing_dot_form_is_also_recognised() {
+        // The marker's trailing dot is optional (`\.?`); "series" (no dot) must match too.
+        let mut c = ctx("x");
+        let out = strip_leading_infrageneric_marker(&mut c, "series Foo Bar".to_string());
+        assert_eq!(out, "Foo Bar");
+        assert_eq!(c.name.rank, Rank::SeriesBotany);
+        assert_eq!(c.name.code, Some(NomCode::Botanical));
+    }
+
+    #[test]
+    fn leading_infragen_marker_remaps_to_zoological_counterpart_under_zoological_code() {
+        // Oracle-verified (via a ColDP TSV row with code=Zoological): "sect. Taeda" ->
+        // rank=SECTION_ZOOLOGY (remapped from SECTION_BOTANY), not SECTION_BOTANY.
+        let mut c = ParseContext::new("x".to_string(), None, None, Some(NomCode::Zoological));
+        let out = strip_leading_infrageneric_marker(&mut c, "sect. Taeda".to_string());
+        assert_eq!(out, "Taeda");
+        assert_eq!(c.name.rank, Rank::SectionZoology);
+        assert_eq!(c.name.code, Some(NomCode::Zoological));
+    }
+
+    #[test]
+    fn leading_infragen_marker_subgenus_has_no_zoological_counterpart_to_remap_to() {
+        // Oracle-verified (via a ColDP TSV row with code=Zoological): "subgen. Trematostoma
+        // Sacc." -> rank stays SUBGENUS even under a caller-supplied ZOOLOGICAL code — Java's
+        // BOT_TO_ZOOL map has no SUBGENUS entry, so `bot_to_zool` returns None and the rank
+        // is left as-is (`r` unchanged, not remapped).
+        let mut c = ParseContext::new("x".to_string(), None, None, Some(NomCode::Zoological));
+        let out =
+            strip_leading_infrageneric_marker(&mut c, "subgen. Trematostoma Sacc.".to_string());
+        assert_eq!(out, "Trematostoma Sacc.");
+        assert_eq!(c.name.rank, Rank::Subgenus);
+    }
+
+    #[test]
+    fn leading_infragen_marker_does_not_overwrite_an_already_set_code() {
+        // Java: `if (r.getCode() != null && ctx.name.getCode() == null)` — an existing
+        // code (e.g. from an earlier step in the same run, such as strip_candidatus
+        // setting BACTERIAL) must survive untouched, unlike step 53's unconditional rank
+        // overwrite.
+        let mut c = ctx("x");
+        c.name.code = Some(NomCode::Bacterial);
+        let out = strip_leading_infrageneric_marker(&mut c, "sect. Foo Bar".to_string());
+        assert_eq!(out, "Foo Bar");
+        assert_eq!(c.name.rank, Rank::SectionBotany, "rank is still pinned");
+        assert_eq!(
+            c.name.code,
+            Some(NomCode::Bacterial),
+            "a pre-existing code must not be overwritten"
+        );
+    }
+
+    #[test]
+    fn no_leading_infragen_marker_is_untouched() {
+        let mut c = ctx("x");
+        let out = strip_leading_infrageneric_marker(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.rank, Rank::Unranked);
+        assert_eq!(c.name.code, None);
+    }
+
+    // ---- Step 55: stashPhraseName ----
+
+    #[test]
+    fn phrase_name_bare_genus_with_species_marker_sets_phrase_but_leaves_rank_untouched() {
+        // Oracle-verified: "Prostanthera sp. Somersbey (B.J.Conn 4024)" -> phrase=
+        // "Somersbey (B.J.Conn 4024)". The eventual full-pipeline `rank=SPECIES` comes from
+        // NameTokens (not yet ported) re-reading the reinserted "sp." marker, NOT from this
+        // step directly — Java's own stashPhraseName has no setRank call on this branch.
+        let mut c = ctx("x");
+        let out = stash_phrase_name(
+            &mut c,
+            "Prostanthera sp. Somersbey (B.J.Conn 4024)".to_string(),
+        );
+        assert_eq!(out, "Prostanthera sp.");
+        assert_eq!(c.name.phrase, Some("Somersbey (B.J.Conn 4024)".to_string()));
+        assert_eq!(
+            c.name.rank,
+            Rank::Unranked,
+            "bare genus + \"sp.\" marker must NOT pin rank directly in this step"
+        );
+    }
+
+    #[test]
+    fn phrase_name_bare_genus_with_non_species_marker_pins_rank_and_drops_the_marker() {
+        // Oracle-verified: "Grevillea subsp. 'Short Leaf'" -> rank=SUBSPECIES,
+        // phrase="'Short Leaf'" (quotes are part of the captured phrase text, not
+        // stripped), uninomial reduces to the bare genus "Grevillea".
+        let mut c = ctx("x");
+        let out = stash_phrase_name(&mut c, "Grevillea subsp. 'Short Leaf'".to_string());
+        assert_eq!(out, "Grevillea");
+        assert_eq!(c.name.rank, Rank::Subspecies);
+        assert_eq!(c.name.phrase, Some("'Short Leaf'".to_string()));
+    }
+
+    #[test]
+    fn phrase_name_digit_leading_quoted_phrase_is_also_recognised() {
+        // Oracle-verified: "Baeckea ssp. 2 (LJM 2019)" -> rank=SUBSPECIES,
+        // phrase="2 (LJM 2019)" — group 3's first alternative allows a leading digit.
+        let mut c = ctx("x");
+        let out = stash_phrase_name(&mut c, "Baeckea ssp. 2 (LJM 2019)".to_string());
+        assert_eq!(out, "Baeckea");
+        assert_eq!(c.name.rank, Rank::Subspecies);
+        assert_eq!(c.name.phrase, Some("2 (LJM 2019)".to_string()));
+    }
+
+    #[test]
+    fn phrase_name_genus_plus_subgenus_extracts_infrageneric_epithet() {
+        // Oracle-verified: "Acacia (Botrycephalae) sp. Bygalorie (P.G.Wilson 2585)" ->
+        // rank=SPECIES, infragenericEpithet=Botrycephalae, uninomial reduces to "Acacia"
+        // (the "(Botrycephalae)" parens are dropped from the working string entirely,
+        // extracted onto a dedicated field instead).
+        let mut c = ctx("x");
+        let out = stash_phrase_name(
+            &mut c,
+            "Acacia (Botrycephalae) sp. Bygalorie (P.G.Wilson 2585)".to_string(),
+        );
+        assert_eq!(out, "Acacia");
+        assert_eq!(c.name.rank, Rank::Species);
+        assert_eq!(
+            c.name.infrageneric_epithet,
+            Some("Botrycephalae".to_string())
+        );
+        assert_eq!(
+            c.name.phrase,
+            Some("Bygalorie (P.G.Wilson 2585)".to_string())
+        );
+    }
+
+    #[test]
+    fn phrase_name_trailing_author_splices_the_marker_before_the_author() {
+        // Oracle-verified: "Baeckea Benth. sp. Bygalorie (ABC 123)" -> working rewritten to
+        // "Baeckea sp. Benth." (marker moved BEFORE the author span so it trails as the
+        // species author for AuthorshipParser, not yet ported); rank untouched by this step
+        // (same "downstream infers it from the reinserted marker" situation as the bare
+        // "sp."-marker case above).
+        let mut c = ctx("x");
+        let out = stash_phrase_name(&mut c, "Baeckea Benth. sp. Bygalorie (ABC 123)".to_string());
+        assert_eq!(out, "Baeckea sp. Benth.");
+        assert_eq!(c.name.phrase, Some("Bygalorie (ABC 123)".to_string()));
+        assert_eq!(c.name.rank, Rank::Unranked);
+    }
+
+    #[test]
+    fn phrase_name_double_quoted_phrase_without_parens_is_also_recognised() {
+        // Oracle-verified: "Prostanthera sp. \"Big Leaf\"" -> phrase="\"Big Leaf\""
+        // (quotes kept verbatim, matching group 3's second, no-parens alternative).
+        let mut c = ctx("x");
+        let out = stash_phrase_name(&mut c, "Prostanthera sp. \"Big Leaf\"".to_string());
+        assert_eq!(out, "Prostanthera sp.");
+        assert_eq!(c.name.phrase, Some("\"Big Leaf\"".to_string()));
+    }
+
+    #[test]
+    fn phrase_without_parens_or_quotes_is_not_recognised_as_a_phrase_name() {
+        // Group 3 requires EITHER parens OR quotes in the phrase text; a bare trailing
+        // author span with neither ("P.G.Wilson 2585 F.Muell.") must not match at all —
+        // oracle-verified: this exact string parses via the ordinary (doubtful) authorship
+        // path instead, with no `phrase` field set.
+        let mut c = ctx("x");
+        let out = stash_phrase_name(&mut c, "Baeckea sp. P.G.Wilson 2585 F.Muell.".to_string());
+        assert_eq!(out, "Baeckea sp. P.G.Wilson 2585 F.Muell.");
+        assert_eq!(c.name.phrase, None);
+    }
+
+    #[test]
+    fn no_phrase_name_shape_is_untouched() {
+        let mut c = ctx("x");
+        let out = stash_phrase_name(&mut c, "Abies alba Mill.".to_string());
+        assert_eq!(out, "Abies alba Mill.");
+        assert_eq!(c.name.phrase, None);
+        assert_eq!(c.name.rank, Rank::Unranked);
+    }
+
+    // ---- Batch 2e cross-step interaction (full `run()`) ----
+
+    #[test]
+    fn full_run_strips_a_leading_infrageneric_marker_and_backfills_the_code() {
+        // Oracle-verified end-to-end: "sect. Taeda" -> rank=SECTION_BOTANY, code=BOTANICAL,
+        // with none of steps 1-52 interfering before step 54 gets to it (a bare "sect."
+        // prefix has a period right after it, so it doesn't trip step 4's
+        // missing-genus-placeholder heuristic the way an unpunctuated word would).
+        let mut c = ctx("sect. Taeda");
+        run(&mut c);
+        assert_eq!(c.working, "Taeda");
+        assert_eq!(c.name.rank, Rank::SectionBotany);
+        assert_eq!(c.name.code, Some(NomCode::Botanical));
+    }
+
+    #[test]
+    fn full_run_stashes_a_phrase_name() {
+        // Oracle-verified end-to-end (StripAndStash's own contribution): "Prostanthera sp.
+        // Somersbey (B.J.Conn 4024)" -> phrase="Somersbey (B.J.Conn 4024)", working
+        // rewritten to "Prostanthera sp." — none of steps 1-52 interfere on this clean,
+        // capital-letter-led input before step 55 gets to it.
+        let mut c = ctx("Prostanthera sp. Somersbey (B.J.Conn 4024)");
+        run(&mut c);
+        assert_eq!(c.working, "Prostanthera sp.");
+        assert_eq!(c.name.phrase, Some("Somersbey (B.J.Conn 4024)".to_string()));
     }
 }
