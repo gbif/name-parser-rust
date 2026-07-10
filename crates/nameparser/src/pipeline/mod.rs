@@ -2,8 +2,11 @@
 //! Java `org.gbif.nameparser.pipeline.Pipeline` — orchestrates the staged parsing
 //! pipeline. Each stage mutates the shared [`ParseContext`].
 
+pub(crate) mod assemble;
 pub(crate) mod authorship_parser;
 pub(crate) mod authorship_split;
+pub(crate) mod blacklisted_epithets;
+pub(crate) mod code_inference;
 pub(crate) mod context;
 pub(crate) mod name_tokens;
 pub(crate) mod preflight;

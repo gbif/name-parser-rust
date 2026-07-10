@@ -16,7 +16,13 @@ pub enum NameType {
 
 /// Java `org.gbif.nameparser.api.NomCode`. Nomenclatural codes governing biological taxonomic
 /// nomenclature.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+///
+/// `Hash` (beyond the `Rank`-parity `Debug, Clone, Copy, PartialEq, Eq, Serialize` set) is
+/// needed for `pipeline::code_inference::infer`'s vote tally, a `HashSet<NomCode>` mirroring
+/// Java's `EnumSet<NomCode> votes` (`CodeInference.java:66`) — added here (Phase 1 Slice 4
+/// Task 3) rather than duplicated as a local newtype, since `Rank` already sets this same
+/// precedent (it derives `Hash` for its own `HashMap`/`HashSet` static tables above).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum NomCode {
     Bacterial,

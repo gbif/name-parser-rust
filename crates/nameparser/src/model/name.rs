@@ -47,6 +47,15 @@ impl Authorship {
     pub fn exists(&self) -> bool {
         !self.authors.is_empty() || self.year.is_some()
     }
+
+    /// Java `Authorship.hasAuthors()`: true if `authors` is non-empty. (Java's own
+    /// null-guard, `authors != null && …`, is unreachable here — `Vec<String>` is eagerly
+    /// initialized and never absent, matching the field's Java default `= new
+    /// ArrayList<>()`.) Used by `pipeline::code_inference`'s vote tally, distinct from
+    /// [`Self::exists`] (which additionally counts a bare year with no authors).
+    pub fn has_authors(&self) -> bool {
+        !self.authors.is_empty()
+    }
 }
 
 /// Java `org.gbif.nameparser.api.CombinedAuthorship`. Bundles the combination
