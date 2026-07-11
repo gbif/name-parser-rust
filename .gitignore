@@ -27,3 +27,9 @@ testdata/*.tsv
 # Phase 4a: project-local Python venv used to build/test crates/nameparser-py via maturin.
 # Never commit a venv or a built wheel (target/wheels/ is already covered by /target above).
 /.venv/
+
+# Phase 4a: pytest/CPython bytecode-cache artifacts generated under crates/nameparser-py/python/
+# by every `pytest` run — never source, regenerated locally on demand.
+__pycache__/
+*.pyc
+.pytest_cache/

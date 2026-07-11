@@ -10,6 +10,6 @@ requires-python = ">=3.9"
 license = { text = "Apache-2.0" }
 
 [tool.maturin]
-manifest-path = "crates/nameparser-py/Cargo.toml"
+manifest-path = "Cargo.toml"
 module-name = "nameparser"
 features = ["pyo3/extension-module"]
