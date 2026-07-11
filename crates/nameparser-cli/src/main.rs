@@ -549,7 +549,9 @@ impl BenchmarkReport {
             .collect();
         // Stable sort, descending by count — ties keep `entries`' incoming order, which is
         // NAME_TYPES' ordinal order, matching Java's `EnumMap`-iteration-then-stable-sort.
-        entries.sort_by(|a, b| b.1.cmp(&a.1));
+        // `Reverse` (not `b.cmp(a)`) so the sort stays keyed and clippy-clean while preserving
+        // both the descending order and the stable tie order.
+        entries.sort_by_key(|e| std::cmp::Reverse(e.1));
         for (t, c) in entries {
             writeln!(out, "  {:<20} {c}", name_type_label(t))?;
         }
