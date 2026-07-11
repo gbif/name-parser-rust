@@ -13,3 +13,6 @@ testdata/*.rust.jsonl
 
 # IDE
 /.idea/
+
+# subagent-driven-development scratch (briefs, reports, ledger)
+/.superpowers/
