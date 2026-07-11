@@ -165,6 +165,7 @@ fn hint(o: &Nullable<String>) -> Option<&str> {
 /// Low-level column-list builder behind the R wrapper `parse_names()` (`bindings/r/R/parse.R`).
 /// Not exported — kept package-internal, since it returns a raw named `List` of parallel
 /// columns rather than the tibble users should call.
+/// @noRd
 #[extendr]
 fn parse_names_impl(
     scientificname: Vec<String>,
@@ -236,6 +237,7 @@ fn unparsable_json(e: &::nameparser_core::model::ParseError) -> String {
 
 /// Lossless escape hatch + parity oracle: the core's own serde JSON for one name
 /// (byte-identical to the CLI's `parsed` object), or `{"error":{…}}` on failure.
+/// @noRd
 #[extendr]
 fn parse_name_json_impl(
     name: String,

@@ -1,15 +1,10 @@
 [package]
 name = "nameparser"
-# NOT "0.0.0": the core crate (../../../../crates/nameparser) is ALSO named
-# "nameparser" and ALSO pinned at version 0.0.0 (repo convention for unpublished
-# crates). Two packages with the identical (name, version) pair from different
-# paths cannot coexist in one Cargo lockfile — "error: package collision in the
-# lockfile" — so this crate (which, uniquely among the bindings, must share the
-# core's exact name for R's `useDynLib(nameparser)`/import-name conventions) is the
-# one that has to take a different version. The R-facing version lives in
-# DESCRIPTION's `Version: 0.0.0.9000` (Step 6) regardless; this is purely to
-# satisfy Cargo.
-version = "0.0.1"
+# Aligned with the core crate (scientific-name-parser 0.1.0) and DESCRIPTION's Version: 0.1.0.
+# (The lockfile-collision that once forced a distinct version is gone: the core was renamed
+# from `nameparser` 0.0.0 to `scientific-name-parser`, so no (name, version) clash remains.
+# This crate's lib target still keeps the short name `nameparser` for R's useDynLib.)
+version = "0.1.0"
 edition = "2021"
 
 [lib]
