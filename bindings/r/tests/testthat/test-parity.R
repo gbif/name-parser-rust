@@ -19,8 +19,11 @@ testthat::test_that("parse_name_json matches the Java CLI oracle over the benchm
   testthat::expect_equal(length(names_vec), length(expected))
 
   norm <- function(o) {
-    # sort the warnings set (Java HashSet order vs our Vec order) then re-serialize with
-    # sorted keys, so the compare ignores warnings-order + object-key-order only.
+    # Normalize ONLY the warnings set (Java HashSet order vs our Vec order) before comparing.
+    # Object key order is NOT normalized here — jsonlite::toJSON preserves the list's order —
+    # so the compare relies on ParsedName's field-declaration order being pinned to match the
+    # Java oracle's key order by design (a core-crate wire-format guarantee). Net effect: a
+    # genuine field/value difference fails; only warnings-set ordering is ignored.
     if (!is.null(o$warnings)) o$warnings <- sort(unlist(o$warnings))
     jsonlite::toJSON(o, auto_unbox = TRUE, null = "null")
   }
