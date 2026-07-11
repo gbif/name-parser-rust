@@ -7,33 +7,44 @@
 //! of the Java subsystem this ports, and `docs/superpowers/plans/2026-07-11-phase4c-validate.md`
 //! for the task breakdown and Global Constraints binding every task in this port.
 //!
-//! ## Status: sampling core wired (Phase 4c Task 2)
+//! ## Status: prompt + verdict model + tolerant parsing wired (Phase 4c Task 3)
 //!
 //! Task 1 provided the pieces that need no LLM/HTTP/sampling machinery: the [`ValidateArgs`]
 //! CLI surface, [`is_barcode_otu`] (`BarcodeOtuFilter`), and [`is_interesting`] (the
 //! "suspicious tail" predicate, `ValidateCli.isInteresting`).
 //!
-//! Task 2 (this task) adds the reproducible-sampling core: [`JavaRandom`] (a bit-exact
-//! hand-port of `java.util.Random`'s 48-bit LCG), [`Reservoir`] (Algorithm R over
-//! [`JavaRandom`]), and [`select`] (`ValidateCli.select` — the single-pass corpus scan that
-//! pre-filters barcode/OTU codes, parses the rest, and reservoir-samples a bounded,
-//! line-ordered `interesting + ordinary` selection). [`run_validate`] now runs `select` and,
-//! for `--dry-run`, writes the verdict-less JSONL report and prints the batch-count summary —
-//! matching `ValidateCli.main`'s Phase 1 plus the dry-run half of Phase 2. A non-dry-run
-//! invocation still isn't implemented: it runs the same selection scan (so its stderr summary
-//! is real) but then reports that judging isn't wired up yet, rather than either silently
-//! doing nothing or attempting an LLM call with no client to make it. The judge/report loop
-//! for a REAL run — the LLM clients, the verdict cache, per-chunk judging, the first-batch
-//! prompt-payload dump — lands in Tasks 3-5.
+//! Task 2 added the reproducible-sampling core: [`JavaRandom`] (a bit-exact hand-port of
+//! `java.util.Random`'s 48-bit LCG), [`Reservoir`] (Algorithm R over [`JavaRandom`]), and
+//! [`select`] (`ValidateCli.select` — the single-pass corpus scan that pre-filters barcode/OTU
+//! codes, parses the rest, and reservoir-samples a bounded, line-ordered `interesting +
+//! ordinary` selection).
+//!
+//! Task 3 (this task) adds the LLM-message layer, with no HTTP client behind it yet:
+//! [`ValidationPrompt`] (`llm.ValidationPrompt` — the verbatim system/output-instruction prompt
+//! text plus [`ValidationPrompt::user_message`], the per-batch request payload builder),
+//! [`Verdict`]/[`FieldIssue`] (`llm.Verdict` — the model's reply shape, with `FieldIssue`'s
+//! four fields tolerantly coerced to display strings), and [`parse_verdicts`] (`llm.Verdicts.parse`
+//! — the tolerant `{"verdicts":[...]}` extractor: `<think>` traces, markdown fences/preamble,
+//! and a `max_tokens`-truncated trailing object are all handled the same way Java's does).
+//! `run_validate`'s `--dry-run` path now also dumps the exact first-batch request payload to
+//! stderr (`ValidationPrompt::user_message` over the first `min(batch, chosen.len())` items),
+//! matching Java's `dumpFirstBatch`. A non-dry-run invocation still isn't implemented: it runs
+//! the same selection scan (so its stderr summary is real) but then reports that judging isn't
+//! wired up yet, rather than either silently doing nothing or attempting an LLM call with no
+//! client to make it. The LLM clients (HTTP), the verdict cache, and the per-chunk judge/report
+//! loop land in Tasks 4-5.
 //!
 //! `nameparser-cli` is a binary-only crate (no library target), so `pub` here doesn't exempt an
 //! item from the `dead_code` lint the way it would in a library. [`run_validate`] now reaches
 //! most of this module's items through [`select`] (which itself calls [`is_barcode_otu`],
-//! [`nameparser::parse`], [`is_interesting`], and both [`Reservoir`]/[`JavaRandom`]), but a few
+//! [`nameparser::parse`], [`is_interesting`], and both [`Reservoir`]/[`JavaRandom`]) and through
+//! the new dry-run payload dump (which calls [`ValidationPrompt::user_message`]), but a few
 //! items still have no caller outside this module's own tests: `ValidateArgs`'s `provider`/
-//! `model`/`cache`/`api_url` fields (read once the LLM client exists, Tasks 3-4) and
-//! [`Reservoir::seen`] (kept for parity with Java `Reservoir.seen()`, exercised by this
-//! module's own reservoir tests). The blanket allow stays until those land.
+//! `model`/`cache`/`api_url` fields (read once the LLM client exists, Task 4),
+//! [`Reservoir::seen`] (kept for parity with Java `Reservoir.seen()`, exercised by this module's
+//! own reservoir tests), [`ValidationPrompt::VERSION`] (feeds the verdict-cache key, Task 5),
+//! and [`parse_verdicts`]/[`Verdict::is_ok`] (called by the HTTP clients, Task 4). The blanket
+//! allow stays until those land.
 
 #![allow(dead_code)]
 
@@ -46,6 +57,8 @@ use std::time::Instant;
 use clap::Args;
 use nameparser::model::{NameType, ParseError, ParsedName, State};
 use regex::Regex;
+use serde::{Deserialize, Deserializer};
+use serde_json::value::RawValue;
 
 /// Options for `nameparser-cli validate`, mirroring the Java CLI's `ValidateCli` option set —
 /// see `VALIDATE.md`'s option table / `ValidateCli`'s `printUsage()`, cross-checked in the
@@ -124,14 +137,15 @@ pub struct ValidateArgs {
 ///
 /// Phase 2: for `--dry-run`, writes one verdict-less JSONL report row per `chosen` item to
 /// `args.output` (matching `ValidateCli.reportRow(r, null)` — no `verdict`/`confidence`/
-/// `note`/`fields`, since no cache or judge exists yet) and prints the same
+/// `note`/`fields`, since no cache or judge exists yet), prints the same
 /// `"Dry run: built N batches..."` summary line Java prints, batching `chosen` into
 /// `args.batch`-sized (clamped to at least 1, matching Java's `Math.max(1, batch)`) chunks
-/// purely to report how many batches a real run would send — no batch's contents are used for
-/// anything else yet (the first-batch prompt-payload dump is Task 3, once `ValidationPrompt`
-/// exists to build it).
+/// purely to report how many batches a real run would send, then (`ValidateCli.dumpFirstBatch`)
+/// dumps the exact first-batch request payload — [`ValidationPrompt::user_message`] over the
+/// first `min(batch, chosen.len())` chosen items — to stderr, so a user can inspect cost/shape
+/// without spending anything.
 ///
-/// For a non-dry-run, there is no `Judge`/LLM client to call yet (Tasks 3-4), so rather than
+/// For a non-dry-run, there is no `Judge`/LLM client to call yet (Task 4), so rather than
 /// silently doing nothing or panicking on an absent client, this prints a clear "not
 /// implemented yet, use --dry-run" message and returns — the Phase 1 scan (and its stderr
 /// summary) still ran for real above.
@@ -151,15 +165,26 @@ pub fn run_validate(args: ValidateArgs) -> io::Result<()> {
 
     let batch = args.batch.max(1);
     let num_batches = chosen.len().div_ceil(batch);
-    // TODO(Task 3): once `ValidationPrompt` exists, also dump the exact first-batch request
-    // payload here (`ValidationPrompt::user_message` over the first `min(batch, chosen.len())`
-    // chosen items), matching Java's `dumpFirstBatch`.
     eprintln!(
         "Dry run: built {num_batches} batches for {} names, no API calls made. Report → {}",
         chosen.len(),
         crate::absolute_path(&args.output).display()
     );
+    dump_first_batch(&chosen, batch);
     Ok(())
+}
+
+/// Java `ValidateCli.dumpFirstBatch`: if `chosen` is non-empty, prints the exact request
+/// payload the first real batch would send — a blank line, a header line, then
+/// [`ValidationPrompt::user_message`] over the first `min(batch, chosen.len())` items.
+fn dump_first_batch(chosen: &[Item], batch: usize) {
+    if chosen.is_empty() {
+        return;
+    }
+    let first = &chosen[..batch.min(chosen.len())];
+    eprintln!();
+    eprintln!("--- first batch payload (dry run) ---");
+    eprintln!("{}", ValidationPrompt::user_message(first));
 }
 
 /// Writes one JSONL report row per `chosen` item, reusing [`crate::render_row`] — the exact
@@ -512,6 +537,378 @@ pub fn select(args: &ValidateArgs) -> (Vec<Item>, ScanCounts) {
     (chosen, counts)
 }
 
+// ---------------------------------------------------------------------------------------
+// ValidationPrompt — the LLM judging prompt (Java `llm.ValidationPrompt`)
+// ---------------------------------------------------------------------------------------
+
+/// Namespace for the LLM judging prompt, mirroring Java's `ValidationPrompt` (a `final class`
+/// with only static members and a private constructor) — kept as a zero-sized type with
+/// associated consts/fns, rather than free items, so call sites read `ValidationPrompt::SYSTEM`
+/// / `ValidationPrompt::user_message(...)`, matching the Java call sites 1:1.
+///
+/// The system prompt encodes the parser's own documented conventions (this repo's `CLAUDE.md`
+/// "Authorship conventions") so the judging model holds the parser to *its own contract* rather
+/// than to the model's guesswork about how names "should" be structured — see the recon doc §4
+/// for the full verified transcription this was checked against.
+pub struct ValidationPrompt;
+
+impl ValidationPrompt {
+    /// Bumped on any change to the system prompt or payload shape; feeds the verdict-cache key
+    /// (a later task) so cached verdicts from an older prompt are never reused silently.
+    pub const VERSION: &'static str = "v1";
+
+    /// Verbatim transcription of Java `ValidationPrompt.SYSTEM` (`String.join("\n", ...)` over
+    /// one array element per line below, joined with `\n`, no trailing newline) — checked
+    /// character-for-character against the Java source, including its three em dashes (U+2014,
+    /// not hyphens) and straight `'`/ASCII-only quoting throughout.
+    pub const SYSTEM: &'static str = concat!(
+        "You are a meticulous reviewer of scientific-name parsing results.\n",
+        "\n",
+        "The GBIF name parser is a deterministic, rule-based parser. It takes a raw\n",
+        "scientific name string and produces a structured ParsedName. Your job is to\n",
+        "judge whether each ParsedName faithfully represents the raw input, according to\n",
+        "the parser's own documented conventions below. You are NOT re-parsing from\n",
+        "scratch and you are NOT imposing your own preferences — you are checking the\n",
+        "parser against its contract.\n",
+        "\n",
+        "Be conservative. Only flag a result as 'suspect' or 'wrong' when you can point\n",
+        "to a concrete field and say what it should be and why. When in doubt, answer\n",
+        "'ok'. Formatting/whitespace differences and equally-valid alternatives are NOT\n",
+        "errors. Prefer high precision over high recall — a human reviews every non-ok\n",
+        "verdict, so false alarms waste their time.\n",
+        "\n",
+        "Parser conventions you must respect:\n",
+        "- Zoological trinomials default to SUBSPECIES: ICZN uses no rank marker, so\n",
+        "  'Vulpes vulpes silaceus Miller, 1907' is rank SUBSPECIES, not a generic\n",
+        "  INFRASPECIFIC_NAME. Botanical infraspecific names DO require an explicit\n",
+        "  subsp./var./f. marker, so absent a marker they stay INFRASPECIFIC_NAME.\n",
+        "- Code inference signals (priority order): a sanctioning author (e.g. ': Fr.')\n",
+        "  => BOTANICAL; '(BasAuthor) RecombAuthor, year' with an explicit infraspecific\n",
+        "  marker => BOTANICAL (the year is the publication year); any other year on the\n",
+        "  author span => ZOOLOGICAL; a filius (f./fil.) suffix on a non-ex author with\n",
+        "  NO year => BOTANICAL; basionym + combination authors without years => BOTANICAL;\n",
+        "  basionym-only without years => ZOOLOGICAL.\n",
+        "- A year extracted from a stripped 'published in' reference is the publication\n",
+        "  year of the work, is code-NEUTRAL, and must NOT by itself imply ZOOLOGICAL.\n",
+        "- Abbreviation of authors or journals is only a weak hint, never a code signal.\n",
+        "- Taxonomic-concept references (sensu, sec., auct., non/nec, emend., fide, ...)\n",
+        "  belong in taxonomicNote, not in the name.\n",
+        "- Viruses, hybrid formulas, OTU/specimen codes, and placeholders are legitimately\n",
+        "  UNPARSABLE — for an unparsable input, judge whether the reported NameType and\n",
+        "  the fact that it was rejected are appropriate, not that it failed to parse.\n",
+        "\n",
+        "For every item you are given, return exactly one verdict object. Echo the item's\n",
+        "'index'. Use verdict 'ok' | 'suspect' | 'wrong' and confidence 'low' | 'med' |\n",
+        "'high'. List only the fields you believe are wrong."
+    );
+
+    /// Verbatim transcription of Java `ValidationPrompt.OUTPUT_INSTRUCTION`. Spells out the
+    /// exact reply shape as JSON; appended only for the local/OpenAI-compatible path (a later
+    /// task) — Anthropic gets a JSON-schema constraint on the request instead, so never needs
+    /// this text.
+    pub const OUTPUT_INSTRUCTION: &'static str = concat!(
+        "Respond with ONLY a JSON object, no prose and no markdown fences, of the form:\n",
+        "{\"verdicts\":[{\"index\":0,\"verdict\":\"ok|suspect|wrong\",\n",
+        "\"confidence\":\"low|med|high\",\"fields\":[{\"name\":\"...\",\"parsed\":\"...\",\n",
+        "\"expected\":\"...\",\"reason\":\"...\"}],\"note\":\"...\"}]}\n",
+        "Return exactly one verdict per input item and echo its 'index'. Use an empty\n",
+        "'fields' array when the verdict is 'ok'."
+    );
+
+    /// Java `ValidationPrompt.userMessage(List<ParseResult>)`: a short header line naming the
+    /// batch size, then a compact JSON array of [`item_json`] objects — one per `items`
+    /// element, `index` = its position in *this* batch (0-based, local to whatever sub-batch is
+    /// actually sent — see the recon doc §5 "Reconciliation" note, relevant once a later task
+    /// chunks/re-sends only the uncached remainder of a chunk).
+    pub fn user_message(items: &[Item]) -> String {
+        let mut arr = String::from("[");
+        for (i, item) in items.iter().enumerate() {
+            if i > 0 {
+                arr.push(',');
+            }
+            arr.push_str(&item_json(i, item));
+        }
+        arr.push(']');
+        format!(
+            "Judge each of the following {} parser results.\n{arr}",
+            items.len()
+        )
+    }
+}
+
+/// Java `ValidationPrompt.item(int, ParseResult)`: one batch-array element —
+/// `{"index":...,"input":...,"parsed":{...}}` on a successful parse, or
+/// `{"index":...,"input":...,"unparsable":{"type":...,"message":...}}` on failure.
+///
+/// Deliberately **omits** Java's optional `canonical` field (`pn.canonicalNameComplete()`,
+/// best-effort/try-catch-guarded there): no canonical-name formatter exists yet in the core
+/// `nameparser` crate (recon doc §10 "genuine scope gaps"; the parent plan's Global Constraints
+/// call this out explicitly as a deferred field, not an oversight) — the model still sees the
+/// complete structured `parsed` object either way.
+///
+/// Built by hand (string concatenation) rather than via `serde_json::Value`/`Map`/`json!`, for
+/// the exact reason [`crate::render_row`] is: this crate's `serde_json` has no `preserve_order`
+/// feature, so a dynamically-built `Value::Object` would serialize its keys alphabetically
+/// (`index`/`input`/`parsed`/`unparsable` happen to alphabetize correctly today, but relying on
+/// that coincidence is fragile). `ParsedName`'s own `#[derive(Serialize)]` (nested in verbatim
+/// via `serde_json::to_string`) always writes fields in declaration order regardless, so nesting
+/// it here is exactly as order-safe as the hand-built envelope around it.
+fn item_json(index: usize, item: &Item) -> String {
+    let mut o = String::from("{\"index\":");
+    o.push_str(&index.to_string());
+    o.push_str(",\"input\":");
+    o.push_str(
+        &serde_json::to_string(&item.input).expect("a String always serializes to a JSON string"),
+    );
+    match &item.outcome {
+        Ok(pn) => {
+            o.push_str(",\"parsed\":");
+            o.push_str(&serde_json::to_string(pn).expect("ParsedName always serializes to JSON"));
+        }
+        Err(e) => {
+            o.push_str(",\"unparsable\":{\"type\":");
+            o.push_str(
+                &serde_json::to_string(&e.type_).expect("NameType always serializes to JSON"),
+            );
+            o.push_str(",\"message\":");
+            o.push_str(
+                &serde_json::to_string(&e.message)
+                    .expect("a String always serializes to a JSON string"),
+            );
+            o.push('}');
+        }
+    }
+    o.push('}');
+    o
+}
+
+// ---------------------------------------------------------------------------------------
+// Verdict / FieldIssue — the model's reply shape (Java `llm.Verdict`)
+// ---------------------------------------------------------------------------------------
+
+/// One LLM verdict on a single parser result — Java `Verdict`, populated here by `serde` from
+/// the model's (possibly salvaged, see [`parse_verdicts`]) JSON reply rather than Gson
+/// reflection, so field names below are the wire/schema property names, not renamed.
+///
+/// `verdict`/`confidence` are plain `String`s, not enums: Anthropic's structured-output request
+/// (a later task) constrains them server-side via a JSON-schema `enum`, but local models get no
+/// such enforcement, so a strict Rust enum could fail to parse an otherwise-usable reply from a
+/// misbehaving local model — matching the recon doc §5 "loose-typing" note, this port keeps
+/// `Verdict`'s own fields untyped strings and defers any stricter validation to the call site
+/// (e.g. the summary/report step, a later task).
+///
+/// `index`/`verdict`/`confidence` are required: unlike Gson (which silently leaves a missing
+/// primitive/String field at its default, `0`/`null`), a verdict object missing any of these
+/// three fails to deserialize — a deliberate, disclosed tightening for this port (the recon doc
+/// flags this exact tradeoff as "worth deciding deliberately"); `fields`/`note` default when
+/// absent, matching Java's `fields`/`note` being genuinely optional (empty/blank when
+/// `verdict == "ok"`).
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Verdict {
+    /// 0-based position within the batch this verdict belongs to (echoed back by the model).
+    pub index: usize,
+    /// `"ok"` | `"suspect"` | `"wrong"`.
+    pub verdict: String,
+    /// `"low"` | `"med"` | `"high"`.
+    pub confidence: String,
+    /// Per-field problems the model identified; empty when `verdict == "ok"`.
+    #[serde(default)]
+    pub fields: Vec<FieldIssue>,
+    /// Free-text explanation, one or two sentences.
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+impl Verdict {
+    /// Java `Verdict.isOk()`: case-insensitive `"ok"` comparison (so a model that replies
+    /// `"OK"`/`"Ok"` still counts).
+    pub fn is_ok(&self) -> bool {
+        self.verdict.eq_ignore_ascii_case("ok")
+    }
+}
+
+/// A single field the model believes the parser got wrong — Java `Verdict.FieldIssue`. Every
+/// field is coerced to a display string via [`coerce_to_string`] regardless of the JSON shape
+/// the model actually sent (Java's `Verdicts.fieldIssueDeserializer`): local models (e.g.
+/// gemma) sometimes echo a whole nested object, or a bare number/boolean, as a field's
+/// `parsed`/`expected` value instead of a flat string — coercing defends against that instead
+/// of aborting the whole judging run over one loose field.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct FieldIssue {
+    /// ParsedName field name, e.g. `rank`, `code`, `combinationAuthorship.year`.
+    #[serde(default, deserialize_with = "coerce_to_string")]
+    pub name: String,
+    /// What the parser produced for that field.
+    #[serde(default, deserialize_with = "coerce_to_string")]
+    pub parsed: String,
+    /// What the model believes it should be.
+    #[serde(default, deserialize_with = "coerce_to_string")]
+    pub expected: String,
+    /// Why.
+    #[serde(default, deserialize_with = "coerce_to_string")]
+    pub reason: String,
+}
+
+/// Java `Verdicts.asString(JsonElement)`: coerce any JSON value to a display string — a JSON
+/// string is unescaped to its plain content; `null` (or an absent key, via `#[serde(default)]`
+/// on the field itself) becomes `""`; anything else (number, boolean, object, array) is kept as
+/// its exact original compact JSON source text.
+///
+/// Deliberately captures via [`RawValue`] rather than deserializing into a `serde_json::Value`
+/// and re-serializing it: this crate's `serde_json` has no `preserve_order` feature, so a
+/// `Value::Object` round-trip would alphabetically re-sort a nested object's keys, diverging
+/// from Java's `JsonObject.toString()` (which preserves the model's original member order) —
+/// see the `raw_value` feature comment in `Cargo.toml`. `RawValue` sidesteps the whole problem
+/// by never materializing a reordered structure: it captures the exact source bytes.
+fn coerce_to_string<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = Box::<RawValue>::deserialize(deserializer)?;
+    let text = raw.get().trim();
+    if text == "null" {
+        return Ok(String::new());
+    }
+    if let Some(stripped) = text.strip_prefix('"') {
+        debug_assert!(stripped.ends_with('"'));
+        return serde_json::from_str::<String>(text).map_err(serde::de::Error::custom);
+    }
+    Ok(text.to_string())
+}
+
+// ---------------------------------------------------------------------------------------
+// parse_verdicts — tolerant extraction (Java `llm.Verdicts.parse`)
+// ---------------------------------------------------------------------------------------
+
+/// Java `Verdicts.THINK`: strips `<think>…</think>` / `<thinking>…</thinking>` reasoning traces
+/// (case-insensitive, `.` matches newlines too) before any JSON scanning — a reasoning model's
+/// trace may itself contain braces, which would confuse a naive brace-matching scan if not
+/// removed first. Java replaces each match with a single space (not empty), reproduced here for
+/// parity even though it makes no observable difference to the downstream scan (stray
+/// whitespace between array elements is already skipped).
+static THINK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?is)<think(?:ing)?>.*?</think(?:ing)?>").unwrap());
+
+/// Java `Verdicts.parse(String)`: the resilience layer that makes judging tolerant of everything
+/// a local/reasoning model routinely does to an otherwise-valid `{"verdicts":[...]}` reply —
+/// `<think>` traces, markdown fences, prose preamble, and a `max_tokens` cutoff mid-object.
+///
+/// 1. Errors (matching Java's `IllegalStateException`, ported here as
+///    [`io::ErrorKind::InvalidData`]) if `reply` is blank.
+/// 2. Strips `<think(ing)>…</think(ing)>` via [`THINK`].
+/// 3. Locates the `"verdicts"` key, then its `[`; errors if not found.
+/// 4. Walks the array element-by-element with a string-literal-and-escape-aware brace-depth
+///    scanner ([`match_object`]) rather than a naive first-`{`/last-`}` span, collecting each
+///    complete top-level `{…}` object's raw text and skipping stray whitespace/commas between
+///    elements. A trailing object left unbalanced (the model hit `max_tokens` mid-object) is
+///    silently dropped — the complete verdicts already collected are salvaged rather than
+///    losing the whole batch.
+/// 5. Deserializes each collected object's raw text into a [`Verdict`] via `serde_json`.
+pub fn parse_verdicts(reply: &str) -> io::Result<Vec<Verdict>> {
+    if reply.trim().is_empty() {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Empty model output",
+        ));
+    }
+    let cleaned = THINK.replace_all(reply, " ");
+    let objects = extract_verdict_objects(&cleaned)?;
+    let mut out = Vec::with_capacity(objects.len());
+    for obj in objects {
+        let verdict: Verdict = serde_json::from_str(obj).map_err(|e| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("invalid verdict object: {e} (raw: {})", brief(obj)),
+            )
+        })?;
+        out.push(verdict);
+    }
+    Ok(out)
+}
+
+/// Java `Verdicts.extractVerdictObjects(String)`. Returns each complete top-level verdict
+/// object's raw text, in order.
+fn extract_verdict_objects(text: &str) -> io::Result<Vec<&str>> {
+    let key = text.find("\"verdicts\"");
+    let arr = key.and_then(|k| text[k..].find('[').map(|off| k + off));
+    let Some(arr) = arr else {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("Model output has no 'verdicts' array: {}", brief(text)),
+        ));
+    };
+
+    // Byte-indexed on purpose, not `char_indices()`: every byte this loop inspects/matches on
+    // (`"`, `\`, `{`, `}`, `]`) is single-byte ASCII, and UTF-8's self-synchronizing design
+    // guarantees no multi-byte character's continuation bytes can equal an ASCII byte value —
+    // so every slice boundary produced below still lands on a valid `char` boundary, even
+    // though the input (e.g. a `note` field) may contain arbitrary Unicode.
+    let bytes = text.as_bytes();
+    let mut objects = Vec::new();
+    let mut i = arr + 1;
+    let n = bytes.len();
+    while i < n {
+        match bytes[i] {
+            b']' => break, // array closed cleanly
+            b'{' => match match_object(bytes, i) {
+                Some(end) => {
+                    objects.push(&text[i..=end]);
+                    i = end + 1;
+                }
+                None => break, // trailing object truncated at max_tokens — salvage what came before
+            },
+            _ => i += 1, // whitespace, commas, stray characters between elements
+        }
+    }
+    Ok(objects)
+}
+
+/// Java `Verdicts.matchObject(String, int)`: byte index of the `}` closing the object that
+/// opens at `open`, honouring string literals and backslash escapes so a `{`/`}`/`"` inside a
+/// JSON string value is never mistaken for structural JSON. `None` if the object never closes
+/// (truncated input — the max_tokens salvage case).
+fn match_object(bytes: &[u8], open: usize) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut in_string = false;
+    let mut escaped = false;
+    for (i, &c) in bytes.iter().enumerate().skip(open) {
+        if in_string {
+            if escaped {
+                escaped = false;
+            } else if c == b'\\' {
+                escaped = true;
+            } else if c == b'"' {
+                in_string = false;
+            }
+            continue;
+        }
+        match c {
+            b'"' => in_string = true,
+            b'{' => depth += 1,
+            b'}' => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(i);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Java `Verdicts.brief(String)`: a trimmed, `…`-truncated (at 500 chars) preview of `s`, for
+/// error messages that otherwise might dump an entire (possibly huge) model reply.
+fn brief(s: &str) -> String {
+    let t = s.trim();
+    if t.chars().count() > 500 {
+        let head: String = t.chars().take(500).collect();
+        format!("{head}…")
+    } else {
+        t.to_string()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -845,5 +1242,323 @@ mod tests {
         }
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // ---- ValidationPrompt ----
+
+    #[test]
+    fn version_is_v1() {
+        assert_eq!(ValidationPrompt::VERSION, "v1");
+    }
+
+    #[test]
+    fn system_prompt_contains_the_documented_conventions() {
+        // Spot-checks rather than a giant literal re-assertion (the constant itself, defined
+        // via `concat!` fragment-for-fragment against the Java source, IS the verbatim
+        // transcription) — these pin the load-bearing conventions plus the exact em dashes
+        // (U+2014, not a hyphen) so a future accidental re-encoding is caught.
+        let s = ValidationPrompt::SYSTEM;
+        assert!(s.starts_with("You are a meticulous reviewer of scientific-name parsing results."));
+        assert!(s.ends_with("'high'. List only the fields you believe are wrong."));
+        // Three em dashes (U+2014), verbatim from the Java source — not ASCII hyphens.
+        assert_eq!(s.matches('\u{2014}').count(), 3);
+        assert!(s.contains("Vulpes vulpes silaceus Miller, 1907"));
+        assert!(s.contains("Zoological trinomials default to SUBSPECIES"));
+        assert!(s.contains("basionym-only without years => ZOOLOGICAL."));
+        assert!(s.contains(
+            "Taxonomic-concept references (sensu, sec., auct., non/nec, emend., fide, ...)"
+        ));
+        assert!(s.contains("Viruses, hybrid formulas, OTU/specimen codes, and placeholders"));
+    }
+
+    #[test]
+    fn output_instruction_is_the_documented_verbatim_text() {
+        let s = ValidationPrompt::OUTPUT_INSTRUCTION;
+        assert!(s.starts_with(
+            "Respond with ONLY a JSON object, no prose and no markdown fences, of the form:"
+        ));
+        assert!(s.contains("{\"verdicts\":[{\"index\":0,\"verdict\":\"ok|suspect|wrong\","));
+        assert!(s.ends_with("'fields' array when the verdict is 'ok'."));
+    }
+
+    /// Small helper: an `Ok` [`Item`] from a real parse, for building test batches without
+    /// duplicating `nameparser::parse` call sites everywhere.
+    fn ok_item(line: usize, name: &str) -> Item {
+        Item {
+            line,
+            input: name.to_string(),
+            outcome: nameparser::parse(name, None, None, None),
+        }
+    }
+
+    #[test]
+    fn user_message_shape_for_a_mixed_batch_of_parsed_and_unparsable() {
+        let items = vec![
+            ok_item(1, "Abies alba Mill."),
+            Item {
+                line: 2,
+                input: "".to_string(),
+                outcome: nameparser::parse("", None, None, None),
+            },
+        ];
+        assert!(items[0].outcome.is_ok());
+        let expected_err = items[1].outcome.as_ref().unwrap_err().clone();
+
+        let msg = ValidationPrompt::user_message(&items);
+        let (header, json_part) = msg.split_once('\n').expect("header line then JSON array");
+        assert_eq!(header, "Judge each of the following 2 parser results.");
+
+        let arr: serde_json::Value = serde_json::from_str(json_part).expect("valid JSON array");
+        let arr = arr.as_array().expect("top level is an array");
+        assert_eq!(arr.len(), 2);
+
+        let first = &arr[0];
+        assert_eq!(first["index"], 0);
+        assert_eq!(first["input"], "Abies alba Mill.");
+        assert!(
+            first.get("parsed").is_some(),
+            "parsed item must carry `parsed`: {first}"
+        );
+        assert!(first.get("unparsable").is_none());
+        assert!(
+            first.get("canonical").is_none(),
+            "`canonical` must be omitted entirely (deferred, no NameFormatter yet): {first}"
+        );
+        assert_eq!(first["parsed"]["genus"], "Abies");
+        assert_eq!(first["parsed"]["specificEpithet"], "alba");
+
+        let second = &arr[1];
+        assert_eq!(second["index"], 1);
+        assert_eq!(second["input"], "");
+        assert!(second.get("parsed").is_none());
+        assert!(second.get("canonical").is_none());
+        let unparsable = second
+            .get("unparsable")
+            .expect("error item must carry `unparsable`");
+        assert_eq!(
+            unparsable["type"],
+            serde_json::to_value(expected_err.type_).unwrap()
+        );
+        assert_eq!(unparsable["message"], expected_err.message);
+    }
+
+    #[test]
+    fn user_message_header_counts_the_batch_not_a_global_total() {
+        let items = vec![
+            ok_item(1, "Abies alba Mill."),
+            ok_item(2, "Quercus robur L."),
+        ];
+        let msg = ValidationPrompt::user_message(&items);
+        assert!(msg.starts_with("Judge each of the following 2 parser results.\n"));
+    }
+
+    #[test]
+    fn user_message_of_an_empty_batch_is_an_empty_array() {
+        let msg = ValidationPrompt::user_message(&[]);
+        assert_eq!(msg, "Judge each of the following 0 parser results.\n[]");
+    }
+
+    // ---- Verdict / parse_verdicts — ported from AnthropicClientTest / OpenAiClientTest ----
+    //
+    // These port the `Verdicts.parse`-equivalent core of the Java LLM-client test suites
+    // (`.../cli/llm/{AnthropicClientTest,OpenAiClientTest}.java`). Cases specific to the outer
+    // HTTP response envelope — Anthropic's `content` block array (`parsesStructuredVerdicts`
+    // wraps its assertions in one), `AnthropicClient.verdictSchema()`, and
+    // `OpenAiClient.{extractContent,finishReason,parseReply}` — belong to the HTTP clients
+    // (Task 4), not to this task's `parse_verdicts`; only the fixtures that exercise
+    // `Verdicts.parse`/[`parse_verdicts`] itself are ported here, several used verbatim as the
+    // model's already-extracted reply text.
+
+    #[test]
+    fn verdict_round_trips_from_a_clean_json_reply() {
+        // The inner JSON `AnthropicClientTest.parsesStructuredVerdicts` feeds through
+        // `Verdicts.parse` once its outer `content` block array is unwrapped (that unwrapping
+        // is `AnthropicClient.parseVerdicts`, Task 4) — used directly here.
+        let reply = concat!(
+            "{\"verdicts\":[",
+            "{\"index\":0,\"verdict\":\"ok\",\"confidence\":\"high\",\"fields\":[],\"note\":\"\"},",
+            "{\"index\":1,\"verdict\":\"wrong\",\"confidence\":\"med\",",
+            "\"fields\":[{\"name\":\"rank\",\"parsed\":\"INFRASPECIFIC_NAME\",",
+            "\"expected\":\"SUBSPECIES\",\"reason\":\"zoological trinomial\"}],\"note\":\"x\"}",
+            "]}",
+        );
+
+        let verdicts = parse_verdicts(reply).expect("clean reply must parse");
+        assert_eq!(verdicts.len(), 2);
+
+        let ok = &verdicts[0];
+        assert_eq!(ok.index, 0);
+        assert!(ok.is_ok());
+
+        let wrong = &verdicts[1];
+        assert_eq!(wrong.index, 1);
+        assert_eq!(wrong.verdict, "wrong");
+        assert_eq!(wrong.fields.len(), 1);
+        assert_eq!(wrong.fields[0].name, "rank");
+        assert_eq!(wrong.fields[0].expected, "SUBSPECIES");
+    }
+
+    #[test]
+    fn parse_verdicts_tolerates_markdown_fence_and_prose_preamble() {
+        // Ported from `OpenAiClientTest.toleratesFencesAndPreamble`.
+        let content = concat!(
+            "Sure, here are my verdicts:\n```json\n",
+            "{\"verdicts\":[{\"index\":0,\"verdict\":\"ok\",\"confidence\":\"high\",",
+            "\"fields\":[],\"note\":\"\"},",
+            "{\"index\":1,\"verdict\":\"suspect\",\"confidence\":\"low\",",
+            "\"fields\":[{\"name\":\"code\",\"parsed\":\"ZOOLOGICAL\",\"expected\":\"BOTANICAL\",",
+            "\"reason\":\"sanctioning author\"}],\"note\":\"maybe\"}]}",
+            "\n```\n",
+        );
+        let verdicts = parse_verdicts(content).expect("fenced/preamble reply must parse");
+        assert_eq!(verdicts.len(), 2);
+        assert!(verdicts[0].is_ok());
+        assert_eq!(verdicts[1].verdict, "suspect");
+        assert_eq!(verdicts[1].fields[0].name, "code");
+    }
+
+    #[test]
+    fn parse_verdicts_strips_reasoning_trace_with_embedded_braces() {
+        // Ported from `OpenAiClientTest.stripsReasoningTraceWithBraces`: a naive first-`{`/
+        // last-`}` span would break on the braces inside the `<think>` trace itself.
+        let content = concat!(
+            "<think>Let me check item 0: rank looks like {SUBSPECIES}? ",
+            "Actually the parsed {genus} is fine.</think>\n",
+            "{\"verdicts\":[{\"index\":0,\"verdict\":\"wrong\",\"confidence\":\"high\",",
+            "\"fields\":[{\"name\":\"rank\",\"parsed\":\"INFRASPECIFIC_NAME\",",
+            "\"expected\":\"SUBSPECIES\",\"reason\":\"zoological trinomial\"}],\"note\":\"\"}]}",
+        );
+        let verdicts = parse_verdicts(content).expect("think-tag reply must parse");
+        assert_eq!(verdicts.len(), 1);
+        assert_eq!(verdicts[0].verdict, "wrong");
+        assert_eq!(verdicts[0].fields[0].expected, "SUBSPECIES");
+    }
+
+    #[test]
+    fn parse_verdicts_ignores_braces_inside_string_values() {
+        // Ported from `OpenAiClientTest.ignoresBracesInsideStringValues`.
+        let content = concat!(
+            "{\"verdicts\":[{\"index\":0,\"verdict\":\"suspect\",\"confidence\":\"low\",",
+            "\"fields\":[],\"note\":\"odd char } in the name\"}]}",
+        );
+        let verdicts = parse_verdicts(content).expect("must parse despite `}` inside a string");
+        assert_eq!(verdicts.len(), 1);
+        assert_eq!(verdicts[0].note.as_deref(), Some("odd char } in the name"));
+    }
+
+    #[test]
+    fn parse_verdicts_rejects_non_json_text() {
+        // Ported from `OpenAiClientTest.rejectsNonJson` (there, `assertThrows
+        // IllegalStateException`; here, an `io::ErrorKind::InvalidData` error).
+        let err = parse_verdicts("I could not produce JSON, sorry.").unwrap_err();
+        assert_eq!(err.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn parse_verdicts_rejects_blank_input() {
+        // Java `Verdicts.parse`: `modelText == null || modelText.isBlank()` => throws. `&str`
+        // can't be null on the Rust side, so only the all-whitespace/empty half applies.
+        assert_eq!(
+            parse_verdicts("").unwrap_err().kind(),
+            io::ErrorKind::InvalidData
+        );
+        assert_eq!(
+            parse_verdicts("   \n\t  ").unwrap_err().kind(),
+            io::ErrorKind::InvalidData
+        );
+    }
+
+    #[test]
+    fn parse_verdicts_salvages_complete_verdicts_from_truncated_output() {
+        // Ported from `OpenAiClientTest.salvagesCompleteVerdictsFromTruncatedOutput`: gemma hit
+        // max_tokens mid-array — two complete verdicts, then a third cut off inside a string
+        // (note the trailing `…`, an intentionally-unterminated JSON string literal).
+        let content = concat!(
+            "{\"verdicts\":[{\"index\":0,\"verdict\":\"ok\",\"confidence\":\"high\",\"fields\":[]},",
+            "{\"index\":1,\"verdict\":\"wrong\",\"confidence\":\"high\",",
+            "\"fields\":[{\"name\":\"rank\",\"parsed\":\"SPECIES\",\"expected\":\"DIVISION\",",
+            "\"reason\":\"div. is a rank indicator\"}]},",
+            "{\"index\":2,\"verdict\":\"wrong\",\"confidence\":\"high\",\"fields\":[{\"name\":",
+            "\"specificEpithet\",\"parsed\":\"div\",\"expected\":\"\",\"reason\":\"div. is a rank indicator, not a specific …",
+        );
+        let verdicts = parse_verdicts(content).expect("must salvage the complete objects");
+        assert_eq!(
+            verdicts.len(),
+            2,
+            "the truncated 3rd object must be dropped, not error"
+        );
+        assert_eq!(verdicts[0].index, 0);
+        assert_eq!(verdicts[1].index, 1);
+        assert_eq!(verdicts[1].fields[0].expected, "DIVISION");
+    }
+
+    #[test]
+    fn parse_verdicts_coerces_object_and_non_string_field_values() {
+        // Ported from `OpenAiClientTest.coercesObjectAndNonStringFieldValues`: a nested object
+        // (preserving its own original key order), a boolean, and a number must all coerce to
+        // their compact-JSON/primitive display-string form rather than failing to deserialize.
+        let content = concat!(
+            "{\"verdicts\":[{\"index\":0,\"verdict\":\"wrong\",\"confidence\":\"high\",",
+            "\"fields\":[{\"name\":\"code\",\"parsed\":\"ZOOLOGICAL\",\"expected\":\"BOTANICAL\",",
+            "\"reason\":\"ok\"},",
+            "{\"name\":\"combinationAuthorship\",\"parsed\":{\"authors\":[\"Miller\"],\"year\":1907},",
+            "\"expected\":\"Miller, 1907\",\"reason\":\"nested\"},",
+            "{\"name\":\"rank\",\"parsed\":true,\"expected\":42,\"reason\":\"scalar\"}],",
+            "\"note\":\"\"}]}",
+        );
+        let verdicts = parse_verdicts(content).expect("must coerce non-string field values");
+        assert_eq!(verdicts.len(), 1);
+        let v = &verdicts[0];
+        assert_eq!(v.fields[0].parsed, "ZOOLOGICAL");
+        assert_eq!(
+            v.fields[1].parsed,
+            "{\"authors\":[\"Miller\"],\"year\":1907}"
+        );
+        assert_eq!(v.fields[2].parsed, "true");
+        assert_eq!(v.fields[2].expected, "42");
+    }
+
+    #[test]
+    fn parse_verdicts_missing_field_issue_subfield_defaults_to_empty_string() {
+        // Not itself a ported Java case (Gson would silently leave a missing String field
+        // `null`, which this port's plain (non-`Option`) `String` fields represent as `""`
+        // instead — see `FieldIssue`'s doc comment) — pins that deliberate, disclosed behavior.
+        let content = concat!(
+            "{\"verdicts\":[{\"index\":0,\"verdict\":\"suspect\",\"confidence\":\"low\",",
+            "\"fields\":[{\"name\":\"rank\"}],\"note\":\"\"}]}",
+        );
+        let verdicts = parse_verdicts(content).expect("must parse despite missing subfields");
+        let f = &verdicts[0].fields[0];
+        assert_eq!(f.name, "rank");
+        assert_eq!(f.parsed, "");
+        assert_eq!(f.expected, "");
+        assert_eq!(f.reason, "");
+    }
+
+    #[test]
+    fn parse_verdicts_missing_required_field_is_an_error() {
+        // Deliberate, disclosed tightening vs. Java's Gson leniency (see `Verdict`'s doc
+        // comment): a verdict object missing `verdict` fails to deserialize rather than
+        // silently defaulting.
+        let content = "{\"verdicts\":[{\"index\":0,\"confidence\":\"high\",\"fields\":[]}]}";
+        assert_eq!(
+            parse_verdicts(content).unwrap_err().kind(),
+            io::ErrorKind::InvalidData
+        );
+    }
+
+    #[test]
+    fn is_ok_is_case_insensitive() {
+        let v = Verdict {
+            index: 0,
+            verdict: "OK".to_string(),
+            confidence: "high".to_string(),
+            fields: Vec::new(),
+            note: None,
+        };
+        assert!(v.is_ok());
+        let mut wrong = v.clone();
+        wrong.verdict = "wrong".to_string();
+        assert!(!wrong.is_ok());
     }
 }

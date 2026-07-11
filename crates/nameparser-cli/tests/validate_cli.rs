@@ -88,6 +88,39 @@ fn validate_dry_run_runs_end_to_end_over_a_committed_corpus() {
     assert!(stderr.contains("Dry run: built"), "stderr was: {stderr}");
     assert!(stderr.contains("no API calls made"), "stderr was: {stderr}");
 
+    // Task 3: the exact first-batch LLM request payload is also dumped to stderr (Java's
+    // `dumpFirstBatch`) — verified here via the real compiled binary, complementing the
+    // in-process `user_message` shape tests in `src/validate.rs`.
+    assert!(
+        stderr.contains("--- first batch payload (dry run) ---"),
+        "stderr was: {stderr}"
+    );
+    let (_, payload) = stderr
+        .split_once("--- first batch payload (dry run) ---\n")
+        .expect("payload header must be followed by the payload");
+    let (header, json_part) = payload
+        .split_once('\n')
+        .expect("payload has a header line then a JSON array line");
+    assert!(
+        header.starts_with("Judge each of the following ") && header.ends_with(" parser results."),
+        "unexpected payload header: {header}"
+    );
+    let arr: serde_json::Value = serde_json::from_str(json_part.trim_end())
+        .unwrap_or_else(|e| panic!("payload JSON array must parse: {e}\n{json_part}"));
+    assert!(arr.is_array(), "payload body must be a JSON array: {arr}");
+    for item in arr.as_array().unwrap() {
+        assert!(item.get("index").is_some(), "item missing 'index': {item}");
+        assert!(item.get("input").is_some(), "item missing 'input': {item}");
+        assert!(
+            item.get("parsed").is_some() || item.get("unparsable").is_some(),
+            "item missing both 'parsed' and 'unparsable': {item}"
+        );
+        assert!(
+            item.get("canonical").is_none(),
+            "'canonical' must be omitted (deferred): {item}"
+        );
+    }
+
     let report_text = std::fs::read_to_string(&report).expect("report file must exist");
     assert!(!report_text.trim().is_empty(), "report must not be empty");
     for line in report_text.lines() {
