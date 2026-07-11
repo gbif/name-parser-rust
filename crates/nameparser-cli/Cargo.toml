@@ -11,7 +11,7 @@ name = "nameparser-cli"
 path = "src/main.rs"
 
 [dependencies]
-nameparser = { path = "../nameparser" }
+nameparser = { package = "scientific-name-parser", path = "../nameparser" }
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }
 # `raw_value`: needed by `validate`'s `FieldIssue` coercion (Phase 4c Task 3) to capture a

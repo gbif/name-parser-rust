@@ -10,5 +10,5 @@ description = "C-ABI cdylib exposing the nameparser crate to non-Rust callers (P
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-nameparser = { path = "../nameparser" }
+nameparser = { package = "scientific-name-parser", path = "../nameparser" }
 serde_json = "1"
