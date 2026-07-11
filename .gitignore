@@ -17,6 +17,10 @@ bindings/**/target/
 
 # IDE
 /.idea/
+# Eclipse / jdtls (Java LSP) generated project files
+bindings/java/.classpath
+bindings/java/.project
+bindings/java/.settings/
 
 # subagent-driven-development scratch (briefs, reports, ledger)
 /.superpowers/
