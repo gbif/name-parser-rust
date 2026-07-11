@@ -2,18 +2,19 @@
 % Please edit documentation in R/parse.R
 \name{parse_names}
 \alias{parse_names}
-\title{Parse scientific names}
+\title{Parse scientific names into a tibble (one row per name).}
 \usage{
 parse_names(scientificname, authorship = NULL, rank = NULL, code = NULL)
 }
 \arguments{
 \item{scientificname}{character vector of scientific names.}
 
-\item{authorship, rank, code}{optional scalar hints (currently unused in the spike).}
+\item{authorship, rank, code}{optional scalar (length-1) hints applied to every name;
+\code{rank}/\code{code} use the parser's SCREAMING_SNAKE_CASE names (e.g. "SPECIES", "ZOOLOGICAL").}
 }
 \value{
-a tibble, one row per input name.
+a tibble, one row per input name; unparsable names have \code{parsed = FALSE}.
 }
 \description{
-Parse scientific names
+Parse scientific names into a tibble (one row per name).
 }

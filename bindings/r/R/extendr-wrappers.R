@@ -5,8 +5,7 @@
 #' @useDynLib nameparser, .registration = TRUE
 NULL
 
-#' Minimal spike: one row per input name, proving Vec<Option<_>> -> NA + tibble wrap.
 #' @export
-parse_names_impl <- function(scientificname) .Call(wrap__parse_names_impl, scientificname)
+parse_names_impl <- function(scientificname, authorship, rank, code) .Call(wrap__parse_names_impl, scientificname, authorship, rank, code)
 
 # nolint end

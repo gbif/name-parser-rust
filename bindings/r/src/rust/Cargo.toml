@@ -32,6 +32,11 @@ path = 'document.rs'
 [dependencies]
 extendr-api = "0.9"
 serde_json = "1"
+# Needed directly (not just transitively via serde_json) because `enum_name`'s bound is
+# `T: serde::Serialize` — `serde_json::to_value` alone doesn't re-export the `Serialize`
+# trait at a `serde_json::` path. No `derive` feature: this crate only reads the core's
+# already-`Serialize` enums, it never derives `Serialize` on a type of its own.
+serde = "1"
 # The core parser crate. Its package is `scientific-name-parser` (renamed for
 # publication) but its lib target is still named `nameparser`. This binding aliases it
 # to `nameparser_core` (Cargo's `package =` rename) so lib.rs refers to it as

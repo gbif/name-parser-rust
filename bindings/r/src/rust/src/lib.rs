@@ -11,32 +11,169 @@
 // `nameparser` — `error[E0464]: multiple candidates for `rlib` dependency `nameparser` found`,
 // which (verified) a leading `::` does not fix, unlike lib.rs's own same-name ambiguity.
 use extendr_api::prelude::*;
+use ::nameparser_core::model::{NomCode, ParsedName, Rank};
 
-/// Minimal spike: one row per input name, proving Vec<Option<_>> -> NA + tibble wrap.
+/// Render any serde-serializable core value (enums are serde-only, no Display/.name())
+/// to its SCREAMING_SNAKE_CASE string; `None`/non-string -> `None` (=> R `NA`).
+fn enum_name<T: serde::Serialize>(v: &T) -> Option<String> {
+    serde_json::to_value(v).ok().and_then(|j| j.as_str().map(str::to_owned))
+}
+
+/// One column-builder closure per output column keeps the parallel Vec<Option<_>>s in lockstep.
+struct Cols {
+    scientific_name: Vec<Option<String>>,
+    parsed: Vec<Option<bool>>,
+    error: Vec<Option<String>>,
+    r#type: Vec<Option<String>>,
+    rank: Vec<Option<String>>,
+    code: Vec<Option<String>>,
+    uninomial: Vec<Option<String>>,
+    genus: Vec<Option<String>>,
+    infrageneric_epithet: Vec<Option<String>>,
+    specific_epithet: Vec<Option<String>>,
+    infraspecific_epithet: Vec<Option<String>>,
+    cultivar_epithet: Vec<Option<String>>,
+    phrase: Vec<Option<String>>,
+    candidatus: Vec<Option<bool>>,
+    notho: Vec<Option<String>>,
+    original_spelling: Vec<Option<bool>>,
+    epithet_qualifier: Vec<Option<String>>,
+    extinct: Vec<Option<bool>>,
+    taxonomic_note: Vec<Option<String>>,
+    nomenclatural_note: Vec<Option<String>>,
+    published_in: Vec<Option<String>>,
+    published_in_year: Vec<Option<i32>>,
+    published_in_page: Vec<Option<String>>,
+    unparsed: Vec<Option<String>>,
+    doubtful: Vec<Option<bool>>,
+    manuscript: Vec<Option<bool>>,
+    state: Vec<Option<String>>,
+}
+
+impl Cols {
+    fn with_capacity(n: usize) -> Self {
+        macro_rules! v { () => { Vec::with_capacity(n) }; }
+        Cols {
+            scientific_name: v!(), parsed: v!(), error: v!(), r#type: v!(), rank: v!(),
+            code: v!(), uninomial: v!(), genus: v!(), infrageneric_epithet: v!(),
+            specific_epithet: v!(), infraspecific_epithet: v!(), cultivar_epithet: v!(),
+            phrase: v!(), candidatus: v!(), notho: v!(), original_spelling: v!(),
+            epithet_qualifier: v!(), extinct: v!(), taxonomic_note: v!(),
+            nomenclatural_note: v!(), published_in: v!(), published_in_year: v!(),
+            published_in_page: v!(), unparsed: v!(), doubtful: v!(), manuscript: v!(),
+            state: v!(),
+        }
+    }
+
+    fn push_ok(&mut self, input: &str, pn: &ParsedName) {
+        self.scientific_name.push(Some(input.to_owned()));
+        self.parsed.push(Some(true));
+        self.error.push(None);
+        self.r#type.push(enum_name(&pn.type_));
+        self.rank.push(enum_name(&pn.rank));
+        self.code.push(enum_name(&pn.code));
+        self.uninomial.push(pn.uninomial.clone());
+        self.genus.push(pn.genus.clone());
+        self.infrageneric_epithet.push(pn.infrageneric_epithet.clone());
+        self.specific_epithet.push(pn.specific_epithet.clone());
+        self.infraspecific_epithet.push(pn.infraspecific_epithet.clone());
+        self.cultivar_epithet.push(pn.cultivar_epithet.clone());
+        self.phrase.push(pn.phrase.clone());
+        self.candidatus.push(Some(pn.candidatus));
+        self.notho.push(pn.notho.as_ref().map(|parts| {
+            parts.iter().filter_map(enum_name).collect::<Vec<_>>().join(", ")
+        }));
+        self.original_spelling.push(pn.original_spelling);
+        self.epithet_qualifier.push(pn.epithet_qualifier.as_ref().map(|m| {
+            let mut kv: Vec<String> = m.iter()
+                .map(|(k, val)| format!("{}={}", enum_name(k).unwrap_or_default(), val))
+                .collect();
+            kv.sort();               // deterministic order regardless of map iteration
+            kv.join(", ")
+        }));
+        self.extinct.push(Some(pn.extinct));
+        self.taxonomic_note.push(pn.taxonomic_note.clone());
+        self.nomenclatural_note.push(pn.nomenclatural_note.clone());
+        self.published_in.push(pn.published_in.clone());
+        self.published_in_year.push(pn.published_in_year);
+        self.published_in_page.push(pn.published_in_page.clone());
+        self.unparsed.push(pn.unparsed.clone());
+        self.doubtful.push(Some(pn.doubtful));
+        self.manuscript.push(Some(pn.manuscript));
+        self.state.push(enum_name(&pn.state));
+    }
+
+    fn push_err(&mut self, input: &str, e: &::nameparser_core::model::ParseError) {
+        self.scientific_name.push(Some(input.to_owned()));
+        self.parsed.push(Some(false));
+        self.error.push(Some(e.message.clone()));
+        self.r#type.push(enum_name(&e.type_));
+        // no ParsedName exists on error -> every parsed atom/flag is NA
+        for col in [
+            &mut self.rank, &mut self.code, &mut self.uninomial, &mut self.genus,
+            &mut self.infrageneric_epithet, &mut self.specific_epithet,
+            &mut self.infraspecific_epithet, &mut self.cultivar_epithet, &mut self.phrase,
+            &mut self.notho, &mut self.epithet_qualifier, &mut self.taxonomic_note,
+            &mut self.nomenclatural_note, &mut self.published_in, &mut self.published_in_page,
+            &mut self.unparsed, &mut self.state,
+        ] {
+            col.push(None);
+        }
+        self.candidatus.push(None);
+        self.original_spelling.push(None);
+        self.extinct.push(None);
+        self.published_in_year.push(None);
+        self.doubtful.push(None);
+        self.manuscript.push(None);
+    }
+}
+
+fn hint(o: &Nullable<String>) -> Option<&str> {
+    match o {
+        Nullable::NotNull(s) => Some(s.as_str()),
+        Nullable::Null => None,
+    }
+}
+
 /// @export
 #[extendr]
-fn parse_names_impl(scientificname: Vec<String>) -> List {
-    let n = scientificname.len();
-    let parsed: Vec<Option<bool>> = scientificname
-        .iter()
-        .map(|s| Some(::nameparser_core::parse(s, None, None, None).is_ok()))
-        .collect();
-    // A deliberately-NA-bearing column: the message on failure, NA on success.
-    let error: Vec<Option<String>> = scientificname
-        .iter()
-        .map(|s| {
-            ::nameparser_core::parse(s, None, None, None)
-                .err()
-                .map(|e| e.message)
-        })
-        .collect();
-    let names_col: Vec<Option<String>> = scientificname.into_iter().map(Some).collect();
-    let _ = n;
+fn parse_names_impl(
+    scientificname: Vec<String>,
+    authorship: Nullable<String>,
+    rank: Nullable<String>,
+    code: Nullable<String>,
+) -> List {
+    let rank = hint(&rank).and_then(Rank::from_name);
+    let code = hint(&code).and_then(NomCode::from_name);
+    let auth = hint(&authorship);
+    let mut c = Cols::with_capacity(scientificname.len());
+    for name in &scientificname {
+        match ::nameparser_core::parse(name, auth, rank, code) {
+            Ok(pn) => c.push_ok(name, &pn),
+            Err(e) => c.push_err(name, &e),
+        }
+    }
     List::from_names_and_values(
-        ["scientificName", "parsed", "error"],
-        [r!(names_col), r!(parsed), r!(error)],
+        [
+            "scientificName", "parsed", "error", "type", "rank", "code", "uninomial",
+            "genus", "infragenericEpithet", "specificEpithet", "infraspecificEpithet",
+            "cultivarEpithet", "phrase", "candidatus", "notho", "originalSpelling",
+            "epithetQualifier", "extinct", "taxonomicNote", "nomenclaturalNote",
+            "publishedIn", "publishedInYear", "publishedInPage", "unparsed", "doubtful",
+            "manuscript", "state",
+        ],
+        [
+            r!(c.scientific_name), r!(c.parsed), r!(c.error), r!(c.r#type), r!(c.rank),
+            r!(c.code), r!(c.uninomial), r!(c.genus), r!(c.infrageneric_epithet),
+            r!(c.specific_epithet), r!(c.infraspecific_epithet), r!(c.cultivar_epithet),
+            r!(c.phrase), r!(c.candidatus), r!(c.notho), r!(c.original_spelling),
+            r!(c.epithet_qualifier), r!(c.extinct), r!(c.taxonomic_note),
+            r!(c.nomenclatural_note), r!(c.published_in), r!(c.published_in_year),
+            r!(c.published_in_page), r!(c.unparsed), r!(c.doubtful), r!(c.manuscript),
+            r!(c.state),
+        ],
     )
-    .expect("equal-length, well-formed columns")
+    .expect("all columns are the same length (one push per input name)")
 }
 
 extendr_module! {
