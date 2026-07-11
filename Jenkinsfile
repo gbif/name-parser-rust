@@ -40,13 +40,11 @@ pipeline {
 
     // The Java FFM binding bundles the nameparser-ffi cdylib into its JAR (bindings/java/pom.xml
     // copies target/release/libnameparser_ffi.* into native/${os.detected.classifier}/), so build
-    // the release cdylib first. Requires cargo on the agent.
+    // the release cdylib first. The script bootstraps rustup if the agent has no Rust, so this
+    // runs on a plain `agent any`.
     stage('Build native cdylib') {
       steps {
-        sh '''
-          . "$HOME/.cargo/env" 2>/dev/null || true
-          cargo build --release -p nameparser-ffi
-        '''
+        sh 'bash ci/build-cdylib.sh'
       }
     }
 
@@ -68,6 +66,11 @@ pipeline {
       }
     }
 
+    // NOTE: this release stage mirrors CoL's structure but needs two things before it works for a
+    // single native-binding module: (1) an <scm> block in bindings/java/pom.xml (release:prepare
+    // tags via SCM); (2) the cdylib inside release:perform's fresh target/checkout build — the
+    // build-cdylib.sh below builds it in the OUTER workspace, not that inner checkout. The snapshot
+    // deploy ('Maven build' above) is the working every-commit flow; finish release wiring later.
     stage('Maven release: Java FFM binding') {
       when {
         allOf {
@@ -82,7 +85,7 @@ pipeline {
             [configFile(fileId: 'org.jenkinsci.plugins.configfiles.maven.GlobalMavenSettingsConfig1387378707709',
               variable: 'MAVEN_SETTINGS_XML')]) {
             git 'https://github.com/gbif/name-parser-rust.git'
-            sh '''. "$HOME/.cargo/env" 2>/dev/null || true; cargo build --release -p nameparser-ffi'''
+            sh 'bash ci/build-cdylib.sh'
             sh "mvn -s \$MAVEN_SETTINGS_XML -f bindings/java/pom.xml -B -Denforcer.skip=true -Darguments=\"-DskipTests -DskipITs\" release:prepare release:perform -Dtag=v${params.RELEASE_VERSION} ${releaseArgs}"
           }
         }
