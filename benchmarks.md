@@ -215,4 +215,4 @@ row). Full detail and the per-corpus table: [`cross-validation.md`](cross-valida
 - `--warmup` on the Rust CLI is substantively a no-op (no JIT) but pays the same fixed 100-name
   pre-pass so the two commands stay directly comparable.
 - The 6.3M `col-names.tsv` used by the Java large-corpus rows is not in this repo; the Rust
-  large-corpus row uses `colxr26.6-names.tsv` (git-ignored; see `.gitignore`).
+  large-corpus row uses `colxr26.6-names.txt` (git-ignored; see `.gitignore`).
