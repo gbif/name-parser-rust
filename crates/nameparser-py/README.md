@@ -29,10 +29,10 @@ marker — this package is fully typed; see [Editors / type checkers](#editors--
 below). Once published, the same package will install with:
 
 ```sh
-pip install scientific-name-parser   # → import nameparser
+pip install gbif-name-parser   # → import nameparser
 ```
 
-(The PyPI **distribution** name is `scientific-name-parser` — matching the Rust core crate on
+(The PyPI **distribution** name is `gbif-name-parser` — matching the Rust core crate on
 crates.io, so it's one name across both registries — but the **importable module** stays
 `nameparser` either way; see `pyproject.toml`.)
 

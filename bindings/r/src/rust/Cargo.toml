@@ -1,8 +1,8 @@
 [package]
 name = "nameparser"
-# Aligned with the core crate (scientific-name-parser 0.1.0) and DESCRIPTION's Version: 0.1.0.
+# Aligned with the core crate (gbif-name-parser 0.1.0) and DESCRIPTION's Version: 0.1.0.
 # (The lockfile-collision that once forced a distinct version is gone: the core was renamed
-# from `nameparser` 0.0.0 to `scientific-name-parser`, so no (name, version) clash remains.
+# from `nameparser` 0.0.0 to `gbif-name-parser`, so no (name, version) clash remains.
 # This crate's lib target still keeps the short name `nameparser` for R's useDynLib.)
 version = "0.1.0"
 edition = "2021"
@@ -32,7 +32,7 @@ serde_json = "1"
 # trait at a `serde_json::` path. No `derive` feature: this crate only reads the core's
 # already-`Serialize` enums, it never derives `Serialize` on a type of its own.
 serde = "1"
-# The core parser crate. Its package is `scientific-name-parser` (renamed for
+# The core parser crate. Its package is `gbif-name-parser` (renamed for
 # publication) but its lib target is still named `nameparser`. This binding aliases it
 # to `nameparser_core` (Cargo's `package =` rename) so lib.rs refers to it as
 # `::nameparser_core::...`. The alias is REQUIRED here (unlike the PyO3 binding, which can
@@ -43,7 +43,7 @@ serde = "1"
 # `error[E0464]: multiple candidates for `rlib` dependency `nameparser``, which (unlike
 # lib.rs's own-name ambiguity E0659 that a leading `::` fixes) is only resolvable by giving
 # the core a distinct extern name, i.e. this alias.
-nameparser_core = { package = "scientific-name-parser", path = "../../../../crates/nameparser" }
+nameparser_core = { package = "gbif-name-parser", path = "../../../../crates/nameparser" }
 
 # Detach from the repo's Cargo workspace so R's Makevars can build this crate
 # standalone (the root workspace lists only crates/* as members).

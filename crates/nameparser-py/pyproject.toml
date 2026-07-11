@@ -5,9 +5,9 @@ build-backend = "maturin"
 [project]
 # The importable module stays `nameparser` (see `[tool.maturin] module-name` below and
 # `[lib] name` in Cargo.toml) — this is only the PyPI *distribution* name. It matches the
-# Rust core crate (`scientific-name-parser` on crates.io), so the package carries one name
-# across both registries; `pip install scientific-name-parser` still gives `import nameparser`.
-name = "scientific-name-parser"
+# Rust core crate (`gbif-name-parser` on crates.io), so the package carries one name
+# across both registries; `pip install gbif-name-parser` still gives `import nameparser`.
+name = "gbif-name-parser"
 version = "0.1.0"
 description = "GBIF scientific name parser — Rust core, Python binding"
 requires-python = ">=3.9"

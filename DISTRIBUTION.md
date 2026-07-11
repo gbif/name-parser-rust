@@ -18,10 +18,10 @@ single "deploy"**, because each binding targets a different package ecosystem.
 
 | Artifact | Path | Channel | Coordinates / name | Status |
 |---|---|---|---|---|
-| Rust core library | `crates/nameparser` | crates.io | `scientific-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
+| Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
 | **Java FFM binding** | `bindings/java` | **repository.gbif.org → Maven Central** | `org.gbif.nameparser:name-parser-rust` | dev-only (native lib not bundled) |
-| Python binding | `crates/nameparser-py` | PyPI | dist `scientific-name-parser`, import `nameparser` | deferred |
+| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | deferred |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
 
 Every binding except the pure-Rust CLI wraps the **`nameparser-ffi` cdylib**
@@ -34,7 +34,7 @@ problem, addressed in §3.
 
 ### 2.1 Rust core + CLI
 
-- **Library** → `cargo publish` to crates.io. The crate is package **`scientific-name-parser`**
+- **Library** → `cargo publish` to crates.io. The crate is package **`gbif-name-parser`**
   `0.1.0` (Apache-2.0) with lib name `nameparser` (so dependents keep `use nameparser::`); add
   `description`/`repository` and set `publish = true` in `Cargo.toml` before the first publish.
 - **CLI** → build `cargo build --release -p nameparser-cli` per target and attach the
@@ -91,7 +91,7 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
   (x86_64 + arm64), and Windows wheels, each embedding the compiled Rust extension. Because
   the crate builds an **abi3** wheel, one wheel per platform covers all supported CPython 3.x.
 - `twine upload` (or the maturin/PyPI publish action) to **PyPI** under distribution name
-  **`scientific-name-parser`** (import stays `nameparser`; matches the Rust crate on crates.io).
+  **`gbif-name-parser`** (import stays `nameparser`; matches the Rust crate on crates.io).
 - Deferred items: the cibuildwheel CI config and the first PyPI publish.
 
 ### 2.4 R binding
@@ -239,7 +239,7 @@ ParsedName pn = parser.parse("Abies alba Mill.", Rank.SPECIES);
 ### Python
 
 ```bash
-pip install scientific-name-parser   # once published to PyPI
+pip install gbif-name-parser   # once published to PyPI
 ```
 ```python
 import nameparser
@@ -273,6 +273,6 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 - [ ] Python: cibuildwheel config + first PyPI publish.
 - [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
 - [ ] Rust: add `description`/`repository` + set `publish = true` (name/version/license already
-      `scientific-name-parser` / `0.1.0` / Apache-2.0); `cargo publish`; CLI release binaries.
+      `gbif-name-parser` / `0.1.0` / Apache-2.0); `cargo publish`; CLI release binaries.
 - [ ] Decide whether the Rust FFM binding ships **alongside** the pure-Java parser or eventually
       **replaces** it behind the same `org.gbif:name-parser` coordinates (Phase-5 cutover decision).

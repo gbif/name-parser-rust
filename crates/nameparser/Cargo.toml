@@ -1,11 +1,11 @@
 [package]
-name = "scientific-name-parser"
+name = "gbif-name-parser"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
 publish = false
 
-# The published/package name is `scientific-name-parser`, but the compiled lib target keeps
+# The published/package name is `gbif-name-parser`, but the compiled lib target keeps
 # its short name `nameparser` so every dependent's `use nameparser::` / `::nameparser::` and
 # this crate's own integration tests/benches (`use nameparser::`) stay unchanged. Dependents
 # select this crate by the package name (aliased back to `nameparser` where convenient).

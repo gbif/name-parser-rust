@@ -19,7 +19,7 @@ oracle — with full field parity to the core validated over the corpus. Realize
 `bindings/java/` Maven module), built with [extendr](https://extendr.rs) 0.9 +
 [rextendr](https://extendr.rs/rextendr/) 0.5.0. Its Rust crate (`bindings/r/src/rust/`) is
 detached from the Cargo workspace (own empty `[workspace]` table) and depends on the core
-`nameparser` crate (published name `scientific-name-parser`) by relative path, aliased
+`nameparser` crate (published name `gbif-name-parser`) by relative path, aliased
 `nameparser_core` to avoid an extern-name collision with the binding crate's own `[lib] name
 = 'nameparser'` (required for R's `useDynLib(nameparser)`).
 
@@ -77,7 +77,7 @@ authorship/warnings flattening + `parse_name_json()`. This pass:
    so `rextendr::document()` now emits a clean `parse_names_impl.Rd` too instead of silently
    dropping it.
 3. **`DESCRIPTION` `Version`: `0.0.0.9000` → `0.1.0`**, aligning with the core
-   `scientific-name-parser` crate and the Python distribution, both already at `0.1.0`.
+   `gbif-name-parser` crate and the Python distribution, both already at `0.1.0`.
 4. **Closed a test-coverage gap**: the committed suite exercised `combinationAuthors`/
    `combinationYear`/`basionymAuthors` (NA case) and merely checked `"warnings" %in%
    names(out)`, but never a populated `combinationExAuthors`, `basionymExAuthors`,

@@ -11,6 +11,6 @@ name = "nameparser"          # the importable Python module name
 crate-type = ["cdylib"]
 
 [dependencies]
-nameparser = { package = "scientific-name-parser", path = "../nameparser" }
+nameparser = { package = "gbif-name-parser", path = "../nameparser" }
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
 pythonize = "0.22"           # must match the pyo3 minor version
