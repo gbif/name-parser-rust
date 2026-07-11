@@ -108,8 +108,11 @@ inputs exist at all, and both corpora are similar-composition real names).
 
 **Rust — `colxr26.6-names.tsv`, 6,416,452 names** (real names only — BOLD specimen IDs and UNITE
 SH fungal OTUs excluded, so its composition mirrors the Java `col-names` set; CoL release 26.6).
-Benchmarked on the **name column** — the `benchmark` command reads col-1 (it splits on the first
-TAB, like `parse`), so it handles this multi-column TSV directly:
+**Col-1 is the _canonical_ name; authorship is a separate column (col-2) and is _not_ included
+here — so this measures name parsing without the authorship-parsing step** (which the 8k corpus
+and the 11,302-name cross-val exercise fully). A full-name (name + authorship) large-corpus run
+is a follow-up. Benchmarked on the **name column** — the `benchmark` command reads col-1 (it
+splits on the first TAB, like `parse`), so it handles this multi-column TSV directly:
 
 ```
 Parsed names: 6416452 (9297 unparsable)     # unparsable count matches `parse`/cross-val exactly
