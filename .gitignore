@@ -20,3 +20,6 @@ bindings/**/target/
 
 # subagent-driven-development scratch (briefs, reports, ledger)
 /.superpowers/
+
+# Large real-world corpora dropped into testdata/ (colxr26.6 8M, clb-verbatim 67M, clb-names-parsed 41M — 6.85 GB). NEVER commit.
+testdata/*.tsv
