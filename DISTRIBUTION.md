@@ -49,7 +49,7 @@ enforces `maven.compiler.release=17`, and `java.lang.foreign` (FFM/Panama) needs
 compiler release at **22**. Current coordinates:
 
 ```
-org.gbif.nameparser:name-parser-rust:0.0.0   (packaging: jar)
+org.gbif.nameparser:name-parser-rust:4.2.0-SNAPSHOT   (packaging: jar)
 ```
 
 It compiles `org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser`,
@@ -67,22 +67,24 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
    Java 17 service cannot load this JAR until it upgrades (tracked as the Phase-5 cutover
    prerequisite).
 
-**Release-readiness changes to `bindings/java/pom.xml`:**
+**Release-readiness — done, and the versioning model:**
 
-- Bump `name-parser-api` from `4.2.0-SNAPSHOT` to the released **`4.2.0`** (now available on
-  repository.gbif.org / Central), and drop the test-scoped `name-parser:4.2.0-SNAPSHOT` to
-  `4.2.0` as well.
-- Set a real `<version>` aligned with the parser line it binds (recommend tracking the
-  `name-parser` version, i.e. `4.2.0`, so the binding version tells you which model it maps).
-- Add `<distributionManagement>` for `repository.gbif.org` (this module cannot get it from
-  motherpom). Use motherpom's own release/snapshot repository definitions as the source of
-  truth for the exact URLs; resolve dependencies through the read group
-  `https://repository.gbif.org/content/groups/gbif`.
-- To also sync to **Maven Central**, add the `maven-source-plugin`, `maven-javadoc-plugin`,
-  `maven-gpg-plugin`, and the Sonatype/Central publishing plugin that motherpom would
-  normally contribute — since this POM opts out of the parent, it must supply them itself.
-  If Central is not required (GBIF-internal consumers resolve from Nexus), this can be
-  skipped.
+- ✅ `name-parser-api` (and test-scoped `name-parser`) bumped to the released **`4.2.0`**; a GBIF
+  Nexus `<repositories>` block resolves them (this standalone POM has no motherpom to supply it).
+- ✅ **Version = `4.2.0-SNAPSHOT`** — the JVM adapter rides the **4.x name-parser reactor line**
+  (decided: it eventually MOVES INTO the name-parser reactor as the Rust-backed impl of
+  `name-parser-api`, once that reactor goes Java 22+; then it inherits motherpom). The
+  **layering** matters: only this JVM adapter tracks the reactor version — the **Rust engine**
+  (`gbif-name-parser` on crates.io + the PyPI/CRAN bindings) keeps its OWN independent semver
+  (`0.1.x`), since those serve non-JVM ecosystems with their own cadence. A `4.2.x` binding
+  bundles whatever engine cdylib it was built against; the two version numbers stay decoupled.
+- ✅ `<distributionManagement>` for `repository.gbif.org` (interim, until the reactor move). The
+  `<server>` credential ids in the deployer's `~/.m2/settings.xml` must match `gbif-release` /
+  `gbif-snapshot` — adjust to your actual ids.
+- Remaining before an actual `mvn deploy`: confirm those credential ids; optionally add the
+  `maven-source-plugin` / `maven-javadoc-plugin` / `maven-gpg-plugin` + Sonatype/Central
+  publishing plugin **if** Maven Central sync is wanted (GBIF-internal consumers resolve from
+  Nexus, so this is skippable).
 
 ### 2.3 Python binding
 
@@ -273,7 +275,10 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 ## 6. Open items
 
 - [x] Java: native-lib bundling in `Ffi.java` + pom (§3a) — DONE; `mvn package` = self-contained JAR (verified).
-- [ ] Java deploy: add `<distributionManagement>` (+ Central plugins if syncing); bump `name-parser-api` to released `4.2.0`; set a real `<version>`; then `mvn deploy` to repository.gbif.org.
+- [ ] Java deploy: POM is deploy-ready (`4.2.0-SNAPSHOT`; `name-parser-api` `4.2.0`; GBIF Nexus
+      `<repositories>`+`<distributionManagement>`). REMAINING: confirm your `~/.m2/settings.xml`
+      `<server>` ids match `gbif-release`/`gbif-snapshot`, then `mvn -f bindings/java/pom.xml deploy`
+      (+ Central sources/javadoc/GPG plugins if Central sync is wanted).
 - [ ] `Jenkinsfile`: native build matrix (Stage 1) + Java deploy (Stage 2); then Stages 3–5.
 - [ ] Python: cibuildwheel config + first PyPI publish.
 - [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
