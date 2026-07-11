@@ -23,12 +23,12 @@ Same 8,017-name corpus (`benchmark-data.txt`) for every row; batch, out-of-proce
 - **~2.1× faster** than today's Java parser in batch, **~7× faster** than the 3.x generation still
   deployed in the CoL backend.
 - **The tail collapses.** Linear-time regex means no catastrophic backtracking: the worst
-  single-name parse is ~1 ms (0.96 ms on the 8k corpus, 1.17 ms across 6.4M names), versus the
-  3.x parser's **1,010 ms** (a full second) on one name in the 6.3M col-names dump. This is the
+  single-name parse is a few ms (0.96 ms on the 8k corpus, 2.48 ms across 6.4M full names), versus
+  the 3.x parser's **1,010 ms** (a full second) on one name in the 6.3M col-names dump. This is the
   ReDoS-robustness goal, made concrete.
 - **Zero behavioural difference.** Byte-for-byte parity with Java at every scale tested — 30/30
   fields in-harness, 11,302 names in-process via FFM (both wire formats), and **6,416,452** real
-  Catalogue-of-Life names via the CLI — all 0 diffs (§5).
+  full Catalogue-of-Life names via the CLI (0 parsed-field diffs) — see §5.
 
 ## Two measurement contexts (read this before comparing numbers)
 
@@ -106,24 +106,24 @@ inputs exist at all, and both corpora are similar-composition real names).
 | V4 (earlier) | 19.79 µs | 18.54 µs | 29.46 µs | 2.62 ms |
 | V4 (2026-05-16) | 34.00 µs | 32.50 µs | 47.21 µs | 5.81 ms |
 
-**Rust — `colxr26.6-names.tsv`, 6,416,452 names** (real names only — BOLD specimen IDs and UNITE
-SH fungal OTUs excluded, so its composition mirrors the Java `col-names` set; CoL release 26.6).
-**Col-1 is the _canonical_ name; authorship is a separate column (col-2) and is _not_ included
-here — so this measures name parsing without the authorship-parsing step** (which the 8k corpus
-and the 11,302-name cross-val exercise fully). A full-name (name + authorship) large-corpus run
-is a follow-up. Benchmarked on the **name column** — the `benchmark` command reads col-1 (it
-splits on the first TAB, like `parse`), so it handles this multi-column TSV directly:
+**Rust — `colxr26.6-names.txt`, 6,416,452 full names** (real names only — BOLD specimen IDs and
+UNITE SH fungal OTUs excluded, so its composition mirrors the Java `col-names` set; CoL release
+26.6). These are **full name strings** — canonical name + authorship, reconstructed by
+concatenating the CoL export's name and authorship columns — so this exercises the authorship
+parser (unlike a canonical-name-only run):
 
 ```
-Parsed names: 6416452 (9297 unparsable)     # unparsable count matches `parse`/cross-val exactly
-Average: 12.21 µs   Min: 333 ns   p50: 11.62 µs   p95: 17.58 µs   Max: 1.17 ms
-Breakdown: SCIENTIFIC 6406907 · OTHER 4744 · FORMULA 4522 · INFORMAL 277 · PLACEHOLDER 2
+Parsed names: 6416452 (9233 unparsable)
+Average: 19.30 µs   Min: 291 ns   p50: 18.38 µs   p95: 27.67 µs   Max: 2.48 ms
+Breakdown: SCIENTIFIC 6406792 · OTHER 4672 · FORMULA 4552 · INFORMAL 427 · PLACEHOLDER 9
 ```
 
-Both large corpora are now real-names-only at ~6.3–6.4M, so the averages are directly
-**indicative** — Rust **12.21 µs** vs the Java 4.x rewrite's **19.8–34 µs** — though they remain
-different CoL releases (26.6 vs an earlier one), not a controlled head-to-head, so no precise
-ratio is claimed.
+(A canonical-name-only run — authorship stripped — was 12.21 µs; the ~7 µs delta is the
+authorship-parsing step.) **Rust-vs-Java cross-val on this corpus: 6,416,452 / 6,416,452 identical
+on every parsed field** — the only 2 differing rows (of 6.4M) are the echoed `input` string's
+trailing whitespace, not a parse difference. Both large corpora are real-names-only at ~6.3–6.4M,
+so the averages are **indicative** — Rust **19.30 µs** vs the Java 4.x rewrite's **19.8–34 µs** —
+though different CoL releases (26.6 vs an earlier one), not a controlled head-to-head.
 
 **The tail is the story.** A linear-time engine *cannot* backtrack catastrophically regardless of
 input; the numbers bear it out at scale:
@@ -132,12 +132,13 @@ input; the numbers bear it out at scale:
 |---|---:|
 | Java 3.x generation (6.3M col-names) | **1,010 ms** |
 | Java 4.x rewrite (6.3M col-names) | 2.6–5.8 ms |
-| **Rust core (6.4M colxr26.6-names)** | **1.17 ms** |
+| **Rust core (6.4M colxr26.6-names, full names)** | **2.48 ms** |
 
 The 3.x parser — the one the CoL backend still runs — spent a **full second** on a single
 pathological name; the Java rewrite fought this down to a few ms with ~20 hand-placed possessive
-quantifiers; the Rust port removes the failure mode structurally (≈860× below the 3.x worst case,
-≈2–5× below the 4.x worst case, on comparably large real corpora).
+quantifiers; the Rust port removes the failure mode structurally — its 2.48 ms worst case is a
+legitimately long/complex name, not backtracking (≈400× below the 3.x worst case, and on par with
+the 4.x rewrite's tail, but bounded by the linear-time engine rather than hand-placed quantifiers).
 
 ## 3. In-process — Java calling Rust via FFM/Panama (JMH)
 
@@ -189,11 +190,16 @@ parser at three scales, every field, **0 differences** everywhere:
 | 8,017 names, all 30 `ParsedName` fields | in-harness golden diff (`tests/parse_golden.rs`) | **30/30 fields, 0 mismatches** |
 | 11,302 names (8k + 6 Java test corpora) | Rust CLI vs Java CLI (`compare`) | **11,302 / 11,302** |
 | 11,302 names, in-process, **both wire formats** | `NameParserRust` vs `NameParserImpl` (`ParityTest`) | **11,302 / 11,302** each |
-| 6,416,452 names (colxr26.6-names, real names only) | Rust CLI vs Java CLI 4.2.0 | **6,416,452 / 6,416,452** |
+| 6,416,452 **full** names (colxr26.6-names) | Rust CLI vs Java CLI 4.2.0 | **6,416,452 / 6,416,452** parsed fields |
 
-The one documented non-difference: Java serializes `ParsedName.warnings` (a `HashSet`) in
-hash-bucket order, Rust in insertion order — a raw-byte difference on 5 of 8,017 rows that both
-the golden harness and `compare` correctly treat as set-equal (neither order is more canonical).
+Two documented non-differences, both cosmetic and neither a parse difference:
+1. Java serializes `ParsedName.warnings` (a `HashSet`) in hash-bucket order, Rust in insertion
+   order — a raw-byte difference on 5 of 8,017 rows that both the golden harness and `compare`
+   correctly treat as set-equal (neither order is more canonical).
+2. On the full-name corpus, 2 of 6,416,452 rows differ only in the echoed `input` string: for
+   names with trailing whitespace, Rust's `parse` echoes the trimmed name while Java echoes the
+   raw line. The parsed result is identical; only the round-tripped input string differs.
+
 Detection was verified adversarially (corrupting one field makes `compare` flag exactly that
 row). Full detail and the per-corpus table: [`cross-validation.md`](cross-validation.md).
 
