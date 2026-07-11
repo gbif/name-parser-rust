@@ -13,7 +13,8 @@
 - **Bind the core NATIVELY.** Depend on `nameparser` (path); reuse `nameparser::parse` + the `pub` `ParsedName`/`Authorship`/`CombinedAuthorship` + `Rank::from_name`/`NomCode::from_name`. **Do not modify the core crate** (everything needed is already `pub`). No JSON on the hot path — `to_dict()` is a convenience, not how `parse` returns.
 - **The `.venv` and build artifacts are git-ignored** — add `/.venv/`, `crates/nameparser-py/target/` is covered by the workspace `/target`. Never commit a venv or a wheel.
 - **Faithful field surface:** the Python `ParsedName` must expose ALL 30 core fields (below). The corpus parity test (Task 3) is the completeness gate — a missing/mismapped field shows up as a diff.
-- **Enums cross as their serialized string names** (`Rank::name()`-style, e.g. `"SPECIES"`, `"ZOOLOGICAL"`, `"SUBSPECIES"`), matching the JSON/Java `.name()` convention — NOT Python enums (keep it simple + string-comparable). `rank`/`code` inputs to `parse` accept the same strings (via `from_name`) or `None`.
+- **Enums cross as their serialized string names** (e.g. `"SPECIES"`, `"ZOOLOGICAL"`, `"SUBSPECIES"`), matching the JSON/Java `.name()` convention — NOT Python enums (keep it simple + string-comparable). `rank`/`code` inputs to `parse` accept the same strings (via `from_name`) or `None`.
+- **IMPORTANT — the core enums have NO `Display`/`.name()` method.** They are serde-only (`#[serde(rename_all="SCREAMING_SNAKE_CASE")]`, verified). So render enum, `notho` (`Vec<NamePart>`), `epithet_qualifier` (`BTreeMap<NamePart,String>`) and nested-authorship fields to Python via **`pythonize(py, &self.inner.<field>)`** — it maps any serde-Serialize value to the idiomatic Python type (enum→`str`, `Option`→`None`/value, `Vec`→`list`, `BTreeMap`→`dict`, struct→`dict`). Do NOT call a `.name()` that doesn't exist, and do NOT add one to the core. Plain scalar fields (`Option<String>`, `bool`, `Option<i32>`) use direct `.clone()` getters (native `str`/`None`/`bool`/`int`) — no pythonize needed.
 - SPDX header (`// SPDX-License-Identifier: Apache-2.0`) on Rust files; crate version `0.0.0`.
 - **Working dir** `/Users/markus/code/gbif/name-parser-rust/`. Preamble: `export PATH="$HOME/.cargo/bin:$PATH"`. Python is `python3` (3.13) on PATH.
 
@@ -99,12 +100,13 @@ pub struct CombinedAuthorship { combination_authorship: Authorship, basionym_aut
 
   #[pymethods]
   impl PyParsedName {
-      #[getter] fn rank(&self) -> String { self.inner.rank.name().to_string() } // adjust to the actual enum→name accessor
+      // enum → str via pythonize (no .name() exists on the core enums)
+      #[getter] fn rank(&self, py: Python<'_>) -> PyResult<PyObject> { Ok(pythonize::pythonize(py, &self.inner.rank)?.into()) }
       #[getter] fn genus(&self) -> Option<String> { self.inner.genus.clone() }
       #[getter] fn specific_epithet(&self) -> Option<String> { self.inner.specific_epithet.clone() }
       #[getter] fn infraspecific_epithet(&self) -> Option<String> { self.inner.infraspecific_epithet.clone() }
       #[getter] fn warnings(&self) -> Vec<String> { self.inner.warnings.clone() }
-      fn __repr__(&self) -> String { format!("ParsedName(rank={}, genus={:?})", self.inner.rank.name(), self.inner.genus) }
+      fn __repr__(&self) -> String { format!("ParsedName(rank={:?}, genus={:?})", self.inner.rank, self.inner.genus) }
   }
 
   #[pyfunction]
