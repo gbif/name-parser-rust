@@ -279,7 +279,7 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
 /// tolerates, since a bare `col-names.tsv`-style single-column TSV extract is a valid plain-
 /// text input). Returns `None` when the line contributes no name; the caller keeps reading
 /// (the line still counts towards the 1-based line numbering either way).
-fn extract_name(raw: &str) -> Option<&str> {
+pub(crate) fn extract_name(raw: &str) -> Option<&str> {
     if raw.is_empty() || raw.starts_with('#') {
         return None;
     }
@@ -306,7 +306,11 @@ fn extract_name(raw: &str) -> Option<&str> {
 /// hand-assembled, and struct-direct serialization (`ParsedName`'s own `#[derive(Serialize)]`)
 /// always writes its fields in declaration order regardless of that same feature flag, so
 /// nesting it verbatim here is exactly as order-safe as the envelope itself.
-fn render_row(line_no: u64, name: &str, result: &Result<ParsedName, ParseError>) -> String {
+pub(crate) fn render_row(
+    line_no: u64,
+    name: &str,
+    result: &Result<ParsedName, ParseError>,
+) -> String {
     let mut out = String::with_capacity(128);
     out.push_str("{\"line\":");
     out.push_str(&line_no.to_string());
@@ -394,7 +398,7 @@ fn run_benchmark(args: BenchmarkArgs) -> io::Result<()> {
 /// "Input not found" message the same way `BenchmarkCli.main` does. Falls back to `path`
 /// unchanged if the current directory can't be read, matching `toAbsolutePath()`'s own
 /// contract (it never fails just because the target is missing).
-fn absolute_path(path: &Path) -> std::path::PathBuf {
+pub(crate) fn absolute_path(path: &Path) -> std::path::PathBuf {
     if path.is_absolute() {
         path.to_path_buf()
     } else {
