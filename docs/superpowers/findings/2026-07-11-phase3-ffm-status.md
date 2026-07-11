@@ -14,10 +14,10 @@
 The FFM bridge is production-ready:
 
 - **`nameparser-ffi` crate:** Rust C-ABI cdylib exposing two wire formats:
-  - `np_parse_json(name: *const u8, len: usize) -> *mut u8` — returns proven `ParsedName` JSON
-  - `np_parse_struct(name: *const u8, len: usize, buffer: *mut u8, buffer_size: usize) -> i32` — returns flat fixed-layout little-endian binary struct (or retries on buffer overflow)
+  - `np_parse_json(name, authorship, rank, code: *const c_char) -> *mut c_char` — four nullable-except-`name` C-string inputs; returns a heap-allocated, NUL-terminated C string holding the proven `ParsedName` JSON, freed via `np_free`
+  - `np_parse_struct(name, authorship, rank, code: *const c_char, out: *mut u8, out_cap: usize) -> i64` — same four inputs, writes a flat fixed-layout little-endian binary struct into `out`; the return is `i64`: `>= 0` bytes written, `-1` unparsable, `-2` internal error, `-(needed+3)` overflow (retry with a bigger buffer)
   - `np_abi_version() -> u32` — version guard (=1)
-  - `np_free(ptr: *mut u8)` — dealloc
+  - `np_free(ptr: *mut c_char)` — dealloc
   - **Safety:** Every `extern "C"` body is `catch_unwind`-guarded; FFI never panics into C
 
 - **`bindings/java/` Maven module:** Self-contained, standalone pom.xml, `--release 22`, JDK 25 (where FFM is stable, not preview)

@@ -257,8 +257,8 @@ final class Ffi {
       }
 
       if (ret == -2) {
-        throw new RuntimeException(
-            "nameparser-ffi: np_parse_struct reported an internal error (caught panic) for name '" + name + "'");
+        throw new IllegalStateException(
+            "nameparser-ffi internal error: np_parse_struct returned -2 (caught panic) for name '" + name + "'");
       }
       if (ret == -1) {
         throw StructCodec.unparsableException(out, name);

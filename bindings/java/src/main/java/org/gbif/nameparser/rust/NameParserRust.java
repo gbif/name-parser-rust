@@ -94,7 +94,8 @@ public class NameParserRust implements NameParser {
     String json = Ffi.callParseJson(scientificName,
         authorship, rank == null ? null : rank.name(), code == null ? null : code.name());
     if (json == null) {
-      throw new UnparsableNameException(NameType.OTHER, scientificName, "native parse returned null");
+      throw new IllegalStateException(
+          "nameparser-ffi internal error: np_parse_json returned null (caught panic) for name '" + scientificName + "'");
     }
     JsonObject o = JsonParser.parseString(json).getAsJsonObject();
     if (o.has("error")) {
