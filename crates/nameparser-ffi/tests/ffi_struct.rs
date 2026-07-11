@@ -10,7 +10,7 @@
 
 use std::ffi::CString;
 
-use nameparser::model::ParsedName;
+use nameparser::model::{Authorship, CombinedAuthorship, ParsedName};
 use nameparser_ffi::layout;
 use nameparser_ffi::np_parse_struct;
 
@@ -77,6 +77,54 @@ fn read_string_run(buf: &[u8], cursor: &mut usize) -> Vec<String> {
     out
 }
 
+/// Reads one 8-byte optional string ref at `*cursor`, advancing past it (honors the sentinel).
+fn read_opt_string_ref(buf: &[u8], cursor: &mut usize) -> Option<String> {
+    let offset = read_u32(buf, *cursor);
+    let len = read_u32(buf, *cursor + 4);
+    *cursor += layout::STRING_REF_SIZE;
+    read_string_ref(buf, offset, len)
+}
+
+/// Reads one nested authorship group at `*cursor` (advancing past it), reconstructing the whole
+/// `CombinedAuthorship` from its present-flag + 4 run tables + 5 string refs so it can be
+/// compared with `==` against the real `ParsedName`'s own `Option<CombinedAuthorship>`.
+fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorship> {
+    let present = read_u32(buf, *cursor);
+    *cursor += 4;
+    if present == layout::GROUP_ABSENT {
+        return None;
+    }
+    assert_eq!(
+        present,
+        layout::GROUP_PRESENT,
+        "nested group present flag must be GROUP_ABSENT (0) or GROUP_PRESENT (1)"
+    );
+    let authors_comb = read_string_run(buf, cursor);
+    let exauthors_comb = read_string_run(buf, cursor);
+    let authors_bas = read_string_run(buf, cursor);
+    let exauthors_bas = read_string_run(buf, cursor);
+    let year_comb = read_opt_string_ref(buf, cursor);
+    let imprint_year_comb = read_opt_string_ref(buf, cursor);
+    let year_bas = read_opt_string_ref(buf, cursor);
+    let imprint_year_bas = read_opt_string_ref(buf, cursor);
+    let sanctioning_author = read_opt_string_ref(buf, cursor);
+    Some(CombinedAuthorship {
+        combination_authorship: Authorship {
+            authors: authors_comb,
+            ex_authors: exauthors_comb,
+            year: year_comb,
+            imprint_year: imprint_year_comb,
+        },
+        basionym_authorship: Authorship {
+            authors: authors_bas,
+            ex_authors: exauthors_bas,
+            year: year_bas,
+            imprint_year: imprint_year_bas,
+        },
+        sanctioning_author,
+    })
+}
+
 #[derive(Debug)]
 struct DecodedHeader {
     abi_version: u32,
@@ -122,11 +170,14 @@ struct Decoded {
     exauthors_bas: Vec<String>,
     warnings: Vec<String>,
     epithet_qualifier: Vec<(u32, String)>,
+    generic_authorship: Option<CombinedAuthorship>,
+    specific_authorship: Option<CombinedAuthorship>,
 }
 
-/// Decodes a full success-path buffer (header + string table + run-slots + blob) — mirrors
-/// `layout`'s documented traversal exactly: fixed-offset header, fixed-offset 15-slot string
-/// table, then the 6 run-slots walked sequentially from `RUN_SLOTS_OFFSET`.
+/// Decodes a full success-path buffer (header + string table + run-slots + nested groups +
+/// blob) — mirrors `layout`'s documented traversal exactly: fixed-offset header, fixed-offset
+/// 17-slot string table, the 6 run-slots walked sequentially from `RUN_SLOTS_OFFSET`, then the
+/// 2 nested authorship groups (generic, specific).
 fn decode(buf: &[u8]) -> Decoded {
     let header = decode_header(buf);
 
@@ -165,6 +216,9 @@ fn decode(buf: &[u8]) -> Decoded {
         epithet_qualifier.push((part_ordinal, s));
     }
 
+    let generic_authorship = read_nested_group(buf, &mut cursor);
+    let specific_authorship = read_nested_group(buf, &mut cursor);
+
     Decoded {
         header,
         strings,
@@ -174,6 +228,8 @@ fn decode(buf: &[u8]) -> Decoded {
         exauthors_bas,
         warnings,
         epithet_qualifier,
+        generic_authorship,
+        specific_authorship,
     }
 }
 
@@ -330,6 +386,27 @@ fn assert_decoded_matches(name: &str, decoded: &Decoded, pn: &ParsedName) {
         decoded.strings[layout::SLOT_YEAR_BAS],
         pn.basionym_authorship.year,
         "{name}: basionym year"
+    );
+    assert_eq!(
+        decoded.strings[layout::SLOT_IMPRINT_YEAR_COMB],
+        pn.combination_authorship.imprint_year,
+        "{name}: combination imprint_year"
+    );
+    assert_eq!(
+        decoded.strings[layout::SLOT_IMPRINT_YEAR_BAS],
+        pn.basionym_authorship.imprint_year,
+        "{name}: basionym imprint_year"
+    );
+
+    // The two nested authorship groups reconstruct whole `CombinedAuthorship`s, compared with
+    // `==` against the real ParsedName's own Option<CombinedAuthorship> (both derive Eq).
+    assert_eq!(
+        decoded.generic_authorship, pn.generic_authorship,
+        "{name}: generic_authorship"
+    );
+    assert_eq!(
+        decoded.specific_authorship, pn.specific_authorship,
+        "{name}: specific_authorship"
     );
 
     assert_eq!(
@@ -495,6 +572,165 @@ fn epithet_qualifier_run_slot_decodes_namepart_ordinal_and_string() {
     assert_decoded_matches(name, &decoded, &pn);
 
     assert_eq!(decoded.epithet_qualifier.len(), 1);
+}
+
+// ---- generic_authorship nested group (real corpus examples) ----
+
+#[test]
+fn generic_authorship_with_combination_and_basionym_authors() {
+    // Cordia (Adans.) Kuntze sect. Salimori:
+    // genericAuthorship.combination=[Kuntze], genericAuthorship.basionym=[Adans.].
+    let name = "Cordia (Adans.) Kuntze sect. Salimori";
+    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    assert!(
+        pn.generic_authorship.is_some(),
+        "test name must actually carry a generic authorship"
+    );
+    let buf = parse_struct_success(name);
+    assert_abi_version_header(&buf);
+    let decoded = decode(&buf);
+    assert_decoded_matches(name, &decoded, &pn);
+
+    let generic = decoded
+        .generic_authorship
+        .as_ref()
+        .expect("generic authorship must decode as present");
+    assert_eq!(
+        generic.combination_authorship.authors,
+        vec!["Kuntze".to_string()]
+    );
+    assert_eq!(
+        generic.basionym_authorship.authors,
+        vec!["Adans.".to_string()]
+    );
+    // The base authorship stays empty for this name — the authorship is entirely in the group.
+    assert!(decoded.authors_comb.is_empty());
+    assert_eq!(decoded.specific_authorship, None);
+}
+
+#[test]
+fn generic_authorship_combination_only() {
+    // Centaurea L. subg. Jacea: genericAuthorship.combination=[L.].
+    let name = "Centaurea L. subg. Jacea";
+    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    assert!(pn.generic_authorship.is_some());
+    let buf = parse_struct_success(name);
+    assert_abi_version_header(&buf);
+    let decoded = decode(&buf);
+    assert_decoded_matches(name, &decoded, &pn);
+
+    let generic = decoded
+        .generic_authorship
+        .as_ref()
+        .expect("generic authorship must decode as present");
+    assert_eq!(
+        generic.combination_authorship.authors,
+        vec!["L.".to_string()]
+    );
+    assert!(generic.basionym_authorship.authors.is_empty());
+}
+
+// ---- specific_authorship nested group (real corpus examples) ----
+
+#[test]
+fn specific_authorship_on_a_cultivar() {
+    // Acer campestre L. cv. 'Elsrijk' Broerse:
+    // specificAuthorship.combination=[L.], base combination=[Broerse].
+    let name = "Acer campestre L. cv. 'Elsrijk' Broerse";
+    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    assert!(
+        pn.specific_authorship.is_some(),
+        "test name must actually carry a specific authorship"
+    );
+    let buf = parse_struct_success(name);
+    assert_abi_version_header(&buf);
+    let decoded = decode(&buf);
+    assert_decoded_matches(name, &decoded, &pn);
+
+    let specific = decoded
+        .specific_authorship
+        .as_ref()
+        .expect("specific authorship must decode as present");
+    assert_eq!(
+        specific.combination_authorship.authors,
+        vec!["L.".to_string()]
+    );
+    // The base combination authorship is a DIFFERENT author than the nested specific one.
+    assert_eq!(decoded.authors_comb, vec!["Broerse".to_string()]);
+    assert_eq!(decoded.generic_authorship, None);
+}
+
+#[test]
+fn specific_authorship_on_another_cultivar() {
+    // Alnus elliptica Req. cv. 'itolanda' Door.:
+    // specificAuthorship.combination=[Req.], base combination=[Door.].
+    let name = "Alnus elliptica Req. cv. 'itolanda' Door.";
+    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    assert!(pn.specific_authorship.is_some());
+    let buf = parse_struct_success(name);
+    assert_abi_version_header(&buf);
+    let decoded = decode(&buf);
+    assert_decoded_matches(name, &decoded, &pn);
+
+    let specific = decoded
+        .specific_authorship
+        .as_ref()
+        .expect("specific authorship must decode as present");
+    assert_eq!(
+        specific.combination_authorship.authors,
+        vec!["Req.".to_string()]
+    );
+    assert_eq!(decoded.authors_comb, vec!["Door.".to_string()]);
+}
+
+// ---- imprint years on the base authorship (real corpus examples) ----
+
+#[test]
+fn imprint_year_alongside_a_year_on_the_base_combination() {
+    // Gemmata Franzmann & Skerman, 1985, 1984:
+    // combinationAuthorship year=1985, imprintYear=1984.
+    let name = "Gemmata Franzmann & Skerman, 1985, 1984";
+    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    assert_eq!(
+        pn.combination_authorship.imprint_year.as_deref(),
+        Some("1984"),
+        "test name must actually carry an imprint year"
+    );
+    let buf = parse_struct_success(name);
+    assert_abi_version_header(&buf);
+    let decoded = decode(&buf);
+    assert_decoded_matches(name, &decoded, &pn);
+
+    assert_eq!(
+        decoded.strings[layout::SLOT_YEAR_COMB].as_deref(),
+        Some("1985")
+    );
+    assert_eq!(
+        decoded.strings[layout::SLOT_IMPRINT_YEAR_COMB].as_deref(),
+        Some("1984")
+    );
+}
+
+#[test]
+fn bracketed_imprint_year_with_no_regular_year() {
+    // Anthoscopus Cabanis [1851]: combinationAuthorship imprintYear=1851, no year.
+    let name = "Anthoscopus Cabanis [1851]";
+    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    assert_eq!(
+        pn.combination_authorship.imprint_year.as_deref(),
+        Some("1851")
+    );
+    assert_eq!(pn.combination_authorship.year, None);
+    let buf = parse_struct_success(name);
+    assert_abi_version_header(&buf);
+    let decoded = decode(&buf);
+    assert_decoded_matches(name, &decoded, &pn);
+
+    assert_eq!(decoded.strings[layout::SLOT_YEAR_COMB], None);
+    assert_eq!(
+        decoded.strings[layout::SLOT_IMPRINT_YEAR_COMB].as_deref(),
+        Some("1851")
+    );
 }
 
 #[test]

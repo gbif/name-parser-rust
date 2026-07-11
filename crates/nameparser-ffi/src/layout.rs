@@ -20,6 +20,8 @@
 //! [ header: HEADER_SIZE bytes, fixed offsets ]
 //! [ string table: 4 + NUM_STRING_SLOTS * 8 bytes, fixed offsets ]
 //! [ run-slot tables: 6 tables, back-to-back, each self-delimiting, VARIABLE total size ]
+//! [ nested authorship groups: 2 groups (generic_authorship, specific_authorship),
+//!   back-to-back, each self-delimiting via a presence flag, VARIABLE total size ]
 //! [ string blob: the remaining bytes, all string content, referenced by absolute offset ]
 //! ```
 //!
@@ -92,8 +94,8 @@
 //!
 //! # String table (fixed slots, offset [`STRING_TABLE_OFFSET`])
 //!
-//! `u32 count` (always [`NUM_STRING_SLOTS`] = 15, written as data — not just implied — so a
-//! reader can sanity-check it), then 15 × `(u32 offset, u32 len)` string refs in this fixed
+//! `u32 count` (always [`NUM_STRING_SLOTS`] = 17, written as data — not just implied — so a
+//! reader can sanity-check it), then 17 × `(u32 offset, u32 len)` string refs in this fixed
 //! slot order:
 //!
 //! | Slot | Index | `ParsedName` field |
@@ -113,6 +115,8 @@
 //! | `SLOT_SANCTIONING_AUTHOR` | 12 | `sanctioning_author` |
 //! | `SLOT_YEAR_COMB` | 13 | `combination_authorship.year` |
 //! | `SLOT_YEAR_BAS` | 14 | `basionym_authorship.year` |
+//! | `SLOT_IMPRINT_YEAR_COMB` | 15 | `combination_authorship.imprint_year` |
+//! | `SLOT_IMPRINT_YEAR_BAS` | 16 | `basionym_authorship.imprint_year` |
 //!
 //! # Run-slots (fixed sequential order, starting at offset [`RUN_SLOTS_OFFSET`])
 //!
@@ -131,7 +135,38 @@
 //!
 //! Each run-slot's entries are always "present" in the string-ref sense (a run entry IS a real
 //! list element, e.g. one actual author string) — the absent-sentinel only ever applies to the
-//! 15 fixed string-table slots above.
+//! 17 fixed string-table slots above (and to the 5 nested-group string refs below).
+//!
+//! # Nested authorship groups (fixed sequential order, right after the run-slots)
+//!
+//! Two `Option<CombinedAuthorship>` fields on [`ParsedName`] — `generic_authorship` (the
+//! authorship of an infrageneric name's genus, e.g. `Cordia (Adans.) Kuntze sect. Salimori`)
+//! and `specific_authorship` (the authorship of a cultivar's species, e.g.
+//! `Acer campestre L. cv. 'Elsrijk' Broerse`) — each encode as a self-delimiting **nested
+//! group**, in this fixed order, right after `RUN_EPITHET_QUALIFIER` and before the blob:
+//!
+//! 1. `generic_authorship`
+//! 2. `specific_authorship`
+//!
+//! Each group is:
+//!
+//! - `u32 present` — [`GROUP_ABSENT`] (0) or [`GROUP_PRESENT`] (1). **If absent, that 4-byte
+//!   flag is the whole group** (the common case costs 4 bytes and is unambiguous). If present:
+//! - four run-slot tables (each a `u32 count` then `count` × 8-byte string refs), in this order:
+//!   its `combination_authorship.authors`, `combination_authorship.ex_authors`,
+//!   `basionym_authorship.authors`, `basionym_authorship.ex_authors`;
+//! - then five fixed 8-byte string refs, in this order: `combination_authorship.year`,
+//!   `combination_authorship.imprint_year`, `basionym_authorship.year`,
+//!   `basionym_authorship.imprint_year`, `sanctioning_author` — each honoring the same
+//!   absent-string sentinel ([`ABSENT_STRING_OFFSET`]) as the string table.
+//!
+//! This mirrors the base `CombinedAuthorship`'s own encoding (the base one is spread across the
+//! four author/ex-author run-slots + the `YEAR_*`/`IMPRINT_YEAR_*`/`SANCTIONING_AUTHOR` string
+//! slots) — the base authorship gets first-class flat slots because it's on every name; the two
+//! nested groups are rare (38 of 11,302 corpus names) so they get a compact
+//! present-flag-gated block instead. A `CombinedAuthorship` is a complete unit here: all four
+//! of each inner `Authorship`'s fields (authors, ex-authors, year, imprint-year) plus the
+//! group's `sanctioning_author` are carried, so a reader reconstructs the whole nested object.
 //!
 //! # Return convention (mirrored on [`crate::np_parse_struct`])
 //!
@@ -150,24 +185,30 @@
 //!   bigger buffer. This only applies to the success path — the unparsable path's small,
 //!   header-only write is never overflow-coded (see above).
 //!
-//! # Known gap — not in this wire format (flagged, not silently patched)
+//! # Field coverage — complete for every field the JSON path serializes
 //!
-//! This layout implements exactly the field set enumerated in the Task 5 brief. Four real,
-//! sometimes-populated [`ParsedName`] fields are deliberately **not** encoded, because the
-//! brief's slot enumeration does not name them:
-//! `generic_authorship`, `specific_authorship` (both `Option<CombinedAuthorship>`, set by
-//! `pipeline::run` for some inputs — see `pipeline/mod.rs`'s handling of `pendingGeneric`/
-//! `pendingSpecific` authorship), and `combination_authorship.imprint_year` /
-//! `basionym_authorship.imprint_year` (both `Option<String>`, set by
-//! `pipeline::authorship_parser` for bracketed/keyword/bare-`&`-year imprint years). A
-//! struct-path `ParsedName` reconstructed by Task 6's Java reader will therefore differ from
-//! the JSON path's for any input where one of these four fields is non-empty. Left as a
-//! reported gap for the plan owner / Task 6, not silently special-cased in this file, since
-//! expanding the wire format beyond the brief's explicit slot list is out of this task's scope.
+//! This layout carries every [`ParsedName`] field the JSON (`np_parse_json`) path emits, so a
+//! struct-path `ParsedName` reconstructed by Task 6's Java reader is field-for-field identical
+//! to the JSON path's for every input. The four fields an earlier revision of this layout
+//! omitted are now all encoded: `combination_authorship.imprint_year` /
+//! `basionym_authorship.imprint_year` (the `SLOT_IMPRINT_YEAR_COMB`/`_BAS` string slots — 33 of
+//! 11,302 corpus names, e.g. the `1985, 1984` double-year and `[1851]` bracketed patterns), and
+//! `generic_authorship` / `specific_authorship` (the two nested authorship groups above — 5 of
+//! 11,302 corpus names). The one deliberate non-carry is `Authorship.imprint_year` on the
+//! nested groups' *inner* authorships, which IS carried (each nested `Authorship` encodes all
+//! four of its fields) — there is no remaining gap.
+//!
+//! (`generic_authorship`/`specific_authorship` are set by `pipeline::run` — see `pipeline/mod.rs`'s
+//! `pendingGeneric`/`pendingSpecific` handling; the imprint years by `pipeline::authorship_parser`
+//! for bracketed/keyword/bare-`&`-year forms. All are read straight off the same `ParsedName`
+//! the JSON path serializes, never re-derived.)
 
 use std::collections::BTreeMap;
 
-use nameparser::model::{NamePart, NameType, NomCode, ParseError, ParsedName, Rank, State};
+use nameparser::model::{
+    Authorship, CombinedAuthorship, NamePart, NameType, NomCode, ParseError, ParsedName, Rank,
+    State,
+};
 
 // ================================================================================================
 // Header offsets and sizes
@@ -224,9 +265,11 @@ pub const SLOT_UNPARSED: usize = 11;
 pub const SLOT_SANCTIONING_AUTHOR: usize = 12;
 pub const SLOT_YEAR_COMB: usize = 13;
 pub const SLOT_YEAR_BAS: usize = 14;
+pub const SLOT_IMPRINT_YEAR_COMB: usize = 15;
+pub const SLOT_IMPRINT_YEAR_BAS: usize = 16;
 
-/// Number of fixed string-table slots (`SLOT_UNINOMIAL`..`SLOT_YEAR_BAS`).
-pub const NUM_STRING_SLOTS: usize = 15;
+/// Number of fixed string-table slots (`SLOT_UNINOMIAL`..`SLOT_IMPRINT_YEAR_BAS`).
+pub const NUM_STRING_SLOTS: usize = 17;
 
 /// Byte size of a single string ref: `u32 offset` + `u32 len`.
 pub const STRING_REF_SIZE: usize = 8;
@@ -263,6 +306,25 @@ pub const EPITHET_QUALIFIER_ENTRY_SIZE: usize = 12;
 /// Byte offset where the first run-slot table (`RUN_AUTHORS_COMB`) begins — fixed, since the
 /// string table ahead of it is always exactly [`STRING_TABLE_SIZE`] bytes regardless of data.
 pub const RUN_SLOTS_OFFSET: usize = STRING_TABLE_OFFSET + STRING_TABLE_SIZE;
+
+// ================================================================================================
+// Nested authorship groups: fixed sequential order, right after the run-slots
+// ================================================================================================
+
+/// `present` flag value for an ABSENT nested authorship group (the whole group is just this
+/// 4-byte flag). See the module doc's "Nested authorship groups" section.
+pub const GROUP_ABSENT: u32 = 0;
+/// `present` flag value for a PRESENT nested authorship group (followed by its 4 run tables and
+/// 5 string refs).
+pub const GROUP_PRESENT: u32 = 1;
+
+/// Number of nested authorship groups (`generic_authorship`, then `specific_authorship`).
+pub const NUM_NESTED_AUTHORSHIP_GROUPS: usize = 2;
+
+/// The 5 fixed 8-byte string refs a PRESENT nested group carries after its 4 run tables:
+/// `combination.year`, `combination.imprint_year`, `basionym.year`, `basionym.imprint_year`,
+/// `sanctioning_author`.
+pub const NESTED_GROUP_STRING_REFS: usize = 5;
 
 // ================================================================================================
 // Enum ordinal mapping — see the module doc's "Enum ordinal mapping" section for how each of
@@ -439,6 +501,110 @@ fn write_epithet_qualifier_table(buf: &mut Vec<u8>, refs: &[(u32, u32, u32)]) {
     }
 }
 
+/// Appends a single `(u32 offset, u32 len)` string ref to `buf`.
+fn write_string_ref(buf: &mut Vec<u8>, r: (u32, u32)) {
+    buf.extend_from_slice(&r.0.to_le_bytes());
+    buf.extend_from_slice(&r.1.to_le_bytes());
+}
+
+/// The absolute string ref for an optional string — the absent sentinel when `None`.
+fn place_opt(placer: &mut StringPlacer, s: Option<&str>) -> (u32, u32) {
+    match s {
+        Some(s) => placer.place(s),
+        None => (ABSENT_STRING_OFFSET, 0),
+    }
+}
+
+// ================================================================================================
+// Nested authorship groups (generic_authorship / specific_authorship)
+// ================================================================================================
+
+/// The placed string refs for one nested `CombinedAuthorship` group (see the module doc's
+/// "Nested authorship groups" section). Strings are already in the blob by the time this exists.
+struct NestedAuthorshipRefs {
+    authors_comb: Vec<(u32, u32)>,
+    exauthors_comb: Vec<(u32, u32)>,
+    authors_bas: Vec<(u32, u32)>,
+    exauthors_bas: Vec<(u32, u32)>,
+    year_comb: (u32, u32),
+    imprint_year_comb: (u32, u32),
+    year_bas: (u32, u32),
+    imprint_year_bas: (u32, u32),
+    sanctioning_author: (u32, u32),
+}
+
+/// The byte size a nested authorship group occupies (count-driven, so computable before any
+/// string is placed): 4 bytes for the `present` flag when absent, else the flag + its four run
+/// tables + [`NESTED_GROUP_STRING_REFS`] fixed refs.
+fn nested_group_size(ca: &Option<CombinedAuthorship>) -> usize {
+    match ca {
+        None => 4,
+        Some(ca) => {
+            4 + (4 + ca.combination_authorship.authors.len() * STRING_REF_SIZE)
+                + (4 + ca.combination_authorship.ex_authors.len() * STRING_REF_SIZE)
+                + (4 + ca.basionym_authorship.authors.len() * STRING_REF_SIZE)
+                + (4 + ca.basionym_authorship.ex_authors.len() * STRING_REF_SIZE)
+                + NESTED_GROUP_STRING_REFS * STRING_REF_SIZE
+        }
+    }
+}
+
+/// Places every string of a nested `CombinedAuthorship` into the blob (in the fixed encode
+/// order: comb authors, comb ex-authors, bas authors, bas ex-authors, then the 5 opt strings),
+/// returning their refs. The years/imprint-years/sanctioning-author use the absent sentinel.
+fn place_nested(placer: &mut StringPlacer, ca: &CombinedAuthorship) -> NestedAuthorshipRefs {
+    let place_run = |placer: &mut StringPlacer, a: &Authorship| {
+        (
+            a.authors
+                .iter()
+                .map(|s| placer.place(s))
+                .collect::<Vec<_>>(),
+            a.ex_authors
+                .iter()
+                .map(|s| placer.place(s))
+                .collect::<Vec<_>>(),
+        )
+    };
+    let (authors_comb, exauthors_comb) = place_run(placer, &ca.combination_authorship);
+    let (authors_bas, exauthors_bas) = place_run(placer, &ca.basionym_authorship);
+    let year_comb = place_opt(placer, ca.combination_authorship.year.as_deref());
+    let imprint_year_comb = place_opt(placer, ca.combination_authorship.imprint_year.as_deref());
+    let year_bas = place_opt(placer, ca.basionym_authorship.year.as_deref());
+    let imprint_year_bas = place_opt(placer, ca.basionym_authorship.imprint_year.as_deref());
+    let sanctioning_author = place_opt(placer, ca.sanctioning_author.as_deref());
+    NestedAuthorshipRefs {
+        authors_comb,
+        exauthors_comb,
+        authors_bas,
+        exauthors_bas,
+        year_comb,
+        imprint_year_comb,
+        year_bas,
+        imprint_year_bas,
+        sanctioning_author,
+    }
+}
+
+/// Appends a nested authorship group to `buf`: just the [`GROUP_ABSENT`] flag when `refs` is
+/// `None`, else the [`GROUP_PRESENT`] flag then its four run tables and five fixed string refs.
+fn write_nested_group(buf: &mut Vec<u8>, refs: &Option<NestedAuthorshipRefs>) {
+    match refs {
+        None => buf.extend_from_slice(&GROUP_ABSENT.to_le_bytes()),
+        Some(refs) => {
+            buf.extend_from_slice(&GROUP_PRESENT.to_le_bytes());
+            write_string_run_table(buf, &refs.authors_comb);
+            write_string_run_table(buf, &refs.exauthors_comb);
+            write_string_run_table(buf, &refs.authors_bas);
+            write_string_run_table(buf, &refs.exauthors_bas);
+            write_string_ref(buf, refs.year_comb);
+            write_string_ref(buf, refs.imprint_year_comb);
+            write_string_ref(buf, refs.year_bas);
+            write_string_ref(buf, refs.imprint_year_bas);
+            write_string_ref(buf, refs.sanctioning_author);
+        }
+    }
+}
+
 // ================================================================================================
 // Public encode entry points
 // ================================================================================================
@@ -449,10 +615,10 @@ fn write_epithet_qualifier_table(buf: &mut Vec<u8>, refs: &[(u32, u32, u32)]) {
 ///
 /// Reads every field directly off `pn` — the same `ParsedName` the JSON path
 /// (`np_parse_json`/`serialize_or_error`) serializes — so the two wire formats can never
-/// derive a field differently (see this module's "Known gap" doc section for the 4 fields
-/// this format does not carry at all, which is a different concern from derivation drift).
+/// derive a field differently, and (see this module's "Field coverage" doc section) this
+/// format now carries every field the JSON path emits.
 pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
-    // ---- gather the 15 fixed string-slot values, in slot order ----
+    // ---- gather the 17 fixed string-slot values, in slot order ----
     let plain_slots: [Option<&str>; NUM_STRING_SLOTS] = [
         pn.uninomial.as_deref(),
         pn.genus.as_deref(),
@@ -469,6 +635,8 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
         pn.sanctioning_author.as_deref(),
         pn.combination_authorship.year.as_deref(),
         pn.basionym_authorship.year.as_deref(),
+        pn.combination_authorship.imprint_year.as_deref(),
+        pn.basionym_authorship.imprint_year.as_deref(),
     ];
 
     // ---- gather the 6 run-slots' source data, in fixed run order ----
@@ -486,8 +654,8 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
         .map(|(part, s)| (namepart_ordinal(*part), s.as_str()))
         .collect();
 
-    // ---- sizes of the header/string-table/run-tables regions are count-driven only, so the
-    // blob's base offset is known before any string byte is placed ----
+    // ---- sizes of the header/string-table/run-tables/nested-group regions are count-driven
+    // only, so the blob's base offset is known before any string byte is placed ----
     let run_table_size = 4
         + run_authors_comb.len() * STRING_REF_SIZE
         + 4
@@ -500,7 +668,9 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
         + run_warnings.len() * STRING_REF_SIZE
         + 4
         + run_epithet_qualifier.len() * EPITHET_QUALIFIER_ENTRY_SIZE;
-    let blob_base = (RUN_SLOTS_OFFSET + run_table_size) as u32;
+    let nested_groups_size =
+        nested_group_size(&pn.generic_authorship) + nested_group_size(&pn.specific_authorship);
+    let blob_base = (RUN_SLOTS_OFFSET + run_table_size + nested_groups_size) as u32;
 
     // ---- place every string into the blob, in a fixed order, recording its ref ----
     let mut placer = StringPlacer::new(blob_base);
@@ -526,6 +696,18 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
             (part_ordinal, offset, len)
         })
         .collect();
+    // Nested groups' strings are placed AFTER the base run-slots' strings, generic before
+    // specific — order is immaterial to correctness (refs are absolute) but fixed for
+    // determinism. `nested_group_size` above already reserved the exact bytes each group's
+    // table occupies before the blob.
+    let refs_generic = pn
+        .generic_authorship
+        .as_ref()
+        .map(|ca| place_nested(&mut placer, ca));
+    let refs_specific = pn
+        .specific_authorship
+        .as_ref()
+        .map(|ca| place_nested(&mut placer, ca));
 
     // ---- assemble the final buffer ----
     let total_size = blob_base as usize + placer.blob.len();
@@ -563,6 +745,10 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
     write_string_run_table(&mut buf, &refs_exauthors_bas);
     write_string_run_table(&mut buf, &refs_warnings);
     write_epithet_qualifier_table(&mut buf, &refs_epithet_qualifier);
+
+    // nested authorship groups, generic then specific
+    write_nested_group(&mut buf, &refs_generic);
+    write_nested_group(&mut buf, &refs_specific);
     debug_assert_eq!(buf.len(), blob_base as usize);
 
     // trailing string blob
@@ -610,9 +796,12 @@ mod tests {
 
     #[test]
     fn string_table_size_and_offset_are_internally_consistent() {
+        assert_eq!(NUM_STRING_SLOTS, 17);
         assert_eq!(STRING_TABLE_OFFSET, HEADER_SIZE);
-        assert_eq!(STRING_TABLE_SIZE, 4 + 15 * 8);
+        assert_eq!(STRING_TABLE_SIZE, 4 + 17 * 8);
         assert_eq!(RUN_SLOTS_OFFSET, HEADER_SIZE + STRING_TABLE_SIZE);
+        // 36 header + (4 + 17*8) string table = 176.
+        assert_eq!(RUN_SLOTS_OFFSET, 176);
     }
 
     #[test]
@@ -651,14 +840,34 @@ mod tests {
     }
 
     #[test]
-    fn encode_of_default_parsed_name_is_header_plus_string_table_plus_empty_run_tables() {
+    fn encode_of_default_parsed_name_is_header_plus_string_table_plus_empty_run_and_group_tables() {
         let buf = encode(&ParsedName::default(), 1);
-        // 6 empty run-slot tables, each just a 4-byte zero count.
-        let expected_len = RUN_SLOTS_OFFSET + NUM_RUN_SLOTS * 4;
+        // 6 empty run-slot tables (a 4-byte zero count each) + 2 absent nested-group flags
+        // (4 bytes each), no blob.
+        let expected_len = RUN_SLOTS_OFFSET + NUM_RUN_SLOTS * 4 + NUM_NESTED_AUTHORSHIP_GROUPS * 4;
         assert_eq!(buf.len(), expected_len);
+        assert_eq!(expected_len, 176 + 24 + 8); // 208
         assert_eq!(
             i32::from_le_bytes(buf[OFF_STATUS..OFF_STATUS + 4].try_into().unwrap()),
             STATUS_SUCCESS
+        );
+        // Both nested-group present flags sit right after the 6 run-slot tables and read ABSENT.
+        let generic_flag_off = RUN_SLOTS_OFFSET + NUM_RUN_SLOTS * 4;
+        assert_eq!(
+            u32::from_le_bytes(
+                buf[generic_flag_off..generic_flag_off + 4]
+                    .try_into()
+                    .unwrap()
+            ),
+            GROUP_ABSENT
+        );
+        assert_eq!(
+            u32::from_le_bytes(
+                buf[generic_flag_off + 4..generic_flag_off + 8]
+                    .try_into()
+                    .unwrap()
+            ),
+            GROUP_ABSENT
         );
     }
 
@@ -739,5 +948,62 @@ mod tests {
         assert_eq!(original_spelling_byte(None), ORIGINAL_SPELLING_UNKNOWN);
         assert_eq!(original_spelling_byte(Some(false)), ORIGINAL_SPELLING_FALSE);
         assert_eq!(original_spelling_byte(Some(true)), ORIGINAL_SPELLING_TRUE);
+    }
+
+    #[test]
+    fn absent_nested_group_is_a_lone_4_byte_flag() {
+        assert_eq!(nested_group_size(&None), 4);
+    }
+
+    #[test]
+    fn present_nested_group_size_counts_flag_four_run_tables_and_five_string_refs() {
+        // combination has 1 author, basionym has 1 author, everything else empty:
+        // 4 (flag) + [4+8] comb authors + [4+0] comb ex + [4+8] bas authors + [4+0] bas ex
+        // + 5*8 fixed refs = 4 + 12 + 4 + 12 + 4 + 40 = 76.
+        let ca = CombinedAuthorship {
+            combination_authorship: Authorship {
+                authors: vec!["Kuntze".to_string()],
+                ..Default::default()
+            },
+            basionym_authorship: Authorship {
+                authors: vec!["Adans.".to_string()],
+                ..Default::default()
+            },
+            sanctioning_author: None,
+        };
+        assert_eq!(nested_group_size(&Some(ca)), 76);
+    }
+
+    #[test]
+    fn imprint_year_slots_round_trip_through_encode() {
+        // Standalone check that the two new string slots carry a base authorship's imprint
+        // years (the full decode-and-compare lives in tests/ffi_struct.rs).
+        let pn = ParsedName {
+            uninomial: Some("Gemmata".to_string()),
+            combination_authorship: Authorship {
+                authors: vec!["Franzmann".to_string(), "Skerman".to_string()],
+                year: Some("1985".to_string()),
+                imprint_year: Some("1984".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let buf = encode(&pn, 1);
+        let read_slot = |slot: usize| -> Option<String> {
+            let entry = STRING_TABLE_OFFSET + 4 + slot * STRING_REF_SIZE;
+            let off = u32::from_le_bytes(buf[entry..entry + 4].try_into().unwrap());
+            let len = u32::from_le_bytes(buf[entry + 4..entry + 8].try_into().unwrap());
+            if off == ABSENT_STRING_OFFSET {
+                None
+            } else {
+                Some(
+                    String::from_utf8(buf[off as usize..off as usize + len as usize].to_vec())
+                        .unwrap(),
+                )
+            }
+        };
+        assert_eq!(read_slot(SLOT_YEAR_COMB).as_deref(), Some("1985"));
+        assert_eq!(read_slot(SLOT_IMPRINT_YEAR_COMB).as_deref(), Some("1984"));
+        assert_eq!(read_slot(SLOT_IMPRINT_YEAR_BAS), None);
     }
 }
