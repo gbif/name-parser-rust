@@ -23,3 +23,7 @@ bindings/**/target/
 
 # Large real-world corpora dropped into testdata/ (colxr26.6 8M, clb-verbatim 67M, clb-names-parsed 41M — 6.85 GB). NEVER commit.
 testdata/*.tsv
+
+# Phase 4a: project-local Python venv used to build/test crates/nameparser-py via maturin.
+# Never commit a venv or a built wheel (target/wheels/ is already covered by /target above).
+/.venv/

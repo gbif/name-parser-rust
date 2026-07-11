@@ -1,0 +1,16 @@
+[package]
+name = "nameparser-py"
+version = "0.0.0"
+edition = "2021"
+license = "Apache-2.0"
+publish = false
+description = "PyO3 cdylib exposing the nameparser crate to Python (Phase 4a: native binding, no C-ABI)."
+
+[lib]
+name = "nameparser"          # the importable Python module name
+crate-type = ["cdylib"]
+
+[dependencies]
+nameparser = { path = "../nameparser" }
+pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+pythonize = "0.22"           # must match the pyo3 minor version
