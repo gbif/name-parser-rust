@@ -69,7 +69,7 @@ FFM downcalls require:
 java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release/libnameparser_ffi.dylib ...
 ```
 
-## What's here (Tasks 2-3 of the Phase 3 plan)
+## What's here (Tasks 2-4 of the Phase 3 plan)
 
 - `pom.xml` — standalone Maven module, `--release 22`.
 - `src/main/java/org/gbif/nameparser/rust/Ffi.java` — the FFM plumbing only (symbol lookup,
@@ -86,8 +86,35 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
   names): 0 diffs, re-proving Phase 2's out-of-process CLI parity result in-process, through
   the FFM boundary and the Gson round trip. Prints a per-corpus + total tally to stdout, and
   up to 20 example diffs (both sides' JSON/exception) to stderr on failure.
+- `jmh/` — a separate, standalone JMH module (own `pom.xml`, not part of a reactor with this
+  one): `org.gbif.nameparser.rust.jmh.ParseBench` benchmarks `NameParserImpl` (`javaImpl`)
+  against `NameParserRust`'s JSON path (`rustJson`), single-name, in-process, over the first
+  ~2,000 names of `../../testdata/benchmark-data.txt`. See "Running the JMH benchmark" below.
+  Raw results: `jmh/results-jmh.json` (committed alongside the code that produced it).
 
-Not in scope for this module yet (later tasks in the same plan, see
-`docs/superpowers/plans/2026-07-11-phase3-ffm-binding.md`): a JMH benchmark (Task 4), and the
-flat fixed-layout struct wire format + a `WireFormat` selector (Tasks 5-6, which also extend
-`ParityTest` to cover the struct path).
+Not in scope for this module yet (a later task in the same plan, see
+`docs/superpowers/plans/2026-07-11-phase3-ffm-binding.md`): the flat fixed-layout struct wire
+format + a `WireFormat` selector (Tasks 5-6, which also extend `ParityTest` and `jmh/` to cover
+the struct path and its own `rustStruct` benchmark).
+
+## Running the JMH benchmark
+
+The `jmh/` module depends on this module's own `name-parser-rust-binding` artifact from
+`~/.m2` (same as `org.gbif:name-parser(-api)`; see "Requirements" above) — install it first,
+then build the cdylib and the benchmark's shaded jar, then run it:
+
+```sh
+mvn -q -f bindings/java/pom.xml install          # publish name-parser-rust-binding:0.0.0 to ~/.m2
+cargo build -p nameparser-ffi --release          # the cdylib the forked benchmark JVMs will dlopen
+mvn -q -f bindings/java/jmh/pom.xml package       # target/benchmarks.jar (shaded, Main-Class org.openjdk.jmh.Main)
+
+java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release/libnameparser_ffi.dylib \
+     -jar bindings/java/jmh/target/benchmarks.jar -rf json -rff bindings/java/jmh/results-jmh.json
+```
+
+The `--enable-native-access`/`-Dnameparser.ffi.lib` flags are given to that `java -jar` command
+itself (the JMH host process), not to a JMH `-jvmArgs` option: by default JMH launches each
+`@Fork`ed measurement JVM with the same input arguments the host JVM was started with, so both
+flags reach the forked JVMs that actually load the cdylib and run `rustJson` without needing to
+repeat them. Override `-Dnameparser.ffi.lib=...` the same way as for `mvn test` above if the
+cdylib lives somewhere else.

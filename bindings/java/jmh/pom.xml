@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Deliberately standalone, like the sibling ../pom.xml (bindings/java) module it depends on:
+    no GBIF <parent> motherpom (that reactor pins the compiler release to 17, which rejects the
+    name-parser-rust-binding dependency's own java.lang.foreign/FFM sources). This module holds
+    nothing but a JMH harness (ParseBench): one @State class benchmarking NameParserImpl (the
+    Java oracle) against NameParserRust (the FFM/JSON path) parsing the same sample of names,
+    single-threaded, in-process. See ../README.md for the full build and run recipe.
+  -->
+  <groupId>org.gbif.nameparser</groupId>
+  <artifactId>name-parser-rust-jmh</artifactId>
+  <version>0.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>GBIF Name Parser :: Rust FFM binding :: JMH benchmark</name>
+  <description>
+    JMH microbenchmark: single-name in-process parse latency of org.gbif.nameparser.rust.NameParserRust
+    (JSON wire format, over FFM) vs org.gbif.nameparser.NameParserImpl (the Java oracle). Builds to
+    target/benchmarks.jar (shaded, Main-Class org.openjdk.jmh.Main); see ../README.md.
+  </description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>22</maven.compiler.release>
+    <jmh.version>1.37</jmh.version>
+  </properties>
+
+  <dependencies>
+    <!-- This repo's own NameParserRust (JSON wire format over FFM) + its Ffi/GSON plumbing.
+         Resolved from ~/.m2; install it first with `mvn -q -f bindings/java/pom.xml install`
+         (see ../README.md); this module is standalone, not part of a reactor with it, so it
+         cannot see an in-tree build of that module. -->
+    <dependency>
+      <groupId>org.gbif.nameparser</groupId>
+      <artifactId>name-parser-rust-binding</artifactId>
+      <version>0.0.0</version>
+    </dependency>
+
+    <!-- The Java oracle implementation (NameParserImpl), the baseline arm of the benchmark.
+         name-parser-rust-binding only depends on this at test scope (its own parity test), so
+         it does not come along transitively; this module needs it at compile scope directly. -->
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>name-parser</artifactId>
+      <version>4.2.0-SNAPSHOT</version>
+    </dependency>
+
+    <dependency>
+      <groupId>org.openjdk.jmh</groupId>
+      <artifactId>jmh-core</artifactId>
+      <version>${jmh.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+        <configuration>
+          <!-- JMH's benchmark-method/state-class plumbing (the generated *_jmhTest sources) is
+               woven in at compile time via this annotation processor: a processor-path entry,
+               NOT a regular dependency, so jmh-generator-annprocess itself never ends up on the
+               runtime classpath or in the shaded jar. -->
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.openjdk.jmh</groupId>
+              <artifactId>jmh-generator-annprocess</artifactId>
+              <version>${jmh.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+
+      <!-- Standard JMH uberjar shade config (the same shape as the official JMH Maven
+           archetype's pom.xml): bundle jmh-core + this module's own deps + their transitives
+           into one target/benchmarks.jar with a Main-Class manifest entry, so `java -jar
+           target/benchmarks.jar <jmh options>` runs org.openjdk.jmh.Main directly. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-shade-plugin</artifactId>
+        <version>3.6.2</version>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <finalName>benchmarks</finalName>
+              <!-- This module is a run-only leaf artifact (nobody depends on it), so there is
+                   no consumer that needs a dependency-reduced POM describing the shaded jar's
+                   flattened dependency set; skip writing dependency-reduced-pom.xml into the
+                   module root (its default location is NOT under target/, so left on it would
+                   otherwise show up as an untracked file after every build). -->
+              <createDependencyReducedPom>false</createDependencyReducedPom>
+              <transformers>
+                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                  <mainClass>org.openjdk.jmh.Main</mainClass>
+                </transformer>
+              </transformers>
+              <filters>
+                <!-- Dropping signature files from shaded dependency jars avoids "Invalid
+                     signature file digest" SecurityExceptions when the uber-jar merges classes
+                     from multiple originally-signed jars under one unsigned manifest. -->
+                <filter>
+                  <artifact>*:*</artifact>
+                  <excludes>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
