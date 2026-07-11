@@ -187,8 +187,8 @@ final class StructCodec {
   static UnparsableNameException unparsableException(MemorySegment header, String originalName) {
     int nameTypeOrd = header.get(LE_INT, OFF_NAME_TYPE);
     int codeOrd = header.get(LE_INT, OFF_CODE);
-    NameType type = NameType.values()[nameTypeOrd];
-    NomCode code = codeOrd == ABSENT_ENUM ? null : NomCode.values()[codeOrd];
+    NameType type = enumByOrdinal(NameType.values(), nameTypeOrd, "name_type");
+    NomCode code = codeOrd == ABSENT_ENUM ? null : enumByOrdinal(NomCode.values(), codeOrd, "code");
     return new UnparsableNameException(type, code, originalName);
   }
 
@@ -200,10 +200,21 @@ final class StructCodec {
    * Decodes a successful {@code np_parse_struct} result (header + string table + run-slots +
    * nested authorship groups, per the class doc) into a fresh {@link ParsedName}. {@code len} is
    * the exact byte count {@code np_parse_struct} reported (not {@code seg}'s own allocated
-   * capacity, which may be larger) -- used only as a trailing sanity bound (see the assertion
-   * below), since every offset/count actually read is otherwise self-describing.
+   * capacity, which may be larger) -- used both as the up-front floor/trailing sanity bounds and,
+   * critically, as the ceiling every variable wire {@code count} is validated against BEFORE it
+   * sizes an allocation (see {@link #checkCount}), so a corrupt/truncated buffer is rejected with
+   * a clear message rather than triggering a huge allocation from a bogus count.
    */
   static ParsedName decode(MemorySegment seg, int len) {
+    // Reject a buffer too small to even hold the fixed header + string-table region before any
+    // fixed-offset read below can walk past the reported length. Every legitimate success-path
+    // buffer is >= 208 bytes (RUN_SLOTS_OFFSET is 176), so this only ever fires on a
+    // corrupt/truncated buffer -- and makes the fixed-region reads that follow safe by construction.
+    if (len < RUN_SLOTS_OFFSET) {
+      throw new IllegalStateException("corrupt struct buffer: reported length " + len
+          + " is below the fixed header + string-table size " + RUN_SLOTS_OFFSET);
+    }
+
     int status = seg.get(LE_INT, OFF_STATUS);
     if (status != STATUS_SUCCESS) {
       throw new IllegalStateException(
@@ -222,6 +233,11 @@ final class StructCodec {
     int nothoBits = seg.get(ValueLayout.JAVA_BYTE, OFF_NOTHO_BITS) & 0xFF;
     int publishedInYear = seg.get(LE_INT, OFF_PUBLISHED_IN_YEAR);
 
+    // The string-table count is a fixed constant, not a length-driving wire value: it must be
+    // exactly NUM_STRING_SLOTS (rejected below otherwise), and the array it fills is sized by that
+    // compile-time constant, never by the wire count -- so there is no unbounded-allocation risk
+    // here, and the 17 fixed-offset entry reads (ending at RUN_SLOTS_OFFSET) are already covered
+    // by the len >= RUN_SLOTS_OFFSET floor check above.
     int stringTableCount = seg.get(LE_INT, STRING_TABLE_OFFSET);
     if (stringTableCount != NUM_STRING_SLOTS) {
       throw new IllegalStateException(
@@ -234,14 +250,18 @@ final class StructCodec {
     }
 
     Cursor cur = new Cursor(RUN_SLOTS_OFFSET);
-    List<String> authorsComb = readStringRun(seg, cur);
-    List<String> exAuthorsComb = readStringRun(seg, cur);
-    List<String> authorsBas = readStringRun(seg, cur);
-    List<String> exAuthorsBas = readStringRun(seg, cur);
-    List<String> warnings = readStringRun(seg, cur);
+    List<String> authorsComb = readStringRun(seg, cur, len, "combination authors");
+    List<String> exAuthorsComb = readStringRun(seg, cur, len, "combination ex-authors");
+    List<String> authorsBas = readStringRun(seg, cur, len, "basionym authors");
+    List<String> exAuthorsBas = readStringRun(seg, cur, len, "basionym ex-authors");
+    List<String> warnings = readStringRun(seg, cur, len, "warnings");
 
     int eqCount = seg.get(LE_INT, cur.pos);
     cur.pos += 4;
+    // Bound the wire count against the bytes remaining BEFORE sizing any allocation off it, so a
+    // corrupt/truncated buffer carrying a bogus huge count is rejected here rather than turned
+    // into a massive new int[]/new String[] first.
+    checkCount("epithetQualifier", eqCount, EPITHET_QUALIFIER_ENTRY_SIZE, cur.pos, len);
     int[] eqParts = new int[eqCount];
     String[] eqValues = new String[eqCount];
     for (int i = 0; i < eqCount; i++) {
@@ -254,8 +274,8 @@ final class StructCodec {
       cur.pos += EPITHET_QUALIFIER_ENTRY_SIZE;
     }
 
-    CombinedAuthorship genericAuthorship = readNestedGroup(seg, cur);
-    CombinedAuthorship specificAuthorship = readNestedGroup(seg, cur);
+    CombinedAuthorship genericAuthorship = readNestedGroup(seg, cur, len);
+    CombinedAuthorship specificAuthorship = readNestedGroup(seg, cur, len);
 
     if (cur.pos > len) {
       throw new IllegalStateException("nameparser-ffi: decode cursor (" + cur.pos
@@ -264,10 +284,10 @@ final class StructCodec {
 
     // ---- populate the ParsedName -- setter order/choice matters, see the class doc ----
     ParsedName pn = new ParsedName();
-    pn.setRank(Rank.values()[rankOrd]);
-    pn.setCode(codeOrd == ABSENT_ENUM ? null : NomCode.values()[codeOrd]);
-    pn.setType(NameType.values()[nameTypeOrd]);
-    pn.setState(ParsedName.State.values()[stateOrd]);
+    pn.setRank(enumByOrdinal(Rank.values(), rankOrd, "rank"));
+    pn.setCode(codeOrd == ABSENT_ENUM ? null : enumByOrdinal(NomCode.values(), codeOrd, "code"));
+    pn.setType(enumByOrdinal(NameType.values(), nameTypeOrd, "name_type"));
+    pn.setState(enumByOrdinal(ParsedName.State.values(), stateOrd, "state"));
 
     pn.setCandidatus(candidatus);
     pn.setDoubtful(doubtful);
@@ -308,7 +328,7 @@ final class StructCodec {
     }
 
     for (int i = 0; i < eqCount; i++) {
-      pn.setEpithetQualifier(NamePart.values()[eqParts[i]], eqValues[i]);
+      pn.setEpithetQualifier(enumByOrdinal(NamePart.values(), eqParts[i], "epithetQualifier namePart"), eqValues[i]);
     }
 
     pn.setCombinationAuthorship(
@@ -359,30 +379,63 @@ final class StructCodec {
   }
 
   /** Reads one run-slot table ({@code u32 count} then {@code count} plain string refs) at
-   *  {@code cur.pos}, advancing it past the table. Run-slot entries are never the absent
+   *  {@code cur.pos}, advancing it past the table. {@code slot} labels it for diagnostics.
+   *  Bounds the wire {@code count} against the bytes remaining ({@code len}) BEFORE it sizes the
+   *  {@code ArrayList} -- a corrupt/truncated buffer with a bogus huge count is rejected here,
+   *  not turned into a massive pre-allocation first. Run-slot entries are never the absent
    *  sentinel (they are real list elements) -- decoding one as absent is a wire-format defect,
    *  not a legitimate value, so it throws rather than silently inserting a null/blank. */
-  private static List<String> readStringRun(MemorySegment seg, Cursor cur) {
+  private static List<String> readStringRun(MemorySegment seg, Cursor cur, int len, String slot) {
     int count = seg.get(LE_INT, cur.pos);
     cur.pos += 4;
+    checkCount(slot, count, STRING_REF_SIZE, cur.pos, len);
     List<String> out = new ArrayList<>(count);
     for (int i = 0; i < count; i++) {
       String s = readOptString(seg, cur.pos);
       cur.pos += STRING_REF_SIZE;
       if (s == null) {
         throw new IllegalStateException(
-            "nameparser-ffi: run-slot string entry decoded as the absent sentinel");
+            "nameparser-ffi: run-slot string entry (" + slot + ") decoded as the absent sentinel");
       }
       out.add(s);
     }
     return out;
   }
 
+  /** Validates a wire-read {@code count} of fixed-size entries fits the bytes remaining in the
+   *  reported buffer BEFORE it is used to size any allocation. {@code entryBytes} is the minimum
+   *  on-wire size of one entry ({@link #STRING_REF_SIZE} for a plain string ref,
+   *  {@link #EPITHET_QUALIFIER_ENTRY_SIZE} for an epithetQualifier entry); {@code pos} is the
+   *  cursor AFTER the 4-byte count field was consumed; {@code len} is the reported buffer length.
+   *  A negative {@code count} (a genuine {@code u32} &gt; {@code Integer.MAX_VALUE} read back as a
+   *  signed {@code int}) is likewise rejected. Throwing here turns a corrupt/truncated buffer into
+   *  a clear diagnostic instead of an {@code OutOfMemoryError} from a bogus huge allocation. */
+  private static void checkCount(String slot, int count, long entryBytes, long pos, int len) {
+    long remaining = len - pos;
+    if (count < 0 || (long) count * entryBytes > remaining) {
+      throw new IllegalStateException("corrupt struct buffer: " + slot + " count " + count
+          + " exceeds remaining " + remaining + " byte(s)");
+    }
+  }
+
+  /** Looks up an enum constant by its wire ordinal, throwing the class's standard
+   *  clear-diagnostic {@code IllegalStateException} (rather than a bare {@code
+   *  ArrayIndexOutOfBoundsException}) if the ordinal is out of range -- the enum-ordinal guard in
+   *  this class's static initializer makes an out-of-range ordinal from a non-corrupt buffer
+   *  impossible, so reaching this throw means a corrupt buffer or an undetected ABI drift. */
+  private static <E extends Enum<E>> E enumByOrdinal(E[] values, int ordinal, String label) {
+    if (ordinal < 0 || ordinal >= values.length) {
+      throw new IllegalStateException("corrupt struct buffer: " + label + " ordinal " + ordinal
+          + " out of range [0," + values.length + ")");
+    }
+    return values[ordinal];
+  }
+
   /** Reads one nested authorship group ({@code generic_authorship}/{@code specific_authorship})
    *  at {@code cur.pos}, advancing past it: a {@code present} flag, and -- only if present --
    *  four run-slot tables and five fixed string refs, reconstructed here as a whole {@link
    *  CombinedAuthorship}. Returns {@code null} for an absent group. */
-  private static CombinedAuthorship readNestedGroup(MemorySegment seg, Cursor cur) {
+  private static CombinedAuthorship readNestedGroup(MemorySegment seg, Cursor cur, int len) {
     int present = seg.get(LE_INT, cur.pos);
     cur.pos += 4;
     if (present == GROUP_ABSENT) {
@@ -393,10 +446,10 @@ final class StructCodec {
           "nameparser-ffi: nested authorship group present flag=" + present + ", expected 0 or 1");
     }
 
-    List<String> authorsComb = readStringRun(seg, cur);
-    List<String> exAuthorsComb = readStringRun(seg, cur);
-    List<String> authorsBas = readStringRun(seg, cur);
-    List<String> exAuthorsBas = readStringRun(seg, cur);
+    List<String> authorsComb = readStringRun(seg, cur, len, "nested combination authors");
+    List<String> exAuthorsComb = readStringRun(seg, cur, len, "nested combination ex-authors");
+    List<String> authorsBas = readStringRun(seg, cur, len, "nested basionym authors");
+    List<String> exAuthorsBas = readStringRun(seg, cur, len, "nested basionym ex-authors");
 
     String yearComb = readOptString(seg, cur.pos);
     cur.pos += STRING_REF_SIZE;

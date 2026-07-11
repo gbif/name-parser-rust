@@ -173,10 +173,23 @@ final class Ffi {
    *  return {@code -1}) writes only a header, clamped to {@code min(HEADER_SIZE, out_cap)} (see
    *  {@code layout.rs}'s "Unparsable path" doc) and is never overflow-coded/retried -- so a
    *  smaller value here would truncate that header and make {@link StructCodec#unparsableException}
-   *  throw {@code IndexOutOfBoundsException} instead of the intended {@code
-   *  UnparsableNameException} for every unparsable name. 4096 is far above 36, so this is not a
-   *  real-world concern at the current value -- noted because it is not otherwise enforced. */
+   *  read past the buffer for every unparsable name. This invariant is enforced at class-init time
+   *  by the {@code static} block below (not merely documented). */
   private static final long INITIAL_STRUCT_BUFFER_BYTES = 4096;
+
+  static {
+    // Real runtime guard for the invariant documented on INITIAL_STRUCT_BUFFER_BYTES above.
+    // StructCodec.HEADER_SIZE is a JLS compile-time constant (a `static final int` with a
+    // constant initializer), so referencing it here inlines the literal 36 and does NOT trigger
+    // StructCodec's own <clinit> (its enum-ordinal guard) -- this check is free of any
+    // Ffi<->StructCodec class-initialization ordering dependency.
+    if (INITIAL_STRUCT_BUFFER_BYTES < StructCodec.HEADER_SIZE) {
+      throw new ExceptionInInitializerError(new IllegalStateException(
+          "INITIAL_STRUCT_BUFFER_BYTES (" + INITIAL_STRUCT_BUFFER_BYTES
+              + ") must be >= StructCodec.HEADER_SIZE (" + StructCodec.HEADER_SIZE
+              + "): the unparsable path writes a header-only buffer that would otherwise be truncated"));
+    }
+  }
 
   /**
    * Raw {@code np_abi_version()} downcall, with no comparison/throwing beyond the downcall
@@ -229,9 +242,12 @@ final class Ffi {
         // Overflow: ret == -(needed + 3). Retry exactly once with a buffer sized to fit exactly
         // -- np_parse_struct is a pure function of its (name, authorship, rank, code) inputs, so
         // a second call with the identical inputs and a big-enough buffer cannot rationally
-        // overflow again or produce a different status.
+        // overflow again or produce a different status. `Math.max(HEADER_SIZE, needed)` is
+        // belt-and-suspenders: a real overflow `needed` is the full success-encode size (>= 208),
+        // never below HEADER_SIZE, but this guarantees the retry buffer can always hold the
+        // header-only write the unparsable path would make even if `needed` were somehow tiny.
         long needed = -ret - 3;
-        cap = needed;
+        cap = Math.max(StructCodec.HEADER_SIZE, needed);
         out = arena.allocate(cap);
         ret = invokeParseStruct(n, au, r, c, out, cap);
         if (ret < 0) {
