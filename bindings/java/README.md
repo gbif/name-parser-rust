@@ -112,12 +112,12 @@ results, the full JMH A/B table, and which wire format the measurements recommen
 
 ## Running the JMH benchmark
 
-The `jmh/` module depends on this module's own `name-parser-rust-binding` artifact from
+The `jmh/` module depends on this module's own `name-parser-rust` artifact from
 `~/.m2` (same as `org.gbif:name-parser(-api)`; see "Requirements" above) — install it first,
 then build the cdylib and the benchmark's shaded jar, then run it:
 
 ```sh
-mvn -q -f bindings/java/pom.xml install          # publish name-parser-rust-binding:0.0.0 to ~/.m2
+mvn -q -f bindings/java/pom.xml install          # publish name-parser-rust:0.0.0 to ~/.m2
 cargo build -p nameparser-ffi --release          # the cdylib the forked benchmark JVMs will dlopen
 mvn -q -f bindings/java/jmh/pom.xml package       # target/benchmarks.jar (shaded, Main-Class org.openjdk.jmh.Main)
 

@@ -8,7 +8,7 @@
   <!--
     Deliberately standalone, like the sibling ../pom.xml (bindings/java) module it depends on:
     no GBIF <parent> motherpom (that reactor pins the compiler release to 17, which rejects the
-    name-parser-rust-binding dependency's own java.lang.foreign/FFM sources). This module holds
+    name-parser-rust dependency's own java.lang.foreign/FFM sources). This module holds
     nothing but a JMH harness (ParseBench): one @State class benchmarking NameParserImpl (the
     Java oracle) against NameParserRust (the FFM/JSON path) parsing the same sample of names,
     single-threaded, in-process. See ../README.md for the full build and run recipe.
@@ -38,12 +38,12 @@
          cannot see an in-tree build of that module. -->
     <dependency>
       <groupId>org.gbif.nameparser</groupId>
-      <artifactId>name-parser-rust-binding</artifactId>
+      <artifactId>name-parser-rust</artifactId>
       <version>0.0.0</version>
     </dependency>
 
     <!-- The Java oracle implementation (NameParserImpl), the baseline arm of the benchmark.
-         name-parser-rust-binding only depends on this at test scope (its own parity test), so
+         name-parser-rust only depends on this at test scope (its own parity test), so
          it does not come along transitively; this module needs it at compile scope directly. -->
     <dependency>
       <groupId>org.gbif</groupId>

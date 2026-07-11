@@ -20,7 +20,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 |---|---|---|---|---|
 | Rust core library | `crates/nameparser` | crates.io | `scientific-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
-| **Java FFM binding** | `bindings/java` | **repository.gbif.org → Maven Central** | `org.gbif.nameparser:name-parser-rust-binding` | dev-only (native lib not bundled) |
+| **Java FFM binding** | `bindings/java` | **repository.gbif.org → Maven Central** | `org.gbif.nameparser:name-parser-rust` | dev-only (native lib not bundled) |
 | Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | deferred |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
 
@@ -49,7 +49,7 @@ enforces `maven.compiler.release=17`, and `java.lang.foreign` (FFM/Panama) needs
 compiler release at **22**. Current coordinates:
 
 ```
-org.gbif.nameparser:name-parser-rust-binding:0.0.0   (packaging: jar)
+org.gbif.nameparser:name-parser-rust:0.0.0   (packaging: jar)
 ```
 
 It compiles `org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser`,
@@ -128,7 +128,7 @@ case because it loads over FFM from a path. Two standard solutions:
   Cost: JAR size grows by (cdylib size × number of platforms), a few MB total.
 
 - **(b) Classifier artifacts** (à la `netty-tcnative`): a thin main JAR plus
-  `name-parser-rust-binding-<ver>-linux-x86-64.jar` etc.; the consumer adds the matching
+  `name-parser-rust-<ver>-linux-x86-64.jar` etc.; the consumer adds the matching
   classifier via `os-maven-plugin`'s `${os.detected.classifier}`. Leaner per-consumer
   downloads, but more artifacts to build and deploy and a heavier consumer POM.
 
@@ -225,7 +225,7 @@ drop-in `NameParser` on **JDK 22+**, native libs bundled per §3**):**
 ```xml
 <dependency>
   <groupId>org.gbif.nameparser</groupId>
-  <artifactId>name-parser-rust-binding</artifactId>
+  <artifactId>name-parser-rust</artifactId>
   <version>4.2.0</version>
 </dependency>
 ```
