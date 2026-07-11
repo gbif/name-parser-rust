@@ -71,6 +71,8 @@
 //! flag alternates or a third positional path as an alternate spelling of `--output` — those add
 //! no behaviour beyond what `--output` plus two positional args already covers.
 
+mod validate;
+
 use std::collections::BTreeSet;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
@@ -154,6 +156,8 @@ enum Command {
     Benchmark(BenchmarkArgs),
     /// Diff two JSONL files produced by `parse`, in lockstep.
     Compare(CompareArgs),
+    /// Sample a corpus's "suspicious tail", have an LLM judge each parse, report.
+    Validate(validate::ValidateArgs),
 }
 
 /// Options for `nameparser-cli parse`, mirroring the Java CLI's `ParseCli` option set
@@ -208,6 +212,7 @@ fn main() {
         Command::Parse(args) => run_parse(args),
         Command::Benchmark(args) => run_benchmark(args),
         Command::Compare(args) => run_compare(args),
+        Command::Validate(args) => validate::run_validate(args),
     };
     if let Err(e) = result {
         eprintln!("nameparser-cli: {e}");
