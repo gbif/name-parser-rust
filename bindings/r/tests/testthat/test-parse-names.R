@@ -25,12 +25,29 @@ test_that("scalar columns match the known Java/Python oracle values", {
   expect_equal(out$infraspecificEpithet[2], "silaceus")
   # Tobacco mosaic virus -> unparsable, NameType OTHER (ParseError.code is
   # VIRUS, but NameType has no VIRUS variant -- confirmed against the core's
-  # own golden fixtures, e.g. crates/nameparser/tests/parse_golden.rs and
-  # crates/nameparser-cli/tests/parse_cli.rs, both of which pin
+  # own golden fixtures, e.g. crates/nameparser-cli/tests/parse_cli.rs and
+  # crates/nameparser-ffi/tests/ffi_json.rs, both of which pin
   # {"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: ..."}
-  # for this exact input).
+  # for this exact input. (crates/nameparser/tests/parse_golden.rs only checks
+  # the unrelated NomCode::Virus -> "VIRUS" name mapping, not this fixture.)
   expect_false(out$parsed[3])
   expect_equal(out$type[3], "OTHER")
   expect_true(is.na(out$rank[3]))        # no ParsedName on error -> NA
   expect_true(is.na(out$candidatus[3]))  # bool flags are NA on error rows
+})
+
+test_that("authorship columns and warnings are flattened", {
+  out <- parse_names("Vulpes vulpes silaceus Miller, 1907")
+  expect_equal(out$combinationAuthors, "Miller")
+  expect_equal(out$combinationYear, "1907")
+  expect_true(is.na(out$basionymAuthors))
+  expect_true("warnings" %in% names(out))
+})
+
+test_that("parse_name_json returns the core's full nested JSON", {
+  js <- parse_name_json("Abies alba Mill.")
+  obj <- jsonlite::fromJSON(js, simplifyVector = FALSE)
+  expect_equal(obj$genus, "Abies")
+  expect_equal(obj$specificEpithet, "alba")
+  expect_equal(obj$combinationAuthorship$authors[[1]], "Mill.")
 })

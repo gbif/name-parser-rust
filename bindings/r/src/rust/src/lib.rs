@@ -48,6 +48,19 @@ struct Cols {
     doubtful: Vec<Option<bool>>,
     manuscript: Vec<Option<bool>>,
     state: Vec<Option<String>>,
+    combination_authors: Vec<Option<String>>,
+    combination_ex_authors: Vec<Option<String>>,
+    combination_year: Vec<Option<String>>,
+    basionym_authors: Vec<Option<String>>,
+    basionym_ex_authors: Vec<Option<String>>,
+    basionym_year: Vec<Option<String>>,
+    sanctioning_author: Vec<Option<String>>,
+    warnings: Vec<Option<String>>,
+}
+
+/// Join a list of authors to one cell, or `None` (=> NA) when empty.
+fn join_authors(a: &[String]) -> Option<String> {
+    if a.is_empty() { None } else { Some(a.join(", ")) }
 }
 
 impl Cols {
@@ -61,7 +74,9 @@ impl Cols {
             epithet_qualifier: v!(), extinct: v!(), taxonomic_note: v!(),
             nomenclatural_note: v!(), published_in: v!(), published_in_year: v!(),
             published_in_page: v!(), unparsed: v!(), doubtful: v!(), manuscript: v!(),
-            state: v!(),
+            state: v!(), combination_authors: v!(), combination_ex_authors: v!(),
+            combination_year: v!(), basionym_authors: v!(), basionym_ex_authors: v!(),
+            basionym_year: v!(), sanctioning_author: v!(), warnings: v!(),
         }
     }
 
@@ -101,6 +116,14 @@ impl Cols {
         self.doubtful.push(Some(pn.doubtful));
         self.manuscript.push(Some(pn.manuscript));
         self.state.push(enum_name(&pn.state));
+        self.combination_authors.push(join_authors(&pn.combination_authorship.authors));
+        self.combination_ex_authors.push(join_authors(&pn.combination_authorship.ex_authors));
+        self.combination_year.push(pn.combination_authorship.year.clone());
+        self.basionym_authors.push(join_authors(&pn.basionym_authorship.authors));
+        self.basionym_ex_authors.push(join_authors(&pn.basionym_authorship.ex_authors));
+        self.basionym_year.push(pn.basionym_authorship.year.clone());
+        self.sanctioning_author.push(pn.sanctioning_author.clone());
+        self.warnings.push(join_authors(&pn.warnings));   // same "join or NA" semantics
     }
 
     fn push_err(&mut self, input: &str, e: &::nameparser_core::model::ParseError) {
@@ -116,6 +139,10 @@ impl Cols {
             &mut self.notho, &mut self.epithet_qualifier, &mut self.taxonomic_note,
             &mut self.nomenclatural_note, &mut self.published_in, &mut self.published_in_page,
             &mut self.unparsed, &mut self.state,
+            &mut self.combination_authors, &mut self.combination_ex_authors,
+            &mut self.combination_year, &mut self.basionym_authors,
+            &mut self.basionym_ex_authors, &mut self.basionym_year,
+            &mut self.sanctioning_author, &mut self.warnings,
         ] {
             col.push(None);
         }
@@ -160,7 +187,9 @@ fn parse_names_impl(
             "cultivarEpithet", "phrase", "candidatus", "notho", "originalSpelling",
             "epithetQualifier", "extinct", "taxonomicNote", "nomenclaturalNote",
             "publishedIn", "publishedInYear", "publishedInPage", "unparsed", "doubtful",
-            "manuscript", "state",
+            "manuscript", "state", "combinationAuthors", "combinationExAuthors",
+            "combinationYear", "basionymAuthors", "basionymExAuthors", "basionymYear",
+            "sanctioningAuthor", "warnings",
         ],
         [
             r!(c.scientific_name), r!(c.parsed), r!(c.error), r!(c.r#type), r!(c.rank),
@@ -170,13 +199,38 @@ fn parse_names_impl(
             r!(c.epithet_qualifier), r!(c.extinct), r!(c.taxonomic_note),
             r!(c.nomenclatural_note), r!(c.published_in), r!(c.published_in_year),
             r!(c.published_in_page), r!(c.unparsed), r!(c.doubtful), r!(c.manuscript),
-            r!(c.state),
+            r!(c.state), r!(c.combination_authors), r!(c.combination_ex_authors),
+            r!(c.combination_year), r!(c.basionym_authors), r!(c.basionym_ex_authors),
+            r!(c.basionym_year), r!(c.sanctioning_author), r!(c.warnings),
         ],
     )
     .expect("all columns are the same length (one push per input name)")
 }
 
+/// Lossless escape hatch + parity oracle: the core's own serde JSON for one name
+/// (byte-identical to the CLI's `parsed` object), or `{"error":{…}}` on failure.
+/// @export
+#[extendr]
+fn parse_name_json_impl(
+    name: String,
+    authorship: Nullable<String>,
+    rank: Nullable<String>,
+    code: Nullable<String>,
+) -> String {
+    let rank = hint(&rank).and_then(Rank::from_name);
+    let code = hint(&code).and_then(NomCode::from_name);
+    match ::nameparser_core::parse(&name, hint(&authorship), rank, code) {
+        Ok(pn) => serde_json::to_string(&pn).unwrap_or_else(|e| format!("{{\"error\":\"{e}\"}}")),
+        Err(e) => serde_json::json!({
+            "error": { "type": enum_name(&e.type_), "code": enum_name(&e.code),
+                       "name": e.name, "message": e.message }
+        })
+        .to_string(),
+    }
+}
+
 extendr_module! {
     mod nameparser;
     fn parse_names_impl;
+    fn parse_name_json_impl;
 }

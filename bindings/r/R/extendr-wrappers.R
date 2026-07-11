@@ -8,4 +8,9 @@ NULL
 #' @export
 parse_names_impl <- function(scientificname, authorship, rank, code) .Call(wrap__parse_names_impl, scientificname, authorship, rank, code)
 
+#' Lossless escape hatch + parity oracle: the core's own serde JSON for one name
+#' (byte-identical to the CLI's `parsed` object), or `{"error":{…}}` on failure.
+#' @export
+parse_name_json_impl <- function(name, authorship, rank, code) .Call(wrap__parse_name_json_impl, name, authorship, rank, code)
+
 # nolint end
