@@ -17,6 +17,11 @@
 //! later cross-validation and the escape hatch for anything a typed getter doesn't
 //! surface), `parse_all()` for batch parsing, and a descriptive `__repr__`.
 //!
+//! Phase 4a Task 4 (this pass) added structured `.name_type`/`.code`/`.name` attributes to
+//! [`UnparsableNameError`] (see [`unparsable_name_error`]), closing the Task 3 review's
+//! `[Important]` finding that the exception previously carried only a message, unlike Java's
+//! `UnparsableNameException.getType()`/`getCode()`/`getName()`.
+//!
 //! The core's `nameparser::ParsedName`/`Rank`/`NomCode`/`ParseError` types live under
 //! `nameparser::model::*`, not re-exported at the `nameparser` crate root — same path
 //! `nameparser-ffi` (the Phase 3 sibling binding) already uses. Only `nameparser::parse`
@@ -355,16 +360,51 @@ impl PyParsedName {
     }
 }
 
+/// Builds the [`UnparsableNameError`] `PyErr` for a core [`::nameparser::model::ParseError`],
+/// attaching three Python attributes onto the raised instance in addition to the exception's
+/// own message (unchanged — `str(err)` is still exactly `e.message`, as it always was):
+/// `.name_type` (`str`), `.code` (`Optional[str]`), `.name` (`str`) — mirroring Java's
+/// `UnparsableNameException.getType()`/`getCode()`/`getName()`
+/// (`org.gbif.nameparser.api.UnparsableNameException`). `create_exception!` (above) makes
+/// `UnparsableNameError` an ordinary Python `Exception` subclass with no `__slots__`, so its
+/// instances carry a `__dict__` and accept arbitrary attributes via `setattr` — the simplest
+/// path to structured fields that actually works, without a hand-written
+/// `#[pyclass(extends = PyException)]` override of `__new__`/`__init__` (which would also risk
+/// changing `args`/`str()` semantics). `name_type`/`code` are rendered via `pythonize`, the same
+/// path every enum-typed getter in this file already uses (the core enums have no
+/// `.name()`/`Display` — see this module's doc comment).
+fn unparsable_name_error(py: Python<'_>, e: ::nameparser::model::ParseError) -> PyErr {
+    match try_attach_error_attrs(py, e) {
+        Ok(err) => err,
+        // Reflective `setattr` of three plain (str-keyed) attributes onto a freshly
+        // constructed, `__dict__`-backed exception instance cannot realistically fail — but
+        // `setattr` returns `PyResult`, so surface a genuine failure honestly (e.g. an
+        // out-of-memory `PyErr` from the interpreter) rather than panicking or silently
+        // dropping it.
+        Err(setattr_err) => setattr_err,
+    }
+}
+
+fn try_attach_error_attrs(py: Python<'_>, e: ::nameparser::model::ParseError) -> PyResult<PyErr> {
+    let err = UnparsableNameError::new_err(e.message);
+    let value = err.value_bound(py).as_any();
+    value.setattr("name_type", pythonize::pythonize(py, &e.type_)?)?;
+    value.setattr("code", pythonize::pythonize(py, &e.code)?)?;
+    value.setattr("name", e.name)?;
+    Ok(err)
+}
+
 /// Parses a scientific name — the Python-facing entry point wrapping
 /// [`::nameparser::parse`]. `rank`/`code`, when given, are the same `SCREAMING_SNAKE_CASE`
 /// names the core's own JSON/Java wire format uses (e.g. `"SPECIES"`, `"ZOOLOGICAL"`),
 /// resolved via [`Rank::from_name`]/[`NomCode::from_name`] — the same hint-parsing the
 /// CLI and the Java FFM binding (`nameparser-ffi`) already use. Raises
-/// [`UnparsableNameError`], carrying the core [`::nameparser::model::ParseError`]'s own
-/// message, when `name` cannot be parsed.
+/// [`UnparsableNameError`] when `name` cannot be parsed — see [`unparsable_name_error`] for
+/// the `.name_type`/`.code`/`.name` attributes it carries.
 #[pyfunction]
 #[pyo3(signature = (name, authorship=None, rank=None, code=None))]
 fn parse(
+    py: Python<'_>,
     name: &str,
     authorship: Option<&str>,
     rank: Option<&str>,
@@ -374,7 +414,7 @@ fn parse(
     let code = code.and_then(NomCode::from_name);
     match ::nameparser::parse(name, authorship, rank, code) {
         Ok(pn) => Ok(PyParsedName { inner: pn }),
-        Err(e) => Err(UnparsableNameError::new_err(e.message)),
+        Err(e) => Err(unparsable_name_error(py, e)),
     }
 }
 

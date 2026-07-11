@@ -19,8 +19,6 @@ silently drifted from the wire contract cannot also grade its own homework.
 """
 from __future__ import annotations
 
-import pytest
-
 import nameparser
 from _corpus import CORPORA, read_corpus
 

@@ -67,6 +67,40 @@ def test_parse_unparsable_name_raises():
     assert "Tobacco mosaic virus" in str(excinfo.value)
 
 
+def test_unparsable_name_error_exposes_structured_attributes():
+    # Phase 4a Task 4: closes the Task 3 review's [Important] finding — the exception used to
+    # carry only a message; it now mirrors Java's `UnparsableNameException.getType()`/
+    # `getCode()`/`getName()` (org.gbif.nameparser.api.UnparsableNameException) as plain Python
+    # attributes. "Tobacco mosaic virus" is rejected by the virus gate as
+    # `ParseError::new(NameType::Other, Some(NomCode::Virus), original)`
+    # (crates/nameparser/src/pipeline/preflight.rs's `apply_virus_gate`), so `name_type` is
+    # "OTHER" (not "SCIENTIFIC"/etc.) and `code` is "VIRUS", not None.
+    with pytest.raises(nameparser.UnparsableNameError) as excinfo:
+        nameparser.parse("Tobacco mosaic virus")
+    exc = excinfo.value
+
+    assert exc.name_type == "OTHER"
+    assert exc.code == "VIRUS"
+    assert exc.name == "Tobacco mosaic virus"
+    # str() is unchanged: still exactly the core's `ParseError.message`, not a repr of the
+    # attributes/args tuple.
+    assert str(exc) == "Unparsable OTHER name: Tobacco mosaic virus"
+
+
+def test_unparsable_name_error_code_is_none_when_no_code_applies():
+    # A name rejected for a reason that carries no NomCode — a single bare letter, per
+    # `crates/nameparser/src/pipeline/preflight.rs`'s `count_letters(&s) == 1` guard
+    # (`ParseError::new(NameType::Other, None, original)`; also covered by the core's own
+    # `single_bare_letter_is_other` unit test) — must expose `code is None`, not the string
+    # "None" or a missing attribute.
+    with pytest.raises(nameparser.UnparsableNameError) as excinfo:
+        nameparser.parse("X")
+    exc = excinfo.value
+    assert exc.name_type == "OTHER"
+    assert exc.code is None
+    assert exc.name == "X"
+
+
 def test_parse_all_returns_none_for_unparsable_without_raising():
     results = nameparser.parse_all(["Abies alba", "Tobacco mosaic virus"])
     assert len(results) == 2

@@ -3,7 +3,11 @@ requires = ["maturin>=1.5,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "nameparser"
+# The importable module stays `nameparser` (see `[tool.maturin] module-name` below and
+# `[lib] name` in Cargo.toml) — this is only the PyPI *distribution* name, and plain
+# `nameparser` is already taken on PyPI by an unrelated package. `pip install
+# gbif-name-parser` still gives you `import nameparser`.
+name = "gbif-name-parser"
 version = "0.0.0"
 description = "GBIF scientific name parser — Rust core, Python binding"
 requires-python = ">=3.9"
@@ -13,3 +17,15 @@ license = { text = "Apache-2.0" }
 manifest-path = "Cargo.toml"
 module-name = "nameparser"
 features = ["pyo3/extension-module"]
+# No explicit `include` needed for `nameparser.pyi`/`py.typed`: maturin auto-detects a
+# `<module_name>.pyi` stub and a `py.typed` marker next to this pyproject.toml (this crate's
+# root, alongside Cargo.toml) and repackages both into the wheel as `nameparser/__init__.pyi`
+# / `nameparser/py.typed` inside the auto-generated `nameparser` package directory —
+# confirmed by inspecting the actual built wheel (`maturin build --release` logs "Found type
+# stub file at nameparser.pyi"; `python -m zipfile -l` on the resulting .whl shows
+# `nameparser/__init__.py` — a generated `from .nameparser import *` shim, `.pyi` and
+# `py.typed` alongside it, and the compiled `nameparser/nameparser.abi3.so`). An earlier
+# version of this file also listed both filenames under an explicit `include = [...]`, which
+# is redundant with that auto-detection and only added two unwanted loose copies at the
+# wheel root, outside the `nameparser` package — removed once the auto-detected placement
+# was verified sufficient on its own.
