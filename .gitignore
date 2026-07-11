@@ -33,3 +33,6 @@ testdata/*.tsv
 __pycache__/
 *.pyc
 .pytest_cache/
+
+# Large derived name corpora (concatenated full-name .txt, hundreds of MB) — never commit
+testdata/col*.txt
