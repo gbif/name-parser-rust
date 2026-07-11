@@ -11,6 +11,10 @@ tools/out/
 testdata/*.java.jsonl
 testdata/*.rust.jsonl
 
+# Maven build output for bindings/java (and later bindings/java/jmh) — the root /target
+# above only covers the Cargo workspace target dir, not Maven modules under bindings/.
+bindings/**/target/
+
 # IDE
 /.idea/
 

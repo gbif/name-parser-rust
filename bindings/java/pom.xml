@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: Apache-2.0 -->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <!--
+    Deliberately standalone: no GBIF <parent> motherpom. The name-parser reactor's
+    motherpom enforces `maven.compiler.release=17`, which would reject `java.lang.foreign`
+    (FFM/Panama) source at compile time. This module needs the compiler release set to 22
+    (java.lang.foreign is finalized/stable as of JDK 22; no preview-features flag required
+    on JDK 22+).
+  -->
+  <groupId>org.gbif.nameparser</groupId>
+  <artifactId>name-parser-rust-binding</artifactId>
+  <version>0.0.0</version>
+  <packaging>jar</packaging>
+
+  <name>GBIF Name Parser :: Rust FFM binding</name>
+  <description>
+    org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser by
+    downcalling the nameparser-ffi Rust cdylib (crates/nameparser-ffi, this repo) over
+    java.lang.foreign (FFM/Panama). JSON wire format only; see bindings/java/README.md.
+  </description>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.compiler.release>22</maven.compiler.release>
+
+    <!-- Resolution order actually used at runtime (see Ffi.resolveLibPath): the system
+         property below (as passed by the surefire argLine) -> env NAMEPARSER_FFI_LIB ->
+         a repo-relative default hardcoded in Ffi.java. This property exists so `mvn test`
+         has a working default without the caller having to set anything, and so the
+         Linux profile below can override just this one coordinate. -->
+    <nameparser.ffi.lib>${project.basedir}/../../target/release/libnameparser_ffi.dylib</nameparser.ffi.lib>
+  </properties>
+
+  <dependencies>
+    <!-- The oracle model/interfaces: ParsedName, NameParser, UnparsableNameException, the
+         enums. Pre-built into ~/.m2 from /Users/markus/code/gbif/name-parser HEAD
+         (4.2.0-SNAPSHOT) — see bindings/java/README.md. Do not `mvn install` that repo
+         from here. -->
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>name-parser-api</artifactId>
+      <version>4.2.0-SNAPSHOT</version>
+    </dependency>
+
+    <!-- The JSON wire format: GSON.fromJson(json, ParsedName.class) reflectively rebuilds
+         ParsedName field-by-field, bypassing the side-effecting setters — see
+         NameParserRust's class doc. -->
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <version>2.11.0</version>
+    </dependency>
+
+    <!-- Test-only: the Java oracle implementation, for future parity testing
+         (bindings/java's ParityTest) against this JSON-over-FFM path. Not used by the
+         smoke test itself. -->
+    <dependency>
+      <groupId>org.gbif</groupId>
+      <artifactId>name-parser</artifactId>
+      <version>4.2.0-SNAPSHOT</version>
+      <scope>test</scope>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>5.10.2</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.13.0</version>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <version>3.2.5</version>
+        <configuration>
+          <!-- FFM downcalls are a JDK "restricted method": without opting in to native
+               access the JVM only warns today, but a future JDK release blocks it
+               outright, so the test JVM opts in explicitly for the unnamed module (this
+               module has no module-info.java). The nameparser.ffi.lib system property
+               threads the resolved cdylib path (see the property above / the
+               linux-cdylib profile below) into the forked test JVM, where
+               Ffi.resolveLibPath() reads it. -->
+          <argLine>--enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=${nameparser.ffi.lib}</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <profiles>
+    <!-- macOS (this module's dev target) is covered by the default
+         <nameparser.ffi.lib> property above (a .dylib path). This profile only
+         overrides the file extension for a Linux CI/dev box; the resolution logic
+         itself (Ffi.resolveLibPath) is OS-agnostic. -->
+    <profile>
+      <id>linux-cdylib</id>
+      <activation>
+        <os>
+          <family>unix</family>
+          <name>Linux</name>
+        </os>
+      </activation>
+      <properties>
+        <nameparser.ffi.lib>${project.basedir}/../../target/release/libnameparser_ffi.so</nameparser.ffi.lib>
+      </properties>
+    </profile>
+  </profiles>
+</project>
