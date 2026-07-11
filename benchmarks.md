@@ -108,9 +108,8 @@ inputs exist at all, and both corpora are similar-composition real names).
 
 **Rust — `colxr26.6-names.tsv`, 6,416,452 names** (real names only — BOLD specimen IDs and UNITE
 SH fungal OTUs excluded, so its composition mirrors the Java `col-names` set; CoL release 26.6).
-Benchmarked on the **name column** (`cut -f1 … | benchmark`) — the `benchmark` command reads a
-single-column corpus (whole trimmed line = name), so a raw multi-column TSV must be projected to
-its name column first, or it times the parser on `name<TAB>author<TAB>…` junk:
+Benchmarked on the **name column** — the `benchmark` command reads col-1 (it splits on the first
+TAB, like `parse`), so it handles this multi-column TSV directly:
 
 ```
 Parsed names: 6416452 (9297 unparsable)     # unparsable count matches `parse`/cross-val exactly
@@ -202,8 +201,8 @@ row). Full detail and the per-corpus table: [`cross-validation.md`](cross-valida
   Rust vs 4.2.0 head-to-head (§1) and the JMH runs (§3) are JDK 25, this repo, this session.
 - §2's large corpora are different CoL releases (Java `col-names` 6.3M vs Rust `colxr26.6-names`
   6.4M) — both real-names-only now, so the averages are indicative; the tail is the like-for-like
-  robustness claim. The `benchmark` command reads a single-column corpus, so the Rust row is
-  measured on the projected name column (`cut -f1`), matching what `parse`/the cross-val see.
+  robustness claim. The `benchmark` command reads col-1 (splitting on the first TAB, like `parse`),
+  so it benchmarks a multi-column TSV's name column directly — matching what `parse`/the cross-val see.
 - `--warmup` on the Rust CLI is substantively a no-op (no JIT) but pays the same fixed 100-name
   pre-pass so the two commands stay directly comparable.
 - The 6.3M `col-names.tsv` used by the Java large-corpus rows is not in this repo; the Rust

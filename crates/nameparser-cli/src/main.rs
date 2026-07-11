@@ -461,16 +461,19 @@ fn run_timed(path: &Path) -> io::Result<BenchmarkReport> {
     })
 }
 
-/// Applies the benchmark's plain-line rule, mirroring the Java CLI's `BenchmarkCli.run`/
-/// `warmup`: a raw line is skipped if it is empty or starts with `#`; otherwise the WHOLE line,
-/// trimmed, is the name. Unlike `parse`'s [`extract_name`] above, this does NOT split on TAB —
-/// `BenchmarkCli` never does either, so pointing `--input` at a TSV would time the raw,
-/// untrimmed row as a single "name", exactly as Java would.
+/// Applies the benchmark's plain-line rule: a raw line is skipped if it is empty or starts with
+/// `#`; otherwise the name is the substring before the first TAB, trimmed (col-1) — the same rule
+/// `parse`'s [`extract_name`] above uses. This DELIBERATELY diverges from Java's `BenchmarkCli`
+/// (which reads the whole line): splitting on TAB is a strict superset of that behaviour — a
+/// single-column corpus has no TAB, so nothing changes — and it means pointing `--input` at a
+/// multi-column TSV benchmarks the name column, instead of timing the raw
+/// `name<TAB>author<TAB>…` row as one "name" (which silently inflates the figures and
+/// mis-classifies types).
 fn extract_benchmark_name(raw: &str) -> Option<&str> {
     if raw.is_empty() || raw.starts_with('#') {
         return None;
     }
-    let name = raw.trim();
+    let name = raw.split('\t').next().unwrap_or(raw).trim();
     if name.is_empty() {
         None
     } else {
@@ -1165,12 +1168,13 @@ mod tests {
     }
 
     #[test]
-    fn extract_benchmark_name_trims_but_does_not_split_on_tab() {
-        // Unlike `extract_name` (used by `parse`), the benchmark reader never splits on TAB —
-        // the whole trimmed line is the "name", matching Java's `BenchmarkCli.run`/`warmup`.
+    fn extract_benchmark_name_splits_on_the_first_tab() {
+        // The benchmark reader splits on the first TAB (col-1), like `extract_name` (used by
+        // `parse`) — deliberately unlike Java's `BenchmarkCli` — so a multi-column TSV benchmarks
+        // the name column instead of the raw `name<TAB>…` row.
         assert_eq!(
             extract_benchmark_name("  Abies alba\tsome other column  "),
-            Some("Abies alba\tsome other column")
+            Some("Abies alba")
         );
     }
 
