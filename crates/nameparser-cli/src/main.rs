@@ -252,6 +252,9 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
 
         let result = nameparser::parse(name, None, None, None);
         let is_ok = result.is_ok();
+        // Echo the extracted (trimmed, first-tab-column) name in `input`, matching the Java CLI's
+        // `ParseCli` (`input = row.name()`, a `PlainTextReader.trim()`-ed value) — verified
+        // byte-for-byte against the shaded jar on a padded input.
         writeln!(writer, "{}", render_row(line_no, name, &result))?;
 
         total += 1;

@@ -618,6 +618,22 @@ pub fn build_judge(
     }
 }
 
+/// Resolves the model id [`build_judge`] would use, WITHOUT constructing a client or requiring
+/// credentials — used by the `--dry-run` path so its cache key matches what a real (non-dry-run)
+/// run would compute (Java's dry-run consults the cache the same way). Mirrors `build_judge`'s
+/// provider normalization + per-provider default-model fallback exactly.
+pub fn resolve_model(provider: &str, model: Option<&str>) -> Result<String, JudgeError> {
+    match provider.to_ascii_lowercase().as_str() {
+        "anthropic" => Ok(model.unwrap_or(AnthropicClient::DEFAULT_MODEL).to_string()),
+        "openai" | "local" | "ollama" => {
+            Ok(model.unwrap_or(OpenAiClient::DEFAULT_MODEL).to_string())
+        }
+        other => Err(JudgeError(format!(
+            "Unknown --provider '{other}' (expected anthropic, openai, local, or ollama)"
+        ))),
+    }
+}
+
 // ---------------------------------------------------------------------------------------
 // env helpers — shared by both clients' `from_env`
 // ---------------------------------------------------------------------------------------

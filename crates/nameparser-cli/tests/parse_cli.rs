@@ -164,3 +164,40 @@ fn parse_stdin_to_stdout_matches_a_verified_java_cli_transcript() {
         r#"{"line":3,"input":"Tobacco mosaic virus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Tobacco mosaic virus"}}"#
     );
 }
+
+/// The `parse` command echoes the EXTRACTED (trimmed, first-tab-column) name in the `input`
+/// field — matching the Java CLI (`ParseCli` sets `input = row.name()`, a `PlainTextReader.trim()`
+/// value, verified byte-for-byte against the shaded jar). A leading/trailing-space input is
+/// trimmed in both the parse AND the echo, so a padded line round-trips to the trimmed name.
+#[test]
+fn parse_echoes_the_trimmed_name_in_input_matching_java() {
+    let output = {
+        use std::io::Write as _;
+        use std::process::Stdio;
+        let mut child = Command::new(env!("CARGO_BIN_EXE_nameparser-cli"))
+            .args(["parse", "--input=-", "--output=-", "--quiet"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn nameparser-cli");
+        child
+            .stdin
+            .take()
+            .expect("stdin was piped")
+            .write_all(b"  Abies alba Mill.  \n")
+            .expect("failed to write to child stdin");
+        child.wait_with_output().expect("failed to wait on child")
+    };
+    assert!(output.status.success());
+    let actual = String::from_utf8(output.stdout).expect("stdout must be valid UTF-8");
+    let line = actual.lines().next().expect("expected one JSONL row");
+    assert!(
+        line.starts_with(r#"{"line":1,"input":"Abies alba Mill.","parsed":{"#),
+        "`input` must echo the TRIMMED name (matching Java), not the raw padded line: {line}"
+    );
+    assert!(
+        line.contains(r#""genus":"Abies""#) && line.contains(r#""specificEpithet":"alba""#),
+        "the parse produces the clean atoms: {line}"
+    );
+}

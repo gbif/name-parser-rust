@@ -50,11 +50,10 @@
 //! extends [`crate::render_row`]'s envelope with `verdict`/`confidence`/`note`/`fields` when a
 //! verdict was obtained; [`Summary`] tallies and prints the final stderr report (verdict counts +
 //! a most-flagged-fields histogram), deliberately disjoint from [`select`]'s own "Scanned N…"
-//! line so the two summaries never duplicate each other. `--dry-run` is UNCHANGED from Tasks
-//! 2/3 by deliberate brief-level choice: it still never opens a [`client::Judge`] at all (so a
-//! missing credential can never abort a dry run) and still writes verdict-less report rows,
-//! even though Java's own dry-run path *does* consult the cache (a disclosed, intentional
-//! simplification for this port — see `run_validate`'s doc comment).
+//! line so the two summaries never duplicate each other. `--dry-run` never opens a
+//! [`client::Judge`] at all (so a missing credential can never abort a dry run) and makes no API
+//! calls, but — matching Java — it DOES consult the verdict cache: a pre-populated `--cache` file
+//! surfaces its verdicts into the dry-run report (pass `--cache=none` to suppress that).
 //!
 //! `nameparser-cli` is a binary-only crate (no library target), so `pub` here doesn't exempt an
 //! item from the `dead_code` lint the way it would in a library. [`run_validate`] now reaches
@@ -160,10 +159,10 @@ pub struct ValidateArgs {
 /// Phase 2 forks on `--dry-run` (Task 5's brief deliberately keeps these as two separate paths,
 /// rather than routing dry-run through the same loop Java's single implementation does — see
 /// [`run_judge_loop`]'s doc comment):
-/// - `--dry-run` (Tasks 2/3, unchanged): writes one verdict-less JSONL report row per `chosen`
-///   item to `args.output` (matching `ValidateCli.reportRow(r, null)` — no `verdict`/
-///   `confidence`/`note`/`fields`; the cache opened above is never consulted here, so a stale
-///   cache never leaks a verdict into a dry-run report), prints the same
+/// - `--dry-run`: writes one JSONL report row per `chosen` item to `args.output` (via
+///   [`write_dry_run_report`]) — CONSULTING the cache like Java, so a pre-populated `--cache` file
+///   surfaces its verdict onto the matching row (`--cache=none` suppresses that), but making NO
+///   `judge()` call, so an uncached item is written verdict-less. Prints the same
 ///   `"Dry run: built N batches..."` summary line Java prints, then
 ///   (`ValidateCli.dumpFirstBatch`) dumps the exact first-batch request payload —
 ///   [`ValidationPrompt::user_message`] over the first `min(batch, chosen.len())` chosen items —
@@ -179,12 +178,18 @@ pub fn run_validate(args: ValidateArgs) -> io::Result<()> {
     let mut cache = open_cache(&args.cache)?;
 
     if args.dry_run {
-        write_report(&args.output, &chosen)?;
+        // Java's dry-run still consults the cache (a stale --cache file surfaces its verdicts into
+        // the dry-run report, unless --cache=none) — so resolve the model the same way a real run
+        // would, for a matching cache key, WITHOUT building a client or needing credentials.
+        let model = client::resolve_model(&args.provider, args.model.as_deref())
+            .map_err(|e| io::Error::other(e.to_string()))?;
+        write_dry_run_report(&args.output, &chosen, &cache, &model)?;
         let batch = args.batch.max(1);
         let num_batches = chosen.len().div_ceil(batch);
         eprintln!(
-            "Dry run: built {num_batches} batches for {} names, no API calls made. Report → {}",
-            chosen.len(),
+            "Dry run: built {} batches for {} names, no API calls made. Report → {}",
+            group_thousands(num_batches as u64),
+            group_thousands(chosen.len() as u64),
             crate::absolute_path(&args.output).display()
         );
         dump_first_batch(&chosen, batch);
@@ -333,9 +338,10 @@ fn run_judge_loop(
         processed += chunk.len();
         if !uncached_positions.is_empty() {
             eprintln!(
-                "  judged {processed}/{}  ({} from cache)",
-                chosen.len(),
-                summary.from_cache
+                "  judged {}/{}  ({} from cache)",
+                group_thousands(processed as u64),
+                group_thousands(chosen.len() as u64),
+                group_thousands(summary.from_cache)
             );
         }
     }
@@ -488,20 +494,27 @@ impl Summary {
         writeln!(out)?;
         writeln!(
             out,
-            "Validated {n} names in {} API call(s), {} from cache.",
-            self.api_calls, self.from_cache
+            "Validated {} names in {} API call(s), {} from cache.",
+            group_thousands(n as u64),
+            group_thousands(self.api_calls),
+            group_thousands(self.from_cache)
         )?;
         if self.missing > 0 {
             writeln!(
                 out,
                 "  ok={}  suspect={}  wrong={}  (no verdict={})",
-                self.ok, self.suspect, self.wrong, self.missing
+                group_thousands(self.ok),
+                group_thousands(self.suspect),
+                group_thousands(self.wrong),
+                self.missing // Java concatenates this "(no verdict=N)" WITHOUT %,d grouping
             )?;
         } else {
             writeln!(
                 out,
                 "  ok={}  suspect={}  wrong={}",
-                self.ok, self.suspect, self.wrong
+                group_thousands(self.ok),
+                group_thousands(self.suspect),
+                group_thousands(self.wrong)
             )?;
         }
         if !self.by_field.is_empty() {
@@ -511,7 +524,7 @@ impl Summary {
             // a `TreeMap`'s (i.e. already-alphabetical) iteration order.
             fields.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
             for (name, count) in fields.into_iter().take(15) {
-                writeln!(out, "  {name:<32} {count}")?;
+                writeln!(out, "  {name:<32} {}", group_thousands(*count))?;
             }
         }
         writeln!(
@@ -535,20 +548,48 @@ fn dump_first_batch(chosen: &[Item], batch: usize) {
     eprintln!("{}", ValidationPrompt::user_message(first));
 }
 
-/// Writes one JSONL report row per `chosen` item, reusing [`crate::render_row`] — the exact
-/// same `{"line":...,"input":...,"parsed":{...}}` / `..."error":{...}}` envelope `parse`
-/// already writes, since Java's `reportRow(r, v)` with `v == null` (no cache/judge exists yet
-/// in this task) is exactly `parse`'s row shape with no additional fields.
-fn write_report(path: &Path, chosen: &[Item]) -> io::Result<()> {
+/// Dry-run report writer — CONSULTS the cache (Java's dry-run does the same lookup: a stale
+/// `--cache` file surfaces its verdicts into a dry-run report, unless `--cache=none`), but makes
+/// NO `judge()` call: an uncached item is written verdict-less. Row shape is identical to the
+/// non-dry-run loop's ([`render_row_with_verdict`]) — a cache hit adds `verdict`/`confidence`/…,
+/// a miss reduces byte-for-byte to `parse`'s plain `{"line","input","parsed"|"error"}` envelope.
+fn write_dry_run_report(
+    path: &Path,
+    chosen: &[Item],
+    cache: &cache::VerdictCache,
+    model: &str,
+) -> io::Result<()> {
     let mut writer = BufWriter::new(File::create(path)?);
     for item in chosen {
+        let key = cache::cache_key(
+            ValidationPrompt::VERSION,
+            model,
+            &item.input,
+            &shape_json(&item.outcome),
+        );
+        let verdict = cache.get(&key).cloned();
         writeln!(
             writer,
             "{}",
-            crate::render_row(item.line as u64, &item.input, &item.outcome)
+            render_row_with_verdict(item.line as u64, &item.input, &item.outcome, verdict.as_ref())
         )?;
     }
     writer.flush()
+}
+
+/// Formats a non-negative integer with `,` thousands separators, matching Java's
+/// `String.format("%,d", n)` (en-US grouping): `0`→`"0"`, `2000`→`"2,000"`, `1234567`→`"1,234,567"`.
+fn group_thousands(n: u64) -> String {
+    let s = n.to_string();
+    let len = s.len();
+    let mut out = String::with_capacity(len + len.saturating_sub(1) / 3);
+    for (i, ch) in s.chars().enumerate() {
+        if i > 0 && (len - i).is_multiple_of(3) {
+            out.push(',');
+        }
+        out.push(ch);
+    }
+    out
 }
 
 // ---------------------------------------------------------------------------------------
@@ -858,7 +899,7 @@ pub fn select(args: &ValidateArgs) -> (Vec<Item>, ScanCounts) {
         }
 
         if counts.total.is_multiple_of(PROGRESS_EVERY) {
-            eprintln!("  scanned {}…", counts.total);
+            eprintln!("  scanned {}…", group_thousands(counts.total));
         }
     }
     counts.scan_seconds = start.elapsed().as_secs_f64();
@@ -873,13 +914,13 @@ pub fn select(args: &ValidateArgs) -> (Vec<Item>, ScanCounts) {
     eprintln!(
         "Scanned {} names in {:.1}s: {} excluded (barcode/OTU), {} interesting, {} ordinary. \
          Selected {} for validation (budget {}).",
-        counts.total,
+        group_thousands(counts.total),
         counts.scan_seconds,
-        counts.excluded,
-        counts.interesting_seen,
-        counts.ordinary_seen,
-        chosen.len(),
-        args.budget
+        group_thousands(counts.excluded),
+        group_thousands(counts.interesting_seen),
+        group_thousands(counts.ordinary_seen),
+        group_thousands(chosen.len() as u64),
+        group_thousands(args.budget as u64)
     );
 
     (chosen, counts)
@@ -1745,6 +1786,50 @@ mod tests {
             .lines()
             .map(|l| serde_json::from_str(l).expect("each report row must be valid JSON"))
             .collect()
+    }
+
+    #[test]
+    fn group_thousands_matches_java_percent_comma_d() {
+        assert_eq!(group_thousands(0), "0");
+        assert_eq!(group_thousands(42), "42");
+        assert_eq!(group_thousands(999), "999");
+        assert_eq!(group_thousands(2000), "2,000");
+        assert_eq!(group_thousands(1_000_000), "1,000,000");
+        assert_eq!(group_thousands(1_234_567), "1,234,567");
+    }
+
+    #[test]
+    fn dry_run_report_consults_the_cache_and_leaves_uncached_items_verdict_less() {
+        // Task-5 review [Important]: Java's --dry-run consults the cache (a pre-populated cache
+        // surfaces its verdicts into the dry-run report unless --cache=none), so the Rust dry-run
+        // must too — previously it opened the cache but never read it on the dry-run path.
+        let dir = temp_dir_for("dry-run-cache");
+        let output = dir.join("report.jsonl");
+        let items = vec![ok_item(1, "Abies alba Mill."), ok_item(2, "Quercus robur L.")];
+        let model = "claude-opus-4-8"; // what resolve_model("anthropic", None) yields
+        let mut cache = cache::VerdictCache::disabled();
+        // Pre-populate a verdict for item 1 ONLY, keyed exactly as the dry-run path looks it up.
+        let key1 = cache::cache_key(
+            ValidationPrompt::VERSION,
+            model,
+            &items[0].input,
+            &shape_json(&items[0].outcome),
+        );
+        cache.put(key1, verdict(0, "wrong")).expect("put");
+
+        write_dry_run_report(&output, &items, &cache, model).expect("must write");
+
+        let rows = read_report_rows(&output);
+        assert_eq!(rows.len(), 2);
+        assert_eq!(
+            rows[0]["verdict"], "wrong",
+            "dry-run must surface the cached verdict for item 1"
+        );
+        assert!(
+            rows[1].get("verdict").is_none(),
+            "an item with no cache entry stays verdict-less in dry-run: {:?}",
+            rows[1]
+        );
     }
 
     #[test]
