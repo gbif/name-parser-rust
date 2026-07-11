@@ -27,19 +27,22 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Single-name, in-process parse latency: {@link NameParserImpl} (the Java {@code 4.2.0-SNAPSHOT}
- * oracle) vs {@link NameParserRust} (the FFM/JSON path, this repo's {@code bindings/java}
- * module). This is the JMH half of the Phase-3 gate ("&ge;2&times; in JMH") -- see the Phase-3
- * plan's Task 4 and its design doc &sect;5 model (in-process &asymp; 2-2.5&times;, capped by the
- * Java-object-build floor). The number this benchmark produces is the empirical answer, recorded
- * verbatim in {@code results-jmh.json} and the task report -- this class does not assert a
- * pass/fail threshold.
+ * Single-name, in-process parse latency, three arms: {@link NameParserImpl} (the Java {@code
+ * 4.2.0-SNAPSHOT} oracle, {@code javaImpl}) vs {@link NameParserRust} over its JSON wire format
+ * ({@code rustJson}) vs {@link NameParserRust} over its flat fixed-layout struct wire format
+ * ({@code rustStruct}, {@code org.gbif.nameparser.rust.StructCodec}). This is the JMH half of
+ * the Phase-3 gate ("&ge;2&times; in JMH") -- see the Phase-3 plan's Tasks 4/6 and its design doc
+ * &sect;5 model (in-process &asymp; 2-2.5&times;, capped by the Java-object-build floor) -- and
+ * Task 6's A/B: whichever of {@code rustJson}/{@code rustStruct} wins (and by how much) is the
+ * evidence used to decide which wire format ships. The numbers this benchmark produces are the
+ * empirical answer, recorded verbatim in {@code results-jmh-ab.json} and the task report -- this
+ * class does not assert a pass/fail threshold.
  *
  * <p>Each {@code @Benchmark} method loops the WHOLE sample array once per invocation (so "one
  * op" = one full pass over the sample, not one name); JMH's {@link Mode#AverageTime} then reports
  * average time per op. Divide by {@link #names}{@code .length} for the per-name figure -- the
- * ratio between the two arms is identical either way, since both share the same sample and loop
- * shape. Both parsers are called the same way the Task 3 parity test calls them:
+ * ratios between arms are identical either way, since all three share the same sample and loop
+ * shape. All three parsers are called the same way the parity test calls them:
  * {@code parse(name, null, null, null)} (name-only, no explicit authorship/rank/code).
  *
  * <p>Run (from the repo root, after {@code cargo build -p nameparser-ffi --release} and building
@@ -47,14 +50,15 @@ import java.util.concurrent.TimeUnit;
  * <pre>
  * java --enable-native-access=ALL-UNNAMED \
  *      -Dnameparser.ffi.lib=$PWD/target/release/libnameparser_ffi.dylib \
- *      -jar bindings/java/jmh/target/benchmarks.jar -rf json -rff bindings/java/jmh/results-jmh.json
+ *      -jar bindings/java/jmh/target/benchmarks.jar -rf json -rff bindings/java/jmh/results-jmh-ab.json
  * </pre>
  * The {@code --enable-native-access}/{@code -Dnameparser.ffi.lib} flags are given to the HOST
  * java process above, not to a {@code -jvmArgs} JMH option -- JMH's default fork behaviour (see
  * {@code @Fork} below) is to launch each forked measurement JVM with the same input arguments the
  * host JVM itself was launched with, so both flags reach the forked JVMs that actually run {@link
- * #rustJson} without this class needing to hardcode a path into a {@code @Fork} annotation
- * (annotation values must be compile-time constants, and the absolute cdylib path is not one).
+ * #rustJson}/{@link #rustStruct} without this class needing to hardcode a path into a {@code
+ * @Fork} annotation (annotation values must be compile-time constants, and the absolute cdylib
+ * path is not one).
  */
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
@@ -89,13 +93,15 @@ public class ParseBench {
 
   String[] names;
   NameParserImpl javaParser;
-  NameParserRust rustParser;
+  NameParserRust rustJsonParser;
+  NameParserRust rustStructParser;
 
   @Setup
   public void setup() throws IOException {
     names = loadSample(resolveCorpusFile());
     javaParser = new NameParserImpl();
-    rustParser = new NameParserRust();
+    rustJsonParser = new NameParserRust();
+    rustStructParser = new NameParserRust(NameParserRust.WireFormat.STRUCT);
   }
 
   @Benchmark
@@ -113,7 +119,21 @@ public class ParseBench {
   public void rustJson(Blackhole bh) {
     for (String name : names) {
       try {
-        bh.consume(rustParser.parse(name, null, null, null));
+        bh.consume(rustJsonParser.parse(name, null, null, null));
+      } catch (UnparsableNameException e) {
+        bh.consume(e);
+      }
+    }
+  }
+
+  /** Same shape as {@link #rustJson}, using the flat fixed-layout struct wire format ({@code
+   *  org.gbif.nameparser.rust.StructCodec}) instead of JSON -- the Task 6 A/B arm this
+   *  benchmark exists to add. */
+  @Benchmark
+  public void rustStruct(Blackhole bh) {
+    for (String name : names) {
+      try {
+        bh.consume(rustStructParser.parse(name, null, null, null));
       } catch (UnparsableNameException e) {
         bh.consume(e);
       }

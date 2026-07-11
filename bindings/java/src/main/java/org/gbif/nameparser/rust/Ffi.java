@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.gbif.nameparser.rust;
 
+import org.gbif.nameparser.api.ParsedName;
+import org.gbif.nameparser.api.UnparsableNameException;
+
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
 import java.lang.foreign.Linker;
@@ -11,26 +14,35 @@ import java.nio.file.Path;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
+import static java.lang.foreign.ValueLayout.JAVA_LONG;
 
 /**
  * FFM (Panama, {@code java.lang.foreign}) plumbing for the {@code nameparser-ffi} Rust cdylib
  * (built by {@code cargo build -p nameparser-ffi --release} from {@code crates/nameparser-ffi}
  * in this repo). Isolated from {@link NameParserRust}'s parsing/model logic so that class only
- * ever deals with Java types (a {@code String} in, a {@code ParsedName} or exception out).
+ * ever deals with Java types (a {@code String} in, a {@code ParsedName} or exception out) --
+ * {@link #callParseJson} hands back raw JSON text ({@link NameParserRust} does the Gson rebuild
+ * and the {@code {"error":...}} envelope handling); {@link #callParseStruct} hands back an
+ * already-decoded {@link ParsedName} (or throws {@link UnparsableNameException}), delegating the
+ * actual byte-level decode work to {@link StructCodec} so this class stays limited to the
+ * arena/downcall/retry mechanics.
  *
  * <p>The C ABI bound here (see {@code crates/nameparser-ffi/src/lib.rs} for the authoritative
  * doc comments):
  * <pre>
  *   u32          np_abi_version()
  *   char *       np_parse_json(name, authorship, rank, code: const char *)
+ *   i64          np_parse_struct(name, authorship, rank, code: const char *, out: u8 *, out_cap: usize)
  *   void         np_free(char *)
  * </pre>
  * {@code name} is required; {@code authorship}/{@code rank}/{@code code} are nullable
  * ({@link MemorySegment#NULL} = absent). {@code rank}/{@code code} are the Java enum
- * {@code .name()} strings (e.g. {@code "SPECIES"}, {@code "BOTANICAL"}). The returned pointer
- * is a heap-allocated, NUL-terminated C string that MUST be handed back to {@code np_free}
- * exactly once; a {@code NULL} return means an internal Rust panic (never an unwind across
- * the ABI boundary -- see the Rust doc comment).
+ * {@code .name()} strings (e.g. {@code "SPECIES"}, {@code "BOTANICAL"}). {@code np_parse_json}'s
+ * returned pointer is a heap-allocated, NUL-terminated C string that MUST be handed back to
+ * {@code np_free} exactly once; a {@code NULL} return means an internal Rust panic (never an
+ * unwind across the ABI boundary -- see the Rust doc comment). {@code np_parse_struct} instead
+ * writes into a caller-owned buffer and returns a byte count/status code -- see {@link
+ * #callParseStruct} for its retry-on-overflow protocol.
  */
 final class Ffi {
 
@@ -44,6 +56,7 @@ final class Ffi {
   private static final Linker LINKER = Linker.nativeLinker();
   private static final MethodHandle ABI_VERSION;
   private static final MethodHandle PARSE_JSON;
+  private static final MethodHandle PARSE_STRUCT;
   private static final MethodHandle FREE;
 
   static {
@@ -54,6 +67,9 @@ final class Ffi {
     PARSE_JSON = LINKER.downcallHandle(
         findOrThrow(lib, "np_parse_json"),
         FunctionDescriptor.of(ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS));
+    PARSE_STRUCT = LINKER.downcallHandle(
+        findOrThrow(lib, "np_parse_struct"),
+        FunctionDescriptor.of(JAVA_LONG, ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS, JAVA_LONG));
     FREE = LINKER.downcallHandle(
         findOrThrow(lib, "np_free"),
         FunctionDescriptor.ofVoid(ADDRESS));
@@ -142,6 +158,103 @@ final class Ffi {
       } finally {
         FREE.invokeExact(result);
       }
+    } catch (Throwable t) {
+      throw new RuntimeException("nameparser-ffi FFM downcall failed", t);
+    }
+  }
+
+  /** Initial scratch buffer size for {@link #callParseStruct}: comfortably above the format's
+   *  own minimum successful-encode size (208 bytes, an empty {@code ParsedName}) and every
+   *  ordinary name/authorship, so the overflow-retry path below is only actually exercised for
+   *  unusually long inputs. Verified end-to-end (retry logic exercised on literally every parse
+   *  in the 11,302-name corpus, still 0 diffs) with this constant temporarily set as low as 64.
+   *
+   *  <p><b>Must stay &ge; {@link StructCodec#HEADER_SIZE} (36).</b> The unparsable path (native
+   *  return {@code -1}) writes only a header, clamped to {@code min(HEADER_SIZE, out_cap)} (see
+   *  {@code layout.rs}'s "Unparsable path" doc) and is never overflow-coded/retried -- so a
+   *  smaller value here would truncate that header and make {@link StructCodec#unparsableException}
+   *  throw {@code IndexOutOfBoundsException} instead of the intended {@code
+   *  UnparsableNameException} for every unparsable name. 4096 is far above 36, so this is not a
+   *  real-world concern at the current value -- noted because it is not otherwise enforced. */
+  private static final long INITIAL_STRUCT_BUFFER_BYTES = 4096;
+
+  /**
+   * Raw {@code np_abi_version()} downcall, with no comparison/throwing beyond the downcall
+   * failing outright -- used by {@link StructCodec}'s own startup guard. Referencing this method
+   * (a real invocation, not a compile-time-constant field read) forces this class's static
+   * initializer -- which independently verifies the same version against {@link
+   * #EXPECTED_ABI_VERSION} and refuses to load the class at all on mismatch -- to run to
+   * completion first, so by the time this method's body executes the version is already known
+   * good; {@link StructCodec} re-checks it anyway as an explicit, self-documented part of its
+   * own guard rather than silently relying on that ordering.
+   */
+  static int nativeAbiVersion() {
+    try {
+      return (int) ABI_VERSION.invokeExact();
+    } catch (Throwable t) {
+      throw new IllegalStateException("nameparser-ffi: np_abi_version() downcall failed", t);
+    }
+  }
+
+  /**
+   * Calls {@code np_parse_struct} over the FFM boundary and decodes its flat binary result into
+   * a {@link ParsedName} via {@link StructCodec#decode}. Null handling for {@code
+   * authorship}/{@code rank}/{@code code} mirrors {@link #callParseJson}'s.
+   *
+   * <p>Implements the overflow-retry protocol {@code np_parse_struct} documents (see {@code
+   * layout.rs}): a first attempt against a {@link #INITIAL_STRUCT_BUFFER_BYTES}-byte scratch
+   * buffer, and -- only if that overflows -- exactly one retry against a buffer sized to the
+   * reported {@code needed} count. Both calls happen inside the same confined {@link Arena}, and
+   * {@link StructCodec#decode} runs before that arena closes (it copies every string it needs
+   * into plain Java {@code String}s, so the returned {@link ParsedName} holds no live reference
+   * into native memory once this method returns).
+   *
+   * @throws UnparsableNameException translated from the native {@code -1} return (the header
+   *     carries the {@code NameType}/{@code NomCode} to attach to it; see {@link
+   *     StructCodec#unparsableException}).
+   */
+  static ParsedName callParseStruct(String name, String authorship, String rank, String code)
+      throws UnparsableNameException {
+    try (Arena arena = Arena.ofConfined()) {
+      MemorySegment n = arena.allocateFrom(name);
+      MemorySegment au = authorship == null ? MemorySegment.NULL : arena.allocateFrom(authorship);
+      MemorySegment r = rank == null ? MemorySegment.NULL : arena.allocateFrom(rank);
+      MemorySegment c = code == null ? MemorySegment.NULL : arena.allocateFrom(code);
+
+      long cap = INITIAL_STRUCT_BUFFER_BYTES;
+      MemorySegment out = arena.allocate(cap);
+      long ret = invokeParseStruct(n, au, r, c, out, cap);
+
+      if (ret < -2) {
+        // Overflow: ret == -(needed + 3). Retry exactly once with a buffer sized to fit exactly
+        // -- np_parse_struct is a pure function of its (name, authorship, rank, code) inputs, so
+        // a second call with the identical inputs and a big-enough buffer cannot rationally
+        // overflow again or produce a different status.
+        long needed = -ret - 3;
+        cap = needed;
+        out = arena.allocate(cap);
+        ret = invokeParseStruct(n, au, r, c, out, cap);
+        if (ret < 0) {
+          throw new IllegalStateException("nameparser-ffi: np_parse_struct still failed (ret=" + ret
+              + ") after retrying with the exact reported size (" + needed + " bytes) for name '" + name + "'");
+        }
+      }
+
+      if (ret == -2) {
+        throw new RuntimeException(
+            "nameparser-ffi: np_parse_struct reported an internal error (caught panic) for name '" + name + "'");
+      }
+      if (ret == -1) {
+        throw StructCodec.unparsableException(out, name);
+      }
+      return StructCodec.decode(out, (int) ret);
+    }
+  }
+
+  private static long invokeParseStruct(MemorySegment n, MemorySegment au, MemorySegment r, MemorySegment c,
+                                         MemorySegment out, long cap) {
+    try {
+      return (long) PARSE_STRUCT.invokeExact(n, au, r, c, out, cap);
     } catch (Throwable t) {
       throw new RuntimeException("nameparser-ffi FFM downcall failed", t);
     }

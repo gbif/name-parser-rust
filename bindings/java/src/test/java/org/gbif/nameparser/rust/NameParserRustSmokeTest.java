@@ -9,7 +9,8 @@ import org.gbif.nameparser.api.NomCode;
 import org.gbif.nameparser.api.ParsedName;
 import org.gbif.nameparser.api.Rank;
 import org.gbif.nameparser.api.UnparsableNameException;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.List;
 import java.util.Map;
@@ -27,13 +28,17 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * nameparser-ffi --release}), not a mock. Run via {@code mvn -f bindings/java/pom.xml test}
  * (the cdylib path and {@code --enable-native-access} are wired in by the surefire
  * {@code argLine} in {@code pom.xml}).
+ *
+ * <p>Every test is parametrized over {@link NameParserRust.WireFormat} ({@code @EnumSource}) so
+ * each assertion runs once through the JSON path and once through the STRUCT path -- both are
+ * expected to behave identically since they read the same Rust-side {@code ParsedName}.
  */
 class NameParserRustSmokeTest {
 
-  private final NameParserRust parser = new NameParserRust();
-
-  @Test
-  void parsesAVulpesSubspeciesWithCombinationAuthorship() throws UnparsableNameException {
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(NameParserRust.WireFormat.class)
+  void parsesAVulpesSubspeciesWithCombinationAuthorship(NameParserRust.WireFormat format) throws UnparsableNameException {
+    NameParserRust parser = new NameParserRust(format);
     ParsedName pn = parser.parse("Vulpes vulpes silaceus Miller, 1907", null, null, null);
 
     assertEquals("Vulpes", pn.getGenus());
@@ -46,8 +51,10 @@ class NameParserRustSmokeTest {
         "combination authors should contain Miller, got " + pn.getCombinationAuthorship().getAuthors());
   }
 
-  @Test
-  void explicitAuthorshipRankAndCodeArgumentsAreMarshalledAndAttached() throws UnparsableNameException {
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(NameParserRust.WireFormat.class)
+  void explicitAuthorshipRankAndCodeArgumentsAreMarshalledAndAttached(NameParserRust.WireFormat format) throws UnparsableNameException {
+    NameParserRust parser = new NameParserRust(format);
     ParsedName pn = parser.parse("Abies alba", "Mill.", Rank.SPECIES, NomCode.BOTANICAL);
 
     assertEquals("Abies", pn.getGenus());
@@ -60,8 +67,10 @@ class NameParserRustSmokeTest {
         "got authors " + pn.getCombinationAuthorship().getAuthors());
   }
 
-  @Test
-  void unparsableVirusNameThrowsWithTypeAndName() {
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(NameParserRust.WireFormat.class)
+  void unparsableVirusNameThrowsWithTypeAndName(NameParserRust.WireFormat format) {
+    NameParserRust parser = new NameParserRust(format);
     UnparsableNameException ex = assertThrows(UnparsableNameException.class,
         () -> parser.parse("Tobacco mosaic virus", null, null, null));
 
@@ -70,8 +79,10 @@ class NameParserRustSmokeTest {
     assertEquals("Tobacco mosaic virus", ex.getName());
   }
 
-  @Test
-  void hybridNothoSetSurvivesAGsonRoundTrip() throws UnparsableNameException {
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(NameParserRust.WireFormat.class)
+  void hybridNothoSetSurvivesAGsonRoundTrip(NameParserRust.WireFormat format) throws UnparsableNameException {
+    NameParserRust parser = new NameParserRust(format);
     ParsedName pn = parser.parse("Salix ×capreola", null, null, null);
 
     assertEquals("Salix", pn.getGenus());
@@ -83,15 +94,19 @@ class NameParserRustSmokeTest {
     // rebuild a second ParsedName from that — a full round trip, not just the one-way
     // deserialization already exercised above. This is the fidelity check Task 2's brief
     // calls for: if EnumSet<NamePart> can't survive Gson's default reflection, it would show
-    // up here as a dropped/garbled `notho` on the second hop.
+    // up here as a dropped/garbled `notho` on the second hop. For the STRUCT format this also
+    // incidentally checks that a ParsedName built via StructCodec's setters (rather than Gson's
+    // reflective field population) is just as Gson-round-trip-safe.
     JsonObject reserialized = NameParserRust.GSON.toJsonTree(pn).getAsJsonObject();
     ParsedName roundTripped = NameParserRust.GSON.fromJson(reserialized, ParsedName.class);
     assertEquals(Set.of(NamePart.SPECIFIC), roundTripped.getNotho(),
         "notho must survive a second Gson round trip identically");
   }
 
-  @Test
-  void epithetQualifierSurvivesAGsonRoundTrip() throws UnparsableNameException {
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(NameParserRust.WireFormat.class)
+  void epithetQualifierSurvivesAGsonRoundTrip(NameParserRust.WireFormat format) throws UnparsableNameException {
+    NameParserRust parser = new NameParserRust(format);
     // "aff." (affinis) is stored in the EnumMap<NamePart, String> epithetQualifier field —
     // named as a specific round-trip risk alongside notho/warnings (both abstract
     // collection-ish types Gson's reflective ConstructorConstructor might not know how to
@@ -110,8 +125,10 @@ class NameParserRustSmokeTest {
         "epithetQualifier must survive a second Gson round trip identically");
   }
 
-  @Test
-  void multiAuthorNameWithAWarningSurvivesAGsonRoundTrip() throws UnparsableNameException {
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(NameParserRust.WireFormat.class)
+  void multiAuthorNameWithAWarningSurvivesAGsonRoundTrip(NameParserRust.WireFormat format) throws UnparsableNameException {
+    NameParserRust parser = new NameParserRust(format);
     ParsedName pn = parser.parse("Gahrliepia (G.) tessellata Traub & Morrow 1955", null, null, null);
 
     assertEquals("Gahrliepia", pn.getGenus());

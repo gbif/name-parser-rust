@@ -1,0 +1,429 @@
+// SPDX-License-Identifier: Apache-2.0
+package org.gbif.nameparser.rust;
+
+import org.gbif.nameparser.api.Authorship;
+import org.gbif.nameparser.api.CombinedAuthorship;
+import org.gbif.nameparser.api.NamePart;
+import org.gbif.nameparser.api.NameType;
+import org.gbif.nameparser.api.NomCode;
+import org.gbif.nameparser.api.ParsedName;
+import org.gbif.nameparser.api.Rank;
+import org.gbif.nameparser.api.UnparsableNameException;
+
+import java.lang.foreign.MemorySegment;
+import java.lang.foreign.ValueLayout;
+import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Reader for the flat fixed-layout binary wire format {@code np_parse_struct} writes -- the
+ * exact offsets/slots/run-tables documented as {@code crates/nameparser-ffi/src/layout.rs}'s
+ * module doc comment (restated in full in {@code .superpowers/sdd/task-5-report.md}, written to
+ * be self-contained for this class). This class owns every offset/slot constant for that wire
+ * format plus the one-time startup guard that makes trusting those constants safe (see the
+ * static initializer below) -- {@link Ffi} stays pure FFM plumbing (arena, downcall, retry) and
+ * defers to this class for everything struct-shaped.
+ *
+ * <p><b>Byte order is little-endian throughout</b> -- {@link #LE_INT} is built with an explicit
+ * {@link ByteOrder#LITTLE_ENDIAN}, never the platform-default/{@code ByteBuffer}-default
+ * (big-endian) layout. Every multi-byte scalar this class reads goes through it.
+ *
+ * <p><b>Setter semantics matter here</b> (see {@link #decode}): {@code ParsedName}'s epithet
+ * setters (e.g. {@code setGenus}) strip a leading {@code ×} and call {@code addNotho(...)} as a
+ * side effect, and {@code addAuthor}/{@code addExAuthor} have an inverted-blank-check bug that
+ * makes them no-ops for real (non-blank) authors -- so authors/ex-authors are populated via
+ * {@code setAuthors}/{@code setExAuthors}, and {@code notho} is rebuilt explicitly and exactly
+ * from the wire's {@code notho_bits} after the epithet setters have already run, rather than
+ * trusted to those setters' side effects.
+ */
+final class StructCodec {
+
+  // ================================================================================================
+  // Layout constants -- mirror crates/nameparser-ffi/src/layout.rs's `pub const`s 1:1. Keep in
+  // sync with that file (the canonical source; see its module doc) if the wire format ever
+  // changes -- a bump there without a matching change here is exactly the class of bug the
+  // enum-ordinal guard below cannot catch (it only guards enum ordinals, not byte offsets).
+  // ================================================================================================
+
+  static final int HEADER_SIZE = 36;
+  private static final int OFF_STATUS = 4;
+  private static final int OFF_RANK = 8;
+  private static final int OFF_CODE = 12;
+  private static final int OFF_NAME_TYPE = 16;
+  private static final int OFF_STATE = 20;
+  private static final int OFF_CANDIDATUS = 24;
+  private static final int OFF_DOUBTFUL = 25;
+  private static final int OFF_MANUSCRIPT = 26;
+  private static final int OFF_EXTINCT = 27;
+  private static final int OFF_ORIGINAL_SPELLING = 28;
+  private static final int OFF_NOTHO_BITS = 29;
+  private static final int OFF_PUBLISHED_IN_YEAR = 32;
+
+  private static final int STATUS_SUCCESS = 0;
+
+  private static final int ABSENT_ENUM = -1;
+
+  private static final int ORIGINAL_SPELLING_FALSE = 0;
+  private static final int ORIGINAL_SPELLING_TRUE = 1;
+  private static final int ORIGINAL_SPELLING_UNKNOWN = 2;
+
+  private static final int STRING_TABLE_OFFSET = HEADER_SIZE; // 36
+  private static final int NUM_STRING_SLOTS = 17;
+  private static final int STRING_REF_SIZE = 8;
+  private static final int STRING_TABLE_SIZE = 4 + NUM_STRING_SLOTS * STRING_REF_SIZE; // 140
+
+  /** {@code u32::MAX} read back as a little-endian signed {@code i32} -- conveniently just
+   *  {@code -1}, so the absent-string sentinel needs no unsigned comparison. */
+  private static final int ABSENT_STRING_OFFSET = -1;
+
+  private static final int SLOT_UNINOMIAL = 0;
+  private static final int SLOT_GENUS = 1;
+  private static final int SLOT_INFRAGENERIC = 2;
+  private static final int SLOT_SPECIFIC = 3;
+  private static final int SLOT_INFRASPECIFIC = 4;
+  private static final int SLOT_CULTIVAR = 5;
+  private static final int SLOT_PHRASE = 6;
+  private static final int SLOT_TAXONOMIC_NOTE = 7;
+  private static final int SLOT_NOMENCLATURAL_NOTE = 8;
+  private static final int SLOT_PUBLISHED_IN = 9;
+  private static final int SLOT_PUBLISHED_IN_PAGE = 10;
+  private static final int SLOT_UNPARSED = 11;
+  private static final int SLOT_SANCTIONING_AUTHOR = 12;
+  private static final int SLOT_YEAR_COMB = 13;
+  private static final int SLOT_YEAR_BAS = 14;
+  private static final int SLOT_IMPRINT_YEAR_COMB = 15;
+  private static final int SLOT_IMPRINT_YEAR_BAS = 16;
+
+  private static final int RUN_SLOTS_OFFSET = STRING_TABLE_OFFSET + STRING_TABLE_SIZE; // 176
+  private static final int EPITHET_QUALIFIER_ENTRY_SIZE = 12;
+
+  private static final int GROUP_ABSENT = 0;
+  private static final int GROUP_PRESENT = 1;
+
+  private static final ValueLayout.OfInt LE_INT =
+      ValueLayout.JAVA_INT_UNALIGNED.withOrder(ByteOrder.LITTLE_ENDIAN);
+
+  // ================================================================================================
+  // Enum-ordinal consistency guard -- runs once, the first time this class is touched (i.e. the
+  // first time a caller actually uses WireFormat.STRUCT; a JSON-only caller never loads this
+  // class and never pays for this check). The struct wire format maps five Java enums
+  // (Rank/NomCode/NameType/NamePart/ParsedName.State) by raw i32 ordinal -- see the class doc --
+  // so if a future name-parser-api release ever reorders/inserts/removes a constant, silently
+  // trusting `.values()[ordinal]` would misdecode every enum-typed field without any crash. This
+  // block fails fast with a clear message instead. Referencing Ffi.nativeAbiVersion() below is a
+  // real method call (not a compile-time-constant field read), so it also forces Ffi's own
+  // static initializer -- which independently verifies np_abi_version() itself -- to run to
+  // completion first; if that already failed, this class is never even reached.
+  // ================================================================================================
+
+  static {
+    int abi = Ffi.nativeAbiVersion();
+    if (abi != 1) {
+      throw new ExceptionInInitializerError(new IllegalStateException(
+          "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
+              + ", StructCodec was written against 1 -- rebuild the cdylib "
+              + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
+    }
+    requireEnumShape("Rank", Rank.values().length, 117);
+    requireEnumShape("NameType", NameType.values().length, 5);
+    requireEnumShape("NomCode", NomCode.values().length, 7);
+    requireEnumShape("NamePart", NamePart.values().length, 4);
+    requireEnumShape("ParsedName.State", ParsedName.State.values().length, 3);
+
+    // Spot-checks pinned against the same Java-oracle values layout.rs's own tests independently
+    // re-verified on the Rust side (see task-5-report.md's "Enum ordinal mapping" section).
+    requireOrdinal("Rank.KINGDOM", Rank.KINGDOM.ordinal(), 8);
+    requireOrdinal("Rank.FAMILY", Rank.FAMILY.ordinal(), 64);
+    requireOrdinal("Rank.GENUS", Rank.GENUS.ordinal(), 73);
+    requireOrdinal("Rank.SPECIES", Rank.SPECIES.ordinal(), 85);
+    requireOrdinal("Rank.SUBSPECIES", Rank.SUBSPECIES.ordinal(), 89);
+    requireOrdinal("Rank.CULTIVAR", Rank.CULTIVAR.ordinal(), 112);
+    requireOrdinal("Rank.OTHER", Rank.OTHER.ordinal(), 115);
+    requireOrdinal("Rank.UNRANKED", Rank.UNRANKED.ordinal(), 116);
+    requireOrdinal("NameType.OTHER", NameType.OTHER.ordinal(), 4);
+    requireOrdinal("NamePart.GENERIC", NamePart.GENERIC.ordinal(), 0);
+    requireOrdinal("NamePart.INFRAGENERIC", NamePart.INFRAGENERIC.ordinal(), 1);
+    requireOrdinal("NamePart.SPECIFIC", NamePart.SPECIFIC.ordinal(), 2);
+    requireOrdinal("NamePart.INFRASPECIFIC", NamePart.INFRASPECIFIC.ordinal(), 3);
+    requireOrdinal("NomCode.BACTERIAL", NomCode.BACTERIAL.ordinal(), 0);
+    requireOrdinal("NomCode.PHYLO", NomCode.PHYLO.ordinal(), 6);
+    requireOrdinal("ParsedName.State.COMPLETE", ParsedName.State.COMPLETE.ordinal(), 0);
+    requireOrdinal("ParsedName.State.NONE", ParsedName.State.NONE.ordinal(), 2);
+  }
+
+  private static void requireEnumShape(String enumName, int actualLength, int expectedLength) {
+    if (actualLength != expectedLength) {
+      throw new ExceptionInInitializerError(new IllegalStateException(
+          "Rust/Java enum ABI desync -- " + enumName + ".values().length=" + actualLength
+              + ", the nameparser-ffi struct wire format was built against " + expectedLength
+              + " -- rebuild the cdylib (`cargo build -p nameparser-ffi --release`) or update StructCodec"));
+    }
+  }
+
+  private static void requireOrdinal(String label, int actualOrdinal, int expectedOrdinal) {
+    if (actualOrdinal != expectedOrdinal) {
+      throw new ExceptionInInitializerError(new IllegalStateException(
+          "Rust/Java enum ABI desync -- " + label + ".ordinal()=" + actualOrdinal
+              + ", expected " + expectedOrdinal
+              + " -- rebuild the cdylib (`cargo build -p nameparser-ffi --release`) or update StructCodec"));
+    }
+  }
+
+  private StructCodec() {
+  }
+
+  // ================================================================================================
+  // Unparsable-path header decode (np_parse_struct returned -1)
+  // ================================================================================================
+
+  /**
+   * Reads the {@code name_type}/{@code code} header fields from a {@code -1} (unparsable)
+   * result buffer and builds the exception {@link Ffi#callParseStruct} throws for it. {@code
+   * originalName} is the caller's own input string (not read off the wire -- the header carries
+   * no name), matching {@link NameParserRust}'s JSON-path behaviour.
+   */
+  static UnparsableNameException unparsableException(MemorySegment header, String originalName) {
+    int nameTypeOrd = header.get(LE_INT, OFF_NAME_TYPE);
+    int codeOrd = header.get(LE_INT, OFF_CODE);
+    NameType type = NameType.values()[nameTypeOrd];
+    NomCode code = codeOrd == ABSENT_ENUM ? null : NomCode.values()[codeOrd];
+    return new UnparsableNameException(type, code, originalName);
+  }
+
+  // ================================================================================================
+  // Success-path decode
+  // ================================================================================================
+
+  /**
+   * Decodes a successful {@code np_parse_struct} result (header + string table + run-slots +
+   * nested authorship groups, per the class doc) into a fresh {@link ParsedName}. {@code len} is
+   * the exact byte count {@code np_parse_struct} reported (not {@code seg}'s own allocated
+   * capacity, which may be larger) -- used only as a trailing sanity bound (see the assertion
+   * below), since every offset/count actually read is otherwise self-describing.
+   */
+  static ParsedName decode(MemorySegment seg, int len) {
+    int status = seg.get(LE_INT, OFF_STATUS);
+    if (status != STATUS_SUCCESS) {
+      throw new IllegalStateException(
+          "StructCodec.decode called on a non-success buffer (status=" + status + ")");
+    }
+
+    int rankOrd = seg.get(LE_INT, OFF_RANK);
+    int codeOrd = seg.get(LE_INT, OFF_CODE);
+    int nameTypeOrd = seg.get(LE_INT, OFF_NAME_TYPE);
+    int stateOrd = seg.get(LE_INT, OFF_STATE);
+    boolean candidatus = seg.get(ValueLayout.JAVA_BYTE, OFF_CANDIDATUS) != 0;
+    boolean doubtful = seg.get(ValueLayout.JAVA_BYTE, OFF_DOUBTFUL) != 0;
+    boolean manuscript = seg.get(ValueLayout.JAVA_BYTE, OFF_MANUSCRIPT) != 0;
+    boolean extinct = seg.get(ValueLayout.JAVA_BYTE, OFF_EXTINCT) != 0;
+    int originalSpellingByte = seg.get(ValueLayout.JAVA_BYTE, OFF_ORIGINAL_SPELLING) & 0xFF;
+    int nothoBits = seg.get(ValueLayout.JAVA_BYTE, OFF_NOTHO_BITS) & 0xFF;
+    int publishedInYear = seg.get(LE_INT, OFF_PUBLISHED_IN_YEAR);
+
+    int stringTableCount = seg.get(LE_INT, STRING_TABLE_OFFSET);
+    if (stringTableCount != NUM_STRING_SLOTS) {
+      throw new IllegalStateException(
+          "nameparser-ffi: string table count=" + stringTableCount + ", expected " + NUM_STRING_SLOTS);
+    }
+    String[] strings = new String[NUM_STRING_SLOTS];
+    for (int i = 0; i < NUM_STRING_SLOTS; i++) {
+      long entryOff = STRING_TABLE_OFFSET + 4L + (long) i * STRING_REF_SIZE;
+      strings[i] = readOptString(seg, entryOff);
+    }
+
+    Cursor cur = new Cursor(RUN_SLOTS_OFFSET);
+    List<String> authorsComb = readStringRun(seg, cur);
+    List<String> exAuthorsComb = readStringRun(seg, cur);
+    List<String> authorsBas = readStringRun(seg, cur);
+    List<String> exAuthorsBas = readStringRun(seg, cur);
+    List<String> warnings = readStringRun(seg, cur);
+
+    int eqCount = seg.get(LE_INT, cur.pos);
+    cur.pos += 4;
+    int[] eqParts = new int[eqCount];
+    String[] eqValues = new String[eqCount];
+    for (int i = 0; i < eqCount; i++) {
+      eqParts[i] = seg.get(LE_INT, cur.pos);
+      String value = readOptString(seg, cur.pos + 4);
+      if (value == null) {
+        throw new IllegalStateException("nameparser-ffi: epithetQualifier entry decoded as absent");
+      }
+      eqValues[i] = value;
+      cur.pos += EPITHET_QUALIFIER_ENTRY_SIZE;
+    }
+
+    CombinedAuthorship genericAuthorship = readNestedGroup(seg, cur);
+    CombinedAuthorship specificAuthorship = readNestedGroup(seg, cur);
+
+    if (cur.pos > len) {
+      throw new IllegalStateException("nameparser-ffi: decode cursor (" + cur.pos
+          + ") ran past the reported buffer length (" + len + ") -- codec/encoder offset mismatch");
+    }
+
+    // ---- populate the ParsedName -- setter order/choice matters, see the class doc ----
+    ParsedName pn = new ParsedName();
+    pn.setRank(Rank.values()[rankOrd]);
+    pn.setCode(codeOrd == ABSENT_ENUM ? null : NomCode.values()[codeOrd]);
+    pn.setType(NameType.values()[nameTypeOrd]);
+    pn.setState(ParsedName.State.values()[stateOrd]);
+
+    pn.setCandidatus(candidatus);
+    pn.setDoubtful(doubtful);
+    pn.setManuscript(manuscript);
+    pn.setExtinct(extinct);
+
+    pn.setOriginalSpelling(switch (originalSpellingByte) {
+      case ORIGINAL_SPELLING_FALSE -> Boolean.FALSE;
+      case ORIGINAL_SPELLING_TRUE -> Boolean.TRUE;
+      case ORIGINAL_SPELLING_UNKNOWN -> null;
+      default -> throw new IllegalStateException(
+          "nameparser-ffi: unexpected original_spelling byte " + originalSpellingByte);
+    });
+
+    // Epithet setters strip a leading '×' and call addNotho as a side effect, but the wire's
+    // epithet strings are already de-'×'d by the Rust encoder, so no side effect actually fires
+    // here in practice; `notho` is (re)built explicitly and exactly from notho_bits right below
+    // regardless, so the final value is correct even if that assumption were ever violated.
+    pn.setUninomial(strings[SLOT_UNINOMIAL]);
+    pn.setGenus(strings[SLOT_GENUS]);
+    pn.setInfragenericEpithet(strings[SLOT_INFRAGENERIC]);
+    pn.setSpecificEpithet(strings[SLOT_SPECIFIC]);
+    pn.setInfraspecificEpithet(strings[SLOT_INFRASPECIFIC]);
+    pn.setCultivarEpithet(strings[SLOT_CULTIVAR]);
+    pn.setPhrase(strings[SLOT_PHRASE]);
+    pn.setTaxonomicNote(strings[SLOT_TAXONOMIC_NOTE]);
+    pn.setNomenclaturalNote(strings[SLOT_NOMENCLATURAL_NOTE]);
+    pn.setPublishedIn(strings[SLOT_PUBLISHED_IN]); // auto-derives publishedInYear
+    pn.setPublishedInYear(publishedInYear == ABSENT_ENUM ? null : publishedInYear); // ...pinned exactly here
+    pn.setPublishedInPage(strings[SLOT_PUBLISHED_IN_PAGE]);
+    pn.setUnparsed(strings[SLOT_UNPARSED]);
+    pn.setSanctioningAuthor(strings[SLOT_SANCTIONING_AUTHOR]);
+
+    for (int i = 0; i < NamePart.values().length; i++) {
+      if ((nothoBits & (1 << i)) != 0) {
+        pn.addNotho(NamePart.values()[i]);
+      }
+    }
+
+    for (int i = 0; i < eqCount; i++) {
+      pn.setEpithetQualifier(NamePart.values()[eqParts[i]], eqValues[i]);
+    }
+
+    pn.setCombinationAuthorship(
+        authorship(authorsComb, exAuthorsComb, strings[SLOT_YEAR_COMB], strings[SLOT_IMPRINT_YEAR_COMB]));
+    pn.setBasionymAuthorship(
+        authorship(authorsBas, exAuthorsBas, strings[SLOT_YEAR_BAS], strings[SLOT_IMPRINT_YEAR_BAS]));
+
+    if (genericAuthorship != null) {
+      pn.setGenericAuthorship(genericAuthorship);
+    }
+    if (specificAuthorship != null) {
+      pn.setSpecificAuthorship(specificAuthorship);
+    }
+
+    if (!warnings.isEmpty()) {
+      pn.addWarning(warnings.toArray(new String[0]));
+    }
+
+    return pn;
+  }
+
+  // ================================================================================================
+  // Byte-level primitives
+  // ================================================================================================
+
+  /** Mutable byte cursor -- the run-slots and nested authorship groups are sequential/
+   *  self-delimiting (not directory-addressed), so decoding them means walking forward and
+   *  remembering where the last read left off; see the class doc / layout.rs's own doc comment. */
+  private static final class Cursor {
+    long pos;
+
+    Cursor(long pos) {
+      this.pos = pos;
+    }
+  }
+
+  /** Resolves one {@code (offset, len)} string ref at {@code pos}, honoring the absent
+   *  sentinel. Does not advance any cursor -- callers add {@link #STRING_REF_SIZE} themselves. */
+  private static String readOptString(MemorySegment seg, long pos) {
+    int offset = seg.get(LE_INT, pos);
+    if (offset == ABSENT_STRING_OFFSET) {
+      return null;
+    }
+    long off = Integer.toUnsignedLong(offset);
+    long strLen = Integer.toUnsignedLong(seg.get(LE_INT, pos + 4));
+    byte[] bytes = seg.asSlice(off, strLen).toArray(ValueLayout.JAVA_BYTE);
+    return new String(bytes, StandardCharsets.UTF_8);
+  }
+
+  /** Reads one run-slot table ({@code u32 count} then {@code count} plain string refs) at
+   *  {@code cur.pos}, advancing it past the table. Run-slot entries are never the absent
+   *  sentinel (they are real list elements) -- decoding one as absent is a wire-format defect,
+   *  not a legitimate value, so it throws rather than silently inserting a null/blank. */
+  private static List<String> readStringRun(MemorySegment seg, Cursor cur) {
+    int count = seg.get(LE_INT, cur.pos);
+    cur.pos += 4;
+    List<String> out = new ArrayList<>(count);
+    for (int i = 0; i < count; i++) {
+      String s = readOptString(seg, cur.pos);
+      cur.pos += STRING_REF_SIZE;
+      if (s == null) {
+        throw new IllegalStateException(
+            "nameparser-ffi: run-slot string entry decoded as the absent sentinel");
+      }
+      out.add(s);
+    }
+    return out;
+  }
+
+  /** Reads one nested authorship group ({@code generic_authorship}/{@code specific_authorship})
+   *  at {@code cur.pos}, advancing past it: a {@code present} flag, and -- only if present --
+   *  four run-slot tables and five fixed string refs, reconstructed here as a whole {@link
+   *  CombinedAuthorship}. Returns {@code null} for an absent group. */
+  private static CombinedAuthorship readNestedGroup(MemorySegment seg, Cursor cur) {
+    int present = seg.get(LE_INT, cur.pos);
+    cur.pos += 4;
+    if (present == GROUP_ABSENT) {
+      return null;
+    }
+    if (present != GROUP_PRESENT) {
+      throw new IllegalStateException(
+          "nameparser-ffi: nested authorship group present flag=" + present + ", expected 0 or 1");
+    }
+
+    List<String> authorsComb = readStringRun(seg, cur);
+    List<String> exAuthorsComb = readStringRun(seg, cur);
+    List<String> authorsBas = readStringRun(seg, cur);
+    List<String> exAuthorsBas = readStringRun(seg, cur);
+
+    String yearComb = readOptString(seg, cur.pos);
+    cur.pos += STRING_REF_SIZE;
+    String imprintYearComb = readOptString(seg, cur.pos);
+    cur.pos += STRING_REF_SIZE;
+    String yearBas = readOptString(seg, cur.pos);
+    cur.pos += STRING_REF_SIZE;
+    String imprintYearBas = readOptString(seg, cur.pos);
+    cur.pos += STRING_REF_SIZE;
+    String sanctioningAuthor = readOptString(seg, cur.pos);
+    cur.pos += STRING_REF_SIZE;
+
+    CombinedAuthorship ca = new CombinedAuthorship();
+    ca.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, yearComb, imprintYearComb));
+    ca.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, yearBas, imprintYearBas));
+    ca.setSanctioningAuthor(sanctioningAuthor);
+    return ca;
+  }
+
+  /** Builds an {@link Authorship} via its plain setters -- NOT {@code addAuthor}/{@code
+   *  addExAuthor}, which have an inverted-blank-check bug making them no-ops for real authors. */
+  private static Authorship authorship(List<String> authors, List<String> exAuthors, String year, String imprintYear) {
+    Authorship a = new Authorship();
+    a.setAuthors(authors);
+    a.setExAuthors(exAuthors);
+    a.setYear(year);
+    a.setImprintYear(imprintYear);
+    return a;
+  }
+}

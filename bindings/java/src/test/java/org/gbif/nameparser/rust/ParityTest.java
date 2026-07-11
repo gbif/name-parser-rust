@@ -10,7 +10,8 @@ import org.gbif.nameparser.NameParserImpl;
 import org.gbif.nameparser.api.NameParser;
 import org.gbif.nameparser.api.ParsedName;
 import org.gbif.nameparser.api.UnparsableNameException;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,17 +28,21 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Parity gate: {@link NameParserRust} (the FFM/JSON path) vs {@link NameParserImpl} (the Java
- * {@code 4.2.0-SNAPSHOT} oracle pipeline) over every name corpus in {@code testdata/}.
+ * Parity gate: {@link NameParserRust} (both {@link NameParserRust.WireFormat}s) vs {@link
+ * NameParserImpl} (the Java {@code 4.2.0-SNAPSHOT} oracle pipeline) over every name corpus in
+ * {@code testdata/}.
  *
  * <p>Phase 2 already proved 11,302/11,302 zero-diff parity between the Rust core and the Java
  * oracle out-of-process, by dumping both to JSONL and diffing with the native CLI's {@code
  * nameparser-cli compare} subcommand (see {@code cross-validation.md} and {@code
  * crates/nameparser-cli/src/main.rs}). This test re-proves the identical claim *in-process*,
- * through the FFM boundary and the Gson round trip {@link NameParserRust} performs on every
- * call — so a mismatch caught here is an FFM-marshalling or gson-round-trip bug in the binding
- * (Task 2 of the Phase-3 plan), not a core-parser regression; the core is already gated by
- * {@code crates/nameparser/tests/parse_golden.rs}.
+ * through the FFM boundary — parametrized over {@link NameParserRust.WireFormat} ({@code
+ * @EnumSource}) so it runs once against the JSON path's Gson round trip and once against the
+ * STRUCT path's {@link StructCodec} decode. A mismatch caught here is therefore either an
+ * FFM-marshalling/gson-round-trip bug (JSON) or a flat-codec decode bug (STRUCT) in the binding,
+ * not a core-parser regression; the core is already gated by {@code
+ * crates/nameparser/tests/parse_golden.rs}. The STRUCT run in particular is {@code
+ * StructCodec}'s correctness proof — it is expected, not merely hoped, to also land on 0 diffs.
  *
  * <p>Both parsers are called the same way the corpora were cross-validated in Phase 2:
  * {@code parse(name, null, null, null)} — name-only, no explicit authorship/rank/code.
@@ -82,11 +87,12 @@ class ParityTest {
   /** Caps the diff dump on assertion failure; the aggregate compared/diff counts are never capped. */
   private static final int MAX_EXAMPLES = 20;
 
-  private final NameParserRust rust = new NameParserRust();
   private final NameParserImpl oracle = new NameParserImpl();
 
-  @Test
-  void zeroDiffsAcrossAllCorpora() throws IOException {
+  @ParameterizedTest(name = "{0}")
+  @EnumSource(NameParserRust.WireFormat.class)
+  void zeroDiffsAcrossAllCorpora(NameParserRust.WireFormat format) throws IOException {
+    NameParserRust rust = new NameParserRust(format);
     File testdataDir = testdataDir();
     assertTrue(testdataDir.isDirectory(),
         "testdata dir not found at " + testdataDir.getAbsolutePath()
@@ -120,11 +126,11 @@ class ParityTest {
     }
     tally.append(String.format(Locale.ROOT, "  %-24s %6d compared, %4d diffs%n", "TOTAL", totalCompared, totalDiffs));
 
-    System.out.println("ParityTest: NameParserRust vs NameParserImpl, per-corpus tally:");
+    System.out.println("ParityTest[" + format + "]: NameParserRust vs NameParserImpl, per-corpus tally:");
     System.out.print(tally);
 
     if (totalDiffs > 0) {
-      System.err.println("ParityTest: " + totalDiffs + " diff(s) out of " + totalCompared + " -- first "
+      System.err.println("ParityTest[" + format + "]: " + totalDiffs + " diff(s) out of " + totalCompared + " -- first "
           + examples.size() + " example(s) follow:");
       for (String example : examples) {
         System.err.println("----");
@@ -132,7 +138,7 @@ class ParityTest {
       }
     }
 
-    assertEquals(0, totalDiffs, totalDiffs + " of " + totalCompared
+    assertEquals(0, totalDiffs, "[" + format + "] " + totalDiffs + " of " + totalCompared
         + " names differ between NameParserRust and NameParserImpl -- see stdout/stderr above"
         + " for the per-corpus tally and up to " + MAX_EXAMPLES + " example diff(s)");
   }

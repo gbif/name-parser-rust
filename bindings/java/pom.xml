@@ -21,7 +21,8 @@
   <description>
     org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser by
     downcalling the nameparser-ffi Rust cdylib (crates/nameparser-ffi, this repo) over
-    java.lang.foreign (FFM/Panama). JSON wire format only; see bindings/java/README.md.
+    java.lang.foreign (FFM/Panama). Two wire formats (JSON, STRUCT) selected via WireFormat;
+    see bindings/java/README.md.
   </description>
 
   <properties>
