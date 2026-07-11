@@ -7,7 +7,7 @@
 //! of the Java subsystem this ports, and `docs/superpowers/plans/2026-07-11-phase4c-validate.md`
 //! for the task breakdown and Global Constraints binding every task in this port.
 //!
-//! ## Status: prompt + verdict model + tolerant parsing wired (Phase 4c Task 3)
+//! ## Status: cache + LLM clients wired, judge loop still pending (Phase 4c Task 4)
 //!
 //! Task 1 provided the pieces that need no LLM/HTTP/sampling machinery: the [`ValidateArgs`]
 //! CLI surface, [`is_barcode_otu`] (`BarcodeOtuFilter`), and [`is_interesting`] (the
@@ -19,34 +19,46 @@
 //! codes, parses the rest, and reservoir-samples a bounded, line-ordered `interesting +
 //! ordinary` selection).
 //!
-//! Task 3 (this task) adds the LLM-message layer, with no HTTP client behind it yet:
-//! [`ValidationPrompt`] (`llm.ValidationPrompt` — the verbatim system/output-instruction prompt
-//! text plus [`ValidationPrompt::user_message`], the per-batch request payload builder),
-//! [`Verdict`]/[`FieldIssue`] (`llm.Verdict` — the model's reply shape, with `FieldIssue`'s
-//! four fields tolerantly coerced to display strings), and [`parse_verdicts`] (`llm.Verdicts.parse`
-//! — the tolerant `{"verdicts":[...]}` extractor: `<think>` traces, markdown fences/preamble,
-//! and a `max_tokens`-truncated trailing object are all handled the same way Java's does).
-//! `run_validate`'s `--dry-run` path now also dumps the exact first-batch request payload to
+//! Task 3 added the LLM-message layer, with no HTTP client behind it yet: [`ValidationPrompt`]
+//! (`llm.ValidationPrompt` — the verbatim system/output-instruction prompt text plus
+//! [`ValidationPrompt::user_message`], the per-batch request payload builder), [`Verdict`]/
+//! [`FieldIssue`] (`llm.Verdict` — the model's reply shape, with `FieldIssue`'s four fields
+//! tolerantly coerced to display strings), and [`parse_verdicts`] (`llm.Verdicts.parse` — the
+//! tolerant `{"verdicts":[...]}` extractor: `<think>` traces, markdown fences/preamble, and a
+//! `max_tokens`-truncated trailing object are all handled the same way Java's does).
+//! `run_validate`'s `--dry-run` path also dumps the exact first-batch request payload to
 //! stderr (`ValidationPrompt::user_message` over the first `min(batch, chosen.len())` items),
-//! matching Java's `dumpFirstBatch`. A non-dry-run invocation still isn't implemented: it runs
-//! the same selection scan (so its stderr summary is real) but then reports that judging isn't
-//! wired up yet, rather than either silently doing nothing or attempting an LLM call with no
-//! client to make it. The LLM clients (HTTP), the verdict cache, and the per-chunk judge/report
-//! loop land in Tasks 4-5.
+//! matching Java's `dumpFirstBatch`.
+//!
+//! Task 4 (this task) closes a Task 3 review finding and adds everything a judge loop needs,
+//! but does NOT wire it into [`run_validate`] yet (that's Task 5): [`parse_verdicts`] now
+//! skips-and-continues on a single malformed verdict object (`eprintln!`s a warning and drops
+//! just that one) instead of erroring the whole reply — see its doc comment point 5. The
+//! [`cache`] submodule adds [`cache::VerdictCache`]/[`cache::cache_key`] (`llm.VerdictCache` —
+//! a SHA-256-keyed, JSONL-backed verdict cache). The [`client`] submodule adds the
+//! [`client::Judge`] trait, [`client::AnthropicClient`] and [`client::OpenAiClient`] (the
+//! latter also serves `--provider=local`/`ollama`), [`client::build_judge`] (provider
+//! normalization + default-model resolution), and the shared hand-rolled retry/backoff
+//! (`client::retry_decision`) both clients use. A non-dry-run [`run_validate`] invocation still
+//! isn't implemented: it runs the same selection scan (so its stderr summary is real) but then
+//! reports that judging isn't wired up yet — the per-chunk cache-lookup + judge + reconcile +
+//! report loop lands in Task 5.
 //!
 //! `nameparser-cli` is a binary-only crate (no library target), so `pub` here doesn't exempt an
 //! item from the `dead_code` lint the way it would in a library. [`run_validate`] now reaches
 //! most of this module's items through [`select`] (which itself calls [`is_barcode_otu`],
 //! [`nameparser::parse`], [`is_interesting`], and both [`Reservoir`]/[`JavaRandom`]) and through
-//! the new dry-run payload dump (which calls [`ValidationPrompt::user_message`]), but a few
-//! items still have no caller outside this module's own tests: `ValidateArgs`'s `provider`/
-//! `model`/`cache`/`api_url` fields (read once the LLM client exists, Task 4),
-//! [`Reservoir::seen`] (kept for parity with Java `Reservoir.seen()`, exercised by this module's
-//! own reservoir tests), [`ValidationPrompt::VERSION`] (feeds the verdict-cache key, Task 5),
-//! and [`parse_verdicts`]/[`Verdict::is_ok`] (called by the HTTP clients, Task 4). The blanket
-//! allow stays until those land.
+//! the dry-run payload dump (which calls [`ValidationPrompt::user_message`]), but a few items
+//! still have no caller outside this module's (and its submodules') own tests: `ValidateArgs`'s
+//! `provider`/`model`/`cache`/`api_url` fields, [`ValidationPrompt::VERSION`], and everything in
+//! [`cache`]/[`client`] — all consumed by the Task 5 judge loop, not yet by [`run_validate`]
+//! itself. [`Reservoir::seen`] is kept for parity with Java `Reservoir.seen()`, exercised only
+//! by this module's own reservoir tests. The blanket allow stays until Task 5 wires these in.
 
 #![allow(dead_code)]
+
+pub mod cache;
+pub mod client;
 
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
@@ -57,7 +69,7 @@ use std::time::Instant;
 use clap::Args;
 use nameparser::model::{NameType, ParseError, ParsedName, State};
 use regex::Regex;
-use serde::{Deserialize, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize};
 use serde_json::value::RawValue;
 
 /// Options for `nameparser-cli validate`, mirroring the Java CLI's `ValidateCli` option set —
@@ -703,7 +715,13 @@ fn item_json(index: usize, item: &Item) -> String {
 /// flags this exact tradeoff as "worth deciding deliberately"); `fields`/`note` default when
 /// absent, matching Java's `fields`/`note` being genuinely optional (empty/blank when
 /// `verdict == "ok"`).
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+///
+/// Also `Serialize` (Task 4): [`cache::VerdictCache`] writes a judged `Verdict` back out as the
+/// JSONL cache's `"verdict"` object — the same field set, round-tripped through this one type
+/// rather than a separate write-side shape. `note: None` is omitted on write
+/// (`skip_serializing_if`), matching Gson's own default null-omission behavior (no
+/// `serializeNulls()` in Java either).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Verdict {
     /// 0-based position within the batch this verdict belongs to (echoed back by the model).
     pub index: usize,
@@ -715,7 +733,7 @@ pub struct Verdict {
     #[serde(default)]
     pub fields: Vec<FieldIssue>,
     /// Free-text explanation, one or two sentences.
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub note: Option<String>,
 }
 
@@ -733,7 +751,7 @@ impl Verdict {
 /// gemma) sometimes echo a whole nested object, or a bare number/boolean, as a field's
 /// `parsed`/`expected` value instead of a flat string — coercing defends against that instead
 /// of aborting the whole judging run over one loose field.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FieldIssue {
     /// ParsedName field name, e.g. `rank`, `code`, `combinationAuthorship.year`.
     #[serde(default, deserialize_with = "coerce_to_string")]
@@ -791,7 +809,9 @@ static THINK: LazyLock<Regex> =
 
 /// Java `Verdicts.parse(String)`: the resilience layer that makes judging tolerant of everything
 /// a local/reasoning model routinely does to an otherwise-valid `{"verdicts":[...]}` reply —
-/// `<think>` traces, markdown fences, prose preamble, and a `max_tokens` cutoff mid-object.
+/// `<think>` traces, markdown fences, prose preamble, a `max_tokens` cutoff mid-object, and (a
+/// deliberate, disclosed EXTENSION beyond Java, see point 5) one malformed verdict object amid
+/// otherwise-good ones.
 ///
 /// 1. Errors (matching Java's `IllegalStateException`, ported here as
 ///    [`io::ErrorKind::InvalidData`]) if `reply` is blank.
@@ -803,7 +823,17 @@ static THINK: LazyLock<Regex> =
 ///    elements. A trailing object left unbalanced (the model hit `max_tokens` mid-object) is
 ///    silently dropped — the complete verdicts already collected are salvaged rather than
 ///    losing the whole batch.
-/// 5. Deserializes each collected object's raw text into a [`Verdict`] via `serde_json`.
+/// 5. Deserializes each collected object's raw text into a [`Verdict`] via `serde_json`,
+///    **independently, skipping-and-continuing on a single failure**: this port's `Verdict`
+///    deserialization is stricter than Java's Gson (see `Verdict`'s doc comment — a missing
+///    required field fails here where Gson would silently default it), so unlike Java, one
+///    malformed object is a real possibility this port must tolerate on its own. A verdict
+///    object that fails to deserialize is `eprintln!`-warned and dropped, keeping the
+///    successfully-parsed rest — mirroring step 4's "salvage what's usable" philosophy, and
+///    safe for the same reason: the (Task 5) reconcile step treats a missing index as "retry
+///    next run," so losing one bad object is fine, but erroring the *entire* reply over it is
+///    not (for `AnthropicClient`, which has no enclosing try/catch, that would abort the whole
+///    run). Only a blank reply or a missing `"verdicts"` array (steps 1/3) remain hard errors.
 pub fn parse_verdicts(reply: &str) -> io::Result<Vec<Verdict>> {
     if reply.trim().is_empty() {
         return Err(io::Error::new(
@@ -815,13 +845,13 @@ pub fn parse_verdicts(reply: &str) -> io::Result<Vec<Verdict>> {
     let objects = extract_verdict_objects(&cleaned)?;
     let mut out = Vec::with_capacity(objects.len());
     for obj in objects {
-        let verdict: Verdict = serde_json::from_str(obj).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("invalid verdict object: {e} (raw: {})", brief(obj)),
-            )
-        })?;
-        out.push(verdict);
+        match serde_json::from_str::<Verdict>(obj) {
+            Ok(verdict) => out.push(verdict),
+            Err(e) => eprintln!(
+                "Skipping malformed verdict object: {e} (raw: {})",
+                brief(obj)
+            ),
+        }
     }
     Ok(out)
 }
@@ -898,8 +928,11 @@ fn match_object(bytes: &[u8], open: usize) -> Option<usize> {
 }
 
 /// Java `Verdicts.brief(String)`: a trimmed, `…`-truncated (at 500 chars) preview of `s`, for
-/// error messages that otherwise might dump an entire (possibly huge) model reply.
-fn brief(s: &str) -> String {
+/// error messages that otherwise might dump an entire (possibly huge) model reply. `pub(crate)`
+/// (not private) so the `client` submodule's HTTP-error messages (Task 4) can reuse it too,
+/// exactly like Java's single `Verdicts.brief` is shared by `ValidateCli`/`AnthropicClient`/
+/// `OpenAiClient` alike.
+pub(crate) fn brief(s: &str) -> String {
     let t = s.trim();
     if t.chars().count() > 500 {
         let head: String = t.chars().take(500).collect();
@@ -1536,13 +1569,60 @@ mod tests {
     }
 
     #[test]
-    fn parse_verdicts_missing_required_field_is_an_error() {
-        // Deliberate, disclosed tightening vs. Java's Gson leniency (see `Verdict`'s doc
-        // comment): a verdict object missing `verdict` fails to deserialize rather than
-        // silently defaulting.
+    fn parse_verdicts_a_lone_malformed_object_is_skipped_not_an_error() {
+        // Task 4 review-fix (task-3-review.md [Important]): a verdict object that fails to
+        // deserialize (here, missing the required `verdict` field — a deliberate, disclosed
+        // tightening vs. Java's Gson leniency, see `Verdict`'s doc comment) must not error the
+        // *whole* reply. `extract_verdict_objects` still found a well-formed `"verdicts"` array
+        // with one structurally-complete (brace-balanced) object in it — the failure is only in
+        // decoding that one object's fields, which is now a skip-with-warning, not a hard error.
+        // This matters because the (Task 5) reconcile step treats a missing index as "retry
+        // next run" — an empty `Ok(vec![])` here is safe; erroring the whole batch is not (it
+        // would abort the entire run for `AnthropicClient`, which has no enclosing try/catch).
         let content = "{\"verdicts\":[{\"index\":0,\"confidence\":\"high\",\"fields\":[]}]}";
+        let verdicts =
+            parse_verdicts(content).expect("a single malformed object must not error the reply");
+        assert!(
+            verdicts.is_empty(),
+            "the sole malformed object must be skipped, not defaulted: {verdicts:?}"
+        );
+    }
+
+    #[test]
+    fn parse_verdicts_skips_only_the_malformed_object_among_several() {
+        // The brief's explicit acceptance case: 3 verdict objects, the middle one missing a
+        // required field ('verdict') -> the 2 good ones are still returned, in order, with
+        // their original `index` values intact (0 and 2, not renumbered to 0 and 1).
+        let content = concat!(
+            "{\"verdicts\":[",
+            "{\"index\":0,\"verdict\":\"ok\",\"confidence\":\"high\",\"fields\":[],\"note\":\"\"},",
+            "{\"index\":1,\"confidence\":\"high\",\"fields\":[]},",
+            "{\"index\":2,\"verdict\":\"suspect\",\"confidence\":\"low\",\"fields\":[],\"note\":\"\"}",
+            "]}",
+        );
+        let verdicts = parse_verdicts(content)
+            .expect("one bad element among several must not error the whole reply");
         assert_eq!(
-            parse_verdicts(content).unwrap_err().kind(),
+            verdicts.len(),
+            2,
+            "the malformed middle object must be skipped, keeping the other two: {verdicts:?}"
+        );
+        assert_eq!(verdicts[0].index, 0);
+        assert!(verdicts[0].is_ok());
+        assert_eq!(verdicts[1].index, 2);
+        assert_eq!(verdicts[1].verdict, "suspect");
+    }
+
+    #[test]
+    fn parse_verdicts_still_errors_on_blank_input_or_a_missing_verdicts_key() {
+        // The two conditions that remain hard errors even after the skip-and-continue fix
+        // (brief: "Still error only if the reply is blank / has no 'verdicts' key").
+        assert_eq!(
+            parse_verdicts("").unwrap_err().kind(),
+            io::ErrorKind::InvalidData
+        );
+        assert_eq!(
+            parse_verdicts("{\"notVerdicts\":[]}").unwrap_err().kind(),
             io::ErrorKind::InvalidData
         );
     }
