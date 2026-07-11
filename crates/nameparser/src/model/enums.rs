@@ -965,6 +965,52 @@ impl Rank {
     }
 }
 
+/// Phase 3 (FFM binding) additions — purely additive, nothing above this point is touched.
+/// The FFI crate (`nameparser-ffi`) needs to turn a Java `Rank.name()` / `NomCode.name()`
+/// string (received across the C ABI as a plain `&str`) back into the corresponding enum
+/// variant. Neither `Rank` nor `NomCode` derives `serde::Deserialize` (only `Serialize`, for
+/// the wire-JSON output direction), so this is a hand-written reverse lookup rather than a
+/// `serde_json::from_value` round-trip.
+impl Rank {
+    /// Looks up a variant by its serialized SCREAMING_SNAKE name (Java `Rank.name()`), the
+    /// exact inverse of [`rank_wire_name`] — which itself is built on this type's own
+    /// `Serialize` impl, so `from_name` can never silently drift from the wire form it
+    /// reverses. A linear scan over all 117 variants; `Rank::from_name` is only ever called
+    /// once per FFI parse call, not in a hot inner loop. Returns `None` for an unrecognized
+    /// name — mirrors Java's `Rank.valueOf(name)` throwing `IllegalArgumentException`, folded
+    /// to `None`/absent here since the FFI caller treats an unrecognized rank hint the same
+    /// as an absent one rather than propagating a Java exception type across the C ABI.
+    pub fn from_name(name: &str) -> Option<Rank> {
+        Rank::ALL
+            .iter()
+            .copied()
+            .find(|&r| rank_wire_name(r) == name)
+    }
+}
+
+impl NomCode {
+    /// Looks up a variant by its serialized SCREAMING_SNAKE name (Java `NomCode.name()`).
+    /// A hand-written match, unlike [`Rank::from_name`], since `NomCode` has no `ALL`-style
+    /// constant to reverse-search over — but each arm's string literal is exactly this type's
+    /// own `#[serde(rename_all = "SCREAMING_SNAKE_CASE")]` output for that variant, pinned
+    /// against the real `Serialize` impl by
+    /// `nomcode_from_name_round_trips_every_variant_via_its_own_serialize_impl` below, so the
+    /// two representations cannot silently drift apart. Returns `None` for an unrecognized
+    /// name, same rationale as `Rank::from_name`.
+    pub fn from_name(name: &str) -> Option<NomCode> {
+        match name {
+            "BACTERIAL" => Some(NomCode::Bacterial),
+            "BOTANICAL" => Some(NomCode::Botanical),
+            "CULTIVARS" => Some(NomCode::Cultivars),
+            "PHYTO" => Some(NomCode::Phyto),
+            "VIRUS" => Some(NomCode::Virus),
+            "ZOOLOGICAL" => Some(NomCode::Zoological),
+            "PHYLO" => Some(NomCode::Phylo),
+            _ => None,
+        }
+    }
+}
+
 /// Java `org.gbif.nameparser.util.RankUtils`'s rank-lookup statics not already covered by
 /// `Rank`'s own instance methods — ported as a `pub mod` the same way `Warnings` (a separate
 /// Java class) is ported as this file's own `pub mod warnings` below.
@@ -1834,5 +1880,65 @@ mod tests {
         assert_eq!(rank_utils::suffices_rank_map(NomCode::Cultivars), None);
         assert_eq!(rank_utils::suffices_rank_map(NomCode::Phyto), None);
         assert_eq!(rank_utils::suffices_rank_map(NomCode::Phylo), None);
+    }
+
+    // ---- Phase 3 (FFM binding): Rank::from_name / NomCode::from_name ----
+
+    /// Every one of the 117 `Rank` variants round-trips through its own wire name — the
+    /// exhaustive version of the pin below, covering multi-word constants like
+    /// `SUPERSECTION_BOTANY` and `FORMA_SPECIALIS` too, not just a hand-picked sample.
+    #[test]
+    fn rank_from_name_round_trips_every_variant_via_its_own_serialize_impl() {
+        for &r in Rank::ALL.iter() {
+            let name = rank_wire_name(r);
+            assert_eq!(
+                Rank::from_name(&name),
+                Some(r),
+                "round-trip failed for {r:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn rank_from_name_pins_a_multi_word_constant_and_rejects_nonsense() {
+        assert_eq!(Rank::from_name("SPECIES"), Some(Rank::Species));
+        assert_eq!(
+            Rank::from_name("DIVISION_ZOOLOGY"),
+            Some(Rank::DivisionZoology)
+        );
+        assert_eq!(Rank::from_name("NONSENSE"), None);
+        assert_eq!(Rank::from_name(""), None);
+    }
+
+    /// Every one of the 7 `NomCode` variants round-trips through its own wire name —
+    /// guards `NomCode::from_name`'s hand-written match against drifting from the real
+    /// `#[derive(Serialize)]` output it's meant to reverse.
+    #[test]
+    fn nomcode_from_name_round_trips_every_variant_via_its_own_serialize_impl() {
+        for &c in &[
+            NomCode::Bacterial,
+            NomCode::Botanical,
+            NomCode::Cultivars,
+            NomCode::Phyto,
+            NomCode::Virus,
+            NomCode::Zoological,
+            NomCode::Phylo,
+        ] {
+            let name = serde_json::to_string(&c)
+                .unwrap()
+                .trim_matches('"')
+                .to_string();
+            assert_eq!(
+                NomCode::from_name(&name),
+                Some(c),
+                "round-trip failed for {c:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn nomcode_from_name_pins_botanical_and_rejects_nonsense() {
+        assert_eq!(NomCode::from_name("BOTANICAL"), Some(NomCode::Botanical));
+        assert_eq!(NomCode::from_name("NONSENSE"), None);
     }
 }
