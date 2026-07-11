@@ -14,11 +14,11 @@
 //      `res` MUST match the classifier Ffi.java computes when it extracts the bundled
 //      library at runtime (DISTRIBUTION.md §3a). ----
 def NATIVE = [
-  'linux-x86_64'  : [ lib: 'libnameparser_ffi.so',    res: 'linux-x86-64'   ],
-  'linux-aarch64' : [ lib: 'libnameparser_ffi.so',    res: 'linux-aarch64'  ],
-  'darwin-arm64'  : [ lib: 'libnameparser_ffi.dylib', res: 'darwin-aarch64' ],
-  'darwin-x86_64' : [ lib: 'libnameparser_ffi.dylib', res: 'darwin-x86-64'  ],
-  'windows-x86_64': [ lib: 'nameparser_ffi.dll',      res: 'windows-x86-64' ],
+  'linux-x86_64'  : [ lib: 'libnameparser_ffi.so',    res: 'linux-x86_64'   ],
+  'linux-aarch64' : [ lib: 'libnameparser_ffi.so',    res: 'linux-aarch_64' ],
+  'darwin-arm64'  : [ lib: 'libnameparser_ffi.dylib', res: 'osx-aarch_64'   ],
+  'darwin-x86_64' : [ lib: 'libnameparser_ffi.dylib', res: 'osx-x86_64'     ],
+  'windows-x86_64': [ lib: 'nameparser_ffi.dll',      res: 'windows-x86_64' ],
 ]
 
 pipeline {

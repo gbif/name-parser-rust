@@ -20,7 +20,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 |---|---|---|---|---|
 | Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
-| **Java FFM binding** | `bindings/java` | **repository.gbif.org → Maven Central** | `org.gbif.nameparser:name-parser-rust` | dev-only (native lib not bundled) |
+| **Java FFM binding** | `bindings/java` | **repository.gbif.org → Maven Central** | `org.gbif.nameparser:name-parser-rust` | **self-contained JAR** (cdylib bundled); not yet deployed |
 | Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | deferred |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
 
@@ -56,12 +56,12 @@ It compiles `org.gbif.nameparser.rust.NameParserRust implements org.gbif.namepar
 so it is a **drop-in** for any code already written against the `NameParser` interface — the
 whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
-**Two hard prerequisites before it can be a real Maven dependency:**
+**Prerequisites to be a real Maven dependency:**
 
-1. **Bundle the native library** (§3) — today `Ffi.resolveLibPath()` resolves the cdylib from
-   `-Dnameparser.ffi.lib` → `$NAMEPARSER_FFI_LIB` → the repo-relative
-   `../../target/release/libnameparser_ffi.{dylib,so,dll}`. Great for `mvn test` in-tree,
-   useless for a downstream consumer who has no such file.
+1. **Bundle the native library** (§3) — ✅ DONE. `Ffi.resolveLibPath()` now extracts the cdylib
+   from a JAR resource (`native/${os.detected.classifier}/`) when no `-Dnameparser.ffi.lib` /
+   `$NAMEPARSER_FFI_LIB` override is set, so `mvn package` produces a self-contained JAR (verified
+   loading the bundled lib with no override). The `-D`/env dev escape hatches still work.
 2. **Java 22+ at runtime.** FFM downcalls are a restricted method; the module already opts in
    with `--enable-native-access=ALL-UNNAMED`, but the *language* level requires JDK 22+. A
    Java 17 service cannot load this JAR until it upgrades (tracked as the Phase-5 cutover
@@ -110,22 +110,27 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 Three bindings need `libnameparser_ffi.*` present on the target machine. Java is the hard
 case because it loads over FFM from a path. Two standard solutions:
 
-- **(a) Bundle-and-extract — recommended.** Ship every platform's cdylib as a classpath
-  resource and extract the right one at load time:
+- **(a) Bundle-and-extract — ✅ IMPLEMENTED.** The platform cdylib ships as a classpath resource
+  and is extracted at load time. Resource dirs are os-maven-plugin's `${os.detected.classifier}`
+  so `Ffi` and the pom agree on the names:
   ```
-  bindings/java/src/main/resources/native/
-    ├── linux-x86-64/libnameparser_ffi.so
-    ├── linux-aarch64/libnameparser_ffi.so
-    ├── darwin-x86-64/libnameparser_ffi.dylib
-    ├── darwin-aarch64/libnameparser_ffi.dylib
-    └── windows-x86-64/nameparser_ffi.dll
+  bindings/java/src/main/resources/native/   (CI, multi-platform) — or —
+  bindings/java/target/classes/native/        (local build, current platform only)
+    ├── linux-x86_64/libnameparser_ffi.so
+    ├── linux-aarch_64/libnameparser_ffi.so
+    ├── osx-x86_64/libnameparser_ffi.dylib
+    ├── osx-aarch_64/libnameparser_ffi.dylib
+    └── windows-x86_64/nameparser_ffi.dll
   ```
-  Change `Ffi.resolveLibPath()` to: keep the `-Dnameparser.ffi.lib` / `$NAMEPARSER_FFI_LIB`
-  overrides as dev escape hatches, but when unset, compute a classifier from
-  `System.getProperty("os.name")` + `os.arch`, copy `native/<classifier>/<libname>` out of the
-  JAR to a temp file, and hand *that* path to `SymbolLookup.libraryLookup(...)`. This yields a
-  single self-contained fat JAR — the model used by `sqlite-jdbc`, `jansi`, `rocksdbjni`.
-  Cost: JAR size grows by (cdylib size × number of platforms), a few MB total.
+  `Ffi.resolveLibPath()` keeps the `-Dnameparser.ffi.lib` / `$NAMEPARSER_FFI_LIB` overrides as
+  dev escape hatches, but when unset extracts `native/${os.detected.classifier}/<libname>` from
+  the JAR to a temp file and hands *that* to `SymbolLookup.libraryLookup(...)` (falling back to
+  the repo-relative dev path only if unbundled). The pom copies the cdylib into the JAR at
+  `prepare-package` (os-maven-plugin + maven-antrun-plugin). Locally, `cargo build -p
+  nameparser-ffi` (release) + `mvn package` yields a self-contained single-platform JAR (~1 MB,
+  verified loading the bundled lib with no override); CI's matrix stashes every platform's
+  cdylib into `src/main/resources/native/**` for a multi-platform fat JAR. Model used by
+  `sqlite-jdbc`, `jansi`, `rocksdbjni`.
 
 - **(b) Classifier artifacts** (à la `netty-tcnative`): a thin main JAR plus
   `name-parser-rust-<ver>-linux-x86-64.jar` etc.; the consumer adds the matching
@@ -267,8 +272,8 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 
 ## 6. Open items
 
-- [ ] Java: implement native-lib bundling in `Ffi.java` + `src/main/resources/native/**` (§3a);
-      add `<distributionManagement>` (+ Central plugins if syncing); bump deps to `4.2.0`; set version.
+- [x] Java: native-lib bundling in `Ffi.java` + pom (§3a) — DONE; `mvn package` = self-contained JAR (verified).
+- [ ] Java deploy: add `<distributionManagement>` (+ Central plugins if syncing); bump `name-parser-api` to released `4.2.0`; set a real `<version>`; then `mvn deploy` to repository.gbif.org.
 - [ ] `Jenkinsfile`: native build matrix (Stage 1) + Java deploy (Stage 2); then Stages 3–5.
 - [ ] Python: cibuildwheel config + first PyPI publish.
 - [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
