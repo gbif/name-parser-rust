@@ -5,10 +5,12 @@
 //! `extern "C"` functions: [`np_abi_version`], [`np_parse_json`], [`np_free`].
 //!
 //! **The FFI boundary never unwinds.** Every `extern "C"` function body is wrapped in
-//! [`std::panic::catch_unwind`] and turns a caught panic into a null pointer (or, for
-//! [`np_abi_version`]/[`np_free`], is simply incapable of panicking in the first place) —
-//! unwinding across a C ABI boundary is undefined behaviour, so a Rust-side panic must never
-//! reach the Java caller as an unwind.
+//! [`std::panic::catch_unwind`]: [`np_parse_json`] turns a caught panic into a null pointer;
+//! [`np_abi_version`] turns one into the sentinel `0`; [`np_free`] just discards the
+//! (impossible) `Result`. [`np_abi_version`]/[`np_free`] can't actually panic in practice, but
+//! wrapping them anyway keeps this invariant uniform and auditable instead of resting on an
+//! unenforced convention — unwinding across a C ABI boundary is undefined behaviour, so a
+//! Rust-side panic must never reach the Java caller as an unwind.
 //!
 //! **Ownership:** every heap pointer [`np_parse_json`] returns is a Rust-allocated
 //! `CString`; the caller (Java) must hand it back to [`np_free`] exactly once and must never
@@ -21,7 +23,7 @@
 //! module does not invent a new error shape.
 
 use std::ffi::{c_char, CStr, CString};
-use std::panic::catch_unwind;
+use std::panic::{catch_unwind, AssertUnwindSafe};
 
 use nameparser::model::{NameType, NomCode, ParseError, ParsedName, Rank};
 
@@ -31,7 +33,7 @@ use nameparser::model::{NameType, NomCode, ParseError, ParsedName, Rank};
 /// changed, or removed function/signature) — NOT on changes to the core parser's output.
 #[no_mangle]
 pub extern "C" fn np_abi_version() -> u32 {
-    1
+    std::panic::catch_unwind(|| 1u32).unwrap_or(0)
 }
 
 /// SAFETY: `p` must be either null or a valid, NUL-terminated C string for the duration of
@@ -168,9 +170,11 @@ fn unparsable_json(e: &ParseError) -> String {
 /// twice, is undefined behaviour (the same contract as `CString::from_raw`).
 #[no_mangle]
 pub unsafe extern "C" fn np_free(ptr: *mut c_char) {
-    if !ptr.is_null() {
-        drop(CString::from_raw(ptr));
-    }
+    let _ = catch_unwind(AssertUnwindSafe(|| unsafe {
+        if !ptr.is_null() {
+            drop(CString::from_raw(ptr));
+        }
+    }));
 }
 
 #[cfg(test)]
