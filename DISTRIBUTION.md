@@ -21,7 +21,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 | Rust core library | `crates/nameparser` | crates.io | `scientific-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
 | **Java FFM binding** | `bindings/java` | **repository.gbif.org → Maven Central** | `org.gbif.nameparser:name-parser-rust` | dev-only (native lib not bundled) |
-| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | deferred |
+| Python binding | `crates/nameparser-py` | PyPI | dist `scientific-name-parser`, import `nameparser` | deferred |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
 
 Every binding except the pure-Rust CLI wraps the **`nameparser-ffi` cdylib**
@@ -91,7 +91,7 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
   (x86_64 + arm64), and Windows wheels, each embedding the compiled Rust extension. Because
   the crate builds an **abi3** wheel, one wheel per platform covers all supported CPython 3.x.
 - `twine upload` (or the maturin/PyPI publish action) to **PyPI** under distribution name
-  **`gbif-name-parser`** (import stays `nameparser`).
+  **`scientific-name-parser`** (import stays `nameparser`; matches the Rust crate on crates.io).
 - Deferred items: the cibuildwheel CI config and the first PyPI publish.
 
 ### 2.4 R binding
@@ -239,7 +239,7 @@ ParsedName pn = parser.parse("Abies alba Mill.", Rank.SPECIES);
 ### Python
 
 ```bash
-pip install gbif-name-parser      # once published to PyPI
+pip install scientific-name-parser   # once published to PyPI
 ```
 ```python
 import nameparser
