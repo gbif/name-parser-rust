@@ -23,10 +23,11 @@ Same 8,017-name corpus (`benchmark-data.txt`) for every row; batch, out-of-proce
 - **~2.1× faster** than today's Java parser in batch, **~7× faster** than the 3.x generation still
   deployed in the CoL backend.
 - **The tail collapses.** Linear-time regex means no catastrophic backtracking: the worst
-  single-name parse is sub-millisecond, versus the 3.x parser's **1,010 ms** (a full second) on
-  one name in the 6.3M col-names dump. This is the ReDoS-robustness goal, made concrete.
+  single-name parse is ~1 ms (0.96 ms on the 8k corpus, 1.17 ms across 6.4M names), versus the
+  3.x parser's **1,010 ms** (a full second) on one name in the 6.3M col-names dump. This is the
+  ReDoS-robustness goal, made concrete.
 - **Zero behavioural difference.** Byte-for-byte parity with Java at every scale tested — 30/30
-  fields in-harness, 11,302 names in-process via FFM (both wire formats), and **7,991,756** real
+  fields in-harness, 11,302 names in-process via FFM (both wire formats), and **6,416,452** real
   Catalogue-of-Life names via the CLI — all 0 diffs (§5).
 
 ## Two measurement contexts (read this before comparing numbers)
@@ -92,9 +93,10 @@ Stable across 3 back-to-back repeats per side (avg / p50 / p95, µs; every run i
 
 ## 2. Large corpus (millions of names) & the ReDoS tail
 
-Large runs come from **different** Catalogue-of-Life dumps on each side, so treat the averages as
-same-order-of-magnitude data points, **not** a head-to-head ratio. The **tail** (worst single
-name) is the robustness-relevant quantity and the point of the comparison.
+The two large runs are from **different CoL releases**, but both are now real-names-only
+(BOLD/SH-OTU excluded) at ~6.3–6.4M — so the averages are directly indicative, and the **tail**
+(worst single name) is the robust cross-corpus claim (it turns on whether backtracking-prone
+inputs exist at all, and both corpora are similar-composition real names).
 
 **Java — `col-names.txt`, 6,259,108 names** (Java repo `benchmarks.md`):
 
@@ -104,17 +106,22 @@ name) is the robustness-relevant quantity and the point of the comparison.
 | V4 (earlier) | 19.79 µs | 18.54 µs | 29.46 µs | 2.62 ms |
 | V4 (2026-05-16) | 34.00 µs | 32.50 µs | 47.21 µs | 5.81 ms |
 
-**Rust — `colxr26.6_names.tsv`, 7,991,756 names** (`nameparser-cli benchmark --warmup`):
+**Rust — `colxr26.6-names.tsv`, 6,416,452 names** (real names only — BOLD specimen IDs and UNITE
+SH fungal OTUs excluded, so its composition mirrors the Java `col-names` set; CoL release 26.6).
+Benchmarked on the **name column** (`cut -f1 … | benchmark`) — the `benchmark` command reads a
+single-column corpus (whole trimmed line = name), so a raw multi-column TSV must be projected to
+its name column first, or it times the parser on `name<TAB>author<TAB>…` junk:
 
 ```
-Parsed names: 7991756 (26545 unparsable)
-Average: 27.17 µs   Min: 416 ns   p50: 28.04 µs   p95: 37.62 µs   Max: 1.15 ms
-Breakdown: SCIENTIFIC 7964782 · OTHER 21982 · FORMULA 4552 · INFORMAL 429 · PLACEHOLDER 11
+Parsed names: 6416452 (9297 unparsable)     # unparsable count matches `parse`/cross-val exactly
+Average: 12.21 µs   Min: 333 ns   p50: 11.62 µs   p95: 17.58 µs   Max: 1.17 ms
+Breakdown: SCIENTIFIC 6406907 · OTHER 4744 · FORMULA 4522 · INFORMAL 277 · PLACEHOLDER 2
 ```
 
-Why Rust's 27.17 µs here exceeds its 13.73 µs on the 8k corpus: colxr26.6 is **99.6% real
-scientific names** that fully parse (the expensive path), whereas `benchmark-data.txt` is ~40%
-fast-to-reject `OTHER`/unparsable. It's a harder corpus, not a regression.
+Both large corpora are now real-names-only at ~6.3–6.4M, so the averages are directly
+**indicative** — Rust **12.21 µs** vs the Java 4.x rewrite's **19.8–34 µs** — though they remain
+different CoL releases (26.6 vs an earlier one), not a controlled head-to-head, so no precise
+ratio is claimed.
 
 **The tail is the story.** A linear-time engine *cannot* backtrack catastrophically regardless of
 input; the numbers bear it out at scale:
@@ -123,11 +130,11 @@ input; the numbers bear it out at scale:
 |---|---:|
 | Java 3.x generation (6.3M col-names) | **1,010 ms** |
 | Java 4.x rewrite (6.3M col-names) | 2.6–5.8 ms |
-| **Rust core (8.0M colxr26.6)** | **1.15 ms** |
+| **Rust core (6.4M colxr26.6-names)** | **1.17 ms** |
 
 The 3.x parser — the one the CoL backend still runs — spent a **full second** on a single
 pathological name; the Java rewrite fought this down to a few ms with ~20 hand-placed possessive
-quantifiers; the Rust port removes the failure mode structurally (≈880× below the 3.x worst case,
+quantifiers; the Rust port removes the failure mode structurally (≈860× below the 3.x worst case,
 ≈2–5× below the 4.x worst case, on comparably large real corpora).
 
 ## 3. In-process — Java calling Rust via FFM/Panama (JMH)
@@ -180,7 +187,7 @@ parser at three scales, every field, **0 differences** everywhere:
 | 8,017 names, all 30 `ParsedName` fields | in-harness golden diff (`tests/parse_golden.rs`) | **30/30 fields, 0 mismatches** |
 | 11,302 names (8k + 6 Java test corpora) | Rust CLI vs Java CLI (`compare`) | **11,302 / 11,302** |
 | 11,302 names, in-process, **both wire formats** | `NameParserRust` vs `NameParserImpl` (`ParityTest`) | **11,302 / 11,302** each |
-| 7,991,756 names (colxr26.6) | Rust CLI vs Java CLI 4.2.0 | **7,991,756 / 7,991,756** |
+| 6,416,452 names (colxr26.6-names, real names only) | Rust CLI vs Java CLI 4.2.0 | **6,416,452 / 6,416,452** |
 
 The one documented non-difference: Java serializes `ParsedName.warnings` (a `HashSet`) in
 hash-bucket order, Rust in insertion order — a raw-byte difference on 5 of 8,017 rows that both
@@ -193,9 +200,11 @@ row). Full detail and the per-corpus table: [`cross-validation.md`](cross-valida
 - One machine (M4 Pro, 48 GB); figures are representative, not a controlled multi-host study.
 - Historical Java rows (§1 DEV/V4, §2) are from the Java repo's `benchmarks.md` (JDK 17); the
   Rust vs 4.2.0 head-to-head (§1) and the JMH runs (§3) are JDK 25, this repo, this session.
-- §2's large-corpus averages are different corpora per side (col-names 6.3M vs colxr26.6 8.0M);
-  only the tail comparison is intended as a like-for-like robustness claim.
+- §2's large corpora are different CoL releases (Java `col-names` 6.3M vs Rust `colxr26.6-names`
+  6.4M) — both real-names-only now, so the averages are indicative; the tail is the like-for-like
+  robustness claim. The `benchmark` command reads a single-column corpus, so the Rust row is
+  measured on the projected name column (`cut -f1`), matching what `parse`/the cross-val see.
 - `--warmup` on the Rust CLI is substantively a no-op (no JIT) but pays the same fixed 100-name
   pre-pass so the two commands stay directly comparable.
 - The 6.3M `col-names.tsv` used by the Java large-corpus rows is not in this repo; the Rust
-  large-corpus row uses `colxr26.6_names.tsv` (git-ignored; see `.gitignore`).
+  large-corpus row uses `colxr26.6-names.tsv` (git-ignored; see `.gitignore`).
