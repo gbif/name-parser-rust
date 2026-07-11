@@ -34,6 +34,12 @@
          has a working default without the caller having to set anything, and so the
          Linux profile below can override just this one coordinate. -->
     <nameparser.ffi.lib>${project.basedir}/../../target/release/libnameparser_ffi.dylib</nameparser.ffi.lib>
+
+    <!-- Same idea as nameparser.ffi.lib above, for ParityTest's corpus discovery
+         (ParityTest.testdataDir()): an absolute default so `mvn test` works regardless of
+         surefire's working directory, with the module-relative "../../testdata" as ParityTest's
+         own fallback if this property is ever unset (e.g. run directly from an IDE). -->
+    <nameparser.testdata.dir>${project.basedir}/../../testdata</nameparser.testdata.dir>
   </properties>
 
   <dependencies>
@@ -94,7 +100,7 @@
                threads the resolved cdylib path (see the property above / the
                linux-cdylib profile below) into the forked test JVM, where
                Ffi.resolveLibPath() reads it. -->
-          <argLine>--enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=${nameparser.ffi.lib}</argLine>
+          <argLine>--enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=${nameparser.ffi.lib} -Dnameparser.testdata.dir=${nameparser.testdata.dir}</argLine>
         </configuration>
       </plugin>
     </plugins>

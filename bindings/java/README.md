@@ -69,7 +69,7 @@ FFM downcalls require:
 java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release/libnameparser_ffi.dylib ...
 ```
 
-## What's here (Task 2 of the Phase 3 plan)
+## What's here (Tasks 2-3 of the Phase 3 plan)
 
 - `pom.xml` — standalone Maven module, `--release 22`.
 - `src/main/java/org/gbif/nameparser/rust/Ffi.java` — the FFM plumbing only (symbol lookup,
@@ -81,8 +81,13 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
   over the real FFM boundary (no mocking): a subspecies parse, an explicit-authorship parse,
   the virus → `UnparsableNameException` case, and Gson round-trip fidelity for the
   trickier collection-typed fields (`notho`, `warnings`, multi-author lists).
+- `src/test/java/org/gbif/nameparser/rust/ParityTest.java` — `NameParserRust` vs
+  `NameParserImpl` (the Java 4.2.0 oracle) over all 7 corpora in `../../testdata/` (11,302
+  names): 0 diffs, re-proving Phase 2's out-of-process CLI parity result in-process, through
+  the FFM boundary and the Gson round trip. Prints a per-corpus + total tally to stdout, and
+  up to 20 example diffs (both sides' JSON/exception) to stderr on failure.
 
 Not in scope for this module yet (later tasks in the same plan, see
-`docs/superpowers/plans/2026-07-11-phase3-ffm-binding.md`): a parity test against
-`NameParserImpl` over the full corpora (Task 3), a JMH benchmark (Task 4), and the flat
-fixed-layout struct wire format + a `WireFormat` selector (Tasks 5-6).
+`docs/superpowers/plans/2026-07-11-phase3-ffm-binding.md`): a JMH benchmark (Task 4), and the
+flat fixed-layout struct wire format + a `WireFormat` selector (Tasks 5-6, which also extend
+`ParityTest` to cover the struct path).
