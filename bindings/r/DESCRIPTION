@@ -1,0 +1,21 @@
+Package: nameparser
+Title: GBIF Scientific Name Parser (Rust)
+Version: 0.0.0.9000
+Authors@R:
+    person("Markus", "Döring", email = "mdoering@gbif.org", role = c("aut", "cre"))
+Description: R binding (via extendr) to the Rust port of the GBIF scientific name
+    parser. Parses scientific names into their structured atoms (genus, epithets,
+    authorship, rank, etc).
+License: Apache License 2.0
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+Config/rextendr/version: 0.5.0
+SystemRequirements: Cargo (Rust's package manager), rustc
+Depends:
+    R (>= 4.2)
+Imports:
+    tibble
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
