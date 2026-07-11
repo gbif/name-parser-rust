@@ -27,6 +27,19 @@ fn run_cli(args: &[&str]) -> std::process::Output {
         .expect("failed to run nameparser-cli")
 }
 
+/// Like [`run_cli`], but with both Anthropic credential env vars explicitly removed from the
+/// child process — regardless of whatever the *ambient* shell environment this test itself
+/// happens to run under does or doesn't have set, the subprocess never inherits them. Used by
+/// the "missing credential aborts the run" test below, which must be deterministic either way.
+fn run_cli_without_anthropic_credentials(args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_nameparser-cli"))
+        .args(args)
+        .env_remove("ANTHROPIC_API_KEY")
+        .env_remove("ANTHROPIC_AUTH_TOKEN")
+        .output()
+        .expect("failed to run nameparser-cli")
+}
+
 /// A process/time-unique path under the system temp dir — avoids a temp-file crate dependency
 /// for a couple of small, self-cleaning fixtures.
 fn temp_path(label: &str) -> PathBuf {
@@ -137,6 +150,57 @@ fn validate_dry_run_runs_end_to_end_over_a_committed_corpus() {
             "no verdict field yet (Task 2 has no cache/judge): {row}"
         );
     }
+
+    let _ = std::fs::remove_file(&report);
+}
+
+/// Task 5 (recon §1/§8, `AnthropicClient.fromEnv`): a non-dry-run invocation with the default
+/// `--provider=anthropic` and no usable credential must abort the WHOLE run cleanly — a nonzero
+/// exit and a helpful stderr message pointing at `--dry-run` as the escape hatch — rather than
+/// hang, panic, or silently do nothing. This exercises the real compiled binary's credential
+/// resolution (`client::build_judge` -> `AnthropicClient::from_env`) end to end without making
+/// any network call at all: resolution fails before any HTTP request is ever attempted.
+#[test]
+fn validate_without_dry_run_aborts_cleanly_when_no_credential_is_available() {
+    assert!(
+        std::path::Path::new(CORPUS).exists(),
+        "corpus {CORPUS} not found"
+    );
+    let report = temp_path("no-credential-report.jsonl");
+
+    let output = run_cli_without_anthropic_credentials(&[
+        "validate",
+        &format!("--input={CORPUS}"),
+        &format!("--output={}", report.display()),
+        "--cache=none",
+        "--budget=5",
+        "--sample-normal=2",
+        "--seed=17",
+    ]);
+
+    assert!(
+        !output.status.success(),
+        "must fail without a credential, got: {:?}",
+        output.status
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("credential"),
+        "expected a credential-related message, got: {stderr}"
+    );
+    assert!(
+        stderr.contains("--dry-run"),
+        "expected the --dry-run escape-hatch hint, got: {stderr}"
+    );
+    // The Phase-1 scan still ran for real (matches Java: `select` happens before the client is
+    // constructed) — proves the abort happens at credential resolution, not e.g. argument
+    // parsing rejecting the command outright before ever reaching `select`.
+    assert!(stderr.contains("Scanned"), "stderr was: {stderr}");
+
+    assert!(
+        !report.exists(),
+        "no report file should be created when the run aborts before Phase 2 opens it"
+    );
 
     let _ = std::fs::remove_file(&report);
 }

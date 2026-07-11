@@ -7,7 +7,7 @@
 //! of the Java subsystem this ports, and `docs/superpowers/plans/2026-07-11-phase4c-validate.md`
 //! for the task breakdown and Global Constraints binding every task in this port.
 //!
-//! ## Status: cache + LLM clients wired, judge loop still pending (Phase 4c Task 4)
+//! ## Status: behaviorally complete (Phase 4c Task 5)
 //!
 //! Task 1 provided the pieces that need no LLM/HTTP/sampling machinery: the [`ValidateArgs`]
 //! CLI surface, [`is_barcode_otu`] (`BarcodeOtuFilter`), and [`is_interesting`] (the
@@ -30,36 +30,46 @@
 //! stderr (`ValidationPrompt::user_message` over the first `min(batch, chosen.len())` items),
 //! matching Java's `dumpFirstBatch`.
 //!
-//! Task 4 (this task) closes a Task 3 review finding and adds everything a judge loop needs,
-//! but does NOT wire it into [`run_validate`] yet (that's Task 5): [`parse_verdicts`] now
-//! skips-and-continues on a single malformed verdict object (`eprintln!`s a warning and drops
-//! just that one) instead of erroring the whole reply — see its doc comment point 5. The
-//! [`cache`] submodule adds [`cache::VerdictCache`]/[`cache::cache_key`] (`llm.VerdictCache` —
-//! a SHA-256-keyed, JSONL-backed verdict cache). The [`client`] submodule adds the
-//! [`client::Judge`] trait, [`client::AnthropicClient`] and [`client::OpenAiClient`] (the
-//! latter also serves `--provider=local`/`ollama`), [`client::build_judge`] (provider
-//! normalization + default-model resolution), and the shared hand-rolled retry/backoff
-//! (`client::retry_decision`) both clients use. A non-dry-run [`run_validate`] invocation still
-//! isn't implemented: it runs the same selection scan (so its stderr summary is real) but then
-//! reports that judging isn't wired up yet — the per-chunk cache-lookup + judge + reconcile +
-//! report loop lands in Task 5.
+//! Task 4 closed a Task 3 review finding ([`parse_verdicts`] now skips-and-continues on a single
+//! malformed verdict object instead of erroring the whole reply — see its doc comment point 5)
+//! and added everything a judge loop needs, without wiring it in yet: the [`cache`] submodule
+//! ([`cache::VerdictCache`]/[`cache::cache_key`], a SHA-256-keyed JSONL verdict cache) and the
+//! [`client`] submodule ([`client::Judge`] trait, [`client::AnthropicClient`]/
+//! [`client::OpenAiClient`] — the latter also serves `--provider=local`/`ollama` —
+//! [`client::build_judge`], and the shared hand-rolled retry/backoff).
+//!
+//! Task 5 (this task) wires it all into a real, non-dry-run [`run_validate`]: [`open_cache`]
+//! dispatches `--cache=none` to a disabled (in-memory-only) cache, otherwise a real file-backed
+//! one; a missing LLM credential now genuinely aborts the run (`client::build_judge`'s `Err`
+//! propagates out of `run_validate`); [`run_judge_loop`] iterates `chosen` in `--batch`-sized
+//! chunks, resolves each chunk's cache hits immediately, sends the uncached remainder as exactly
+//! one [`client::Judge::judge`] call, and reconciles the reply BY THE MODEL'S ECHOED
+//! `Verdict::index` — never by `Vec` position, since [`parse_verdicts`]'s skip-and-continue
+//! salvage means a clean reply can carry fewer verdicts than were sent (see that function's own
+//! doc comment for why this is load-bearing, not a defensive nicety). [`render_row_with_verdict`]
+//! extends [`crate::render_row`]'s envelope with `verdict`/`confidence`/`note`/`fields` when a
+//! verdict was obtained; [`Summary`] tallies and prints the final stderr report (verdict counts +
+//! a most-flagged-fields histogram), deliberately disjoint from [`select`]'s own "Scanned N…"
+//! line so the two summaries never duplicate each other. `--dry-run` is UNCHANGED from Tasks
+//! 2/3 by deliberate brief-level choice: it still never opens a [`client::Judge`] at all (so a
+//! missing credential can never abort a dry run) and still writes verdict-less report rows,
+//! even though Java's own dry-run path *does* consult the cache (a disclosed, intentional
+//! simplification for this port — see `run_validate`'s doc comment).
 //!
 //! `nameparser-cli` is a binary-only crate (no library target), so `pub` here doesn't exempt an
 //! item from the `dead_code` lint the way it would in a library. [`run_validate`] now reaches
-//! most of this module's items through [`select`] (which itself calls [`is_barcode_otu`],
-//! [`nameparser::parse`], [`is_interesting`], and both [`Reservoir`]/[`JavaRandom`]) and through
-//! the dry-run payload dump (which calls [`ValidationPrompt::user_message`]), but a few items
-//! still have no caller outside this module's (and its submodules') own tests: `ValidateArgs`'s
-//! `provider`/`model`/`cache`/`api_url` fields, [`ValidationPrompt::VERSION`], and everything in
-//! [`cache`]/[`client`] — all consumed by the Task 5 judge loop, not yet by [`run_validate`]
-//! itself. [`Reservoir::seen`] is kept for parity with Java `Reservoir.seen()`, exercised only
-//! by this module's own reservoir tests. The blanket allow stays until Task 5 wires these in.
+//! essentially every item in this module and its submodules through either the dry-run path or
+//! [`run_judge_loop`]; the blanket allow remains only for a couple of Java-parity/test-only
+//! methods with no production call site by design: [`Reservoir::seen`] (parity with Java
+//! `Reservoir.seen()`) and [`cache::VerdictCache::len`]/[`cache::VerdictCache::is_empty`]
+//! (parity with `VerdictCache.size()`; `run_judge_loop` only ever calls `get`/`put`).
 
 #![allow(dead_code)]
 
 pub mod cache;
 pub mod client;
 
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, BufWriter, Write};
 use std::path::{Path, PathBuf};
@@ -139,51 +149,377 @@ pub struct ValidateArgs {
     pub dry_run: bool,
 }
 
-/// Runs the `validate` subcommand — matches the shape of `ValidateCli.main`'s two phases,
-/// though Phase 2 (judge + report) is only implemented for `--dry-run` so far (Task 2); the
-/// real judge/report loop lands in Task 5.
+/// Runs the `validate` subcommand — matches the shape of `ValidateCli.main`'s two phases.
 ///
 /// Phase 1 always runs: [`select`] streams `args.input` (exiting the process with code 2,
 /// per Java, if it doesn't exist) and reservoir-samples the `chosen` selection, printing its
-/// own scan-summary line to stderr.
+/// own scan-summary line to stderr. The verdict cache is then opened (or a disabled,
+/// in-memory-only stand-in built for `--cache=none`) unconditionally, matching Java's own
+/// ordering (`ValidateCli.main` opens the cache before its `dryRun` branch too).
 ///
-/// Phase 2: for `--dry-run`, writes one verdict-less JSONL report row per `chosen` item to
-/// `args.output` (matching `ValidateCli.reportRow(r, null)` — no `verdict`/`confidence`/
-/// `note`/`fields`, since no cache or judge exists yet), prints the same
-/// `"Dry run: built N batches..."` summary line Java prints, batching `chosen` into
-/// `args.batch`-sized (clamped to at least 1, matching Java's `Math.max(1, batch)`) chunks
-/// purely to report how many batches a real run would send, then (`ValidateCli.dumpFirstBatch`)
-/// dumps the exact first-batch request payload — [`ValidationPrompt::user_message`] over the
-/// first `min(batch, chosen.len())` chosen items — to stderr, so a user can inspect cost/shape
-/// without spending anything.
-///
-/// For a non-dry-run, there is no `Judge`/LLM client to call yet (Task 4), so rather than
-/// silently doing nothing or panicking on an absent client, this prints a clear "not
-/// implemented yet, use --dry-run" message and returns — the Phase 1 scan (and its stderr
-/// summary) still ran for real above.
+/// Phase 2 forks on `--dry-run` (Task 5's brief deliberately keeps these as two separate paths,
+/// rather than routing dry-run through the same loop Java's single implementation does — see
+/// [`run_judge_loop`]'s doc comment):
+/// - `--dry-run` (Tasks 2/3, unchanged): writes one verdict-less JSONL report row per `chosen`
+///   item to `args.output` (matching `ValidateCli.reportRow(r, null)` — no `verdict`/
+///   `confidence`/`note`/`fields`; the cache opened above is never consulted here, so a stale
+///   cache never leaks a verdict into a dry-run report), prints the same
+///   `"Dry run: built N batches..."` summary line Java prints, then
+///   (`ValidateCli.dumpFirstBatch`) dumps the exact first-batch request payload —
+///   [`ValidationPrompt::user_message`] over the first `min(batch, chosen.len())` chosen items —
+///   to stderr. Critically, no [`client::Judge`] is ever constructed on this path, so a missing
+///   API credential can never abort a dry run.
+/// - non-dry-run (Task 5): constructs the [`client::Judge`] ([`client::build_judge`]) — this is
+///   where a missing credential now genuinely aborts the whole run, propagated as this
+///   function's `Err` (matching Java: `AnthropicClient.fromEnv`/`OpenAiClient.fromEnv` throw
+///   before the loop even starts) — logs which model/endpoint is judging, then hands off to
+///   [`run_judge_loop`] for the real per-chunk cache/judge/reconcile/report/summary work.
 pub fn run_validate(args: ValidateArgs) -> io::Result<()> {
     let (chosen, _counts) = select(&args);
+    let mut cache = open_cache(&args.cache)?;
 
-    if !args.dry_run {
+    if args.dry_run {
+        write_report(&args.output, &chosen)?;
+        let batch = args.batch.max(1);
+        let num_batches = chosen.len().div_ceil(batch);
         eprintln!(
-            "nameparser-cli validate: judging (a non-dry-run) isn't implemented yet — the LLM \
-             client, verdict cache, and judge/report loop land in later Phase 4c tasks. \
-             Re-run with --dry-run to select and preview batches without any API calls."
+            "Dry run: built {num_batches} batches for {} names, no API calls made. Report → {}",
+            chosen.len(),
+            crate::absolute_path(&args.output).display()
         );
+        dump_first_batch(&chosen, batch);
         return Ok(());
     }
 
-    write_report(&args.output, &chosen)?;
+    let judge = client::build_judge(
+        &args.provider,
+        args.model.as_deref(),
+        args.api_url.as_deref(),
+    )
+    .map_err(|e| io::Error::other(e.to_string()))?;
+    let label = if args.provider.eq_ignore_ascii_case("anthropic") {
+        "cloud"
+    } else {
+        "local"
+    };
+    let at_url = args
+        .api_url
+        .as_deref()
+        .map(|u| format!(" at {u}"))
+        .unwrap_or_default();
+    eprintln!("Judging with {label} model '{}'{at_url}", judge.model_id());
 
+    run_judge_loop(&args, &chosen, &mut cache, judge.as_ref())
+}
+
+/// Java `"none".equalsIgnoreCase(cacheArg) ? VerdictCache.disabled() : VerdictCache.open(...)`.
+fn open_cache(cache_arg: &str) -> io::Result<cache::VerdictCache> {
+    if cache_arg.eq_ignore_ascii_case("none") {
+        Ok(cache::VerdictCache::disabled())
+    } else {
+        cache::VerdictCache::open(Path::new(cache_arg))
+    }
+}
+
+/// Java `ValidateCli.main`'s Phase 2 (non-dry-run half): judge `chosen` in `--batch`-sized
+/// chunks. Per chunk, every item's cache key is computed and looked up first (a hit needs no API
+/// call at all); the uncached remainder — possibly the whole chunk, possibly none of it — is
+/// sent as exactly ONE [`client::Judge::judge`] call (recon §5: "a fully-cached chunk costs 0
+/// API calls; a partially-cached chunk sends only the gap").
+///
+/// **Reconciliation is BY THE MODEL'S ECHOED [`Verdict::index`], never by `Vec` position.** The
+/// index is 0-based within the just-sent uncached sub-batch (matching
+/// [`ValidationPrompt::user_message`]'s own per-batch indexing). [`parse_verdicts`]'s
+/// skip-and-continue salvage (its doc comment's point 5) means a clean, non-error 200 reply can
+/// legitimately carry FEWER verdicts than were sent — an index the model dropped must resolve to
+/// "missing" for that one item, not silently shift every later item's verdict by one slot. A
+/// freshly-obtained verdict is written to the cache immediately (so a later chunk of the SAME
+/// run can hit it too, e.g. a duplicate name); a missing index is tallied but deliberately never
+/// cached, so a later run retries it.
+///
+/// `judge()` itself has no enclosing try/catch here (matching `AnthropicClient`'s Java behavior
+/// — no per-chunk resilience at this layer, unlike `OpenAiClient.parseReply`'s own internal
+/// degrade-to-empty, which already happened one layer down inside [`client::Judge::judge`]
+/// itself): its `Err` propagates straight out of this function and aborts the whole run, exactly
+/// like Java's uncaught `IOException`.
+///
+/// The report is written incrementally, one row per chunk item, in `chosen` order — but only
+/// flushed once, at the very end (`writer.flush()` after the loop), matching Java's `try
+/// (BufferedWriter report = ...)`: NOT safe to `tail -f`, unlike the verdict cache (which
+/// flushes after every `put`, see [`cache::VerdictCache::put`]'s doc comment). A per-chunk
+/// progress line prints to stderr, but only for a chunk that actually had an uncached remainder
+/// (matching Java's `if (!dryRun && !uncached.isEmpty())` guard — a 100%-cache-hit chunk prints
+/// nothing). The final [`Summary`] prints once, after the loop, and — per the brief — does NOT
+/// repeat [`select`]'s own "Scanned N…" line, which already covers Phase 1.
+fn run_judge_loop(
+    args: &ValidateArgs,
+    chosen: &[Item],
+    cache: &mut cache::VerdictCache,
+    judge: &dyn client::Judge,
+) -> io::Result<()> {
+    let model = judge.model_id().to_string();
     let batch = args.batch.max(1);
-    let num_batches = chosen.len().div_ceil(batch);
-    eprintln!(
-        "Dry run: built {num_batches} batches for {} names, no API calls made. Report → {}",
+    let mut writer = BufWriter::new(File::create(&args.output)?);
+    let mut summary = Summary::default();
+    let mut processed = 0usize;
+
+    for chunk in chosen.chunks(batch) {
+        // 1. Cache-key every item in this chunk; split into resolved hits vs. an uncached
+        // remainder (by position within `chunk`).
+        let keys: Vec<String> = chunk
+            .iter()
+            .map(|item| {
+                cache::cache_key(
+                    ValidationPrompt::VERSION,
+                    &model,
+                    &item.input,
+                    &shape_json(&item.outcome),
+                )
+            })
+            .collect();
+
+        let mut verdicts: Vec<Option<Verdict>> = Vec::with_capacity(chunk.len());
+        let mut uncached_positions: Vec<usize> = Vec::new();
+        for (i, key) in keys.iter().enumerate() {
+            if let Some(v) = cache.get(key) {
+                verdicts.push(Some(v.clone()));
+                summary.from_cache += 1;
+            } else {
+                verdicts.push(None);
+                uncached_positions.push(i);
+            }
+        }
+
+        // 2. Exactly one `judge()` call for the whole uncached remainder, if any.
+        if !uncached_positions.is_empty() {
+            let uncached_items: Vec<Item> = uncached_positions
+                .iter()
+                .map(|&i| chunk[i].clone())
+                .collect();
+            let message = ValidationPrompt::user_message(&uncached_items);
+            let fresh = judge
+                .judge(&message, uncached_items.len())
+                .map_err(|e| io::Error::other(e.to_string()))?;
+            summary.api_calls += 1;
+
+            let mut by_send_index: HashMap<usize, Verdict> =
+                fresh.into_iter().map(|v| (v.index, v)).collect();
+            for (send_pos, &chunk_pos) in uncached_positions.iter().enumerate() {
+                if let Some(v) = by_send_index.remove(&send_pos) {
+                    cache.put(keys[chunk_pos].clone(), v.clone())?;
+                    verdicts[chunk_pos] = Some(v);
+                }
+                // else: the model dropped this send-position (skip-and-continue truncation) —
+                // `verdicts[chunk_pos]` stays `None`, tallied as "missing" below, deliberately
+                // never cached (retried next run).
+            }
+        }
+
+        // 3. Write one report row per chunk item, in order, and tally the summary.
+        for (item, verdict) in chunk.iter().zip(verdicts.iter()) {
+            writeln!(
+                writer,
+                "{}",
+                render_row_with_verdict(
+                    item.line as u64,
+                    &item.input,
+                    &item.outcome,
+                    verdict.as_ref()
+                )
+            )?;
+            summary.record(verdict.as_ref());
+        }
+
+        processed += chunk.len();
+        if !uncached_positions.is_empty() {
+            eprintln!(
+                "  judged {processed}/{}  ({} from cache)",
+                chosen.len(),
+                summary.from_cache
+            );
+        }
+    }
+    writer.flush()?;
+
+    summary.print(
         chosen.len(),
-        crate::absolute_path(&args.output).display()
-    );
-    dump_first_batch(&chosen, batch);
-    Ok(())
+        &mut io::stderr().lock(),
+        &crate::absolute_path(&args.output),
+    )
+}
+
+/// Java `ValidateCli.cacheKey`'s "shape" component: the full serialized parse outcome —
+/// the same JSON the report row's own `"parsed"`/`"error"` field carries (Java: `GSON.toJson(
+/// r.parsed)` / `GSON.toJson(r.error)`, the identical call `reportRow` itself makes via
+/// `GSON.toJsonTree`) — NOT the reduced `{type, message}` `"unparsable"` shape [`item_json`]
+/// sends the model (which omits `code`). Hand-built for the error case, deliberately
+/// byte-identical to [`crate::render_row`]'s own error branch, for the same key-ordering reason
+/// that function is hand-built (see its doc comment in `main.rs`) — both exist to answer "what
+/// did/would the model see for this outcome", so keeping them in lockstep is intentional, not
+/// just convenient.
+fn shape_json(outcome: &ParseOutcome) -> String {
+    match outcome {
+        Ok(pn) => serde_json::to_string(pn).expect("ParsedName always serializes to JSON"),
+        Err(e) => {
+            let mut s = String::from("{\"type\":");
+            s.push_str(
+                &serde_json::to_string(&e.type_).expect("NameType always serializes to JSON"),
+            );
+            if let Some(code) = &e.code {
+                s.push_str(",\"code\":");
+                s.push_str(
+                    &serde_json::to_string(code).expect("NomCode always serializes to JSON"),
+                );
+            }
+            s.push_str(",\"message\":");
+            s.push_str(
+                &serde_json::to_string(&e.message)
+                    .expect("a String always serializes to a JSON string"),
+            );
+            s.push('}');
+            s
+        }
+    }
+}
+
+/// Java `ValidateCli.reportRow(r, v)`: [`crate::render_row`]'s `{"line":...,"input":...,
+/// "parsed"|"error":{...}}` envelope, with four more fields spliced in when `verdict` is
+/// `Some` — `verdict`, `confidence` (always present alongside a verdict), `note` (only if
+/// non-blank), `fields` (only if non-empty), exactly the recon doc §9 field table's
+/// presence/omission contract. `None` (no verdict at all — a dry-run row, or, in principle, a
+/// item this run never got to) reduces to plain [`crate::render_row`], byte-identical to the
+/// Task 2/3 dry-run report rows.
+fn render_row_with_verdict(
+    line_no: u64,
+    input: &str,
+    outcome: &ParseOutcome,
+    verdict: Option<&Verdict>,
+) -> String {
+    let mut row = crate::render_row(line_no, input, outcome);
+    if let Some(v) = verdict {
+        debug_assert!(
+            row.ends_with('}'),
+            "render_row must end with the closing brace"
+        );
+        row.pop();
+        row.push_str(",\"verdict\":");
+        row.push_str(
+            &serde_json::to_string(&v.verdict)
+                .expect("a String always serializes to a JSON string"),
+        );
+        row.push_str(",\"confidence\":");
+        row.push_str(
+            &serde_json::to_string(&v.confidence)
+                .expect("a String always serializes to a JSON string"),
+        );
+        if let Some(note) = v.note.as_deref() {
+            if !note.trim().is_empty() {
+                row.push_str(",\"note\":");
+                row.push_str(
+                    &serde_json::to_string(note)
+                        .expect("a String always serializes to a JSON string"),
+                );
+            }
+        }
+        if !v.fields.is_empty() {
+            row.push_str(",\"fields\":");
+            row.push_str(
+                &serde_json::to_string(&v.fields)
+                    .expect("Vec<FieldIssue> always serializes to JSON"),
+            );
+        }
+        row.push('}');
+    }
+    row
+}
+
+/// Running tallies for the non-dry-run stderr summary — Java `ValidateCli.Summary`. Deliberately
+/// disjoint from [`ScanCounts`]/[`select`]'s own "Scanned N…" line: this reports on the judging
+/// phase only (verdict outcomes + API/cache usage), never repeating Phase 1's numbers.
+#[derive(Default)]
+struct Summary {
+    /// Number of [`client::Judge::judge`] invocations — i.e. chunks with a non-empty uncached
+    /// remainder, NOT a count of names (Java: `apiCalls`).
+    api_calls: u64,
+    /// Individual cache-hit items across the whole run (Java: `fromCache`).
+    from_cache: u64,
+    ok: u64,
+    suspect: u64,
+    wrong: u64,
+    /// Items that ended the run with no verdict at all (a dropped index after skip-and-continue
+    /// salvage) — Java: `missing`.
+    missing: u64,
+    /// `fields[].name` -> flag count, across every verdict this run recorded (cached or fresh)
+    /// — Java: `byField` (there a `TreeMap`, only for its iteration-order tie-break; this port
+    /// applies the equivalent alphabetical tie-break explicitly in [`Self::print`] instead).
+    by_field: HashMap<String, u64>,
+}
+
+impl Summary {
+    /// Java `Summary.record(ParseResult, Verdict)`. `v == null` (Java) / `None` (here) is
+    /// "missing" and tallied separately (never reaches the ok/suspect/wrong bucketing below).
+    /// Otherwise buckets `ok`/`suspect`/`wrong` case-insensitively, with **any OTHER verdict
+    /// string defaulting to "ok"** — Java's own permissive fallback for a malformed `verdict`
+    /// string (recon §5's "loose-typing" note), kept for parity even though this port's own
+    /// [`parse_verdicts`] already requires `verdict` to be present (just not a validated enum)
+    /// before a [`Verdict`] can exist at all. Also tallies every `fields[].name` for the
+    /// most-flagged-fields histogram — matching Java's `f.name != null` guard: a
+    /// [`FieldIssue::name`] can be an empty string (never `None`, since it's a plain `String`)
+    /// and is still counted, exactly like Java only skips a true `null`, not an empty one.
+    fn record(&mut self, v: Option<&Verdict>) {
+        let Some(v) = v else {
+            self.missing += 1;
+            return;
+        };
+        if v.verdict.eq_ignore_ascii_case("wrong") {
+            self.wrong += 1;
+        } else if v.verdict.eq_ignore_ascii_case("suspect") {
+            self.suspect += 1;
+        } else {
+            self.ok += 1;
+        }
+        for f in &v.fields {
+            *self.by_field.entry(f.name.clone()).or_insert(0) += 1;
+        }
+    }
+
+    /// Java `Summary.print(PrintStream, int, int, Path)`.
+    fn print<W: Write>(&self, n: usize, out: &mut W, report_path: &Path) -> io::Result<()> {
+        writeln!(out)?;
+        writeln!(
+            out,
+            "Validated {n} names in {} API call(s), {} from cache.",
+            self.api_calls, self.from_cache
+        )?;
+        if self.missing > 0 {
+            writeln!(
+                out,
+                "  ok={}  suspect={}  wrong={}  (no verdict={})",
+                self.ok, self.suspect, self.wrong, self.missing
+            )?;
+        } else {
+            writeln!(
+                out,
+                "  ok={}  suspect={}  wrong={}",
+                self.ok, self.suspect, self.wrong
+            )?;
+        }
+        if !self.by_field.is_empty() {
+            writeln!(out, "Most-flagged fields:")?;
+            let mut fields: Vec<(&String, &u64)> = self.by_field.iter().collect();
+            // Descending by count; ties broken alphabetically — matches Java's stable sort over
+            // a `TreeMap`'s (i.e. already-alphabetical) iteration order.
+            fields.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
+            for (name, count) in fields.into_iter().take(15) {
+                writeln!(out, "  {name:<32} {count}")?;
+            }
+        }
+        writeln!(
+            out,
+            "Report → {}  (review 'verdict' != ok rows; jq '. | select(.verdict!=\"ok\")')",
+            report_path.display()
+        )
+    }
 }
 
 /// Java `ValidateCli.dumpFirstBatch`: if `chosen` is non-empty, prints the exact request
@@ -1275,6 +1611,448 @@ mod tests {
         }
 
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // ---- Task 5: run_judge_loop — reconcile by index, cache hits, report shape, summary ----
+    //
+    // No test in this section makes a network call: [`client::Judge`] is a trait, so these
+    // exercise `run_judge_loop` against small, in-process fake implementations that return
+    // canned `Verdict`s (or, for the cache-hit test, must never be called at all).
+
+    /// A [`client::Judge`] that always returns the same canned reply, regardless of what it's
+    /// asked — used to control exactly which send-positions come back "judged" vs. dropped by
+    /// a simulated skip-and-continue salvage.
+    struct FakeJudge {
+        model: String,
+        reply: Vec<Verdict>,
+    }
+
+    impl FakeJudge {
+        fn new(model: &str, reply: Vec<Verdict>) -> Self {
+            FakeJudge {
+                model: model.to_string(),
+                reply,
+            }
+        }
+    }
+
+    impl client::Judge for FakeJudge {
+        fn judge(
+            &self,
+            _user_message: &str,
+            _batch_size: usize,
+        ) -> Result<Vec<Verdict>, client::JudgeError> {
+            Ok(self.reply.clone())
+        }
+
+        fn model_id(&self) -> &str {
+            &self.model
+        }
+    }
+
+    /// A [`client::Judge`] whose `judge()` panics if ever called — for proving a chunk that is
+    /// 100% cache hits never reaches the judge at all (stronger than merely trusting the call
+    /// count wasn't incremented: any invocation fails the test immediately).
+    struct PanicJudge;
+
+    impl client::Judge for PanicJudge {
+        fn judge(
+            &self,
+            _user_message: &str,
+            _batch_size: usize,
+        ) -> Result<Vec<Verdict>, client::JudgeError> {
+            panic!("judge() must not be called when every item in the chunk is already cached");
+        }
+
+        fn model_id(&self) -> &str {
+            "fake-model"
+        }
+    }
+
+    /// A [`client::Judge`] that counts its own invocations (via a `Cell`, since `judge` takes
+    /// `&self`) — for proving "exactly one `judge()` call per chunk with an uncached remainder"
+    /// holds across MULTIPLE chunks, not just trivially true for a single-chunk run.
+    struct CountingJudge {
+        model: String,
+        reply: Vec<Verdict>,
+        calls: std::cell::Cell<u32>,
+    }
+
+    impl CountingJudge {
+        fn new(model: &str, reply: Vec<Verdict>) -> Self {
+            CountingJudge {
+                model: model.to_string(),
+                reply,
+                calls: std::cell::Cell::new(0),
+            }
+        }
+
+        fn call_count(&self) -> u32 {
+            self.calls.get()
+        }
+    }
+
+    impl client::Judge for CountingJudge {
+        fn judge(
+            &self,
+            _user_message: &str,
+            _batch_size: usize,
+        ) -> Result<Vec<Verdict>, client::JudgeError> {
+            self.calls.set(self.calls.get() + 1);
+            Ok(self.reply.clone())
+        }
+
+        fn model_id(&self) -> &str {
+            &self.model
+        }
+    }
+
+    /// A minimal, `note: None`/`fields: []` [`Verdict`] for a given echoed `index` and
+    /// `verdict` string — most reconcile/cache tests only care about `index`/`verdict`.
+    fn verdict(index: usize, kind: &str) -> Verdict {
+        Verdict {
+            index,
+            verdict: kind.to_string(),
+            confidence: "high".to_string(),
+            fields: Vec::new(),
+            note: None,
+        }
+    }
+
+    /// A `ValidateArgs` with every field [`run_judge_loop`] itself doesn't read set to a
+    /// harmless placeholder — `run_judge_loop` never touches `input`/`budget`/`sample_normal`/
+    /// `seed`/`provider`/`model`/`api_url` (those are all [`select`]/[`open_cache`]/
+    /// `build_judge` concerns, exercised by other tests), only `output`/`batch`.
+    fn judge_loop_test_args(output: PathBuf, batch: usize) -> ValidateArgs {
+        ValidateArgs {
+            provider: "anthropic".to_string(),
+            model: None,
+            input: PathBuf::from("unused-by-run_judge_loop"),
+            output,
+            budget: 2000,
+            sample_normal: 200,
+            batch,
+            seed: 17,
+            cache: "none".to_string(),
+            api_url: None,
+            dry_run: false,
+        }
+    }
+
+    fn read_report_rows(path: &Path) -> Vec<serde_json::Value> {
+        std::fs::read_to_string(path)
+            .expect("report file must exist")
+            .lines()
+            .map(|l| serde_json::from_str(l).expect("each report row must be valid JSON"))
+            .collect()
+    }
+
+    #[test]
+    fn run_judge_loop_reconciles_verdicts_by_echoed_index_not_position() {
+        // The brief's literal acceptance scenario: an uncached sub-batch of 3, a judge reply
+        // covering send-positions [0, 2] only (1 dropped, simulating skip-and-continue salvage
+        // of a malformed/truncated element for that one slot) — items 0 and 2 must get their
+        // verdicts, item 1 must end up with no verdict at all (not shifted, not defaulted).
+        let dir = temp_dir_for("reconcile-by-index");
+        let output = dir.join("report.jsonl");
+        let items = vec![
+            ok_item(1, "Abies alba Mill."),
+            ok_item(2, "Quercus robur L."),
+            ok_item(3, "Picea abies (L.) H.Karst."),
+        ];
+        let args = judge_loop_test_args(output.clone(), 25); // one chunk holds all 3
+        let mut cache = cache::VerdictCache::disabled();
+        let judge = FakeJudge::new("fake-model", vec![verdict(0, "ok"), verdict(2, "suspect")]);
+
+        run_judge_loop(&args, &items, &mut cache, &judge).expect("must succeed");
+
+        let rows = read_report_rows(&output);
+        assert_eq!(rows.len(), 3);
+        assert_eq!(rows[0]["verdict"], "ok");
+        assert!(
+            rows[1].get("verdict").is_none(),
+            "the dropped send-position must carry no verdict field at all: {:?}",
+            rows[1]
+        );
+        assert!(
+            rows[1].get("confidence").is_none(),
+            "no confidence either, for the same missing item: {:?}",
+            rows[1]
+        );
+        assert_eq!(rows[2]["verdict"], "suspect");
+
+        // Reconciliation must key by the model's echoed `index`, not by uncached-Vec position:
+        // if position had been used instead, item 2's reply (index 2) would have been
+        // mis-attributed to item 1 (uncached position 1). Item 1 having NO verdict, and item 2
+        // correctly getting "suspect", together rule that failure mode out.
+        let key_for = |item: &Item| {
+            cache::cache_key(
+                ValidationPrompt::VERSION,
+                "fake-model",
+                &item.input,
+                &shape_json(&item.outcome),
+            )
+        };
+        assert!(
+            cache.get(&key_for(&items[0])).is_some(),
+            "a reconciled verdict must be cached"
+        );
+        assert!(
+            cache.get(&key_for(&items[1])).is_none(),
+            "a missing (dropped-index) verdict must NEVER be cached — it must be retried next run"
+        );
+        assert!(
+            cache.get(&key_for(&items[2])).is_some(),
+            "a reconciled verdict must be cached"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn run_judge_loop_uses_a_cache_hit_without_ever_calling_judge() {
+        let dir = temp_dir_for("cache-hit-no-call");
+        let output = dir.join("report.jsonl");
+        let item = ok_item(1, "Abies alba Mill.");
+        let args = judge_loop_test_args(output.clone(), 25);
+
+        let mut cache = cache::VerdictCache::disabled();
+        let key = cache::cache_key(
+            ValidationPrompt::VERSION,
+            "fake-model",
+            &item.input,
+            &shape_json(&item.outcome),
+        );
+        cache
+            .put(key, verdict(0, "ok"))
+            .expect("seeding the cache must succeed");
+
+        // PanicJudge proves the cache hit is resolved without ever reaching the judge — a bug
+        // that called `judge()` anyway (e.g. re-sending a "cached" item) would panic this test
+        // rather than merely leaving an unchecked call counter at a wrong-but-plausible value.
+        let judge = PanicJudge;
+        run_judge_loop(&args, std::slice::from_ref(&item), &mut cache, &judge)
+            .expect("must succeed purely from the cache");
+
+        let rows = read_report_rows(&output);
+        assert_eq!(rows.len(), 1);
+        assert_eq!(rows[0]["verdict"], "ok");
+        assert_eq!(rows[0]["confidence"], "high");
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn run_judge_loop_issues_exactly_one_judge_call_per_chunk_with_an_uncached_remainder() {
+        let dir = temp_dir_for("one-call-per-chunk");
+        let output = dir.join("report.jsonl");
+        let items = vec![
+            ok_item(1, "Abies alba Mill."),
+            ok_item(2, "Quercus robur L."),
+            ok_item(3, "Picea abies (L.) H.Karst."),
+            ok_item(4, "Pinus sylvestris L."),
+        ];
+        let args = judge_loop_test_args(output.clone(), 2); // 4 items, batch=2 => two chunks
+        let mut cache = cache::VerdictCache::disabled();
+        let judge = CountingJudge::new("fake-model", vec![verdict(0, "ok"), verdict(1, "ok")]);
+
+        run_judge_loop(&args, &items, &mut cache, &judge).expect("must succeed");
+
+        assert_eq!(
+            judge.call_count(),
+            2,
+            "one judge() call per chunk, two chunks, both fully uncached"
+        );
+        let rows = read_report_rows(&output);
+        assert_eq!(rows.len(), 4);
+        for row in &rows {
+            assert_eq!(row["verdict"], "ok");
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn render_row_with_verdict_omits_blank_note_and_empty_fields_but_keeps_real_ones() {
+        let item = ok_item(1, "Abies alba Mill.");
+
+        let no_verdict = render_row_with_verdict(1, &item.input, &item.outcome, None);
+        assert_eq!(
+            no_verdict,
+            crate::render_row(1, &item.input, &item.outcome),
+            "no verdict at all must reduce to plain render_row"
+        );
+
+        let minimal = verdict(0, "ok"); // note: None, fields: empty
+        let row = render_row_with_verdict(1, &item.input, &item.outcome, Some(&minimal));
+        let v: serde_json::Value = serde_json::from_str(&row).expect("must be valid JSON");
+        assert_eq!(v["verdict"], "ok");
+        assert_eq!(v["confidence"], "high");
+        assert!(v.get("note").is_none(), "no note => omitted: {row}");
+        assert!(v.get("fields").is_none(), "empty fields => omitted: {row}");
+
+        let mut whitespace_note = verdict(0, "ok");
+        whitespace_note.note = Some("   ".to_string());
+        let row = render_row_with_verdict(1, &item.input, &item.outcome, Some(&whitespace_note));
+        let v: serde_json::Value = serde_json::from_str(&row).expect("must be valid JSON");
+        assert!(
+            v.get("note").is_none(),
+            "a whitespace-only note counts as blank => omitted: {row}"
+        );
+
+        let mut full = verdict(0, "wrong");
+        full.note = Some("check rank".to_string());
+        full.fields = vec![FieldIssue {
+            name: "rank".to_string(),
+            parsed: "INFRASPECIFIC_NAME".to_string(),
+            expected: "SUBSPECIES".to_string(),
+            reason: "zoological trinomial".to_string(),
+        }];
+        let row = render_row_with_verdict(1, &item.input, &item.outcome, Some(&full));
+        let v: serde_json::Value = serde_json::from_str(&row).expect("must be valid JSON");
+        assert_eq!(v["note"], "check rank");
+        assert_eq!(v["fields"][0]["name"], "rank");
+        assert_eq!(v["fields"][0]["expected"], "SUBSPECIES");
+        // Field order in the envelope itself: line, input, parsed/error, verdict, confidence,
+        // note, fields — spot-check via the raw string rather than the (key-order-blind) Value.
+        let verdict_pos = row.find("\"verdict\"").unwrap();
+        let confidence_pos = row.find("\"confidence\"").unwrap();
+        let note_pos = row.find("\"note\"").unwrap();
+        let fields_pos = row.find("\"fields\"").unwrap();
+        assert!(verdict_pos < confidence_pos && confidence_pos < note_pos && note_pos < fields_pos);
+    }
+
+    #[test]
+    fn shape_json_is_the_parsed_or_error_json_and_changes_when_the_outcome_does() {
+        let a = ok_item(1, "Abies alba Mill.");
+        let b = ok_item(1, "Quercus robur L.");
+        assert_ne!(shape_json(&a.outcome), shape_json(&b.outcome));
+
+        // On success, shape_json is structurally identical to the report row's own "parsed"
+        // field (both are the ParsedName's JSON).
+        let parsed_shape: serde_json::Value =
+            serde_json::from_str(&shape_json(&a.outcome)).expect("must be valid JSON");
+        let row: serde_json::Value =
+            serde_json::from_str(&crate::render_row(1, &a.input, &a.outcome))
+                .expect("must be valid JSON");
+        assert_eq!(parsed_shape, row["parsed"]);
+
+        // On failure, shape_json matches the report row's own "error" field (type/code?/
+        // message) — NOT the prompt payload's reduced {type, message} "unparsable" shape (see
+        // shape_json's doc comment for why byte-parity with render_row's error branch matters).
+        let err = nameparser::parse("Tobacco mosaic virus", None, None, None);
+        assert!(err.is_err());
+        let error_shape: serde_json::Value =
+            serde_json::from_str(&shape_json(&err)).expect("must be valid JSON");
+        let row: serde_json::Value =
+            serde_json::from_str(&crate::render_row(1, "x", &err)).expect("must be valid JSON");
+        assert_eq!(error_shape, row["error"]);
+    }
+
+    #[test]
+    fn summary_print_matches_the_documented_shape_including_the_missing_suffix() {
+        let mut s = Summary {
+            api_calls: 2,
+            from_cache: 3,
+            ..Summary::default()
+        };
+        s.record(Some(&verdict(0, "ok")));
+        s.record(Some(&verdict(0, "suspect")));
+        s.record(None); // missing
+
+        let mut buf = Vec::new();
+        s.print(3, &mut buf, Path::new("/tmp/validate-report.jsonl"))
+            .expect("write to a Vec<u8> never fails");
+        let text = String::from_utf8(buf).unwrap();
+
+        assert_eq!(
+            text,
+            concat!(
+                "\n",
+                "Validated 3 names in 2 API call(s), 3 from cache.\n",
+                "  ok=1  suspect=1  wrong=0  (no verdict=1)\n",
+                "Report → /tmp/validate-report.jsonl  ",
+                "(review 'verdict' != ok rows; jq '. | select(.verdict!=\"ok\")')\n",
+            )
+        );
+    }
+
+    #[test]
+    fn summary_print_omits_the_missing_suffix_and_the_histogram_when_nothing_to_report() {
+        let mut s = Summary::default();
+        s.record(Some(&verdict(0, "ok")));
+
+        let mut buf = Vec::new();
+        s.print(1, &mut buf, Path::new("/r.jsonl")).unwrap();
+        let text = String::from_utf8(buf).unwrap();
+
+        assert!(text.contains("  ok=1  suspect=0  wrong=0\n"));
+        assert!(
+            !text.contains("no verdict"),
+            "missing=0 => no suffix: {text}"
+        );
+        assert!(
+            !text.contains("Most-flagged fields"),
+            "no field was ever flagged => no histogram header: {text}"
+        );
+    }
+
+    #[test]
+    fn summary_print_histogram_is_sorted_desc_by_count_then_asc_by_name_and_capped_at_15() {
+        let mut s = Summary::default();
+        // 16 distinct field names: a clean descending run (f01=20 .. f13=8), a tie at count=5
+        // (to prove the alphabetical tie-break), and one more (f14=1) that must be cut off since
+        // only the top 15 are ever printed.
+        for (name, count) in [
+            ("f01", 20u64),
+            ("f02", 19),
+            ("f03", 18),
+            ("f04", 17),
+            ("f05", 16),
+            ("f06", 15),
+            ("f07", 14),
+            ("f08", 13),
+            ("f09", 12),
+            ("f10", 11),
+            ("f11", 10),
+            ("f12", 9),
+            ("f13", 8),
+            ("zzz", 5),
+            ("aaa", 5),
+            ("f14", 1),
+        ] {
+            s.by_field.insert(name.to_string(), count);
+        }
+
+        let mut buf = Vec::new();
+        s.print(0, &mut buf, Path::new("/r.jsonl")).unwrap();
+        let text = String::from_utf8(buf).unwrap();
+
+        let histogram_lines: Vec<&str> = text
+            .lines()
+            .skip_while(|l| *l != "Most-flagged fields:")
+            .skip(1)
+            .take_while(|l| l.starts_with("  "))
+            .collect();
+        assert_eq!(
+            histogram_lines.len(),
+            15,
+            "must cap at the top 15: {histogram_lines:?}"
+        );
+        assert!(histogram_lines[0].trim_start().starts_with("f01"));
+        assert!(histogram_lines[12].trim_start().starts_with("f13"));
+        assert!(
+            histogram_lines[13].trim_start().starts_with("aaa"),
+            "count=5 tie must break alphabetically (aaa before zzz): {histogram_lines:?}"
+        );
+        assert!(
+            histogram_lines[14].trim_start().starts_with("zzz"),
+            "count=5 tie must break alphabetically (aaa before zzz): {histogram_lines:?}"
+        );
+        assert!(
+            !text.contains("f14"),
+            "the 16th distinct name (lowest count) must be dropped: {text}"
+        );
     }
 
     // ---- ValidationPrompt ----
