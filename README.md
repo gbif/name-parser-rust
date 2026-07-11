@@ -30,6 +30,10 @@ Measured against the Java parser (`org.gbif:name-parser` 4.2.0), same machine:
 | Batch throughput (CLI, single core) | **~2.1× faster** (13.7 vs 28.8 µs/name); p95 tail ~2.4× |
 | In-process Java via FFM/Panama (JMH, single name) | 1.38× (flat-struct wire format) — capped by the Java-object-build floor |
 
+Full cross-era (3.x → 4.x → Rust) and cross-binding breakdown — with methodology, percentiles,
+error bars, and the ReDoS-tail comparison — is in [`benchmarks.md`](benchmarks.md); field-level
+correctness parity is in [`cross-validation.md`](cross-validation.md).
+
 ## Layout
 
 ```
