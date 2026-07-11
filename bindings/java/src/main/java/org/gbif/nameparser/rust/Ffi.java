@@ -10,7 +10,11 @@ import java.lang.foreign.Linker;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.SymbolLookup;
 import java.lang.invoke.MethodHandle;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 import static java.lang.foreign.ValueLayout.ADDRESS;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
@@ -102,20 +106,82 @@ final class Ffi {
   }
 
   /**
-   * Resolves the cdylib path: {@code -Dnameparser.ffi.lib} system property, else the
-   * {@code NAMEPARSER_FFI_LIB} environment variable, else a repo-relative default (this
-   * module lives at {@code bindings/java/}, and the cdylib is built to the workspace root's
-   * {@code target/release/}).
+   * Resolves the cdylib to load, in priority order:
+   * <ol>
+   *   <li>{@code -Dnameparser.ffi.lib} system property, else {@code NAMEPARSER_FFI_LIB} env var —
+   *       an explicit override for dev or a deployment that ships the cdylib separately;</li>
+   *   <li>a cdylib <b>bundled in this JAR</b> ({@code /native/<classifier>/<libname>}), extracted
+   *       to a temp file — the distributable path that makes the JAR self-contained;</li>
+   *   <li>the repo-relative build output ({@code ../../target/release/}) — the in-tree dev
+   *       fallback when neither an override nor a bundled resource is present.</li>
+   * </ol>
    */
   private static Path resolveLibPath() {
     String path = System.getProperty("nameparser.ffi.lib");
     if (path == null || path.isBlank()) {
       path = System.getenv("NAMEPARSER_FFI_LIB");
     }
-    if (path == null || path.isBlank()) {
-      path = "../../target/release/" + defaultLibFileName();
+    if (path != null && !path.isBlank()) {
+      return Path.of(path);
     }
-    return Path.of(path);
+    Path bundled = extractBundledLib();
+    if (bundled != null) {
+      return bundled;
+    }
+    return Path.of("../../target/release/" + defaultLibFileName());
+  }
+
+  /**
+   * Extracts the platform's cdylib bundled in this JAR (resource {@code /native/<classifier>/
+   * <libname>}, {@code <classifier>} matching os-maven-plugin's {@code ${os.detected.classifier}})
+   * to a temp file deleted on JVM exit, returning its path — or {@code null} when no such resource
+   * is bundled (a plain {@code cargo}/dev build), letting {@link #resolveLibPath} fall through.
+   */
+  private static Path extractBundledLib() {
+    String libName = defaultLibFileName();
+    String resource = "/native/" + osDetectedClassifier() + "/" + libName;
+    try (InputStream in = Ffi.class.getResourceAsStream(resource)) {
+      if (in == null) {
+        return null;
+      }
+      int dot = libName.lastIndexOf('.');
+      Path tmp = Files.createTempFile("nameparser_ffi", dot >= 0 ? libName.substring(dot) : ".lib");
+      tmp.toFile().deleteOnExit();
+      Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+      return tmp;
+    } catch (IOException e) {
+      throw new IllegalStateException(
+          "failed to extract bundled nameparser-ffi native library " + resource, e);
+    }
+  }
+
+  /**
+   * The os-maven-plugin {@code ${os.detected.classifier}} for the running JVM — e.g.
+   * {@code osx-aarch_64}, {@code linux-x86_64}, {@code windows-x86_64} — so this lookup and the
+   * pom's resource copy agree on the {@code /native/<classifier>/} directory name.
+   */
+  private static String osDetectedClassifier() {
+    String os = System.getProperty("os.name", "").toLowerCase();
+    String arch = System.getProperty("os.arch", "").toLowerCase();
+    String o;
+    if (os.startsWith("mac") || os.contains("os x") || os.contains("darwin")) {
+      o = "osx";
+    } else if (os.contains("win")) {
+      o = "windows";
+    } else if (os.contains("linux")) {
+      o = "linux";
+    } else {
+      o = os.replaceAll("[^a-z0-9]+", "");
+    }
+    String a;
+    if (arch.equals("aarch64") || arch.equals("arm64")) {
+      a = "aarch_64";
+    } else if (arch.equals("x86_64") || arch.equals("amd64")) {
+      a = "x86_64";
+    } else {
+      a = arch.replaceAll("[^a-z0-9]+", "_");
+    }
+    return o + "-" + a;
   }
 
   /** Best-effort default cdylib file name for the current OS (macOS is the dev target). */
