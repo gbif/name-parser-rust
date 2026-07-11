@@ -36,3 +36,10 @@ __pycache__/
 
 # Large derived name corpora (concatenated full-name .txt, hundreds of MB) — never commit
 testdata/col*.txt
+
+# Phase 4b: R/extendr package build artifacts (bindings/**/target already covers the cargo dir)
+bindings/r/src/*.o
+bindings/r/src/*.so
+bindings/r/src/rust/target/
+bindings/r/..Rcheck/
+bindings/r/**/*.rds

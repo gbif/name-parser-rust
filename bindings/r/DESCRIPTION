@@ -1,6 +1,6 @@
 Package: nameparser
 Title: GBIF Scientific Name Parser (Rust)
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R:
     person("Markus", "Döring", email = "mdoering@gbif.org", role = c("aut", "cre"))
 Description: R binding (via extendr) to the Rust port of the GBIF scientific name

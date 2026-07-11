@@ -5,12 +5,13 @@
 #' @useDynLib nameparser, .registration = TRUE
 NULL
 
-#' @export
+#' Low-level column-list builder behind the R wrapper `parse_names()` (`bindings/r/R/parse.R`).
+#' Not exported — kept package-internal, since it returns a raw named `List` of parallel
+#' columns rather than the tibble users should call.
 parse_names_impl <- function(scientificname, authorship, rank, code) .Call(wrap__parse_names_impl, scientificname, authorship, rank, code)
 
 #' Lossless escape hatch + parity oracle: the core's own serde JSON for one name
 #' (byte-identical to the CLI's `parsed` object), or `{"error":{…}}` on failure.
-#' @export
 parse_name_json_impl <- function(name, authorship, rank, code) .Call(wrap__parse_name_json_impl, name, authorship, rank, code)
 
 # nolint end

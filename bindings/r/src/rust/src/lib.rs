@@ -162,7 +162,9 @@ fn hint(o: &Nullable<String>) -> Option<&str> {
     }
 }
 
-/// @export
+/// Low-level column-list builder behind the R wrapper `parse_names()` (`bindings/r/R/parse.R`).
+/// Not exported — kept package-internal, since it returns a raw named `List` of parallel
+/// columns rather than the tibble users should call.
 #[extendr]
 fn parse_names_impl(
     scientificname: Vec<String>,
@@ -207,9 +209,33 @@ fn parse_names_impl(
     .expect("all columns are the same length (one push per input name)")
 }
 
+/// Builds `{"error":{"type":...,"code":...,"message":...}}` — byte-for-byte the same shape
+/// `nameparser-ffi`'s private `unparsable_json` builds (and `nameparser-cli`'s `render_row`
+/// writes for its own `"error"` value: `crates/nameparser-ffi/src/lib.rs` lines ~143-166,
+/// `crates/nameparser-cli/src/main.rs`'s `render_row`): `code` is OMITTED (not serialized as
+/// `null`) when absent, there is no `name` key, and the key order is `type`, `code`,
+/// `message` — NOT the alphabetical order a dynamically-built `serde_json::Map` would
+/// produce (this crate's `serde_json` dependency has no `preserve_order` feature enabled
+/// either, for the same reason the FFI crate hand-assembles instead of using `json!`). Each
+/// leaf value is still rendered via `serde_json::to_string`, for correct JSON string escaping.
+fn unparsable_json(e: &::nameparser_core::model::ParseError) -> String {
+    let mut out = String::with_capacity(96);
+    out.push_str("{\"error\":{\"type\":");
+    out.push_str(&serde_json::to_string(&e.type_).expect("NameType always serializes to JSON"));
+    if let Some(code) = &e.code {
+        out.push_str(",\"code\":");
+        out.push_str(&serde_json::to_string(code).expect("NomCode always serializes to JSON"));
+    }
+    out.push_str(",\"message\":");
+    out.push_str(
+        &serde_json::to_string(&e.message).expect("a String always serializes to a JSON string"),
+    );
+    out.push_str("}}");
+    out
+}
+
 /// Lossless escape hatch + parity oracle: the core's own serde JSON for one name
 /// (byte-identical to the CLI's `parsed` object), or `{"error":{…}}` on failure.
-/// @export
 #[extendr]
 fn parse_name_json_impl(
     name: String,
@@ -221,11 +247,7 @@ fn parse_name_json_impl(
     let code = hint(&code).and_then(NomCode::from_name);
     match ::nameparser_core::parse(&name, hint(&authorship), rank, code) {
         Ok(pn) => serde_json::to_string(&pn).unwrap_or_else(|e| format!("{{\"error\":\"{e}\"}}")),
-        Err(e) => serde_json::json!({
-            "error": { "type": enum_name(&e.type_), "code": enum_name(&e.code),
-                       "name": e.name, "message": e.message }
-        })
-        .to_string(),
+        Err(e) => unparsable_json(&e),
     }
 }
 
