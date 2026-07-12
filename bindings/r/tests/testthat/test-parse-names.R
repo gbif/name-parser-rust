@@ -44,6 +44,26 @@ test_that("authorship columns and warnings are flattened", {
   expect_true("warnings" %in% names(out))
 })
 
+test_that("NameFormatter rendering columns match the Java oracle", {
+  out <- parse_names(c("Abies alba Mill.",
+                       "Astragalus subg. Cercidothrix",
+                       "×Agropogon littoralis",
+                       "Tobacco mosaic virus"))
+  # Abies alba Mill. (values are Java-authoritative)
+  expect_equal(out$canonical[1], "Abies alba Mill.")
+  expect_equal(out$canonicalWithoutAuthorship[1], "Abies alba")
+  expect_equal(out$canonicalMinimal[1], "Abies alba")
+  expect_equal(out$canonicalComplete[1], "Abies alba Mill.")
+  expect_equal(out$authorshipComplete[1], "Mill.")
+  # infrageneric: minimal drops the genus + marker
+  expect_equal(out$canonicalMinimal[2], "Cercidothrix")
+  # notho genus keeps its hybrid marker + space
+  expect_equal(out$canonical[3], "× Agropogon littoralis")
+  # unparsable row -> every rendering column is NA
+  expect_true(is.na(out$canonical[4]))
+  expect_true(is.na(out$authorshipComplete[4]))
+})
+
 test_that("parse_name_json returns the core's full nested JSON", {
   js <- parse_name_json("Abies alba Mill.")
   obj <- jsonlite::fromJSON(js, simplifyVector = FALSE)

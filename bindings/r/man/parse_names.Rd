@@ -14,6 +14,10 @@ parse_names(scientificname, authorship = NULL, rank = NULL, code = NULL)
 }
 \value{
 a tibble, one row per input name; unparsable names have \code{parsed = FALSE}.
+Besides the parsed atoms, five \code{NameFormatter} rendering columns are included:
+\code{canonical} (full name with authorship), \code{canonicalWithoutAuthorship},
+\code{canonicalMinimal} (bare parts, folded to ascii), \code{canonicalComplete} and
+\code{authorshipComplete} — all \code{NA} on unparsable rows.
 }
 \description{
 Parse scientific names into a tibble (one row per name).

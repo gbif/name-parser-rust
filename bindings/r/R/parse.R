@@ -4,6 +4,10 @@
 #' @param authorship,rank,code optional scalar (length-1) hints applied to every name;
 #'   `rank`/`code` use the parser's SCREAMING_SNAKE_CASE names (e.g. "SPECIES", "ZOOLOGICAL").
 #' @return a tibble, one row per input name; unparsable names have `parsed = FALSE`.
+#'   Besides the parsed atoms, five `NameFormatter` rendering columns are included:
+#'   `canonical` (full name with authorship), `canonicalWithoutAuthorship`,
+#'   `canonicalMinimal` (bare parts, folded to ascii), `canonicalComplete` and
+#'   `authorshipComplete` — all `NA` on unparsable rows.
 #' @export
 parse_names <- function(scientificname, authorship = NULL, rank = NULL, code = NULL) {
   stopifnot(is.character(scientificname))

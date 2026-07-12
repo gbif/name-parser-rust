@@ -56,6 +56,12 @@ struct Cols {
     basionym_year: Vec<Option<String>>,
     sanctioning_author: Vec<Option<String>>,
     warnings: Vec<Option<String>>,
+    // NameFormatter renderings (Java org.gbif.nameparser.util.NameFormatter).
+    canonical: Vec<Option<String>>,
+    canonical_without_authorship: Vec<Option<String>>,
+    canonical_minimal: Vec<Option<String>>,
+    canonical_complete: Vec<Option<String>>,
+    authorship_complete: Vec<Option<String>>,
 }
 
 /// Join a list of authors to one cell, or `None` (=> NA) when empty.
@@ -77,6 +83,8 @@ impl Cols {
             state: v!(), combination_authors: v!(), combination_ex_authors: v!(),
             combination_year: v!(), basionym_authors: v!(), basionym_ex_authors: v!(),
             basionym_year: v!(), sanctioning_author: v!(), warnings: v!(),
+            canonical: v!(), canonical_without_authorship: v!(), canonical_minimal: v!(),
+            canonical_complete: v!(), authorship_complete: v!(),
         }
     }
 
@@ -124,6 +132,12 @@ impl Cols {
         self.basionym_year.push(pn.basionym_authorship.year.clone());
         self.sanctioning_author.push(pn.sanctioning_author.clone());
         self.warnings.push(join_authors(&pn.warnings));   // same "join or NA" semantics
+        // NameFormatter renderings (each already `None` => NA when it renders empty).
+        self.canonical.push(pn.canonical_name());
+        self.canonical_without_authorship.push(pn.canonical_name_without_authorship());
+        self.canonical_minimal.push(pn.canonical_name_minimal());
+        self.canonical_complete.push(pn.canonical_name_complete());
+        self.authorship_complete.push(pn.authorship_complete());
     }
 
     fn push_err(&mut self, input: &str, e: &::nameparser_core::model::ParseError) {
@@ -143,6 +157,9 @@ impl Cols {
             &mut self.combination_year, &mut self.basionym_authors,
             &mut self.basionym_ex_authors, &mut self.basionym_year,
             &mut self.sanctioning_author, &mut self.warnings,
+            &mut self.canonical, &mut self.canonical_without_authorship,
+            &mut self.canonical_minimal, &mut self.canonical_complete,
+            &mut self.authorship_complete,
         ] {
             col.push(None);
         }
@@ -192,7 +209,8 @@ fn parse_names_impl(
             "publishedIn", "publishedInYear", "publishedInPage", "unparsed", "doubtful",
             "manuscript", "state", "combinationAuthors", "combinationExAuthors",
             "combinationYear", "basionymAuthors", "basionymExAuthors", "basionymYear",
-            "sanctioningAuthor", "warnings",
+            "sanctioningAuthor", "warnings", "canonical", "canonicalWithoutAuthorship",
+            "canonicalMinimal", "canonicalComplete", "authorshipComplete",
         ],
         [
             r!(c.scientific_name), r!(c.parsed), r!(c.error), r!(c.r#type), r!(c.rank),
@@ -205,6 +223,8 @@ fn parse_names_impl(
             r!(c.state), r!(c.combination_authors), r!(c.combination_ex_authors),
             r!(c.combination_year), r!(c.basionym_authors), r!(c.basionym_ex_authors),
             r!(c.basionym_year), r!(c.sanctioning_author), r!(c.warnings),
+            r!(c.canonical), r!(c.canonical_without_authorship), r!(c.canonical_minimal),
+            r!(c.canonical_complete), r!(c.authorship_complete),
         ],
     )
     .expect("all columns are the same length (one push per input name)")
