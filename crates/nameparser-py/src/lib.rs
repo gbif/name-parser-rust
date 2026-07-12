@@ -322,6 +322,49 @@ impl PyParsedName {
         self.inner.sanctioning_author.clone()
     }
 
+    // ---- name formatter (Java `org.gbif.nameparser.util.NameFormatter`) ----
+
+    /// The full scientific name with authorship in its canonical form (Java
+    /// `NameFormatter.canonical`). `None` if the name renders empty.
+    fn canonical_name(&self) -> Option<String> {
+        self.inner.canonical_name()
+    }
+
+    /// The canonical name without any authorship (Java
+    /// `NameFormatter.canonicalWithoutAuthorship`).
+    fn canonical_name_without_authorship(&self) -> Option<String> {
+        self.inner.canonical_name_without_authorship()
+    }
+
+    /// The three bare name parts, unicode folded to ascii, no markers or authorship (Java
+    /// `NameFormatter.canonicalMinimal`).
+    fn canonical_name_minimal(&self) -> Option<String> {
+        self.inner.canonical_name_minimal()
+    }
+
+    /// The full name with all details, incl. non-code-compliant informal remarks (Java
+    /// `NameFormatter.canonicalComplete`).
+    fn canonical_name_complete(&self) -> Option<String> {
+        self.inner.canonical_name_complete()
+    }
+
+    /// As `canonical_name_complete` but with `<i>…</i>` markup (Java
+    /// `NameFormatter.canonicalCompleteHtml`).
+    fn canonical_name_complete_html(&self) -> Option<String> {
+        self.inner.canonical_name_complete_html()
+    }
+
+    /// The full concatenated authorship incl. the sanctioning author (Java
+    /// `NameFormatter.authorshipComplete`), or `None` when the name has no authorship.
+    fn authorship_complete(&self) -> Option<String> {
+        self.inner.authorship_complete()
+    }
+
+    /// `str(pn)` is the canonical name (empty string if it renders empty).
+    fn __str__(&self) -> String {
+        self.inner.canonical_name().unwrap_or_default()
+    }
+
     // ---- escape hatch + repr ----
 
     /// The complete `ParsedName` structure straight from the core's own
@@ -335,27 +378,14 @@ impl PyParsedName {
         Ok(pythonize::pythonize(py, &self.inner)?.into())
     }
 
-    /// Rank plus the reconstructed name atoms (uninomial, or genus/infrageneric/
-    /// specific/infraspecific/cultivar epithets, whichever are set) — a debugging aid,
-    /// not a nomenclaturally-correct canonical name renderer (the core doesn't have one
-    /// yet either; rank markers, hybrid signs, and authorship placement are all still
-    /// out of scope here).
+    /// Rank plus the full canonical name (`canonical_name`, with rank markers, hybrid
+    /// signs and authorship) — a debugging aid. `rank` uses the Rust `Debug` form (e.g.
+    /// `Species`), not the wire `SCREAMING_SNAKE_CASE`.
     fn __repr__(&self) -> String {
-        let mut atoms: Vec<String> = Vec::new();
-        match &self.inner.uninomial {
-            Some(u) => atoms.push(u.clone()),
-            None => {
-                atoms.extend(self.inner.genus.clone());
-                atoms.extend(self.inner.infrageneric_epithet.clone());
-                atoms.extend(self.inner.specific_epithet.clone());
-                atoms.extend(self.inner.infraspecific_epithet.clone());
-            }
-        }
-        atoms.extend(self.inner.cultivar_epithet.clone());
         format!(
             "ParsedName(rank={:?}, name={:?})",
             self.inner.rank,
-            atoms.join(" ")
+            self.inner.canonical_name().unwrap_or_default()
         )
     }
 }

@@ -138,6 +138,27 @@ class ParsedName:
     @property
     def sanctioning_author(self) -> str | None: ...
 
+    # ---- name formatter (Java org.gbif.nameparser.util.NameFormatter) ----
+    def canonical_name(self) -> str | None:
+        """The full scientific name with authorship, canonical form."""
+        ...
+    def canonical_name_without_authorship(self) -> str | None:
+        """The canonical name without any authorship."""
+        ...
+    def canonical_name_minimal(self) -> str | None:
+        """The bare name parts, unicode folded to ascii, no markers or authorship."""
+        ...
+    def canonical_name_complete(self) -> str | None:
+        """The full name with all details incl. informal remarks."""
+        ...
+    def canonical_name_complete_html(self) -> str | None:
+        """As canonical_name_complete but with <i></i> markup."""
+        ...
+    def authorship_complete(self) -> str | None:
+        """The full concatenated authorship incl. the sanctioning author, or None."""
+        ...
+    def __str__(self) -> str: ...
+
     # ---- escape hatch + repr ----
     def to_dict(self) -> dict[str, Any]:
         """The complete `ParsedName` structure straight from the core's own

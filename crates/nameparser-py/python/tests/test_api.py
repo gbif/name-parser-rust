@@ -169,3 +169,29 @@ def test_parsed_name_repr_includes_rank_and_name_atoms():
     assert "Abies" in r
     assert "alba" in r
     assert "Species" in r  # Rust Debug form of the Rank enum, not the wire SCREAMING_SNAKE_CASE
+
+
+def test_name_formatter_renderings():
+    # Expected values are Java-authoritative (real NameFormatter over the same inputs).
+    pn = nameparser.parse("Abies alba Mill.")
+    assert pn.canonical_name() == "Abies alba Mill."
+    assert pn.canonical_name_without_authorship() == "Abies alba"
+    assert pn.canonical_name_minimal() == "Abies alba"
+    assert pn.canonical_name_complete() == "Abies alba Mill."
+    assert pn.authorship_complete() == "Mill."
+    assert str(pn) == "Abies alba Mill."  # __str__ is the canonical name
+
+    # authorship-less name -> None
+    assert nameparser.parse("Abies alba").authorship_complete() is None
+
+    # minimal drops the infrageneric genus + rank marker
+    assert nameparser.parse("Astragalus subg. Cercidothrix").canonical_name_minimal() == "Cercidothrix"
+
+    # notho hybrid marker with its space
+    assert nameparser.parse("×Agropogon littoralis").canonical_name() == "× Agropogon littoralis"
+
+    # html markup italicises the name parts
+    assert (
+        nameparser.parse("Abies alba Mill.").canonical_name_complete_html()
+        == "<i>Abies</i> <i>alba</i> Mill."
+    )
