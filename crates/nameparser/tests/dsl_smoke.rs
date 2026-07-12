@@ -28,3 +28,21 @@ fn plain_binomial_with_author_no_year() {
 fn unparsable_virus_carries_type_and_code() {
     assert_unparsable_code("Tobacco mosaic virus", NameType::Other, NomCode::Virus);
 }
+
+// ---- smoke tests for the parseAuthorship-emulating + viral helpers (used by later waves) ----
+
+#[test]
+fn authorship_helpers_parse_bare_authorship() {
+    // Java-authoritative from testAuthorteam.
+    assert_authorship("Petzold & G.Kirchn.", &["Petzold", "G.Kirchn."]);
+    assert_authorship("Balsamo M Fregni E Tongiorgi MA", &["M.Balsamo", "E.Fregni", "M.A.Tongiorgi"]);
+    assert_single_author("L.");
+    assert_single_author("C.E.M.Bicudo");
+}
+
+#[test]
+fn is_viral_name_matches_java_helper() {
+    assert!(is_viral_name("Cactus virus 2"));
+    assert!(is_viral_name("Vibrio phage 149 (type IV)"));
+    assert!(!is_viral_name("Abies alba"));
+}

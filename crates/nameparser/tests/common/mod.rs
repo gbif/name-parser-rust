@@ -110,6 +110,129 @@ pub fn assert_unparsable_code(input: &str, type_: NameType, code: NomCode) {
     }
 }
 
+/// `assertUnparsable(name, rank, type)` — unparsable with a rank hint; the echoed error name
+/// equals the input. Delegates to [`assert_unparsable_name`].
+pub fn assert_unparsable_rank(input: &str, rank: Rank, type_: NameType) {
+    assert_unparsable_name(input, rank, type_, input);
+}
+
+/// `assertUnparsableName(name, rank, type, expectedName)` — unparsable (parsed with the rank
+/// hint) with the given `NameType`, and the echoed error name equals `expected_name`.
+pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected_name: &str) {
+    match nameparser::parse(input, None, Some(rank), None) {
+        Err(e) => {
+            assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
+            assert_eq!(e.name, expected_name, "`{input}`: name {:?} != {expected_name:?}", e.name);
+        }
+        Ok(pn) => panic!("expected `{input}` to be unparsable ({type_:?}) but it parsed: {pn:?}"),
+    }
+}
+
+/// `assertSensu(raw, sensu)` — parse `raw` and assert its taxonomic (sensu/sec) note.
+pub fn assert_sensu(raw: &str, sensu: &str) {
+    let n = nameparser::parse(raw, None, None, None)
+        .unwrap_or_else(|e| panic!("expected `{raw}` to parse: {e:?}"));
+    assert_eq!(n.taxonomic_note.as_deref(), Some(sensu), "sensu mismatch for `{raw}`");
+}
+
+/// `assertPhraseName(sciname, canonicalName, rank, phrase)` — parse, assert the `phrase`, the
+/// full canonical rendering (`NameFormatter.canonical`), the optional rank, and `type=INFORMAL`.
+/// Returns the assertion for further chaining.
+pub fn assert_phrase_name(
+    sciname: &str,
+    canonical: &str,
+    rank: Option<Rank>,
+    phrase: &str,
+) -> NameAssertion {
+    let n = nameparser::parse(sciname, None, None, None)
+        .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
+    assert_eq!(
+        n.canonical_name().as_deref(),
+        Some(canonical),
+        "canonical mismatch for `{sciname}`"
+    );
+    let na = NameAssertion::new(n).phrase(phrase);
+    let na = match rank {
+        Some(r) => na.rank(r),
+        None => na,
+    };
+    na.type_(NameType::Informal)
+}
+
+/// `assertNomNote(note, sciname)` — parse `sciname` and assert its nomenclatural note. Returns
+/// the assertion for further chaining.
+pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
+    let n = nameparser::parse(sciname, None, None, None)
+        .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
+    NameAssertion::new(n).nom_note(note)
+}
+
+/// `assertCultivar(note)` — parse `"Abies alba <note>"` and assert its nomenclatural note
+/// equals `note` (Java's helper is misnamed; it checks the nom-note). Returns the assertion.
+pub fn assert_cultivar(note: &str) -> NameAssertion {
+    let sciname = format!("Abies alba {note}");
+    let n = nameparser::parse(&sciname, None, None, None)
+        .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
+    NameAssertion::new(n).nom_note(note)
+}
+
+/// `assertAuthorship(rawAuthorship, expectedAuthors...)` — parse a bare authorship string and
+/// assert the combination authors. Java's `parseAuthorship(auth, code)` is
+/// `parse("Abies alba", auth, SPECIES, code)` reading `combinationAuthorship`, reproduced here.
+pub fn assert_authorship(raw: &str, expected_authors: &[&str]) -> NameAssertion {
+    assert_ex_authorship(raw, None, expected_authors)
+}
+
+/// `assertSingleAuthor(raw)` — a bare authorship parsing to exactly the single author `raw`.
+pub fn assert_single_author(raw: &str) -> NameAssertion {
+    assert_ex_authorship(raw, None, &[raw])
+}
+
+/// `assertExAuthorship(rawAuthorship, exAuthor, expectedAuthors...)` — parse a bare authorship
+/// and assert its ex-author (or none) and combination authors.
+pub fn assert_ex_authorship(
+    raw: &str,
+    ex_author: Option<&str>,
+    expected_authors: &[&str],
+) -> NameAssertion {
+    let full = nameparser::parse("Abies alba", Some(raw), Some(Rank::Species), None)
+        .unwrap_or_else(|e| panic!("authorship `{raw}` should parse: {e:?}"));
+    let auth = &full.combination_authorship;
+    match ex_author {
+        None => assert!(
+            auth.ex_authors.is_empty(),
+            "unexpected exAuthors for `{raw}`: {:?}",
+            auth.ex_authors
+        ),
+        Some(ex) => {
+            assert_eq!(auth.ex_authors.len(), 1, "expected exactly 1 exAuthor for `{raw}`");
+            assert_eq!(auth.ex_authors[0], ex, "exAuthor mismatch for `{raw}`");
+        }
+    }
+    if !expected_authors.is_empty() {
+        assert_eq!(auth.authors, str_vec(expected_authors), "authors mismatch for `{raw}`");
+    }
+    // Authorship-only assertion (name parts empty), mirroring Java's
+    // NameAssertion(ParsedAuthorship) which copies only the authorship onto a fresh ParsedName.
+    let pn = ParsedName {
+        combination_authorship: full.combination_authorship,
+        basionym_authorship: full.basionym_authorship,
+        sanctioning_author: full.sanctioning_author,
+        ..Default::default()
+    };
+    NameAssertion::new(pn)
+}
+
+/// `isViralName(name)` — Java's test helper: parse `name` and report whether the nomenclatural
+/// code came out as `VIRUS` (on the parsed name, or on the unparsable error). NOT the core
+/// `viral::is_viral` word-primitive.
+pub fn is_viral_name(name: &str) -> bool {
+    match nameparser::parse(name, None, None, None) {
+        Ok(pn) => pn.code == Some(NomCode::Virus),
+        Err(e) => e.type_ == NameType::Other && e.code == Some(NomCode::Virus),
+    }
+}
+
 // ---- the assertion builder --------------------------------------------------------------------
 
 /// One `ParsedName` field-category, tracked so `nothing_else()` can check the untouched ones are
