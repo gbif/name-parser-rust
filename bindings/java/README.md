@@ -112,7 +112,7 @@ The `jmh/` module depends on this module's own `name-parser-rust` artifact from
 then build the cdylib and the benchmark's shaded jar, then run it:
 
 ```sh
-mvn -q -f bindings/java/pom.xml install          # publish name-parser-rust:4.2.0-SNAPSHOT to ~/.m2
+mvn -q -f bindings/java/pom.xml install          # publish name-parser-rust:0.1.0-SNAPSHOT to ~/.m2
 cargo build -p nameparser-ffi --release          # the cdylib the forked benchmark JVMs will dlopen
 mvn -q -f bindings/java/jmh/pom.xml package       # target/benchmarks.jar (shaded, Main-Class org.openjdk.jmh.Main)
 

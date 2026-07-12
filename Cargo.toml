@@ -1,3 +1,12 @@
 [workspace]
 resolver = "2"
 members = ["crates/nameparser", "crates/nameparser-cli", "crates/nameparser-ffi", "crates/nameparser-py"]
+
+# One shared version for every Rust crate in this repo -- the "engine version". The CLI, the
+# Python wheel (crates/nameparser-py -> PyPI), the R package (bindings/r -> CRAN) and the Java FFM
+# binding (bindings/java) all carry this same number, released in lockstep, so one version across
+# every binding means the same engine. Bump it here (or via scripts/bump-version.sh, which also
+# updates pyproject.toml / DESCRIPTION / the Maven pom) -> all crates inherit it via
+# `version.workspace = true`. See RELEASE.md.
+[workspace.package]
+version = "0.1.0"

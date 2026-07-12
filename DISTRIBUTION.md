@@ -20,7 +20,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 |---|---|---|---|---|
 | Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
-| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — auto-deployed `4.2.0-SNAPSHOT` |
+| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — auto-deployed `0.1.0-SNAPSHOT` |
 | Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | CI ready (needs PyPI trusted-publisher setup) |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
 
@@ -49,7 +49,7 @@ enforces `maven.compiler.release=17`, and `java.lang.foreign` (FFM/Panama) needs
 compiler release at **22**. Current coordinates:
 
 ```
-org.gbif.nameparser:name-parser-rust:4.2.0-SNAPSHOT   (packaging: jar)
+org.gbif.nameparser:name-parser-rust:0.1.0-SNAPSHOT   (packaging: jar)
 ```
 
 It compiles `org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser`,
@@ -69,15 +69,18 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
 **Release-readiness — done, and the versioning model:**
 
-- ✅ `name-parser-api` (and test-scoped `name-parser`) bumped to the released **`4.2.0`**; a GBIF
+- ✅ `name-parser-api` (and test-scoped `name-parser`) pinned to the released **`4.2.0`**; a GBIF
   Nexus `<repositories>` block resolves them (this standalone POM has no motherpom to supply it).
-- ✅ **Version = `4.2.0-SNAPSHOT`** — the JVM adapter rides the **4.x name-parser reactor line**
-  (decided: it eventually MOVES INTO the name-parser reactor as the Rust-backed impl of
-  `name-parser-api`, once that reactor goes Java 22+; then it inherits motherpom). The
-  **layering** matters: only this JVM adapter tracks the reactor version — the **Rust engine**
-  (`gbif-name-parser` on crates.io + the PyPI/CRAN bindings) keeps its OWN independent semver
-  (`0.1.x`), since those serve non-JVM ecosystems with their own cadence. A `4.2.x` binding
-  bundles whatever engine cdylib it was built against; the two version numbers stay decoupled.
+  These are an independently versioned **dependency** — the stable contract — **not** this
+  module's own version.
+- ✅ **Version = `0.1.0-SNAPSHOT`** — the Java FFM binding **shares the Rust engine's version**
+  (the Cargo `[workspace.package]` version at the repo root), released in lockstep with the
+  CLI/Python/R bindings: **one version across every binding ⇒ the same engine**. It is *not* tied
+  to the `name-parser-api` version it implements (an implementation versioning independently from
+  its api is normal — cf. logback-classic vs slf4j-api). The bindings sit at **`0.x`** while new
+  and gathering real-use feedback, and will **graduate to the product's `4.x` line once stable**
+  (a deliberate one-time re-baseline, in lockstep). The JAR manifest also stamps
+  `Rust-Engine-Version` + the git SHA, so the exact engine is always readable from the artifact.
 - ✅ `<distributionManagement>` for `repository.gbif.org` (interim, until the reactor move). The
   `<server>` credential ids in the deployer's `~/.m2/settings.xml` must match `gbif-release` /
   `gbif-snapshot` — adjust to your actual ids.

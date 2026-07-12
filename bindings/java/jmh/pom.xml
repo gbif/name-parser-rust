@@ -39,7 +39,7 @@
     <dependency>
       <groupId>org.gbif.nameparser</groupId>
       <artifactId>name-parser-rust</artifactId>
-      <version>4.2.0-SNAPSHOT</version>
+      <version>0.1.0-SNAPSHOT</version>
     </dependency>
 
     <!-- The Java oracle implementation (NameParserImpl), the baseline arm of the benchmark.

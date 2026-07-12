@@ -9,17 +9,18 @@
     Standalone FOR NOW: no GBIF <parent> motherpom yet, because motherpom enforces
     `maven.compiler.release=17`, which rejects `java.lang.foreign` (FFM/Panama) source (this
     module needs release 22 — java.lang.foreign is finalized/stable as of JDK 22).
-    THE PLAN: this module rides the 4.x name-parser reactor version (see <version>) as the
-    Rust-backed implementation of name-parser-api, and eventually MOVES INTO the name-parser
-    reactor once that reactor moves to Java 22+ (the Phase-5 backend-cutover prerequisite). At
-    that point it inherits motherpom (parent, distributionManagement, release plugins) and the
-    standalone <repositories>/<distributionManagement> below become redundant. The Rust ENGINE
-    it wraps (gbif-name-parser on crates.io + the PyPI/CRAN bindings) keeps its OWN independent
-    semver — only this JVM adapter tracks the reactor line.
+
+    VERSIONING: this binding shares the Rust ENGINE's version — the Cargo [workspace.package]
+    version at this repo's root (gbif-name-parser, 0.1.x today) — released in lockstep with the
+    CLI/Python/R bindings, so one version across all bindings means one engine. It is NOT the
+    version of the api it implements: `org.gbif:name-parser-api` (4.x, a dependency below) is
+    independently versioned and pinned. The bindings sit at 0.x while new / gathering real-use
+    feedback, and graduate to the product's 4.x line once stable. Keep <version> below in sync
+    with the Cargo workspace version — scripts/bump-version.sh does this; see RELEASE.md.
   -->
   <groupId>org.gbif.nameparser</groupId>
   <artifactId>name-parser-rust</artifactId>
-  <version>4.2.0-SNAPSHOT</version>
+  <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>GBIF Name Parser :: Rust FFM binding</name>
