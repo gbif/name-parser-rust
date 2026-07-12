@@ -14,6 +14,8 @@ testdata/*.rust.jsonl
 # Maven build output for bindings/java (and later bindings/java/jmh) — the root /target
 # above only covers the Cargo workspace target dir, not Maven modules under bindings/.
 bindings/**/target/
+# Per-platform cdylibs staged by ci/build-cdylib.sh for the Java classifier JARs (built, not tracked)
+bindings/java/native-staging/
 
 # IDE
 /.idea/

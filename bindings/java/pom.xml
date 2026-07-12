@@ -34,6 +34,11 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>22</maven.compiler.release>
 
+    <!-- rust.engine.version (the gbif-name-parser engine, tracks crates/nameparser/Cargo.toml) is
+         stamped into the main JAR manifest; the git SHA is injected by git-commit-id-maven-plugin.
+         Do NOT pre-define git.commit.id.abbrev here — a static value shadows the plugin's. -->
+    <rust.engine.version>0.1.0</rust.engine.version>
+
     <!-- Resolution order actually used at runtime (see Ffi.resolveLibPath): the system
          property below (as passed by the surefire argLine) -> env NAMEPARSER_FFI_LIB ->
          a repo-relative default hardcoded in Ffi.java. This property exists so `mvn test`
@@ -111,17 +116,6 @@
   </distributionManagement>
 
   <build>
-    <!-- os-maven-plugin exposes ${os.detected.classifier} (e.g. osx-aarch_64, linux-x86_64),
-         used below to place the bundled cdylib under native/<classifier>/, matching
-         Ffi.osDetectedClassifier() at load time. -->
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.7.1</version>
-      </extension>
-    </extensions>
-
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -129,35 +123,81 @@
         <version>3.13.0</version>
       </plugin>
 
-      <!-- Make the JAR self-contained: copy the nameparser-ffi cdylib into
-           target/classes/native/${os.detected.classifier}/ at prepare-package so it ships inside
-           the JAR (Ffi extracts it at load time). Requires the cdylib to be release-built first
-           (`cargo build -p nameparser-ffi`, release profile). In CI the Jenkins matrix additionally
-           stashes every platform's cdylib into
-           src/main/resources/native/** for a multi-platform JAR; the two paths coexist. If no
-           cdylib is present the copy is a no-op and Ffi falls back to -D/env or the dev path. -->
+      <!-- git SHA for the JAR manifest (Rust-Engine-Git-Revision). Points at the repo-root .git;
+           tolerant of a non-git build (e.g. a source tarball) via failOnNoGitDirectory=false. -->
       <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.1.0</version>
+        <groupId>io.github.git-commit-id</groupId>
+        <artifactId>git-commit-id-maven-plugin</artifactId>
+        <version>9.0.1</version>
         <executions>
           <execution>
-            <id>bundle-native-cdylib</id>
-            <phase>prepare-package</phase>
-            <goals><goal>run</goal></goals>
-            <configuration>
-              <target>
-                <mkdir dir="${project.build.outputDirectory}/native/${os.detected.classifier}"/>
-                <copy todir="${project.build.outputDirectory}/native/${os.detected.classifier}"
-                      flatten="true" overwrite="true" failonerror="false">
-                  <fileset dir="${project.basedir}/../../target/release" erroronmissingdir="false">
-                    <include name="libnameparser_ffi.so"/>
-                    <include name="libnameparser_ffi.dylib"/>
-                    <include name="nameparser_ffi.dll"/>
-                  </fileset>
-                </copy>
-              </target>
-            </configuration>
+            <id>get-git-info</id>
+            <phase>initialize</phase>
+            <goals><goal>revision</goal></goals>
+          </execution>
+        </executions>
+        <configuration>
+          <dotGitDirectory>${project.basedir}/../../.git</dotGitDirectory>
+          <failOnNoGitDirectory>false</failOnNoGitDirectory>
+          <generateGitPropertiesFile>false</generateGitPropertiesFile>
+          <includeOnlyProperties>
+            <includeOnlyProperty>^git.commit.id.abbrev$</includeOnlyProperty>
+          </includeOnlyProperties>
+        </configuration>
+      </plugin>
+
+      <!-- Packaging: a THIN main JAR (Java classes only) whose manifest carries the version +
+           Rust-engine stamps, plus one small classifier JAR per platform holding just that
+           platform's cdylib under native/<classifier>/ (netty-tcnative style — a consumer pulls
+           only its platform via os-maven-plugin's ${os.detected.classifier}). ci/build-cdylib.sh
+           cross-builds + stages each cdylib into native-staging/<classifier>/native/<classifier>/;
+           a classifier execution is skipped (skipIfEmpty) when its platform wasn't built. -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <version>3.4.1</version>
+        <configuration>
+          <archive>
+            <manifest>
+              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+              <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
+            </manifest>
+            <manifestEntries>
+              <Rust-Engine-Version>${rust.engine.version}</Rust-Engine-Version>
+              <Rust-Engine-Git-Revision>${git.commit.id.abbrev}</Rust-Engine-Git-Revision>
+            </manifestEntries>
+          </archive>
+        </configuration>
+        <executions>
+          <execution>
+            <id>native-linux-x86_64</id><phase>package</phase><goals><goal>jar</goal></goals>
+            <configuration><classifier>linux-x86_64</classifier>
+              <classesDirectory>${project.basedir}/native-staging/linux-x86_64</classesDirectory>
+              <skipIfEmpty>true</skipIfEmpty></configuration>
+          </execution>
+          <execution>
+            <id>native-linux-aarch_64</id><phase>package</phase><goals><goal>jar</goal></goals>
+            <configuration><classifier>linux-aarch_64</classifier>
+              <classesDirectory>${project.basedir}/native-staging/linux-aarch_64</classesDirectory>
+              <skipIfEmpty>true</skipIfEmpty></configuration>
+          </execution>
+          <execution>
+            <id>native-osx-x86_64</id><phase>package</phase><goals><goal>jar</goal></goals>
+            <configuration><classifier>osx-x86_64</classifier>
+              <classesDirectory>${project.basedir}/native-staging/osx-x86_64</classesDirectory>
+              <skipIfEmpty>true</skipIfEmpty></configuration>
+          </execution>
+          <execution>
+            <id>native-osx-aarch_64</id><phase>package</phase><goals><goal>jar</goal></goals>
+            <configuration><classifier>osx-aarch_64</classifier>
+              <classesDirectory>${project.basedir}/native-staging/osx-aarch_64</classesDirectory>
+              <skipIfEmpty>true</skipIfEmpty></configuration>
+          </execution>
+          <execution>
+            <id>native-windows-x86_64</id><phase>package</phase><goals><goal>jar</goal></goals>
+            <configuration><classifier>windows-x86_64</classifier>
+              <classesDirectory>${project.basedir}/native-staging/windows-x86_64</classesDirectory>
+              <skipIfEmpty>true</skipIfEmpty></configuration>
           </execution>
         </executions>
       </plugin>
