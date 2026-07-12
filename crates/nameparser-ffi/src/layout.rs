@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! The flat fixed-layout binary encoding for [`np_parse_struct`](crate::np_parse_struct) — a
-//! single canonical description of the wire format both Rust (this file) and Java (Task 6's
-//! `StructCodec.java`, a later task) read. Where `np_parse_json` marshals a [`ParsedName`]
-//! through `serde_json` text + Gson reflection, this module writes the SAME data as raw bytes
-//! at fixed/computed offsets into a caller-owned buffer, to shed that marshalling cost.
+//! single canonical description of the wire format both Rust (this file) and Java
+//! (`StructCodec.java`) read. This module writes every [`ParsedName`] field as raw bytes at
+//! fixed/computed offsets into a caller-owned buffer — the one wire format the Java binding
+//! uses across the FFM boundary, decoded field-for-field by `StructCodec`.
 //!
 //! # Byte order
 //!
@@ -57,9 +57,9 @@
 //! # Enum ordinal mapping — verified, not assumed
 //!
 //! Every Rust wire enum here (`Rank`, `NomCode`, `NameType`, `NamePart`, `State`) is a
-//! fieldless enum declared in the exact same order as its Java counterpart (this was already
-//! required for `#[serde(rename_all = "SCREAMING_SNAKE_CASE")]` to reproduce Java's `.name()`
-//! wire form on the JSON path — see `model::enums`' own module docs). Rust guarantees a
+//! fieldless enum declared in the exact same order as its Java counterpart (already required
+//! elsewhere in this port for each Rust variant's ordinal to match Java's — see `model::enums`'
+//! own module docs). Rust guarantees a
 //! fieldless enum's discriminants are numbered `0, 1, 2, ...` in declaration order unless
 //! overridden, so `as i32` on any of these five types already equals the Java ordinal — but
 //! per this task's brief, that equivalence is verified here rather than assumed silently:
@@ -185,11 +185,11 @@
 //!   bigger buffer. This only applies to the success path — the unparsable path's small,
 //!   header-only write is never overflow-coded (see above).
 //!
-//! # Field coverage — complete for every field the JSON path serializes
+//! # Field coverage — every `ParsedName` field
 //!
-//! This layout carries every [`ParsedName`] field the JSON (`np_parse_json`) path emits, so a
-//! struct-path `ParsedName` reconstructed by Task 6's Java reader is field-for-field identical
-//! to the JSON path's for every input. The four fields an earlier revision of this layout
+//! This layout carries every [`ParsedName`] field the core parser produces, so a
+//! `ParsedName` reconstructed by the Java `StructCodec` reader is field-for-field identical to
+//! the core parser's own output for every input. The four fields an earlier revision of this layout
 //! omitted are now all encoded: `combination_authorship.imprint_year` /
 //! `basionym_authorship.imprint_year` (the `SLOT_IMPRINT_YEAR_COMB`/`_BAS` string slots — 33 of
 //! 11,302 corpus names, e.g. the `1985, 1984` double-year and `[1851]` bracketed patterns), and
@@ -201,7 +201,7 @@
 //! (`generic_authorship`/`specific_authorship` are set by `pipeline::run` — see `pipeline/mod.rs`'s
 //! `pendingGeneric`/`pendingSpecific` handling; the imprint years by `pipeline::authorship_parser`
 //! for bracketed/keyword/bare-`&`-year forms. All are read straight off the same `ParsedName`
-//! the JSON path serializes, never re-derived.)
+//! the core parser produces, never re-derived.)
 
 use std::collections::BTreeMap;
 
@@ -613,10 +613,9 @@ fn write_nested_group(buf: &mut Vec<u8>, refs: &Option<NestedAuthorshipRefs>) {
 /// threaded in by the caller (`np_parse_struct`, via `np_abi_version()`) rather than read from
 /// a constant here, keeping this module independent of `lib.rs`'s ABI-versioning policy.
 ///
-/// Reads every field directly off `pn` — the same `ParsedName` the JSON path
-/// (`np_parse_json`/`serialize_or_error`) serializes — so the two wire formats can never
-/// derive a field differently, and (see this module's "Field coverage" doc section) this
-/// format now carries every field the JSON path emits.
+/// Reads every field directly off `pn` — the `ParsedName` from a single `nameparser::parse`
+/// call — so (see this module's "Field coverage" doc section) this format carries every field
+/// the core parser produces.
 pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
     // ---- gather the 17 fixed string-slot values, in slot order ----
     let plain_slots: [Option<&str>; NUM_STRING_SLOTS] = [

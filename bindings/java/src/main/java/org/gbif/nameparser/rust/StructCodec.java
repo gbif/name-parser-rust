@@ -107,8 +107,8 @@ final class StructCodec {
 
   // ================================================================================================
   // Enum-ordinal consistency guard -- runs once, the first time this class is touched (i.e. the
-  // first time a caller actually uses WireFormat.STRUCT; a JSON-only caller never loads this
-  // class and never pays for this check). The struct wire format maps five Java enums
+  // first parse, since the flat struct is the binding's only decode path). The wire format maps
+  // five Java enums
   // (Rank/NomCode/NameType/NamePart/ParsedName.State) by raw i32 ordinal -- see the class doc --
   // so if a future name-parser-api release ever reorders/inserts/removes a constant, silently
   // trusting `.values()[ordinal]` would misdecode every enum-typed field without any crash. This
@@ -120,10 +120,10 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 1) {
+    if (abi != 2) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 1 -- rebuild the cdylib "
+              + ", StructCodec was written against 2 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
@@ -181,8 +181,8 @@ final class StructCodec {
   /**
    * Reads the {@code name_type}/{@code code} header fields from a {@code -1} (unparsable)
    * result buffer and builds the exception {@link Ffi#callParseStruct} throws for it. {@code
-   * originalName} is the caller's own input string (not read off the wire -- the header carries
-   * no name), matching {@link NameParserRust}'s JSON-path behaviour.
+   * originalName} is the caller's own input string (not read off the wire -- the unparsable
+   * header carries no name).
    */
   static UnparsableNameException unparsableException(MemorySegment header, String originalName) {
     int nameTypeOrd = header.get(LE_INT, OFF_NAME_TYPE);

@@ -24,29 +24,23 @@ import static java.lang.foreign.ValueLayout.JAVA_LONG;
  * FFM (Panama, {@code java.lang.foreign}) plumbing for the {@code nameparser-ffi} Rust cdylib
  * (built by {@code cargo build -p nameparser-ffi --release} from {@code crates/nameparser-ffi}
  * in this repo). Isolated from {@link NameParserRust}'s parsing/model logic so that class only
- * ever deals with Java types (a {@code String} in, a {@code ParsedName} or exception out) --
- * {@link #callParseJson} hands back raw JSON text ({@link NameParserRust} does the Gson rebuild
- * and the {@code {"error":...}} envelope handling); {@link #callParseStruct} hands back an
- * already-decoded {@link ParsedName} (or throws {@link UnparsableNameException}), delegating the
- * actual byte-level decode work to {@link StructCodec} so this class stays limited to the
- * arena/downcall/retry mechanics.
+ * ever deals with Java types (a {@code String} in, a {@code ParsedName} or exception out):
+ * {@link #callParseStruct} hands back an already-decoded {@link ParsedName} (or throws {@link
+ * UnparsableNameException}), delegating the actual byte-level decode work to {@link StructCodec}
+ * so this class stays limited to the arena/downcall/retry mechanics.
  *
  * <p>The C ABI bound here (see {@code crates/nameparser-ffi/src/lib.rs} for the authoritative
  * doc comments):
  * <pre>
  *   u32          np_abi_version()
- *   char *       np_parse_json(name, authorship, rank, code: const char *)
  *   i64          np_parse_struct(name, authorship, rank, code: const char *, out: u8 *, out_cap: usize)
- *   void         np_free(char *)
  * </pre>
  * {@code name} is required; {@code authorship}/{@code rank}/{@code code} are nullable
  * ({@link MemorySegment#NULL} = absent). {@code rank}/{@code code} are the Java enum
- * {@code .name()} strings (e.g. {@code "SPECIES"}, {@code "BOTANICAL"}). {@code np_parse_json}'s
- * returned pointer is a heap-allocated, NUL-terminated C string that MUST be handed back to
- * {@code np_free} exactly once; a {@code NULL} return means an internal Rust panic (never an
- * unwind across the ABI boundary -- see the Rust doc comment). {@code np_parse_struct} instead
+ * {@code .name()} strings (e.g. {@code "SPECIES"}, {@code "BOTANICAL"}). {@code np_parse_struct}
  * writes into a caller-owned buffer and returns a byte count/status code -- see {@link
- * #callParseStruct} for its retry-on-overflow protocol.
+ * #callParseStruct} for its retry-on-overflow protocol. (The former JSON wire path,
+ * {@code np_parse_json}/{@code np_free}, was removed at ABI version 2.)
  */
 final class Ffi {
 
@@ -55,28 +49,20 @@ final class Ffi {
    * {@code nameparser-ffi}'s own {@code np_abi_version()} on any change to the extern "C"
    * surface itself.
    */
-  private static final int EXPECTED_ABI_VERSION = 1;
+  private static final int EXPECTED_ABI_VERSION = 2;
 
   private static final Linker LINKER = Linker.nativeLinker();
   private static final MethodHandle ABI_VERSION;
-  private static final MethodHandle PARSE_JSON;
   private static final MethodHandle PARSE_STRUCT;
-  private static final MethodHandle FREE;
 
   static {
     SymbolLookup lib = SymbolLookup.libraryLookup(resolveLibPath(), Arena.global());
     ABI_VERSION = LINKER.downcallHandle(
         findOrThrow(lib, "np_abi_version"),
         FunctionDescriptor.of(JAVA_INT));
-    PARSE_JSON = LINKER.downcallHandle(
-        findOrThrow(lib, "np_parse_json"),
-        FunctionDescriptor.of(ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS));
     PARSE_STRUCT = LINKER.downcallHandle(
         findOrThrow(lib, "np_parse_struct"),
         FunctionDescriptor.of(JAVA_LONG, ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS, JAVA_LONG));
-    FREE = LINKER.downcallHandle(
-        findOrThrow(lib, "np_free"),
-        FunctionDescriptor.ofVoid(ADDRESS));
 
     int actual;
     try {
@@ -195,40 +181,6 @@ final class Ffi {
     return "libnameparser_ffi.dylib";
   }
 
-  /**
-   * Calls {@code np_parse_json} over the FFM boundary and copies its result into a Java
-   * {@code String}. {@code name} must be non-null (see the C ABI doc above); {@code
-   * authorship}/{@code rank}/{@code code} may each be null, which is marshalled as {@link
-   * MemorySegment#NULL}.
-   *
-   * @return the JSON text (either a {@code ParsedName} object or an {@code {"error":...}}
-   *     envelope -- {@link NameParserRust} distinguishes them), or {@code null} if the native
-   *     call itself returned a null pointer (an internal Rust panic).
-   */
-  static String callParseJson(String name, String authorship, String rank, String code) {
-    try (Arena arena = Arena.ofConfined()) {
-      MemorySegment n = arena.allocateFrom(name);
-      MemorySegment au = authorship == null ? MemorySegment.NULL : arena.allocateFrom(authorship);
-      MemorySegment r = rank == null ? MemorySegment.NULL : arena.allocateFrom(rank);
-      MemorySegment c = code == null ? MemorySegment.NULL : arena.allocateFrom(code);
-
-      MemorySegment result = (MemorySegment) PARSE_JSON.invokeExact(n, au, r, c);
-      if (result.address() == 0) {
-        return null;
-      }
-      // The returned segment has zero declared length (it's just an address returned from a
-      // downcall) -- reinterpret it as unbounded so getString can walk it to find the NUL
-      // terminator, then copy the bytes into a Java String before freeing the native memory.
-      try {
-        return result.reinterpret(Long.MAX_VALUE).getString(0);
-      } finally {
-        FREE.invokeExact(result);
-      }
-    } catch (Throwable t) {
-      throw new RuntimeException("nameparser-ffi FFM downcall failed", t);
-    }
-  }
-
   /** Initial scratch buffer size for {@link #callParseStruct}: comfortably above the format's
    *  own minimum successful-encode size (208 bytes, an empty {@code ParsedName}) and every
    *  ordinary name/authorship, so the overflow-retry path below is only actually exercised for
@@ -277,8 +229,8 @@ final class Ffi {
 
   /**
    * Calls {@code np_parse_struct} over the FFM boundary and decodes its flat binary result into
-   * a {@link ParsedName} via {@link StructCodec#decode}. Null handling for {@code
-   * authorship}/{@code rank}/{@code code} mirrors {@link #callParseJson}'s.
+   * a {@link ParsedName} via {@link StructCodec#decode}. {@code authorship}/{@code rank}/{@code
+   * code} are each marshalled as {@link MemorySegment#NULL} when null.
    *
    * <p>Implements the overflow-retry protocol {@code np_parse_struct} documents (see {@code
    * layout.rs}): a first attempt against a {@link #INITIAL_STRUCT_BUFFER_BYTES}-byte scratch

@@ -26,7 +26,7 @@
   <description>
     org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser by
     downcalling the nameparser-ffi Rust cdylib (crates/nameparser-ffi, this repo) over
-    java.lang.foreign (FFM/Panama). Two wire formats (JSON, STRUCT) selected via WireFormat;
+    java.lang.foreign (FFM/Panama), marshalling each parse result as a flat binary struct;
     see bindings/java/README.md.
   </description>
 
@@ -73,13 +73,16 @@
       <version>4.2.0</version>
     </dependency>
 
-    <!-- The JSON wire format: GSON.fromJson(json, ParsedName.class) reflectively rebuilds
-         ParsedName field-by-field, bypassing the side-effecting setters — see
-         NameParserRust's class doc. -->
+    <!-- TEST-ONLY. The binding itself no longer uses Gson (the struct wire path rebuilds
+         ParsedName via StructCodec's setters, not reflection). ParityTest still uses Gson as its
+         comparison tool: it serializes both the Rust-built and oracle-built ParsedNames to JSON
+         trees and diffs them field-by-field with an order-insensitive carve-out. Test scope, so
+         consumers of this artifact do NOT inherit Gson. -->
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
       <version>2.11.0</version>
+      <scope>test</scope>
     </dependency>
 
     <!-- Test-only: the Java oracle implementation, for future parity testing

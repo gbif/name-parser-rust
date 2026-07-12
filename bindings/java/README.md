@@ -3,13 +3,12 @@
 `org.gbif.nameparser.rust.NameParserRust` implements `org.gbif.nameparser.api.NameParser`
 (the HEAD `4.2.0-SNAPSHOT` interface) by downcalling the `nameparser-ffi` Rust cdylib
 in-process via `java.lang.foreign` (FFM/Panama, stable since JDK 22 — no
-`--enable-preview` needed). This module carries two wire formats, selected via the
-`WireFormat` enum: `JSON` (the default) marshals a JSON string across the FFI boundary and
-rebuilds a `ParsedName` from it with Gson (`GSON.fromJson(json, ParsedName.class)`, reflective
-field population — see `NameParserRust`'s class doc for why that, rather than the setters, is
-the correct rebuild); `STRUCT` marshals a flat fixed-layout binary struct instead and rebuilds
-the `ParsedName` via `StructCodec` and the real setters. See `.superpowers/sdd/task-6-report.md`
-for the JMH A/B measurement between the two and which one is recommended for production use.
+`--enable-preview` needed). Each `parse` marshals its inputs across the FFI boundary, receives
+the result as a **flat fixed-layout binary struct**, and rebuilds a `ParsedName` from it via
+`StructCodec` and the real setters. This is the single wire format: it was ~13% faster than a
+JSON/Gson path in the Phase-3 JMH A/B, so that JSON path was dropped at cdylib **ABI version 2**,
+which also removed the `gson` runtime dependency (`gson` is now test-scope only, used by
+`ParityTest` as its structural-comparison tool).
 
 This module is deliberately **standalone**: it has no `<parent>` (the GBIF `name-parser`
 reactor's motherpom pins `--release 17`, which rejects `java.lang.foreign`), and it does not
@@ -79,10 +78,9 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
 - `pom.xml` — standalone Maven module, `--release 22`.
 - `src/main/java/org/gbif/nameparser/rust/Ffi.java` — the FFM plumbing only (symbol lookup,
   downcall handles, the ABI-version guard, the confined-arena marshalling + overflow-retry
-  helpers for both wire formats). No parsing logic; delegates struct decoding to `StructCodec`.
-- `src/main/java/org/gbif/nameparser/rust/NameParserRust.java` — `implements NameParser`,
-  two wire formats selected by the `WireFormat` enum: `new NameParserRust()` /
-  `new NameParserRust(WireFormat.JSON)` (the default) and `new NameParserRust(WireFormat.STRUCT)`.
+  helpers for the struct wire format). No parsing logic; delegates struct decoding to `StructCodec`.
+- `src/main/java/org/gbif/nameparser/rust/NameParserRust.java` — `implements NameParser`;
+  `new NameParserRust()` parses over the flat-struct wire format (the only one).
 - `src/main/java/org/gbif/nameparser/rust/StructCodec.java` — reads the flat fixed-layout
   binary wire format `np_parse_struct` writes (see `crates/nameparser-ffi/src/layout.rs`) via
   little-endian `MemorySegment` accessors and rebuilds a `ParsedName` through its real setters
@@ -91,26 +89,22 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
   format is actually used) that fails fast with a clear message if the `name-parser-api` jar's
   enum shapes ever drift from what the cdylib was built against.
 - `src/test/java/org/gbif/nameparser/rust/NameParserRustSmokeTest.java` — end-to-end tests
-  over the real FFM boundary (no mocking), parametrized over both `WireFormat`s: a subspecies
-  parse, an explicit-authorship parse, the virus → `UnparsableNameException` case, and Gson
-  round-trip fidelity for the trickier collection-typed fields (`notho`, `warnings`,
-  multi-author lists).
-- `src/test/java/org/gbif/nameparser/rust/ParityTest.java` — `NameParserRust` (both wire
-  formats, parametrized) vs `NameParserImpl` (the Java 4.2.0 oracle) over all 7 corpora in
-  `../../testdata/` (11,302 names): 0 diffs for JSON *and* 0 diffs for STRUCT, re-proving Phase
-  2's out-of-process CLI parity result in-process — the STRUCT run is `StructCodec`'s
-  correctness proof. Prints a per-corpus + total tally to stdout, and up to 20 example diffs
-  (both sides' JSON/exception) to stderr on failure.
+  over the real FFM boundary (no mocking): a subspecies parse, an explicit-authorship parse,
+  the virus → `UnparsableNameException` case, and struct-decode fidelity for the trickier
+  collection-typed fields (`notho`, `epithetQualifier`, `warnings`, multi-author lists).
+- `src/test/java/org/gbif/nameparser/rust/ParityTest.java` — `NameParserRust` vs
+  `NameParserImpl` (the Java 4.2.0 oracle) over all 7 corpora in `../../testdata/`
+  (11,302 names): **0 diffs**, re-proving Phase 2's out-of-process CLI parity result in-process
+  — `StructCodec`'s correctness proof. Prints a per-corpus + total tally to stdout, and up to 20
+  example diffs to stderr on failure. (Uses a test-scope Gson to structurally compare the two
+  `ParsedName`s; the shipped binding no longer depends on Gson.)
 - `jmh/` — a separate, standalone JMH module (own `pom.xml`, not part of a reactor with this
   one): `org.gbif.nameparser.rust.jmh.ParseBench` benchmarks `NameParserImpl` (`javaImpl`)
-  against `NameParserRust`'s JSON path (`rustJson`) and its STRUCT path (`rustStruct`),
-  single-name, in-process, over the first ~2,000 names of `../../testdata/benchmark-data.txt`.
-  See "Running the JMH benchmark" below. Raw results: `jmh/results-jmh.json` (Task 4, JSON vs
-  Java only) and `jmh/results-jmh-ab.json` (Task 6, all three arms — the wire-format A/B),
-  both committed alongside the code that produced them.
+  against `NameParserRust` (`rust`), single-name, in-process, over the first ~2,000 names of
+  `../../testdata/benchmark-data.txt`. See "Running the JMH benchmark" below.
 
-See `.superpowers/sdd/task-6-report.md` for the STRUCT wire format's design, the parity
-results, the full JMH A/B table, and which wire format the measurements recommend shipping.
+See `.superpowers/sdd/task-6-report.md` for the STRUCT wire format's design and the JMH A/B that
+led to dropping the JSON path in favour of it (`jmh/results-jmh-ab.json` holds those raw numbers).
 
 ## Running the JMH benchmark
 
@@ -119,17 +113,17 @@ The `jmh/` module depends on this module's own `name-parser-rust` artifact from
 then build the cdylib and the benchmark's shaded jar, then run it:
 
 ```sh
-mvn -q -f bindings/java/pom.xml install          # publish name-parser-rust:0.0.0 to ~/.m2
+mvn -q -f bindings/java/pom.xml install          # publish name-parser-rust:4.2.0-SNAPSHOT to ~/.m2
 cargo build -p nameparser-ffi --release          # the cdylib the forked benchmark JVMs will dlopen
 mvn -q -f bindings/java/jmh/pom.xml package       # target/benchmarks.jar (shaded, Main-Class org.openjdk.jmh.Main)
 
 java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release/libnameparser_ffi.dylib \
-     -jar bindings/java/jmh/target/benchmarks.jar -rf json -rff bindings/java/jmh/results-jmh-ab.json
+     -jar bindings/java/jmh/target/benchmarks.jar -rf json -rff bindings/java/jmh/results.json
 ```
 
 The `--enable-native-access`/`-Dnameparser.ffi.lib` flags are given to that `java -jar` command
 itself (the JMH host process), not to a JMH `-jvmArgs` option: by default JMH launches each
 `@Fork`ed measurement JVM with the same input arguments the host JVM was started with, so both
-flags reach the forked JVMs that actually load the cdylib and run `rustJson` without needing to
+flags reach the forked JVMs that actually load the cdylib and run `rust` without needing to
 repeat them. Override `-Dnameparser.ffi.lib=...` the same way as for `mvn test` above if the
 cdylib lives somewhere else.

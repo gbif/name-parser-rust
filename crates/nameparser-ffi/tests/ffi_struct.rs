@@ -810,6 +810,6 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
 }
 
 #[test]
-fn np_abi_version_is_1() {
-    assert_eq!(nameparser_ffi::np_abi_version(), 1);
+fn np_abi_version_is_2() {
+    assert_eq!(nameparser_ffi::np_abi_version(), 2);
 }
