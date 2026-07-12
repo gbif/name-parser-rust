@@ -20,7 +20,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 |---|---|---|---|---|
 | Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
-| **Java FFM binding** | `bindings/java` | **repository.gbif.org → Maven Central** | `org.gbif.nameparser:name-parser-rust` | **self-contained JAR** (cdylib bundled); not yet deployed |
+| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — auto-deployed `4.2.0-SNAPSHOT` |
 | Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | deferred |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
 
@@ -109,39 +109,32 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
 ## 3. Packaging the native library (the cross-cutting problem)
 
-Three bindings need `libnameparser_ffi.*` present on the target machine. Java is the hard
-case because it loads over FFM from a path. Two standard solutions:
+Three bindings need `libnameparser_ffi.*` on the target machine. Java is the hard case because it
+loads over FFM from a path. `Ffi.resolveLibPath()` extracts the cdylib from a **classpath
+resource** `native/${os.detected.classifier}/<libname>` to a temp file and hands *that* to
+`SymbolLookup.libraryLookup(...)` — with the `-Dnameparser.ffi.lib` / `$NAMEPARSER_FFI_LIB`
+overrides and a repo-relative dev path as fallbacks. That resource works whether it sits in the
+main JAR or (as we ship it) a per-platform classifier JAR on the consumer's classpath.
 
-- **(a) Bundle-and-extract — ✅ IMPLEMENTED.** The platform cdylib ships as a classpath resource
-  and is extracted at load time. Resource dirs are os-maven-plugin's `${os.detected.classifier}`
-  so `Ffi` and the pom agree on the names:
-  ```
-  bindings/java/src/main/resources/native/   (CI, multi-platform) — or —
-  bindings/java/target/classes/native/        (local build, current platform only)
-    ├── linux-x86_64/libnameparser_ffi.so
-    ├── linux-aarch_64/libnameparser_ffi.so
-    ├── osx-x86_64/libnameparser_ffi.dylib
-    ├── osx-aarch_64/libnameparser_ffi.dylib
-    └── windows-x86_64/nameparser_ffi.dll
-  ```
-  `Ffi.resolveLibPath()` keeps the `-Dnameparser.ffi.lib` / `$NAMEPARSER_FFI_LIB` overrides as
-  dev escape hatches, but when unset extracts `native/${os.detected.classifier}/<libname>` from
-  the JAR to a temp file and hands *that* to `SymbolLookup.libraryLookup(...)` (falling back to
-  the repo-relative dev path only if unbundled). The pom copies the cdylib into the JAR at
-  `prepare-package` (os-maven-plugin + maven-antrun-plugin). Locally, `cargo build -p
-  nameparser-ffi` (release) + `mvn package` yields a self-contained single-platform JAR (~1 MB,
-  verified loading the bundled lib with no override); CI's matrix stashes every platform's
-  cdylib into `src/main/resources/native/**` for a multi-platform fat JAR. Model used by
-  `sqlite-jdbc`, `jansi`, `rocksdbjni`.
+**✅ IMPLEMENTED — classifier JARs (netty-tcnative style), for small JARs.** The module publishes:
 
-- **(b) Classifier artifacts** (à la `netty-tcnative`): a thin main JAR plus
-  `name-parser-rust-<ver>-linux-x86-64.jar` etc.; the consumer adds the matching
-  classifier via `os-maven-plugin`'s `${os.detected.classifier}`. Leaner per-consumer
-  downloads, but more artifacts to build and deploy and a heavier consumer POM.
+- a **thin main JAR** `name-parser-rust-<ver>.jar` (~22 KB, Java classes only) whose manifest is
+  stamped with `Implementation-Version`, `Rust-Engine-Version` (the `gbif-name-parser` crate
+  version), and `Rust-Engine-Git-Revision` (the exact source SHA — see the versioning note in §2.2);
+- one **per-platform classifier JAR** `name-parser-rust-<ver>-<classifier>.jar` (~1–1.6 MB, just
+  that platform's cdylib under `native/<classifier>/`) for `linux-x86_64`, `linux-aarch_64`,
+  `osx-x86_64`, `osx-aarch_64` (Apple Silicon), and `windows-x86_64`.
 
-Given GBIF's deployment surface (Linux servers + developer macs), **(a)** is the simpler
-choice. Either way, CI must build the cdylib for **every platform in the resource matrix
-before the JAR is packaged** — which drives the pipeline shape below.
+A consumer depends on the main JAR + their platform's classifier (via `os-maven-plugin`'s
+`${os.detected.classifier}`), so nobody downloads five architectures they won't use (§5).
+
+The cdylibs are **cross-compiled with `cargo-zigbuild`** (`ci/build-cdylib.sh`): one Linux CI agent
+builds every target — zig cross-compiles cleanly to macOS/Windows because `nameparser-ffi` is pure
+Rust (no C deps). The script bootstraps rustup + zig (self-contained tarball, no brew needed) and
+stages each cdylib into `native-staging/<classifier>/`; the pom's `maven-jar-plugin` executions
+package them with `skipIfEmpty`, so an agent that manages only its host platform still deploys a
+valid subset. Verified end-to-end locally: 6 JARs, correct architectures (incl. Mach-O arm64), and
+a stamped manifest.
 
 ---
 
@@ -226,15 +219,31 @@ If your build does not already resolve from GBIF's Nexus, add:
 </repositories>
 ```
 
-**The Rust-backed FFM binding (once released** — coordinates as in `bindings/java/pom.xml`, a
-drop-in `NameParser` on **JDK 22+**, native libs bundled per §3**):**
+**The Rust-backed FFM binding** — a drop-in `NameParser` on **JDK 22+**. Add the thin main JAR
+plus your platform's native classifier JAR (via `os-maven-plugin`, §3). `4.2.0-SNAPSHOT` deploys
+on every push; `4.2.0` once released:
 
 ```xml
-<dependency>
-  <groupId>org.gbif.nameparser</groupId>
-  <artifactId>name-parser-rust</artifactId>
-  <version>4.2.0</version>
-</dependency>
+<build><extensions>
+  <!-- sets ${os.detected.classifier}: linux-x86_64, osx-aarch_64, windows-x86_64, … -->
+  <extension>
+    <groupId>kr.motd.maven</groupId><artifactId>os-maven-plugin</artifactId><version>1.7.1</version>
+  </extension>
+</extensions></build>
+
+<dependencies>
+  <dependency>                               <!-- thin main JAR: Java + FFM loader -->
+    <groupId>org.gbif.nameparser</groupId>
+    <artifactId>name-parser-rust</artifactId>
+    <version>4.2.0</version>
+  </dependency>
+  <dependency>                               <!-- your platform's native cdylib -->
+    <groupId>org.gbif.nameparser</groupId>
+    <artifactId>name-parser-rust</artifactId>
+    <version>4.2.0</version>
+    <classifier>${os.detected.classifier}</classifier>
+  </dependency>
+</dependencies>
 ```
 
 ```java
@@ -274,14 +283,19 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 
 ## 6. Open items
 
-- [x] Java: native-lib bundling in `Ffi.java` + pom (§3a) — DONE; `mvn package` = self-contained JAR (verified).
-- [ ] Java deploy: POM is deploy-ready (`4.2.0-SNAPSHOT`; `name-parser-api` `4.2.0`; GBIF Nexus
-      `<repositories>`+`<distributionManagement>`). REMAINING: confirm your `~/.m2/settings.xml`
-      `<server>` ids match `gbif-release`/`gbif-snapshot`, then `mvn -f bindings/java/pom.xml deploy`
-      (+ Central sources/javadoc/GPG plugins if Central sync is wanted).
-- [ ] `Jenkinsfile`: native build matrix (Stage 1) + Java deploy (Stage 2); then Stages 3–5.
-- [ ] Python: cibuildwheel config + first PyPI publish.
+- [x] Java native-lib packaging — DONE. Per-arch **classifier JARs** (thin main + `linux-x86_64` /
+      `linux-aarch_64` / `osx-x86_64` / `osx-aarch_64` / `windows-x86_64`), cross-compiled via
+      cargo-zigbuild; main-JAR manifest stamped with version + `Rust-Engine-Version`/`-Git-Revision`.
+- [x] Java deploy + Jenkins — **LIVE**. A Multibranch pipeline auto-deploys `4.2.0-SNAPSHOT` to
+      `repository.gbif.org` on every push (parity 11,302/0 in CI). A `4.2.0` RELEASE additionally
+      needs `release:perform`'s fresh checkout to stage the native libs (flagged in the Jenkinsfile;
+      `<scm>` is now in place); optionally the Central sources/javadoc/GPG plugins for Central sync.
+- [ ] Python: cibuildwheel config + first PyPI publish (`gbif-name-parser`) — needs a PyPI token.
 - [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
+- [ ] Rust CLI: attach `nameparser-cli-<target>.tar.gz` to a GitHub Release.
+- [ ] Wire-format decision: keep-JSON vs keep-struct (recommend keep-JSON — the struct is ~1,500 LOC
+      of brittle lockstep layout for a ~12% edge). A human call.
+- [ ] Phase 5: backend cutover (swap `NameParserRust` in behind the `NameParser` interface; Java 22+).
 - [ ] Rust: add `description`/`repository` + set `publish = true` (name/version/license already
       `gbif-name-parser` / `0.1.0` / Apache-2.0); `cargo publish`; CLI release binaries.
 - [ ] Decide whether the Rust FFM binding ships **alongside** the pure-Java parser or eventually

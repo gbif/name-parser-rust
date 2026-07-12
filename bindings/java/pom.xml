@@ -30,6 +30,16 @@
     see bindings/java/README.md.
   </description>
 
+  <url>https://github.com/gbif/name-parser-rust</url>
+
+  <!-- Required by maven-release-plugin (the Jenkinsfile's release stage) to tag the release. -->
+  <scm>
+    <connection>scm:git:https://github.com/gbif/name-parser-rust.git</connection>
+    <developerConnection>scm:git:git@github.com:gbif/name-parser-rust.git</developerConnection>
+    <url>https://github.com/gbif/name-parser-rust</url>
+    <tag>HEAD</tag>
+  </scm>
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.release>22</maven.compiler.release>
