@@ -53,7 +53,9 @@ Resolved in this order by `Ffi.resolveLibPath()`:
 
 1. JVM system property `-Dnameparser.ffi.lib=/abs/path/to/libnameparser_ffi.dylib`
 2. Environment variable `NAMEPARSER_FFI_LIB`
-3. A repo-relative default (`../../target/release/libnameparser_ffi.{dylib,so,dll}`,
+3. A cdylib **bundled in the JAR** at `native/<os.detected.classifier>/<libname>`, extracted to a
+   temp file — the distributable path (supplied by this artifact's per-platform classifier JAR)
+4. A repo-relative dev default (`../../target/release/libnameparser_ffi.{dylib,so,dll}`,
    extension picked from `os.name`)
 
 `mvn test` already wires (1) via the surefire `argLine`, sourced from the `nameparser.ffi.lib`
