@@ -49,6 +49,13 @@
          Do NOT pre-define git.commit.id.abbrev here — a static value shadows the plugin's. -->
     <rust.engine.version>0.1.0</rust.engine.version>
 
+    <!-- Base dir the per-platform classifier JARs read the staged cdylibs from (ci/build-cdylib.sh
+         populates it). Defaults to this module's own native-staging/; overridable so `mvn
+         release:perform` — which builds in a fresh target/checkout where nothing is staged — can
+         point the inner build back at the cdylibs already built in the OUTER workspace (see the
+         Jenkinsfile release stage), instead of rebuilding them inside the checkout. -->
+    <native.staging.dir>${project.basedir}/native-staging</native.staging.dir>
+
     <!-- Resolution order actually used at runtime (see Ffi.resolveLibPath): the system
          property below (as passed by the surefire argLine) -> env NAMEPARSER_FFI_LIB ->
          a repo-relative default hardcoded in Ffi.java. This property exists so `mvn test`
@@ -185,31 +192,31 @@
           <execution>
             <id>native-linux-x86_64</id><phase>package</phase><goals><goal>jar</goal></goals>
             <configuration><classifier>linux-x86_64</classifier>
-              <classesDirectory>${project.basedir}/native-staging/linux-x86_64</classesDirectory>
+              <classesDirectory>${native.staging.dir}/linux-x86_64</classesDirectory>
               <skipIfEmpty>true</skipIfEmpty></configuration>
           </execution>
           <execution>
             <id>native-linux-aarch_64</id><phase>package</phase><goals><goal>jar</goal></goals>
             <configuration><classifier>linux-aarch_64</classifier>
-              <classesDirectory>${project.basedir}/native-staging/linux-aarch_64</classesDirectory>
+              <classesDirectory>${native.staging.dir}/linux-aarch_64</classesDirectory>
               <skipIfEmpty>true</skipIfEmpty></configuration>
           </execution>
           <execution>
             <id>native-osx-x86_64</id><phase>package</phase><goals><goal>jar</goal></goals>
             <configuration><classifier>osx-x86_64</classifier>
-              <classesDirectory>${project.basedir}/native-staging/osx-x86_64</classesDirectory>
+              <classesDirectory>${native.staging.dir}/osx-x86_64</classesDirectory>
               <skipIfEmpty>true</skipIfEmpty></configuration>
           </execution>
           <execution>
             <id>native-osx-aarch_64</id><phase>package</phase><goals><goal>jar</goal></goals>
             <configuration><classifier>osx-aarch_64</classifier>
-              <classesDirectory>${project.basedir}/native-staging/osx-aarch_64</classesDirectory>
+              <classesDirectory>${native.staging.dir}/osx-aarch_64</classesDirectory>
               <skipIfEmpty>true</skipIfEmpty></configuration>
           </execution>
           <execution>
             <id>native-windows-x86_64</id><phase>package</phase><goals><goal>jar</goal></goals>
             <configuration><classifier>windows-x86_64</classifier>
-              <classesDirectory>${project.basedir}/native-staging/windows-x86_64</classesDirectory>
+              <classesDirectory>${native.staging.dir}/windows-x86_64</classesDirectory>
               <skipIfEmpty>true</skipIfEmpty></configuration>
           </execution>
         </executions>

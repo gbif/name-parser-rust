@@ -1,0 +1,79 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Publishes the native `nameparser-cli` binary to a GitHub Release — one archive per platform,
+# each with a SHA-256 checksum. The CLI is pure Rust (no FFM/cdylib), so every target builds
+# NATIVELY on its own runner; there is no cross-compilation to get wrong.
+#
+# This workflow is ONLY for the CLI. The Java FFM binding releases separately via Jenkins (see
+# Jenkinsfile), the Rust engine to crates.io, Python to PyPI, R to CRAN — see DISTRIBUTION.md.
+#
+# Release flow:
+#   1. Bump `crates/nameparser-cli/Cargo.toml`'s version to match the intended tag (optional but
+#      tidy — the binary works regardless; the archive/version comes from the git tag).
+#   2. Tag and push:  git tag cli-v0.1.0 && git push origin cli-v0.1.0
+#   3. This workflow builds all platforms and attaches the archives to the `cli-v0.1.0` release.
+# Or run it from the Actions tab (workflow_dispatch) against an existing `cli-v*` tag.
+
+name: Publish CLI
+
+on:
+  push:
+    tags:
+      - 'cli-v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing cli-v* tag to build and publish (e.g. cli-v0.1.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write   # create the release and upload the binary archives
+
+jobs:
+  publish:
+    name: ${{ matrix.target }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-24.04-arm      # native arm64 runner (free for public repos) — no cross-compile
+          - target: x86_64-apple-darwin
+            os: macos-13              # Intel macOS
+          - target: aarch64-apple-darwin
+            os: macos-latest          # Apple Silicon macOS
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out the tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+
+      - name: Install the Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+
+      - name: Build, archive, and upload nameparser-cli to the release
+        uses: taiki-e/upload-rust-binary-action@v1
+        with:
+          bin: nameparser-cli
+          target: ${{ matrix.target }}
+          # e.g. nameparser-cli-x86_64-unknown-linux-gnu.tar.gz (.zip on Windows); the version
+          # lives in the release/tag name, so it is not repeated in the archive name.
+          archive: nameparser-cli-$target
+          checksum: sha256
+          # On a tag push, $tag is taken from github.ref. On manual dispatch, github.ref is the
+          # default branch, so pin the release tag explicitly to the input.
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/tags/{0}', inputs.tag) || github.ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -66,11 +66,13 @@ pipeline {
       }
     }
 
-    // NOTE: this release stage mirrors CoL's structure but needs two things before it works for a
-    // single native-binding module: (1) an <scm> block in bindings/java/pom.xml (release:prepare
-    // tags via SCM); (2) the cdylib inside release:perform's fresh target/checkout build — the
-    // build-cdylib.sh below builds it in the OUTER workspace, not that inner checkout. The snapshot
-    // deploy ('Maven build' above) is the working every-commit flow; finish release wiring later.
+    // Maven release of the single native-binding module. Two things make release:perform work here:
+    // (1) the <scm> block in bindings/java/pom.xml (release:prepare tags via SCM); (2) the classifier
+    // JARs read their cdylibs from ${native.staging.dir} (a pom property) -- release:perform builds
+    // in a fresh target/checkout where nothing is staged, so -Darguments below points that inner
+    // build at the cdylibs build-cdylib.sh already staged in the OUTER $WORKSPACE, rather than
+    // rebuilding them inside the checkout. (The snapshot deploy in 'Maven build' above stays the
+    // every-commit flow.) A first release should be run as a dry-run to confirm end to end.
     stage('Maven release: Java FFM binding') {
       when {
         allOf {
@@ -86,7 +88,7 @@ pipeline {
               variable: 'MAVEN_SETTINGS_XML')]) {
             git 'https://github.com/gbif/name-parser-rust.git'
             sh 'bash ci/build-cdylib.sh'
-            sh "mvn -s \$MAVEN_SETTINGS_XML -f bindings/java/pom.xml -B -Denforcer.skip=true -Darguments=\"-DskipTests -DskipITs\" release:prepare release:perform -Dtag=v${params.RELEASE_VERSION} ${releaseArgs}"
+            sh "mvn -s \$MAVEN_SETTINGS_XML -f bindings/java/pom.xml -B -Denforcer.skip=true -Darguments=\"-DskipTests -DskipITs -Dnative.staging.dir=\$WORKSPACE/bindings/java/native-staging\" release:prepare release:perform -Dtag=v${params.RELEASE_VERSION} ${releaseArgs}"
           }
         }
       }
