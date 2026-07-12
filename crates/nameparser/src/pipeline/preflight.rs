@@ -715,8 +715,8 @@ mod tests {
     #[test]
     fn single_letter_abbreviation_with_dot_is_not_rejected_by_the_letter_count_guard() {
         // "B." is an abbreviated genus stand-in, not a bare letter -- Preflight's own
-        // letter-count guard must let it through (downstream stages, not yet ported in this
-        // slice, are responsible for actually expanding/handling it).
+        // letter-count guard must let it through (downstream stages are responsible for
+        // actually expanding/handling it).
         assert!(check("B.").is_ok());
     }
 
@@ -849,8 +849,8 @@ mod tests {
     #[test]
     fn question_prefixed_epithet_with_trailing_authorship_is_not_preflight_rejected() {
         // QUESTION_ONLY only fires when there's nothing else on the line; with an author
-        // citation following, the missing-genus placeholder is reconstructed downstream
-        // (not yet ported in this slice), so Preflight itself must let it through.
+        // citation following, the missing-genus placeholder is reconstructed downstream, so
+        // Preflight itself must let it through.
         assert!(check("? gryphoidis Bourguignat 1870").is_ok());
     }
 

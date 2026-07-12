@@ -3,8 +3,10 @@
 //! the homoglyph-replacement table (`HOMOGLYHPS`/`containsHomoglyphs`/`replaceHomoglyphs`)
 //! used by `pipeline::stripandstash`'s step 13. `decompose`/`foldToAscii`/
 //! `replaceSpecialCases`/`removeNonAscii`/`replaceNonAscii`/`unescapeUnicodeChars`/
-//! `decodeUtf8Garbage`/`containsDiacritics`/`findDiacritics` are NOT ported — no ported
-//! call site reaches them yet.
+//! `decodeUtf8Garbage`/`containsDiacritics`/`findDiacritics` are NOT ported: no call site
+//! anywhere in this crate's (now complete) pipeline reaches them, and the full-corpus
+//! Rust-vs-Java parity cross-validation (see `benchmarks.md`/`cross-validation.md`, 0
+//! mismatches) confirms their absence isn't a gap.
 
 /// Unicode apostrophe / single-quote variants that normalise to the ASCII apostrophe `'`.
 /// Verbatim transcription of Java `UnicodeUtils.SINGLE_QUOTES`

@@ -19,9 +19,8 @@ import java.util.List;
 
 /**
  * Reader for the flat fixed-layout binary wire format {@code np_parse_struct} writes -- the
- * exact offsets/slots/run-tables documented as {@code crates/nameparser-ffi/src/layout.rs}'s
- * module doc comment (restated in full in {@code .superpowers/sdd/task-5-report.md}, written to
- * be self-contained for this class). This class owns every offset/slot constant for that wire
+ * exact offsets/slots/run-tables documented in {@code crates/nameparser-ffi/src/layout.rs}'s
+ * module doc comment. This class owns every offset/slot constant for that wire
  * format plus the one-time startup guard that makes trusting those constants safe (see the
  * static initializer below) -- {@link Ffi} stays pure FFM plumbing (arena, downcall, retry) and
  * defers to this class for everything struct-shaped.

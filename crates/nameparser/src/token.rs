@@ -48,12 +48,11 @@ pub(crate) fn is_whitespace_java(c: char) -> bool {
 /// combine with a following capitalised author surname ("de Vriese", "Van Heurck", "von
 /// der Linde"). Full 50-entry set transcribed verbatim from `AuthorParticles.java` (and
 /// verified programmatically against it — an exact set match, no entries dropped or
-/// added), even
-/// though the only current call site (`StripAndStash::apply_missing_genus_placeholder`,
-/// Phase 1 Slice 2 Task 3) only needs the boolean `is_particle` — a later
-/// authorship-parsing slice needs the same table (and Java's own
-/// `isCapitalisedParticle`), so the full set is ported once here rather than a
-/// hand-trimmed subset.
+/// added). The first call site (`StripAndStash::apply_missing_genus_placeholder`, Phase 1
+/// Slice 2 Task 3) only needed the boolean `is_particle` — `NameTokens`/`AuthorshipSplit`/
+/// `AuthorshipParser` now call it too (mirroring Java's own `isCapitalisedParticle`, which
+/// needs the same table), so porting the full set once here rather than a hand-trimmed
+/// subset paid off.
 const PARTICLES: &[&str] = &[
     "a", "ab", "af", "ap", "auf", "d", "da", "dal", "dalla", "dalle", "dallo", "das", "de",
     "degli", "dei", "del", "della", "delle", "delli", "dello", "der", "des", "di", "do", "dos",

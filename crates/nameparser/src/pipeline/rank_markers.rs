@@ -2,7 +2,7 @@
 
 //! Java `org.gbif.nameparser.pipeline.RankMarkers` — the two rank-marker lookup tables
 //! (`INFRASPECIFIC`, `INFRAGENERIC`: marker string -> [`Rank`]) and their notho-aware
-//! matchers. Consumed by the not-yet-ported `AuthorshipSplit`/`NameTokens` stages (Phase 1
+//! matchers. Consumed by the `AuthorshipSplit`/`NameTokens` stages (Phase 1
 //! Slice 3 Tasks 2-3) to recognise rank-marker tokens ("subsp.", "var.", "sect.", …)
 //! between name-part epithets.
 //!

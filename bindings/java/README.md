@@ -103,8 +103,8 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
   against `NameParserRust` (`rust`), single-name, in-process, over the first ~2,000 names of
   `../../testdata/benchmark-data.txt`. See "Running the JMH benchmark" below.
 
-See `.superpowers/sdd/task-6-report.md` for the STRUCT wire format's design and the JMH A/B that
-led to dropping the JSON path in favour of it (`jmh/results-jmh-ab.json` holds those raw numbers).
+The JMH A/B that led to dropping the JSON path in favour of the struct is recorded in
+`benchmarks.md` (§5) and `jmh/results-jmh-ab.json` (raw numbers).
 
 ## Running the JMH benchmark
 

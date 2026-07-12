@@ -115,19 +115,9 @@ pub fn run(
     // function, sitting between StripAndStash and the Tokenizer.
     stripandstash::run(&mut ctx);
 
-    // StripAndStash's skeleton is wired in above, in Java's exact position (Phase 1 Slice 2
-    // Task 2), but every one of its 55 steps is still a `// TODO batch N` no-op stub —
-    // later Slice 2 batches replace them — so `ctx.working` here is still byte-for-byte
-    // what Preflight left it. That already makes this guard sound in the direction that
-    // matters: StripAndStash only ever strips characters out of `ctx.working` (stashing
-    // annotation spans elsewhere on `ctx`), it never adds any, so "no letters left after
-    // Preflight" already guarantees "no letters left after a fully-ported StripAndStash"
-    // too — every input this guard rejects, Java would also reject post-strip. Known
-    // deferred gap, not yet reachable by the corpus, that resolves itself automatically as
-    // the batches land (no further change needed at this call site): an input WITH a
-    // letter now, all of whose letters a *completed* StripAndStash would strip away (e.g. a
-    // bracketed "[sic]"-only comment), isn't caught here yet. (Originally found via the
-    // Task 6 golden corpus: `-,.#` — Java `Err(OTHER)` — before this guard existed at all.)
+    // The guard rejects any input left with no letters after Preflight + StripAndStash,
+    // matching Java `Pipeline.java:70-73`. (Originally found via the Task 6 golden corpus:
+    // `-,.#` — Java `Err(OTHER)` — before this guard existed at all.)
     if !has_letter(&ctx.working) {
         return Err(ParseError::new(NameType::Other, None, name));
     }
@@ -388,7 +378,8 @@ mod tests {
     #[test]
     fn name_at_max_length_is_not_rejected_by_the_length_guard() {
         // Exactly MAX_LENGTH (1000) chars must pass the length guard (only `> 1000`
-        // rejects); the stubbed Preflight lets it through this slice.
+        // rejects); Preflight has no length check of its own, so a bare run of letters
+        // like this passes it too.
         let at_limit = "a".repeat(1000);
         assert!(run(&at_limit, None, None, None).is_ok());
     }
@@ -406,10 +397,9 @@ mod tests {
     #[test]
     fn normal_binomial_returns_ok_with_a_seeded_name() {
         let pn = run("Abies alba", None, None, None).expect("should parse");
-        // Tokenizer + AuthorshipSplit + NameTokens are wired in as of Phase 1 Slice 3 Task
-        // 3, so a clean binomial is now fully name-part-classified; only the authorship
-        // fields (AuthorshipParser/Assemble, still `// TODO`) stay at their
-        // ParseContext-seeded defaults.
+        // Tokenizer + AuthorshipSplit + NameTokens classify a clean binomial into its
+        // name-part fields; this input carries no authorship, so the authorship fields
+        // (AuthorshipParser/Assemble) stay at their ParseContext-seeded defaults here.
         assert_eq!(pn.genus, Some("Abies".to_string()));
         assert_eq!(pn.specific_epithet, Some("alba".to_string()));
         assert_eq!(pn.rank, Rank::Species);
@@ -434,8 +424,8 @@ mod tests {
 
     #[test]
     fn long_name_over_250_chars_gets_the_long_name_warning() {
-        // "Abies " (6 chars) * 42 = 252 chars, still all-letters/space so Preflight's
-        // no-op stub and the length guard (1000) both let it through.
+        // "Abies " (6 chars) * 42 = 252 chars, still all-letters/space so Preflight and
+        // the length guard (1000) both let it through.
         let long = "Abies ".repeat(42);
         let pn = run(long.trim(), None, None, None).expect("should parse");
         assert!(pn.warnings.contains(&warnings::LONG_NAME.to_string()));

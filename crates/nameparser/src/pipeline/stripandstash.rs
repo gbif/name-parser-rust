@@ -130,8 +130,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
 // Every worked example below was spot-checked against the real Java CLI oracle
 // (`name-parser-cli-4.2.0-SNAPSHOT-shaded.jar`) on adjunct test input — not just traced by
 // hand — since the corpus golden harness alone can't validate step-level behaviour for
-// fields the (not yet ported) tokenizer/authorship-parser/Assemble stages would otherwise
-// surface.
+// fields the tokenizer/authorship-parser/Assemble stages would otherwise surface.
 // ===================================================================================
 
 /// Java `hasEarlierYear(String, int)` (StripAndStash.java:362-365): true if a 4-digit year
@@ -210,7 +209,7 @@ static UNCERTAIN_AUTHOR_SLASH: LazyLock<Regex> =
 /// Schinz", "Smith/Jones") mark the authorship uncertain WITHOUT stripping anything — the
 /// "?"/"or"/"/" stay in the working string (spot-checked against the Java CLI oracle: "Aus
 /// bus Sess?" keeps the literal "Sess?" through this step — the "?" is only later dropped by
-/// the not-yet-ported tokenizer; "Aus bus Jarocki or Schinz, 1900" keeps the literal " or "
+/// the tokenizer; "Aus bus Jarocki or Schinz, 1900" keeps the literal " or "
 /// in the author text all the way to the final parse). Internal "letter?letter"
 /// transcription artefacts ("Istv?nffi") are left to `repair_question_mark_in_word` (step 7).
 fn flag_uncertain_authorship(ctx: &mut ParseContext, mut s: String) -> String {
@@ -247,7 +246,7 @@ static INFRAGEN_AUTHOR_BEFORE_MARKER: LazyLock<Regex> = LazyLock::new(|| {
 /// authorship placed before an infrageneric rank marker as the genus author: "Cordia
 /// (Adans.) Kuntze sect. Salimori" leaves "Cordia sect. Salimori" for the pipeline (the
 /// sectional epithet is not read as an author) and stashes "(Adans.) Kuntze" in
-/// `ctx.pending_generic_author` for `Pipeline` (not yet ported) to apply as the generic
+/// `ctx.pending_generic_author` for `Pipeline` to apply as the generic
 /// authorship — the section itself is unauthored.
 fn extract_generic_author(ctx: &mut ParseContext, s: String) -> String {
     // Java calls `.matches()` (full-string match); the pattern's own `^…$` anchors make
@@ -278,7 +277,7 @@ static QUOTED_MONOMIAL: LazyLock<FancyRegex> =
 /// Java `StripAndStash.stripQuotedMonomial` (StripAndStash.java:655-666). A leading
 /// monomial wrapped in quotes ("'Prosthète' Hesse, 1861" / "\"Foo\" Bar, 2000") marks a
 /// word that is not an available scientific name. Strips the quotes for parsing, remembers
-/// the quote char in `ctx.quoted_monomial` (so `Assemble`, not yet ported, can re-wrap the
+/// the quote char in `ctx.quoted_monomial` (so `Assemble` can re-wrap the
 /// parsed uninomial — confirmed against the Java CLI oracle: the final `uninomial` comes
 /// back as `'Prosthète'`, quotes and all), and flags doubtful.
 fn strip_quoted_monomial(ctx: &mut ParseContext, s: String) -> String {
@@ -442,23 +441,23 @@ static LETTER_SUBDIVISION_MARKER: LazyLock<Regex> = LazyLock::new(|| {
 
 /// Java `RankMarkers.LETTER_SUBDIVISION` (RankMarkers.java:21): the synthetic single-token
 /// marker `StripAndStash` substitutes for informal letter-based species subdivisions, so
-/// the (not yet ported) rank-marker machinery treats the trailing epithet as an
+/// the rank-marker machinery treats the trailing epithet as an
 /// infraspecific of the unmappable rank `Rank::Other`. Never appears in user input.
 const LETTER_SUBDIVISION: &str = "infrasubdivision";
 
 /// Java `RankMarkers.matchInfraspecific(String) != null` — MINIMAL existence-only port.
-/// `Rank` is still a stub in this Phase 1 slice (only `Unranked`/`Species`/`Subspecies`
-/// exist), so the real `RankMarkers.INFRASPECIFIC` map (word -> `Rank`) can't be
-/// represented yet; only the boolean null-check this one call site
-/// (`normalise_letter_subdivision_marker` below) needs is ported here — the full map (with
-/// real `Rank` values) lands in the dedicated rank-handling slice. Key set transcribed
-/// verbatim from `RankMarkers.java`'s `INFRASPECIFIC` map (including `LETTER_SUBDIVISION`
-/// itself, which Java's own map also carries as a key, and the non-letter `"*"` key, which
-/// this call site can never actually produce). In practice the calling regex can only ever
-/// split a SINGLE ASCII lowercase letter into `segments[0]` (see the doc comment below), so
-/// only the `"f"` entry is reachable here — the full set is still ported (not hand-trimmed
-/// down to just "f") so this stays an honest stand-in for the real map, not a
-/// call-site-specific shortcut.
+/// This is a small pre-existing stand-in for the real `RankMarkers.INFRASPECIFIC` map (word
+/// -> `Rank`), predating `rank_markers.rs` (the dedicated rank-handling module, which now
+/// carries the full word -> `Rank` map); only the boolean null-check this one call site
+/// (`normalise_letter_subdivision_marker` below) needs is kept here rather than routed
+/// through that module (see `rank_markers.rs`'s own module doc for the cross-reference).
+/// Key set transcribed verbatim from `RankMarkers.java`'s `INFRASPECIFIC` map (including
+/// `LETTER_SUBDIVISION` itself, which Java's own map also carries as a key, and the
+/// non-letter `"*"` key, which this call site can never actually produce). In practice the
+/// calling regex can only ever split a SINGLE ASCII lowercase letter into `segments[0]`
+/// (see the doc comment below), so only the `"f"` entry is reachable here — the full key
+/// set is nonetheless transcribed in full (not hand-trimmed down to just "f") so this stays
+/// an honest stand-in for the real map, not a call-site-specific shortcut.
 const KNOWN_INFRASPECIFIC_MARKERS: &[&str] = &[
     LETTER_SUBDIVISION,
     "subsp",
@@ -599,7 +598,7 @@ static STRAIN_DESIGNATION: LazyLock<FancyRegex> = LazyLock::new(|| {
 /// strain designation after a "str"/"strain" marker ("Aphanizomenon flos-aquae
 /// str .'Aph K2'") is kept intact as `ctx.name.phrase` (type=INFORMAL) rather than let leak
 /// into the authorship parser or get reinterpreted as a cultivar epithet. The remaining
-/// "Genus species str." is left for NameTokens (not yet ported), which resolves the
+/// "Genus species str." is left for NameTokens, which resolves the
 /// trailing "str" marker to `Rank::Strain` — spot-checked against the Java CLI oracle:
 /// `rank=STRAIN, phrase="Aph K2", type=INFORMAL`. Only fires when a plausible name (a
 /// capitalised genus) precedes the marker, never on junk.
@@ -739,8 +738,7 @@ static NULL_EPITHET_MID: LazyLock<FancyRegex> = LazyLock::new(|| {
 /// "null" between two lowercase epithets ("Austrorhynchus pectatus null pectatus") is a
 /// data-quality artefact — dropped, flagging doubtful + `NULL_EPITHET` (spot-checked
 /// against the Java CLI oracle). A single "null" epithet followed by an author span
-/// ("Abies null Hood") is NOT touched here — left for `Assemble::flagBlacklistedEpithets`
-/// (not yet ported).
+/// ("Abies null Hood") is NOT touched here — left for `Assemble::flagBlacklistedEpithets`.
 fn strip_null_between_epithets(ctx: &mut ParseContext, s: String) -> String {
     if NULL_EPITHET_TEST.is_match(&s) {
         let s = fancy_replace_all(&NULL_EPITHET_MID, &s, |_| " ".to_string());
@@ -1022,11 +1020,11 @@ fn strip_html(ctx: &mut ParseContext, s: String) -> String {
 // ---------------------------------------------------------------------------------
 // Batch 2 (steps 20-30): candidatus, cultivar Group/grex/quoted, extinct, t.infr.,
 // doubtful-genus brackets, sic/corrig, synonym bracket, bracketed + bare nom-note.
-// Ported (Phase 1 Slice 2, batch 2b). This batch introduces the first `Rank` variants
-// beyond the Unranked/Species/Subspecies trio (`model::enums::Rank`'s own STUB doc
-// comment has the details) — `rank`/`code` are shared (B) fields also written by later,
-// not-yet-ported stages, so they're not part of THIS slice's gate, but are set here
-// faithfully anyway since later slices consume them.
+// Ported (Phase 1 Slice 2, batch 2b). This batch introduced the first `Rank` variants
+// beyond the Unranked/Species/Subspecies trio that existed at the time (`model::enums::Rank`
+// is now the full 117-constant enumeration — see its own doc comment) — `rank`/`code` are
+// shared (B) fields also written by the downstream stages, so they're not part of THIS
+// slice's gate, but are set here faithfully anyway since those stages consume them.
 // ---------------------------------------------------------------------------------
 
 /// Java WHITESPACE (StripAndStash.java:288): `\s+`, no flags. Has `\s`, no `\p{...}` ->
@@ -1660,7 +1658,7 @@ static NOM_NOTE_RANK_HINT: LazyLock<Regex> =
 /// pre-match text, trimmed) — independent `if`s, not else-if:
 ///   - a bare "sp. nov."/"spec. nov." tail on an otherwise-single-Title-Word monomial
 ///     REPLACES the reconstructed working string with "`before` sp." (re-adding a bare
-///     rank marker so the not-yet-ported indet/INFORMAL handling still recognises a
+///     rank marker so the downstream indet/INFORMAL handling still recognises a
 ///     species-indet name, rather than leaving a bare uninomial with the marker fully
 ///     gone);
 ///   - a captured note containing "ined"/"ms"/"msc"/"unpublished" sets `manuscript = true`
@@ -1668,7 +1666,7 @@ static NOM_NOTE_RANK_HINT: LazyLock<Regex> =
 ///     manuscript-marker step, batch 4, won't see it there anymore);
 ///   - when the name doesn't already carry a rank (`Rank::Unranked`), a gen/fam/var/form
 ///     prefix on `raw` pins the rank accordingly ("sp"/"spec" is left alone — SPECIES is
-///     assigned later, by the not-yet-ported Assemble, for binomials).
+///     assigned later, by Assemble, for binomials).
 fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
     let caps = match NOM_NOTE.captures(&s) {
         Ok(Some(c)) => c,
@@ -1772,7 +1770,7 @@ static TRAILING_SPECIES_WORD: LazyLock<Regex> =
 /// trailing " species"/" species." on an otherwise-bare Title-cased uninomial ("Abies
 /// species", "Abies species.") drops the word, producing a plain monomial — spot-checked:
 /// both forms -> `uninomial="Abies"` (no rank/INFORMAL marker stashed here; that
-/// classification happens in the not-yet-ported tokenizer/Assemble).
+/// classification happens in the tokenizer/Assemble).
 fn strip_trailing_species_word(_ctx: &mut ParseContext, s: String) -> String {
     if TRAILING_SPECIES_WORD_TEST.is_match(&s) {
         if let Some(m) = TRAILING_SPECIES_WORD.find(&s) {
@@ -1910,7 +1908,7 @@ static ANON_LOWER: LazyLock<FancyRegex> =
 /// Java `StripAndStash.normaliseAnon` (StripAndStash.java:1268-1274). Working-string-only
 /// (no `ctx.name` mutation, no warnings): TWO sequential, UNCONDITIONAL replacements —
 /// title-case "Anon"/"Anon." and lower-case "anon" (not already followed by a dot) both
-/// normalise to the canonical lower-case "anon." so the (not yet ported) authorship
+/// normalise to the canonical lower-case "anon." so the authorship
 /// parser captures it as a real anonymous-author token — spot-checked: "Aus bus Anon." ->
 /// authors=["anon."]; "Aus bus anon" -> authors=["anon."] (same result either input
 /// casing).
@@ -2030,11 +2028,11 @@ static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 
 /// Java `StripAndStash.stripParenTaxNote` (StripAndStash.java:1334-1344). A trailing
 /// "(nec/non/not …, YYYY)" parenthesised homonym citation — the WHOLE bracket wraps the
-/// note (unlike step 40's sibling `PAREN_NOTE`/`LEADING_HOMONYM_PAREN`, not yet ported —
-/// those handle a homonym citation embedded inside an authorship span, not this
-/// end-anchored standalone form) — APPENDS the captured text (verbatim, trimmed) to
-/// `taxonomicNote` — spot-checked: "Aus bus Smith (non Foo, 1850)" ->
-/// `taxonomicNote="non Foo, 1850"`, authors=["Smith"].
+/// note (unlike step 40's sibling `PAREN_NOTE`/`LEADING_HOMONYM_PAREN`, ported further down
+/// this file as part of `strip_authorship_markers` — those handle a homonym citation
+/// embedded inside an authorship span, not this end-anchored standalone form) — APPENDS the
+/// captured text (verbatim, trimmed) to `taxonomicNote` — spot-checked: "Aus bus Smith (non
+/// Foo, 1850)" -> `taxonomicNote="non Foo, 1850"`, authors=["Smith"].
 fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = PAREN_TAX_NOTE.captures(&s) {
         let note = java_trim(caps.get(1).unwrap().as_str()).to_string();
@@ -2074,11 +2072,11 @@ static SENSU_LATO_REMAINDER: LazyLock<Regex> = LazyLock::new(|| {
 /// mid-string "s.l."/"s.lat."/"s.str."/"s.ampl." marker followed by trailing junk that
 /// isn't part of the name (e.g. a truncated re-citation after a dash) — the marker
 /// (whitespace-removed, lower-cased) APPENDS to `taxonomicNote` and the trailing junk
-/// (trimmed) is parked in `ctx.pending_unparsed` (first-writer-wins; NOT validated this
-/// slice, but populated faithfully for later slices to consume) — spot-checked:
+/// (trimmed) is parked in `ctx.pending_unparsed` (first-writer-wins), populated faithfully
+/// for the downstream stages that consume it — spot-checked:
 /// "Asplenium trichomanes L. s.lat. - Asplen trich" -> `taxonomicNote="s.lat."`,
 /// `unparsed="- Asplen trich"` (the `unparsed` JSON field itself, like `state=PARTIAL`, is
-/// assembled by the not-yet-ported Pipeline/Assemble from `pending_unparsed` — this step
+/// assembled by Pipeline/Assemble from `pending_unparsed` — this step
 /// only needs to stash the pending value).
 fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = SENSU_LATO_REMAINDER.captures(&s) {
@@ -2247,10 +2245,10 @@ static AGGREGATE: LazyLock<Regex> = LazyLock::new(|| {
 /// " agg."/"aggregate"/"species group"/"species complex"/"group"/"complex"/"-group"/
 /// "-aggregate" suffix marks a species aggregate: sets `ctx.aggregate = true` (a direct
 /// field write, matching Java's package-private `ctx.aggregate = true;` — NOT one of the
-/// 10 downstream-independent gate fields; consumed by the not-yet-ported Assemble to
+/// 10 downstream-independent gate fields; consumed by Assemble to
 /// promote `rank` to `SPECIES_AGGREGATE`) and strips the suffix — spot-checked against
-/// the Java CLI oracle (rank promotion itself is Assemble's job, out of scope this slice,
-/// but confirms the working-string strip leaves a clean binomial in all three shapes):
+/// the Java CLI oracle (rank promotion itself is Assemble's job, so this only confirms
+/// the working-string strip leaves a clean binomial in all three shapes):
 /// "Achillea millefolium agg." / "... species group" / "...-group" all reduce the working
 /// string to "Achillea millefolium".
 fn strip_aggregate_suffix(ctx: &mut ParseContext, s: String) -> String {
@@ -2277,8 +2275,9 @@ fn strip_aggregate_suffix(ctx: &mut ParseContext, s: String) -> String {
 // have already populated a reference). Steps 46/49/52 APPEND to `nomenclaturalNote`
 // via `add_nomenclatural_note`. New `ParseContext::set_pending_publication_year`
 // (first-writer-wins, mirrors `set_pending_imprint_year`) is threaded through from
-// steps 48/49/50 — not yet consumed by anything downstream (Pipeline/Assemble aren't
-// ported), same port-ahead-of-the-consumer precedent already set by
+// steps 48/49/50 and consumed downstream by Pipeline (applied onto the combination
+// authorship's year — see `pipeline::mod`'s own doc comment), same
+// port-the-producer-and-consumer-together pattern already used for
 // `pending_generic_author`/`pending_specific_author`. All worked examples below were
 // spot-checked against the real Java CLI oracle, same convention as batches 1-2c.
 // ---------------------------------------------------------------------------------
@@ -2368,7 +2367,7 @@ static IN_AUTHOR_YEAR: LazyLock<Regex> =
 /// <publication>" citation INSIDE a parenthesised basionym ("Hypsicera femoralis (Geoffroy in
 /// Fourcroy, 1785)") is rewritten to just the basionym author, MOVING the publication's own
 /// year onto the basionym when the basionym didn't already carry one — so it survives as a
-/// normal "(Author, year)" basionym for the not-yet-ported authorship parser and code
+/// normal "(Author, year)" basionym for the authorship parser and code
 /// inference — and the publication text APPENDS to `publishedIn` (`add_published_in`, same
 /// append-is-setPublishedIn-on-the-combined-string semantics described on that method). Spot-
 /// checked against the Java CLI oracle: -> "Hypsicera femoralis (Geoffroy, 1785)" with
@@ -2976,12 +2975,12 @@ static PHRASE_NAME: LazyLock<Regex> = LazyLock::new(|| {
 /// e.g. "Prostanthera sp. Somersbey (B.J.Conn 4024)" — the phrase (here "Somersbey
 /// (B.J.Conn 4024)") is stashed on `ctx.name.phrase` UNCONDITIONALLY once a recognised
 /// rank marker is found, and the working string is rewritten into one of four shapes
-/// depending on the Latin prefix, so the not-yet-ported NameTokens sees a clean indet
+/// depending on the Latin prefix, so NameTokens sees a clean indet
 /// name. All four shapes spot-checked against the Java CLI oracle:
 ///   - a trailing author span after the epithet(s) ("Baeckea Benth. sp. Bygalorie (ABC
 ///     123)" -> working "Baeckea sp. Benth.") -> the marker is spliced BEFORE that author
-///     span so the author still trails as the species author for AuthorshipParser (not
-///     yet ported); rank is NOT pinned here — oracle confirms the eventual `rank=SPECIES`
+///     span so the author still trails as the species author for AuthorshipParser;
+///     rank is NOT pinned here — oracle confirms the eventual `rank=SPECIES`
 ///     comes from downstream re-reading the reinserted "sp." marker, not from this step.
 ///   - a bare genus (no species) with a marker OTHER than "sp."/"spec." ("Grevillea
 ///     subsp. 'Short Leaf'" -> `rank=SUBSPECIES`, working "Grevillea") -> rank pinned
@@ -3017,7 +3016,7 @@ fn stash_phrase_name(ctx: &mut ParseContext, s: String) -> String {
 
     if let Some(author_start) = author_start {
         // Splice the marker BEFORE the author span so it trails as the species author for
-        // AuthorshipParser (not yet ported) to pick up; rank is intentionally left
+        // AuthorshipParser to pick up; rank is intentionally left
         // untouched here — the reinserted "marker." drives the rank downstream instead.
         format!(
             "{} {marker}. {}",
@@ -3293,8 +3292,8 @@ mod tests {
     #[test]
     fn qmark_glued_to_author_word_flags_uncertain_without_stripping() {
         // Spot-checked against the Java CLI oracle: "Aus bus Sess?" keeps the literal
-        // "Sess?" through StripAndStash — the "?" is dropped later by the (not yet
-        // ported) tokenizer, not here.
+        // "Sess?" through StripAndStash — the "?" is dropped later by the tokenizer,
+        // not here.
         let mut c = ctx("x");
         let out = flag_uncertain_authorship(&mut c, "Aus bus Sess?".to_string());
         assert_eq!(out, "Aus bus Sess?");
@@ -4349,7 +4348,7 @@ mod tests {
         // Spot-checked against the Java CLI oracle: genus=Abies (no specificEpithet),
         // type=INFORMAL, nomenclaturalNote="sp. nov." — the SP_NOV_PREFIX +
         // SINGLE_TITLE_WORD override reduces the working string to "Abies sp." so the
-        // (not yet ported) indet-species handling still recognises it downstream.
+        // indet-species handling still recognises it downstream.
         let mut c = ctx("x");
         let out = strip_nom_note(&mut c, "Abies sp. nov.".to_string());
         assert_eq!(out, "Abies sp.");
@@ -4748,7 +4747,7 @@ mod tests {
         // No ", YYYY" after the colon (a sanctioning-author citation, e.g. "Boletus
         // versicolor L. : Fr.") must NOT be captured here — spot-checked against the
         // Java CLI oracle: this form surfaces as `sanctioningAuthor`, a wholly different
-        // (not yet ported) mechanism, and StripAndStash leaves it untouched.
+        // mechanism, and StripAndStash leaves it untouched.
         let mut c = ctx("x");
         let out = strip_colon_concept_reference(
             &mut c,
@@ -5412,7 +5411,7 @@ mod tests {
         // year-shaped match in the combined string" rule, the latter is
         // set_pending_publication_year's "parenthesised year tried first" rule. Oracle-verified
         // this input yields publishedInYear=1990 but a combinationAuthorship year of 1988 (the
-        // pending_year, applied by the not-yet-ported Pipeline stage).
+        // pending_year, applied by the Pipeline stage).
         let mut c = ctx("x");
         let out = strip_in_author_citation(
             &mut c,
@@ -5966,7 +5965,7 @@ mod tests {
     fn phrase_name_bare_genus_with_species_marker_sets_phrase_but_leaves_rank_untouched() {
         // Oracle-verified: "Prostanthera sp. Somersbey (B.J.Conn 4024)" -> phrase=
         // "Somersbey (B.J.Conn 4024)". The eventual full-pipeline `rank=SPECIES` comes from
-        // NameTokens (not yet ported) re-reading the reinserted "sp." marker, NOT from this
+        // NameTokens re-reading the reinserted "sp." marker, NOT from this
         // step directly — Java's own stashPhraseName has no setRank call on this branch.
         let mut c = ctx("x");
         let out = stash_phrase_name(
@@ -6032,7 +6031,7 @@ mod tests {
     fn phrase_name_trailing_author_splices_the_marker_before_the_author() {
         // Oracle-verified: "Baeckea Benth. sp. Bygalorie (ABC 123)" -> working rewritten to
         // "Baeckea sp. Benth." (marker moved BEFORE the author span so it trails as the
-        // species author for AuthorshipParser, not yet ported); rank untouched by this step
+        // species author for AuthorshipParser); rank untouched by this step
         // (same "downstream infers it from the reinserted marker" situation as the bare
         // "sp."-marker case above).
         let mut c = ctx("x");

@@ -462,7 +462,8 @@ mod tests {
     fn epithet_qualifier_btreemap_key_renders_as_name_and_sorts_ordinally() {
         // Not one of the two golden rows (both leave epithetQualifier unset) — this
         // only defines and exercises the *shape* of the populated case; full parity
-        // with Java's populated output is validated in a later slice.
+        // with Java's populated output is validated separately, by the full-corpus
+        // golden harness (`tests/parse_golden.rs`).
         let mut map = BTreeMap::new();
         map.insert(NamePart::Specific, "cf.".to_string());
         map.insert(NamePart::Generic, "aff.".to_string());

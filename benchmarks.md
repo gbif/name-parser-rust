@@ -147,6 +147,10 @@ the Rust cdylib and rebuilds a Java `ParsedName`. Two wire formats were built an
 string vs a flat fixed-layout binary struct. JMH `AverageTime`, µs per 2,000-name pass, 2 forks ×
 (5 warmup + 5 measurement) iterations; per-name = score ÷ 2000.
 
+> **Update (post-decision):** the JSON arm was subsequently dropped — the flat struct became the
+> binding's *sole* wire format at cdylib ABI 2 (which also sheds the gson runtime dependency).
+> The table below is the A/B that drove that call; `rustJson` no longer exists in the binding.
+
 | Arm | µs / 2000-name op | ± 99.9% CI | µs / name | vs javaImpl |
 |---|---:|---:|---:|---:|
 | `javaImpl` (Java `NameParserImpl`, in-JVM) | 25,590 | ±281 | 12.80 | 1.00× |

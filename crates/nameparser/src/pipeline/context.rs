@@ -14,13 +14,14 @@ use crate::token::Token;
 /// read-only after construction, matching the Java contract.
 ///
 /// Several fields (`tokens`, `pending_unparsed`, `aggregate`, `pending_year` and friends —
-/// see each field's own doc comment) are written by `new`/Preflight for pipeline stages
-/// (StripAndStash, NameTokens, AuthorshipParser, Assemble, …) that aren't ported yet, so
-/// nothing reads them within the crate for now. While this struct was `pub`, rustc
-/// exempted them from `dead_code` as public API surface; now that it's `pub(crate)`
-/// (Phase 1 foundation review — closes a `MAX_LENGTH`-guard bypass), that exemption no
-/// longer applies. Allowed at the struct level rather than per-field since the reason is
-/// uniform; drop once every field has a real reader.
+/// see each field's own doc comment) were originally written by `new`/Preflight ahead of
+/// the pipeline stages that would consume them (StripAndStash, NameTokens,
+/// AuthorshipParser, Assemble, …); all of those stages are now ported and read them. While
+/// this struct was `pub`, rustc exempted them from `dead_code` as public API surface; once
+/// it became `pub(crate)` (Phase 1 foundation review — closes a `MAX_LENGTH`-guard bypass)
+/// that exemption stopped applying, hence the struct-level `#[allow(dead_code)]` below.
+/// Every field now has a real reader, so the allow is no longer load-bearing; removing it
+/// is a separate cleanup from this comment.
 #[allow(dead_code)]
 pub(crate) struct ParseContext {
     // ---- Java `final` (conceptually immutable after construction) ----
