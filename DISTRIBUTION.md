@@ -21,7 +21,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 | Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
 | **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — auto-deployed `4.2.0-SNAPSHOT` |
-| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | deferred |
+| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | CI ready (needs PyPI trusted-publisher setup) |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
 
 Every binding except the pure-Rust CLI wraps the **`nameparser-ffi` cdylib**
@@ -88,13 +88,16 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
 ### 2.3 Python binding
 
-- Build wheels with **[cibuildwheel](https://cibuildwheel.pypa.io/)** driving
-  **maturin** — it produces a matrix of `manylinux` (x86_64 + aarch64), macOS
-  (x86_64 + arm64), and Windows wheels, each embedding the compiled Rust extension. Because
-  the crate builds an **abi3** wheel, one wheel per platform covers all supported CPython 3.x.
-- `twine upload` (or the maturin/PyPI publish action) to **PyPI** under distribution name
-  **`gbif-name-parser`** (import stays `nameparser`; matches the Rust crate on crates.io).
-- Deferred items: the cibuildwheel CI config and the first PyPI publish.
+- **CI: `.github/workflows/python-release.yml`** (uses **[PyO3/maturin-action](https://github.com/PyO3/maturin-action)**)
+  builds `manylinux` (x86_64 + aarch64), macOS (x86_64 + arm64), and Windows wheels plus an sdist,
+  each embedding the compiled Rust extension. Because the crate builds an **abi3** (`abi3-py39`)
+  wheel, one wheel per platform covers CPython 3.9+ — no per-version matrix.
+- Publishes to **PyPI** under distribution name **`gbif-name-parser`** (import stays `nameparser`;
+  matches the Rust crate on crates.io) via **Trusted Publishing (OIDC)** — no PyPI token is stored
+  anywhere. A tag-vs-`pyproject.toml`-version guard blocks a mismatched (and irreversible) upload.
+- Trigger: push a `py-v<version>` tag. **One-time setup** before the first release: register the
+  PyPI Trusted Publisher (owner `gbif`, repo `name-parser-rust`, workflow `python-release.yml`,
+  environment `pypi`) and create the `pypi` GitHub environment. See the workflow header for details.
 
 ### 2.4 R binding
 
@@ -155,7 +158,7 @@ Stage 2 — Java  (needs JDK 22+)
     mvn -f bindings/java/pom.xml deploy      → repository.gbif.org
 
 Stage 3 — Python
-    cibuildwheel (manylinux + macOS + Windows)  → twine upload  → PyPI
+    maturin-action (manylinux + macOS + Windows wheels + sdist)  → gh-action-pypi-publish (OIDC)  → PyPI
 
 Stage 4 — R
     R CMD build bindings/r ; R CMD check       → GitHub release asset
@@ -287,12 +290,16 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
       `linux-aarch_64` / `osx-x86_64` / `osx-aarch_64` / `windows-x86_64`), cross-compiled via
       cargo-zigbuild; main-JAR manifest stamped with version + `Rust-Engine-Version`/`-Git-Revision`.
 - [x] Java deploy + Jenkins — **LIVE**. A Multibranch pipeline auto-deploys `4.2.0-SNAPSHOT` to
-      `repository.gbif.org` on every push (parity 11,302/0 in CI). A `4.2.0` RELEASE additionally
-      needs `release:perform`'s fresh checkout to stage the native libs (flagged in the Jenkinsfile;
-      `<scm>` is now in place); optionally the Central sources/javadoc/GPG plugins for Central sync.
-- [ ] Python: cibuildwheel config + first PyPI publish (`gbif-name-parser`) — needs a PyPI token.
+      `repository.gbif.org` on every push (parity 11,302/0 in CI). The `release:perform` stage is
+      now complete — `<scm>` is in place and the classifier JARs read `${native.staging.dir}`, which
+      the Jenkinsfile points at the outer workspace's staged cdylibs — pending a first dry-run.
+      Optionally add the Central sources/javadoc/GPG plugins for Maven Central sync.
+- [x] Rust CLI — GitHub Releases workflow (`.github/workflows/cli-release.yml`): a `cli-v*` tag
+      builds + attaches per-platform archives (5 targets) + sha256. Pending the first tag.
+- [x] Python — PyPI workflow (`.github/workflows/python-release.yml`): a `py-v*` tag builds all
+      wheels + sdist and publishes via Trusted Publishing. Pending the one-time PyPI trusted-publisher
+      + `pypi` environment setup, then the first tag.
 - [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
-- [ ] Rust CLI: attach `nameparser-cli-<target>.tar.gz` to a GitHub Release.
 - [ ] Wire-format decision: keep-JSON vs keep-struct (recommend keep-JSON — the struct is ~1,500 LOC
       of brittle lockstep layout for a ~12% edge). A human call.
 - [ ] Phase 5: backend cutover (swap `NameParserRust` in behind the `NameParser` interface; Java 22+).
