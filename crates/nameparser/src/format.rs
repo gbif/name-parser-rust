@@ -31,9 +31,11 @@ const ET_AL: &str = "et al.";
 const ITALICS_OPEN: &str = "<i>";
 const ITALICS_CLOSE: &str = "</i>";
 
-/// Java `NameFormatter.AL` = `^al\.?$`, tested with `Matcher.find()` (the `^…$` anchors
-/// make find() a full-string test regardless). Detects a trailing "al"/"al." author so
-/// `X, al.` renders with " et al." rather than " & al.".
+/// Java `NameFormatter.AL` = `^al\.?$`, tested with `Matcher.find()`. Detects a trailing
+/// "al"/"al." author so `X, al.` renders with " et al." rather than " & al.". The `^…$`
+/// anchors make find() a whole-string test for every real author token; the one Java/Rust
+/// `$` difference (Java `$` also matches just before a trailing `\n`, Rust `$` = `\z` does
+/// not) is unreachable — author tokens never carry a trailing line terminator.
 static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 
 /// Java `NameFormatter.PHRASE_SPECIES_MARKER` = `^(?:species|spec|sp)\b.*`
@@ -48,7 +50,10 @@ static PHRASE_SPECIES_MARKER: LazyLock<Regex> =
 /// `String.matches()` (full match → anchored `^…$` here). Recognises an author-shaped tail
 /// after a phrase's parenthesised collector reference (e.g. "…(D.Murfet 3190) R.J.Bates"),
 /// which canonical rendering drops. `\p{Lu}` is Unicode by default in the Rust `regex`
-/// crate, matching Java's `(?U)` flag.
+/// crate, matching Java's `(?U)` flag. The `.`/`$` line-terminator set differs subtly from
+/// Java's (Rust `.` excludes only `\n`; Java's also excludes `\r`/U+0085/U+2028/U+2029), but
+/// the tail is `java_trim`'d and realistic author tails contain no embedded line terminators,
+/// so it is not observable. The sibling `PHRASE_SPECIES_MARKER` shares this caveat.
 static PHRASE_AUTHOR_TAIL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^[\p{Lu}](?:\.[\p{Lu}])*\..+$").unwrap());
 
@@ -701,6 +706,10 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                         // the species marker verbatim ("Allium species 1") — the phrase
                         // carries it.
                         sb.push(' ');
+                        // Java `sb.append(n.getRank().getMarker())`. Here the rank is
+                        // species-or-below-but-not-infraspecific (SPECIES / SPECIES_AGGREGATE),
+                        // both of which always have a marker, so the default is never taken; unlike
+                        // line 757 there is no null-marker rank to mirror Java's "null" for.
                         sb.push_str(n.rank.marker().unwrap_or(""));
                     }
                     authorship = false;
@@ -754,7 +763,13 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                         sb.push_str(" ssp.");
                     } else {
                         sb.push(' ');
-                        sb.push_str(n.rank.marker().unwrap_or(""));
+                        // Faithful to Java `sb.append(n.getRank().getMarker())`: when the marker
+                        // is null Java's `StringBuilder.append((String) null)` appends the literal
+                        // "null". The only infraspecific rank with a null marker is CULTIVAR_GROUP
+                        // (which reaches here only for a specific-but-no-infraspecific, no-cultivar
+                        // name — not producible by `parse()`, but the formatter is public API over
+                        // any hand-built ParsedName), so mirror the "null" rather than dropping it.
+                        sb.push_str(n.rank.marker().unwrap_or("null"));
                     }
                     authorship = false;
                 }
@@ -1065,6 +1080,25 @@ mod tests {
         );
         // ...but the non-minimal renderings keep the original unicode.
         assert_eq!(p("Læptura").canonical_name().as_deref(), Some("Læptura"));
+    }
+
+    #[test]
+    fn cultivar_group_indet_mirrors_javas_null_marker_append() {
+        // Latent faithfulness case flagged by review, unreachable via parse(): a CULTIVAR_GROUP
+        // name with a specific but no infraspecific/cultivar epithet. CULTIVAR_GROUP is
+        // infraspecific yet has a null rank marker, so Java's
+        // `sb.append(n.getRank().getMarker())` appends the literal "null"
+        // (`StringBuilder.append((String) null)`). Java-verified: `canonical(pn)` == "Aaa bbb
+        // null". The formatter is public API over any hand-built ParsedName, so we mirror it.
+        use crate::model::{ParsedName, Rank};
+        let pn = ParsedName {
+            rank: Rank::CultivarGroup,
+            genus: Some("Aaa".to_string()),
+            specific_epithet: Some("bbb".to_string()),
+            ..Default::default()
+        };
+        assert_eq!(pn.canonical_name().as_deref(), Some("Aaa bbb null"));
+        assert_eq!(pn.canonical_name_complete().as_deref(), Some("Aaa bbb null"));
     }
 
     #[test]
