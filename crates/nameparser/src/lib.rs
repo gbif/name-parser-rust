@@ -6,6 +6,7 @@
 //! (`NameParserImpl`) over 11,302 + 6.4M names (0 diffs). The same engine also ships as a native
 //! CLI and as Java/Python/R bindings — see the repository README.
 
+pub mod format;
 pub mod model;
 pub mod pipeline;
 pub mod regexes;
