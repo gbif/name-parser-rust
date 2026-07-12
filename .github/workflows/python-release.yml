@@ -28,6 +28,11 @@ on:
     tags:
       - 'py-v*'
   workflow_dispatch:
+    inputs:
+      testpypi:
+        description: 'Dry run — also publish the built wheels + sdist to TestPyPI (test.pypi.org)'
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -138,4 +143,31 @@ jobs:
       - name: Publish to PyPI (Trusted Publishing)
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
+          packages-dir: dist
+
+  publish-testpypi:
+    # Dry run: a manual (workflow_dispatch) run with the `testpypi` box checked publishes the SAME
+    # wheels + sdist to TestPyPI (test.pypi.org) instead of the real index. Never runs on a tag
+    # push. Needs its own Trusted Publisher on test.pypi.org (Environment name: `testpypi`).
+    # Note: TestPyPI, like PyPI, rejects re-uploading an existing version — bump the pyproject
+    # version (e.g. a 0.1.0rc1 suffix) or delete the TestPyPI release to re-run a dry run.
+    name: Dry-run publish to TestPyPI
+    if: github.event_name == 'workflow_dispatch' && inputs.testpypi
+    needs: [linux, macos, windows, sdist]
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      id-token: write   # Trusted Publishing (OIDC) against test.pypi.org
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          merge-multiple: true
+          path: dist
+      - name: List artifacts to publish
+        run: ls -l dist
+      - name: Publish to TestPyPI (Trusted Publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
           packages-dir: dist
