@@ -212,9 +212,24 @@ pub fn assert_ex_authorship(
     if !expected_authors.is_empty() {
         assert_eq!(auth.authors, str_vec(expected_authors), "authors mismatch for `{raw}`");
     }
-    // Authorship-only assertion (name parts empty), mirroring Java's
-    // NameAssertion(ParsedAuthorship) which copies only the authorship onto a fresh ParsedName.
+    // Authorship-only assertion, mirroring Java's `NameAssertion(ParsedAuthorship)` =
+    // `new ParsedName(); n.copy(pa)`: the 16 ParsedName-own fields reset to their defaults
+    // (name parts, rank, code, type, notho, …), and the 11 ParsedAuthorship + 3
+    // CombinedAuthorship fields carried over from the parse — so a chained `.sensu()`,
+    // `.nom_note()`, `.doubtful()`, etc. sees the note/flag the authorship parse produced (e.g.
+    // "auct. nec Zeller, 1877" lands in taxonomicNote, not in the author list).
     let pn = ParsedName {
+        extinct: full.extinct,
+        taxonomic_note: full.taxonomic_note,
+        nomenclatural_note: full.nomenclatural_note,
+        published_in: full.published_in,
+        published_in_year: full.published_in_year,
+        published_in_page: full.published_in_page,
+        unparsed: full.unparsed,
+        doubtful: full.doubtful,
+        manuscript: full.manuscript,
+        state: full.state,
+        warnings: full.warnings,
         combination_authorship: full.combination_authorship,
         basionym_authorship: full.basionym_authorship,
         sanctioning_author: full.sanctioning_author,
