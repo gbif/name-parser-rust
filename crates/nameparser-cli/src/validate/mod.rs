@@ -1029,11 +1029,10 @@ impl ValidationPrompt {
 /// `{"index":...,"input":...,"parsed":{...}}` on a successful parse, or
 /// `{"index":...,"input":...,"unparsable":{"type":...,"message":...}}` on failure.
 ///
-/// Deliberately **omits** Java's optional `canonical` field (`pn.canonicalNameComplete()`,
-/// best-effort/try-catch-guarded there): no canonical-name formatter exists yet in the core
-/// `nameparser` crate (recon doc §10 "genuine scope gaps"; the parent plan's Global Constraints
-/// call this out explicitly as a deferred field, not an oversight) — the model still sees the
-/// complete structured `parsed` object either way.
+/// On a successful parse, adds Java's optional `canonical` field right after `parsed`
+/// (`pn.canonicalNameComplete()`, guarded to non-blank by `safeCanonical`) — now that the core
+/// `nameparser` crate has a `NameFormatter` port (`ParsedName::canonical_name_complete`), this
+/// matches Java's `ValidationPrompt.item` exactly (previously omitted as a deferred field).
 ///
 /// Built by hand (string concatenation) rather than via `serde_json::Value`/`Map`/`json!`, for
 /// the exact reason [`crate::render_row`] is: this crate's `serde_json` has no `preserve_order`
@@ -1053,6 +1052,17 @@ fn item_json(index: usize, item: &Item) -> String {
         Ok(pn) => {
             o.push_str(",\"parsed\":");
             o.push_str(&serde_json::to_string(pn).expect("ParsedName always serializes to JSON"));
+            // Java `ValidationPrompt.item`: after `parsed`, add `canonical` from
+            // `pn.canonicalNameComplete()` when it is non-blank (`safeCanonical`). Our
+            // `canonical_name_complete()` already returns `None` for a blank/empty render, so
+            // this matches Java's null/blank guard exactly (Java's try-catch has no analogue).
+            if let Some(canonical) = pn.canonical_name_complete() {
+                o.push_str(",\"canonical\":");
+                o.push_str(
+                    &serde_json::to_string(&canonical)
+                        .expect("a String always serializes to a JSON string"),
+                );
+            }
         }
         Err(e) => {
             o.push_str(",\"unparsable\":{\"type\":");
@@ -2216,9 +2226,9 @@ mod tests {
             "parsed item must carry `parsed`: {first}"
         );
         assert!(first.get("unparsable").is_none());
-        assert!(
-            first.get("canonical").is_none(),
-            "`canonical` must be omitted entirely (deferred, no NameFormatter yet): {first}"
+        assert_eq!(
+            first["canonical"], "Abies alba Mill.",
+            "`canonical` = canonicalNameComplete, added after `parsed` (matches Java): {first}"
         );
         assert_eq!(first["parsed"]["genus"], "Abies");
         assert_eq!(first["parsed"]["specificEpithet"], "alba");
@@ -2227,6 +2237,7 @@ mod tests {
         assert_eq!(second["index"], 1);
         assert_eq!(second["input"], "");
         assert!(second.get("parsed").is_none());
+        // no `parsed` on an error item -> no `canonical` either (only added alongside `parsed`)
         assert!(second.get("canonical").is_none());
         let unparsable = second
             .get("unparsable")

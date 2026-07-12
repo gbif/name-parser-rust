@@ -128,10 +128,19 @@ fn validate_dry_run_runs_end_to_end_over_a_committed_corpus() {
             item.get("parsed").is_some() || item.get("unparsable").is_some(),
             "item missing both 'parsed' and 'unparsable': {item}"
         );
-        assert!(
-            item.get("canonical").is_none(),
-            "'canonical' must be omitted (deferred): {item}"
-        );
+        // `canonical` (= canonicalNameComplete) accompanies `parsed` and only `parsed`
+        // (matches Java `ValidationPrompt.item`); every real parsed name renders non-blank.
+        if item.get("parsed").is_some() {
+            assert!(
+                item.get("canonical").is_some(),
+                "'canonical' must accompany 'parsed': {item}"
+            );
+        } else {
+            assert!(
+                item.get("canonical").is_none(),
+                "'canonical' only appears alongside 'parsed': {item}"
+            );
+        }
     }
 
     let report_text = std::fs::read_to_string(&report).expect("report file must exist");
