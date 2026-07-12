@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
+
+//! A faithful Rust port of the GBIF scientific name parser. [`parse`] turns a scientific name into
+//! its structured atoms — genus, epithets, authorship, rank, nomenclatural code, notes, warnings —
+//! as a [`model::ParsedName`]. Byte-for-byte cross-validated against the Java `name-parser`
+//! (`NameParserImpl`) over 11,302 + 6.4M names (0 diffs). The same engine also ships as a native
+//! CLI and as Java/Python/R bindings — see the repository README.
+
 pub mod model;
 pub mod pipeline;
 pub mod regexes;

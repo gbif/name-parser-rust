@@ -106,21 +106,27 @@ git tag py-v0.2.0 && git push origin py-v0.2.0
 sdist and publishes to PyPI via Trusted Publishing. A guard fails the run if the tag doesn't match
 `pyproject.toml`'s version (PyPI uploads are irreversible). Result: `pip install gbif-name-parser`.
 
-### Rust engine → crates.io — *not yet wired*
+### Rust engine → crates.io
 
-The core crate is currently `publish = false`. To enable:
+The core crate `gbif-name-parser` is crates.io-ready (`cargo publish --dry-run -p gbif-name-parser`
+passes). **This must precede a CRAN release** — the R package vendors the core *from* crates.io.
 
-1. Remove `publish = false` from `crates/nameparser/Cargo.toml` (and add `description`,
-   `repository`, `readme`, `keywords` for a good crates.io page).
-2. `cargo login <token>` once, then `cargo publish -p gbif-name-parser` at the bumped version.
-   (`nameparser-cli`/`-ffi`/`-py` stay `publish = false` — they're not library crates.)
+1. `cargo login <token>` once (a crates.io API token).
+2. `cargo publish -p gbif-name-parser` at the bumped version. (`nameparser-cli`/`-ffi`/`-py` stay
+   `publish = false` — they are not library crates.)
 
-### R → CRAN — *not yet wired*
+### R → CRAN — *needs crates.io first*
 
-CRAN is source-based and human-reviewed (no auto-publish). Before the first submission the extendr
-package needs the offline-build vendoring set up (`src/rust/vendor.tar.xz` + the vendored-crate
-license inventory) and a clean `R CMD check --as-cran`. Then submit the source tarball via
-<https://cran.r-project.org/submit.html>. *(Tracked as the remaining Phase-5-prep item.)*
+CRAN is source-based and human-reviewed (no auto-publish). **Prerequisite: the core on crates.io**
+(above) — the R package isn't self-contained until it depends on `gbif-name-parser` *by version*
+and can vendor it (`cargo vendor` skips local path deps). Then:
+
+1. Point `bindings/r/src/rust/Cargo.toml`'s `nameparser_core` dependency at the crates.io version.
+2. `Rscript -e 'rextendr::vendor_pkgs("bindings/r")'` → bundles the core + all deps into
+   `src/rust/vendor.tar.xz` (the `Makevars` already builds offline from it).
+3. Add the vendored-crate license inventory (`inst/AUTHORS`) CRAN requires for bundled sources.
+4. `R CMD check --as-cran` until clean, then submit the source tarball via
+   <https://cran.r-project.org/submit.html>.
 
 ---
 

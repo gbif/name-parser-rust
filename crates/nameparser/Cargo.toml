@@ -3,7 +3,13 @@ name = "gbif-name-parser"
 version.workspace = true
 edition = "2021"
 license = "Apache-2.0"
-publish = false
+description = "A faithful Rust port of the GBIF scientific name parser: parses scientific names into their structured atoms (genus, epithets, authorship, rank, nomenclatural code)."
+repository = "https://github.com/gbif/name-parser-rust"
+homepage = "https://github.com/gbif/name-parser-rust"
+documentation = "https://docs.rs/gbif-name-parser"
+readme = "README.md"
+keywords = ["taxonomy", "biodiversity", "gbif", "nomenclature", "parser"]
+categories = ["science", "parser-implementations"]
 
 # The published/package name is `gbif-name-parser`, but the compiled lib target keeps
 # its short name `nameparser` so every dependent's `use nameparser::` / `::nameparser::` and
