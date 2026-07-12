@@ -33,7 +33,7 @@
 //! does pay a real JIT-warmup cost), then times a full pass parsing every row and reports
 //! count / total / average / min / p50 / p95 / max plus a by-[`nameparser::model::NameType`]
 //! breakdown to stdout — nothing else goes there; progress/warnings/errors go to stderr, just
-//! like Java. `benchmarks.md` at the repo root records the actual Rust-vs-Java full-parser
+//! like Java. `BENCHMARKS.md` at the repo root records the actual Rust-vs-Java full-parser
 //! throughput comparison this command was built to make (the comparison the Phase 0 spike,
 //! which only measured components, deferred).
 //!

@@ -5,7 +5,7 @@
 //! `replaceSpecialCases`/`removeNonAscii`/`replaceNonAscii`/`unescapeUnicodeChars`/
 //! `decodeUtf8Garbage`/`containsDiacritics`/`findDiacritics` are NOT ported: no call site
 //! anywhere in this crate's (now complete) pipeline reaches them, and the full-corpus
-//! Rust-vs-Java parity cross-validation (see `benchmarks.md`/`cross-validation.md`, 0
+//! Rust-vs-Java parity cross-validation (see `BENCHMARKS.md`/`cross-validation.md`, 0
 //! mismatches) confirms their absence isn't a gap.
 
 /// Unicode apostrophe / single-quote variants that normalise to the ASCII apostrophe `'`.

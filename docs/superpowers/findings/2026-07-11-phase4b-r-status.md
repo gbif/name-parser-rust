@@ -121,7 +121,7 @@ because that is its deliberately lossless/oracle-comparable contract, not becaus
 binding needs JSON internally). As with the Python binding, there is no FFI-marshalling
 floor to measure a ratio against — no dedicated R-specific benchmark was run this phase;
 throughput inherits the core's own batch-throughput profile documented in the root
-[`benchmarks.md`](../../../benchmarks.md). Establishing an R-specific call-overhead number
+[`BENCHMARKS.md`](../../../BENCHMARKS.md). Establishing an R-specific call-overhead number
 (e.g. `bench::mark()` against `rgbif::name_parse()`'s HTTP-backed implementation, which is
 not an apples-to-apples comparison anyway since that function is a *web service* client, not
 an in-process parser) is left as follow-on work if ever needed.

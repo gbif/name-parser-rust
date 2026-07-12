@@ -31,7 +31,7 @@ Measured against the Java parser (`org.gbif:name-parser` 4.2.0), same machine:
 | In-process Java via FFM/Panama (JMH, single name) | 1.38× (flat-struct wire format) — capped by the Java-object-build floor |
 
 Full cross-era (3.x → 4.x → Rust) and cross-binding breakdown — with methodology, percentiles,
-error bars, and the ReDoS-tail comparison — is in [`benchmarks.md`](benchmarks.md); field-level
+error bars, and the ReDoS-tail comparison — is in [`BENCHMARKS.md`](BENCHMARKS.md); field-level
 correctness parity is in [`cross-validation.md`](cross-validation.md).
 
 ## Layout

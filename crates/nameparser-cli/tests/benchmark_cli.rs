@@ -9,7 +9,7 @@
 //! plus the by-name-type breakdown), that the report goes to stdout and nothing else does, and
 //! that a missing input file fails the way Java's does. The exact numbers-in-anger, and the
 //! actual Rust-vs-Java throughput comparison, are a one-off measurement recorded in
-//! `benchmarks.md` at the repo root — not something a fast test suite should pin.
+//! `BENCHMARKS.md` at the repo root — not something a fast test suite should pin.
 //!
 //! The pure formatting/math helpers (`percentile`, `fmt_nanos`, `name_type_label`, the exact
 //! `BenchmarkReport::print` layout) already have dedicated unit tests in `src/main.rs`; this
@@ -83,7 +83,7 @@ fn benchmark_over_the_full_corpus_produces_a_report_shaped_like_javas() {
     }
     // This corpus is known (from the core crate's own golden harness) to parse mostly as
     // SCIENTIFIC — spot check the breakdown carries at least that one row, without pinning the
-    // exact counts (which belong to benchmarks.md, not a correctness test).
+    // exact counts (which belong to BENCHMARKS.md, not a correctness test).
     assert!(
         stdout.contains("SCIENTIFIC"),
         "expected a SCIENTIFIC row in the breakdown:\n{stdout}"

@@ -85,7 +85,7 @@ This binding never starts a JVM and needs no `java`/`JAVA_HOME` on the machine t
 unlike `bindings/java` (which requires JDK 22+ for `java.lang.foreign`) — because it compiles
 directly against the Rust core, in-process, with PyO3 doing the Rust↔Python marshalling at the
 Rust/CPython C-API level rather than crossing a JVM boundary at all. Performance-wise it
-inherits the native CLI's batch-throughput profile (see the root [`benchmarks.md`](../../benchmarks.md)):
+inherits the native CLI's batch-throughput profile (see the root [`BENCHMARKS.md`](../../BENCHMARKS.md)):
 there is no per-call FFM downcall or JSON re-serialization step the way the Java binding's
 `NameParserRust` has, since `parse()`/`parse_all()` call `nameparser::parse` directly.
 

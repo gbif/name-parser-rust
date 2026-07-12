@@ -84,10 +84,9 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
 - `src/main/java/org/gbif/nameparser/rust/StructCodec.java` — reads the flat fixed-layout
   binary wire format `np_parse_struct` writes (see `crates/nameparser-ffi/src/layout.rs`) via
   little-endian `MemorySegment` accessors and rebuilds a `ParsedName` through its real setters
-  (no reflection available on this path, unlike Gson on the JSON path). Also owns the one-time
-  enum-ordinal consistency guard (a static initializer that runs the first time the STRUCT
-  format is actually used) that fails fast with a clear message if the `name-parser-api` jar's
-  enum shapes ever drift from what the cdylib was built against.
+  (no reflection on this path). Also owns the one-time enum-ordinal consistency guard (a static
+  initializer that runs on the first parse) that fails fast with a clear message if the
+  `name-parser-api` jar's enum shapes ever drift from what the cdylib was built against.
 - `src/test/java/org/gbif/nameparser/rust/NameParserRustSmokeTest.java` — end-to-end tests
   over the real FFM boundary (no mocking): a subspecies parse, an explicit-authorship parse,
   the virus → `UnparsableNameException` case, and struct-decode fidelity for the trickier
@@ -104,7 +103,7 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
   `../../testdata/benchmark-data.txt`. See "Running the JMH benchmark" below.
 
 The JMH A/B that led to dropping the JSON path in favour of the struct is recorded in
-`benchmarks.md` (§5) and `jmh/results-jmh-ab.json` (raw numbers).
+`BENCHMARKS.md` (§5) and `jmh/results-jmh-ab.json` (raw numbers).
 
 ## Running the JMH benchmark
 

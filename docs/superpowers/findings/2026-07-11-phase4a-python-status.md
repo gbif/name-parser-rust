@@ -128,7 +128,7 @@ Rust and the caller to measure a ratio against in the first place — PyO3's get
 already-built Rust struct's fields directly into Python objects on access, with no
 intermediate serialization step. No dedicated Python-specific benchmark was run this phase;
 the binding inherits the native core's own batch-throughput profile documented in the root
-[`benchmarks.md`](../../../benchmarks.md) (`nameparser-cli`, out-of-process: **13.73 µs/name
+[`BENCHMARKS.md`](../../../BENCHMARKS.md) (`nameparser-cli`, out-of-process: **13.73 µs/name
 average, ~2.10× faster than the Java parser's 28.77 µs/name**, p95 2.43×, no JVM/GC/regex-
 backtracking tail) — `parse()`/`parse_all()` call the identical `nameparser::parse` that CLI
 figure already measures, with PyO3's per-call overhead (GIL acquisition, struct wrapping,
