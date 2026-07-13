@@ -49,3 +49,6 @@ bindings/r/src/*.so
 bindings/r/src/rust/target/
 bindings/r/*.Rcheck/
 bindings/r/**/*.rds
+
+# personal working notes, not tracked
+todo.md
