@@ -112,7 +112,15 @@ pub unsafe extern "C" fn np_parse_struct(
         let code = opt_str(code).and_then(NomCode::from_name);
         match nameparser::parse(name, authorship, rank, code) {
             Ok(pn) => Ok(layout::encode(&pn, np_abi_version())),
-            Err(e) => Err(layout::encode_unparsable(&e, np_abi_version())),
+            // 5.0.0 `ParseResult.Unparsable` (the Java record this header feeds) may only carry a
+            // non-parsable type; the core error path can still tag an informal-but-unrepresentable
+            // grouping as INFORMAL, so clamp it to OTHER before encoding (see
+            // `ParseError::clamped_to_unparsable`). The success/informal split itself is applied
+            // Java-side from the decoded ParsedName — see `StructCodec`/`NameParserRust`.
+            Err(e) => Err(layout::encode_unparsable(
+                &e.clamped_to_unparsable(),
+                np_abi_version(),
+            )),
         }
     });
     match result {

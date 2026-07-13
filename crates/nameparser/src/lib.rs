@@ -111,7 +111,9 @@ pub fn parse_result(
     match pipeline::run(name, authorship, rank, code) {
         Ok(pn) if is_informal(&pn) => ParseResult::Informal(to_informal(pn)),
         Ok(pn) => ParseResult::Parsed(pn),
-        Err(e) => ParseResult::Unparsable(e),
+        // `Unparsable` may only carry a non-parsable type (mirrors Java); the core's error path
+        // can still tag an informal-but-unrepresentable grouping as INFORMAL — clamp it to OTHER.
+        Err(e) => ParseResult::Unparsable(e.clamped_to_unparsable()),
     }
 }
 
@@ -226,6 +228,26 @@ mod tests {
         match parse_result("", None, None, None) {
             ParseResult::Unparsable(e) => assert_eq!(e.type_, NameType::Other),
             other => panic!("expected Unparsable, got {other:?}"),
+        }
+    }
+
+    /// The 5.0.0 boundary clamp: the raw [`parse`] path keeps the core's `INFORMAL` error type for
+    /// an informal-but-unrepresentable grouping (`"Amauropeltoid clade"`) — preserving 4.2.0 golden
+    /// parity — while [`parse_result`] clamps it to `OTHER` so the `Unparsable` result is legal
+    /// under the 5.0.0 model (which, like Java, forbids a parsable type in `Unparsable`).
+    #[test]
+    fn parse_result_clamps_informal_error_to_other() {
+        // raw path: still INFORMAL (matches the frozen Java 4.2.0 oracle)
+        let raw = parse("Amauropeltoid clade", None, None, None).unwrap_err();
+        assert_eq!(raw.type_, NameType::Informal);
+
+        // 5.0.0 path: clamped to OTHER, and never Informal/Parsed (no anchor to hang off)
+        match parse_result("Amauropeltoid clade", None, None, None) {
+            ParseResult::Unparsable(e) => {
+                assert_eq!(e.type_, NameType::Other);
+                assert!(!e.type_.is_parsable(), "Unparsable must carry a non-parsable type");
+            }
+            other => panic!("expected Unparsable(OTHER), got {other:?}"),
         }
     }
 }

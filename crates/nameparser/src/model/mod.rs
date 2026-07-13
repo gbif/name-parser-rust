@@ -36,6 +36,22 @@ impl ParseError {
             message,
         }
     }
+
+    /// Clamp a parsable [`NameType`] to [`NameType::Other`] so this error is legal as a 5.0.0
+    /// `Unparsable` result. The core's error path can still tag an unrepresentable-but-informal
+    /// grouping (`"Bartonella group"`, `"Amauropeltoid clade"`) as `INFORMAL`, but the 5.0.0
+    /// `ParseResult::Unparsable` variant — mirroring Java's, whose record rejects `isParsable()`
+    /// types — may only carry a non-parsable type. Applied ONLY at the 5.0.0 boundaries
+    /// ([`crate::parse_result`] and the FFI); [`crate::parse`] (the raw path, cross-validated
+    /// byte-for-byte against Java 4.2.0) keeps the original `INFORMAL`, so the golden oracles are
+    /// untouched. Rebuilds the message via [`Self::new`] so it names the clamped type.
+    pub fn clamped_to_unparsable(self) -> ParseError {
+        if self.type_.is_parsable() {
+            ParseError::new(NameType::Other, self.code, self.name)
+        } else {
+            self
+        }
+    }
 }
 
 /// An informal / semistructured name — the payload of [`crate::ParseResult::Informal`], mirroring

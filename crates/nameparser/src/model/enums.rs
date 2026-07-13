@@ -14,6 +14,16 @@ pub enum NameType {
     Other,
 }
 
+impl NameType {
+    /// Java `NameType.isParsable()` (`NameType.java`): true iff the parser can express such a name
+    /// as a [`crate::model::ParsedName`] — `SCIENTIFIC` or `INFORMAL`. The 5.0.0
+    /// `ParseResult.Unparsable` variant (Java + Rust) may only carry a non-parsable type, so this
+    /// gates the [`crate::ParseError::clamped_to_unparsable`] normalization.
+    pub fn is_parsable(&self) -> bool {
+        matches!(self, NameType::Scientific | NameType::Informal)
+    }
+}
+
 /// Java `org.gbif.nameparser.api.NomCode`. Nomenclatural codes governing biological taxonomic
 /// nomenclature.
 ///
