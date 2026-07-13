@@ -132,6 +132,24 @@ fn infraspecific_indeterminate_stays_parsed() {
 }
 
 #[test]
+fn binomial_with_a_species_n_tag_stays_parsed_keeping_the_phrase() {
+    // "Genus epithet species N" / "Genus epithet sp. N" — a placeholder tag appended to a binomial.
+    // The species epithet is present, so it stays Parsed; the trailing tag is preserved as the phrase
+    // (type INFORMAL) rather than reading "species"/"sp" as a (blacklisted) infraspecific epithet and
+    // dropping the number. Surfaced by the CoL backend's dwca/17 fixture.
+    assert_name("Dichanthelium chrysopsidifolium species 12")
+        .species("Dichanthelium", "chrysopsidifolium")
+        .type_(NameType::Informal)
+        .phrase("species 12")
+        .nothing_else();
+    assert_name("Dichanthelium chrysopsidifolium sp. 12")
+        .species("Dichanthelium", "chrysopsidifolium")
+        .type_(NameType::Informal)
+        .phrase("12")
+        .nothing_else();
+}
+
+#[test]
 fn bare_determined_genus_stays_parsed_scientific() {
     // "Rhizobium" alone is a determined SCIENTIFIC monomial — NOT informal (no provisional marker).
     assert_name("Rhizobium")

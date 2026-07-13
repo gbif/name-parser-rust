@@ -343,11 +343,24 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     continue;
                 }
                 // 2. indet markers — sp./spec./indet
+                // A number right after the marker (past an optional dot) is a placeholder tag:
+                // "Genus sp. 1" (monomial) or "Genus epithet species 12" (after a binomial). Preserve
+                // it as an informal phrase rather than reading "species"/"sp" as a (blacklisted)
+                // infraspecific epithet and dropping the number — so `species N` round-trips verbatim.
+                let number_follows_marker = {
+                    let mut j = i + 1;
+                    if j < ts.len() && ts[j].kind == TokenKind::Dot {
+                        j += 1;
+                    }
+                    j < ts.len() && ts[j].kind == TokenKind::Number
+                };
                 if (w.eq_ignore_ascii_case("sp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet"))
-                    && (lower_epithets.is_empty() || marker_idx_in_epithets >= 0)
+                    && (lower_epithets.is_empty()
+                        || marker_idx_in_epithets >= 0
+                        || number_follows_marker)
                 {
                     indet = true;
                     ctx.name.type_ = NameType::Informal;
