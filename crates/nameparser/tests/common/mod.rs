@@ -16,6 +16,20 @@
 //! `nothing_else()` asserts every field you did NOT mention is at its default — so a test pins
 //! the WHOLE parse, not just the parts you named.
 //!
+//! ## 5.0.0 three-way DSL (the authoritative spec — the golden is only a Rust regression snapshot)
+//! The three classifying entry points go through the exceptionless [`nameparser::parse_result`] and
+//! assert the actual 5.0.0 [`nameparser::ParseResult`] VARIANT, so a misclassification fails loudly:
+//! * [`assert_name`] (+ `_hinted`/`_rank`/`_code`/`_auth`) — asserts a [`ParseResult::Parsed`] name.
+//! * [`assert_informal`] (+ `_hinted`) — asserts a [`ParseResult::Informal`] (a supraspecific anchor
+//!   + a provisional designation, no species epithet) via the fluent [`InformalAssertion`].
+//! * [`assert_unparsable`] (+ `_code`/`_rank`/`_name`) — asserts a [`ParseResult::Unparsable`] with
+//!   the CLAMPED type (an `Unparsable` may only carry a non-parsable `NameType`).
+//!
+//! The remaining helpers ([`assert_phrase_name`], [`assert_authorship`], [`assert_sensu`],
+//! [`assert_nom_note`], [`is_viral_name`], …) deliberately stay on the lower-level raw
+//! [`nameparser::parse`] path — they test the `ParsedName` atoms / `NameFormatter` renderings /
+//! authorship directly, which is a distinct (still public) API from the three-way classification.
+//!
 //! ## Java → Rust mapping (for porting the suites)
 //! * `assertName(name, canonical)` → `assert_name(name)` — the `expectedCanonicalWithoutAuthors`
 //!   arg is dropped (Rust has no `canonicalName()`; the field assertions + `nothing_else()` pin
@@ -46,7 +60,11 @@ use nameparser::ParseResult;
 
 // ---- entry points -----------------------------------------------------------------------------
 
-/// Parse `input` (no hints) and start an assertion chain. Panics if the name is unparsable.
+/// Parse `input` (no hints) through the 5.0.0 [`nameparser::parse_result`] and assert the outcome is
+/// a [`ParseResult::Parsed`] name, starting an assertion chain. Panics (loudly) if the name comes
+/// back `Informal` or `Unparsable` — so a determined-name test that wrongly reclassifies as informal
+/// fails here, not silently. (The informal band is [`assert_informal`]; the junk band is
+/// [`assert_unparsable`].)
 pub fn assert_name(input: &str) -> NameAssertion {
     assert_name_hinted(input, None, None, None)
 }
@@ -73,9 +91,14 @@ pub fn assert_name_hinted(
     rank: Option<Rank>,
     code: Option<NomCode>,
 ) -> NameAssertion {
-    match nameparser::parse(input, authorship, rank, code) {
-        Ok(pn) => NameAssertion::new(pn),
-        Err(e) => panic!("expected `{input}` to parse, but it was unparsable: {e:?}"),
+    match nameparser::parse_result(input, authorship, rank, code) {
+        ParseResult::Parsed(pn) => NameAssertion::new(pn),
+        ParseResult::Informal(inf) => {
+            panic!("expected `{input}` to be a Parsed name, but it was Informal: {inf:?}")
+        }
+        ParseResult::Unparsable(e) => {
+            panic!("expected `{input}` to parse, but it was unparsable: {e:?}")
+        }
     }
 }
 
@@ -107,21 +130,6 @@ pub fn assert_informal_hinted(
     }
 }
 
-/// Like [`assert_name`] but asserts the 5.0.0 three-way `Parsed` VARIANT (via
-/// [`nameparser::parse_result`]), failing if the name comes back `Informal` or `Unparsable`. Use to
-/// pin the boundary cases that must STAY `Parsed` — cf./aff. binomials, infraspecific-indeterminate
-/// names (whose `specific_authorship` a flat `Informal` could not hold), a bare determined genus.
-pub fn assert_parsed(input: &str) -> NameAssertion {
-    match nameparser::parse_result(input, None, None, None) {
-        ParseResult::Parsed(pn) => NameAssertion::new(pn),
-        ParseResult::Informal(inf) => {
-            panic!("expected `{input}` to be Parsed, but it was Informal: {inf:?}")
-        }
-        ParseResult::Unparsable(e) => {
-            panic!("expected `{input}` to be Parsed, but it was Unparsable: {e:?}")
-        }
-    }
-}
 
 /// `assertNoName(name)` — the input must be unparsable. Java asserts `NameType.NO_NAME`, but the
 /// 4.2.0 `NameType` this port targets has only 5 variants (see the mapping note in the module
@@ -130,22 +138,24 @@ pub fn assert_no_name(input: &str) {
     assert_unparsable(input, NameType::Other);
 }
 
-/// `assertUnparsable(name, type)` — the input must be unparsable with the given `NameType`.
+/// `assertUnparsable(name, type)` — the input must be a 5.0.0 [`ParseResult::Unparsable`] with the
+/// given `NameType` (the type is the CLAMPED one — `Unparsable` may only carry a non-parsable type).
 pub fn assert_unparsable(input: &str, type_: NameType) {
-    match nameparser::parse(input, None, None, None) {
-        Err(e) => assert_eq!(
+    match nameparser::parse_result(input, None, None, None) {
+        ParseResult::Unparsable(e) => assert_eq!(
             e.type_, type_,
             "`{input}` unparsable as expected but with type {:?}, expected {type_:?}",
             e.type_
         ),
-        Ok(pn) => panic!("expected `{input}` to be unparsable ({type_:?}) but it parsed: {pn:?}"),
+        other => panic!("expected `{input}` to be unparsable ({type_:?}), got {other:?}"),
     }
 }
 
-/// `assertUnparsable(name, type, code)` — unparsable with the given `NameType` AND `NomCode`.
+/// `assertUnparsable(name, type, code)` — [`ParseResult::Unparsable`] with the given `NameType` AND
+/// `NomCode`.
 pub fn assert_unparsable_code(input: &str, type_: NameType, code: NomCode) {
-    match nameparser::parse(input, None, None, None) {
-        Err(e) => {
+    match nameparser::parse_result(input, None, None, None) {
+        ParseResult::Unparsable(e) => {
             assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
             assert_eq!(
                 e.code,
@@ -154,9 +164,7 @@ pub fn assert_unparsable_code(input: &str, type_: NameType, code: NomCode) {
                 e.code
             );
         }
-        Ok(pn) => {
-            panic!("expected `{input}` unparsable ({type_:?}/{code:?}) but it parsed: {pn:?}")
-        }
+        other => panic!("expected `{input}` unparsable ({type_:?}/{code:?}), got {other:?}"),
     }
 }
 
@@ -169,8 +177,8 @@ pub fn assert_unparsable_rank(input: &str, rank: Rank, type_: NameType) {
 /// `assertUnparsableName(name, rank, type, expectedName)` — unparsable (parsed with the rank
 /// hint) with the given `NameType`, and the echoed error name equals `expected_name`.
 pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected_name: &str) {
-    match nameparser::parse(input, None, Some(rank), None) {
-        Err(e) => {
+    match nameparser::parse_result(input, None, Some(rank), None) {
+        ParseResult::Unparsable(e) => {
             assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
             assert_eq!(
                 e.name, expected_name,
@@ -178,7 +186,7 @@ pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected
                 e.name
             );
         }
-        Ok(pn) => panic!("expected `{input}` to be unparsable ({type_:?}) but it parsed: {pn:?}"),
+        other => panic!("expected `{input}` to be unparsable ({type_:?}), got {other:?}"),
     }
 }
 

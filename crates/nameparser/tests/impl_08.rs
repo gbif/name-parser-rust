@@ -271,29 +271,36 @@ fn redundant_authorship() {
 /// https://github.com/gbif/name-parser/issues/45
 #[test]
 fn bold_placeholder() {
-    assert_name_rank("OdontellidaeGEN", Rank::Genus)
-        .monomial_rank("Odontellidae", Rank::Genus)
+    // 5.0.0: BOLD/placeholder suprageneric-provisional names ("<Taxon><CODE>") are Informal
+    // results — the supraspecific anchor + a placeholder phrase, no species epithet. (Java surfaced
+    // them as Informal-typed ParsedNames; the three-way surfaces them as `Informal`.)
+    assert_informal_hinted("OdontellidaeGEN", None, Some(Rank::Genus), None)
+        .taxon("Odontellidae")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Genus)
         .phrase("GEN")
-        .type_(NameType::Informal)
         .nothing_else();
 
-    assert_name_code("EusiridaeNZD", NomCode::Zoological)
-        .monomial_rank("Eusiridae", Rank::Family)
+    assert_informal_hinted("EusiridaeNZD", None, None, Some(NomCode::Zoological))
+        .taxon("Eusiridae")
+        .taxon_rank(Rank::Family)
+        .rank(Rank::Family)
         .phrase("NZD")
-        .type_(NameType::Informal)
         .code(NomCode::Zoological)
         .nothing_else();
 
-    assert_name("Blattellinae_SB")
-        .monomial("Blattellinae")
+    assert_informal("Blattellinae_SB")
+        .taxon("Blattellinae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
         .phrase("SB")
-        .type_(NameType::Informal)
         .nothing_else();
 
-    assert_name("GenusANIC_3")
-        .monomial("Genus")
+    assert_informal("GenusANIC_3")
+        .taxon("Genus")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
         .phrase("ANIC_3")
-        .type_(NameType::Informal)
         .nothing_else();
 }
 

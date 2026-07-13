@@ -251,14 +251,14 @@ fn hybrid_formulas() {
 #[test]
 fn o_tu() {
     // https://github.com/gbif/name-parser/issues/74
-    // Java's chained `.phraseName(monomial, phrase)` (`NameAssertion.java:353-359`) has no
-    // direct DSL equivalent; composed here from `.monomial(...)` (uninomial/genus/rank/epithets
-    // all checked) + `.phrase(...)` (the phrase text) + `.type_(NameType::Informal)`, together
-    // asserting the same fields Java's `phraseName` + its private `assertPhrase(...)` check.
-    assert_name("Desulfobacterota_B")
-        .monomial("Desulfobacterota")
+    // 5.0.0: Java's `.phraseName(monomial, phrase)` is a supraspecific-provisional name → an
+    // `Informal` result. The anchor is a suprageneric uninomial (a GTDB-style phylum), so its
+    // `taxon_rank` is UNRANKED (the parser cannot rank it), not GENUS.
+    assert_informal("Desulfobacterota_B")
+        .taxon("Desulfobacterota")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
         .phrase("B")
-        .type_(NameType::Informal)
         .nothing_else();
 
     // unparsable identifiers

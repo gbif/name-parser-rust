@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //! The 5.0.0 informal / semistructured band, tested through the three-way `parse_result` via the
-//! fluent `assert_informal` / `assert_parsed` DSL helpers. Cases are lifted from the reservoir
+//! fluent `assert_informal` / `assert_name` DSL helpers. Cases are lifted from the reservoir
 //! samples of the 67.5M verbatim-corpus study (`docs/superpowers/findings/`): overwhelmingly
 //! molecular / DNA-barcoding provisional species `Genus sp. <specimen/culture/BOLD code>`.
 //!
@@ -104,7 +104,7 @@ fn single_uppercase_letter_designator() {
 fn cf_binomial_stays_parsed_with_its_qualifier() {
     // A complete binomial that was only "informal" via an open-nomenclature qualifier — the
     // qualifier is an annotation (epithetQualifier), not a reclassification.
-    assert_parsed("Salicornia cf. patula")
+    assert_name("Salicornia cf. patula")
         .species("Salicornia", "patula")
         .type_(NameType::Informal)
         .qualifiers(&[(NamePart::Specific, "cf.")])
@@ -115,7 +115,7 @@ fn cf_binomial_stays_parsed_with_its_qualifier() {
 fn aff_binomial_with_authorship_stays_parsed() {
     // aff. on a complete binomial WITH authorship — the clearest reason it must stay Parsed: a flat
     // Informal anchor could not represent the species-level authorship.
-    assert_parsed("Turritella aff. adulterata Deshayes 1820-1851")
+    assert_name("Turritella aff. adulterata Deshayes 1820-1851")
         .species("Turritella", "adulterata")
         .comb_authors(Some("1820"), &["Deshayes"])
         .qualifiers(&[(NamePart::Specific, "aff.")])
@@ -126,7 +126,7 @@ fn aff_binomial_with_authorship_stays_parsed() {
 fn infraspecific_indeterminate_stays_parsed() {
     // "Salix alba subsp. B" has a species epithet ("alba"), so it stays Parsed — a flat Informal
     // could not hold an infraspecific-level designation hanging off a determined species.
-    assert_parsed("Salix alba subsp. B")
+    assert_name("Salix alba subsp. B")
         .infra_species("Salix", "alba", Rank::Subspecies, "B")
         .type_(NameType::Informal);
 }
@@ -134,7 +134,7 @@ fn infraspecific_indeterminate_stays_parsed() {
 #[test]
 fn bare_determined_genus_stays_parsed_scientific() {
     // "Rhizobium" alone is a determined SCIENTIFIC monomial — NOT informal (no provisional marker).
-    assert_parsed("Rhizobium")
+    assert_name("Rhizobium")
         .monomial("Rhizobium")
         .type_(NameType::Scientific)
         .nothing_else();

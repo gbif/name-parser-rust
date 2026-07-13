@@ -39,8 +39,8 @@ fn informal_and_parsed_variant_helpers_work_end_to_end() {
         .rank(Rank::Species)
         .phrase("RE1-2a")
         .nothing_else();
-    // assert_parsed asserts the `Parsed` variant — a species epithet is present, so it is NOT informal.
-    assert_parsed("Salicornia cf. patula").species("Salicornia", "patula");
+    // assert_name asserts the `Parsed` variant — a species epithet is present, so it is NOT informal.
+    assert_name("Salicornia cf. patula").species("Salicornia", "patula");
 }
 
 // ---- smoke tests for the parseAuthorship-emulating + viral helpers (used by later waves) ----
