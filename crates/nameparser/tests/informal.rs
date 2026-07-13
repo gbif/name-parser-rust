@@ -1,0 +1,161 @@
+// SPDX-License-Identifier: Apache-2.0
+//! The 5.0.0 informal / semistructured band, tested through the three-way `parse_result` via the
+//! fluent `assert_informal` / `assert_parsed` DSL helpers. Cases are lifted from the reservoir
+//! samples of the 67.5M verbatim-corpus study (`docs/superpowers/findings/`): overwhelmingly
+//! molecular / DNA-barcoding provisional species `Genus sp. <specimen/culture/BOLD code>`.
+//!
+//! The design contract this file pins:
+//!  * a supraspecific taxon carrying a provisional designation with NO species epithet → `Informal`,
+//!    a flat `taxon` + `taxon_rank` + `rank` + `phrase` + `code`;
+//!  * a name WITH a species epithet (a binomial core — incl. cf./aff. and infraspecific-indet) stays
+//!    `Parsed`, so its `specific_authorship` (unrepresentable by a flat anchor) survives;
+//!  * a determined monomial (`Rhizobium`) stays `Parsed`/SCIENTIFIC — not informal.
+
+mod common;
+use common::*;
+use nameparser::model::{NamePart, NameType, Rank};
+use nameparser::ParseResult;
+
+// ---- Informal: supraspecific anchor + provisional designation, no species epithet -------------
+
+#[test]
+fn molecular_provisional_species_with_a_captured_tag() {
+    // ~99.8% of the band: genus-anchored, SPECIES rank, a specimen/culture/BOLD code phrase.
+    assert_informal("Serratia sp. RE1-2a")
+        .taxon("Serratia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("RE1-2a")
+        .nothing_else();
+    assert_informal("Plasmodium sp. SYBOR9")
+        .taxon("Plasmodium")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("SYBOR9")
+        .nothing_else();
+}
+
+#[test]
+fn multi_token_specimen_tag_is_captured_as_the_phrase() {
+    // The 5.0.0 tag-capture enhancement rescues the ~382k rows whose multi-token trailing tag the
+    // 4.2.0 parser dropped (or misread as an author): the whole verbatim tail becomes the phrase.
+    assert_informal("Rhizobium sp. RMCC TR1811")
+        .taxon("Rhizobium")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("RMCC TR1811")
+        .nothing_else();
+    assert_informal("Ichneumonidae sp. UAM Ento 145060")
+        .taxon("Ichneumonidae") // a family, but the parser's best guess is the genus slot (not backbone-validated)
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("UAM Ento 145060")
+        .nothing_else();
+}
+
+#[test]
+fn australian_herbarium_locality_convention() {
+    // "Genus sp. <Locality>" — the type-specimen-based convention; the locality becomes the phrase
+    // instead of the 4.2.0 parser's misread "author Rocky Creek".
+    assert_informal("Elaeocarpus sp. Rocky Creek")
+        .taxon("Elaeocarpus")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("Rocky Creek")
+        .nothing_else();
+}
+
+#[test]
+fn numbered_placeholder() {
+    // Phrase leading tokens are dominated by bare numbers (sp. 1, sp. 2, …).
+    assert_informal("Allium sp. 1")
+        .taxon("Allium")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("1")
+        .nothing_else();
+}
+
+#[test]
+fn bare_genus_sp_has_no_phrase() {
+    // A bare "Genus sp." — indeterminate, no distinguishing tag.
+    assert_informal("Rhizobium sp.")
+        .taxon("Rhizobium")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .no_phrase()
+        .nothing_else();
+}
+
+#[test]
+fn single_uppercase_letter_designator() {
+    // "Genus sp. E" — a single-letter informal designator captured as the phrase.
+    assert_informal("Bryozoan sp. E")
+        .taxon("Bryozoan")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("E")
+        .nothing_else();
+}
+
+// ---- Boundary: a species epithet is present → must STAY Parsed, NOT Informal ------------------
+
+#[test]
+fn cf_binomial_stays_parsed_with_its_qualifier() {
+    // A complete binomial that was only "informal" via an open-nomenclature qualifier — the
+    // qualifier is an annotation (epithetQualifier), not a reclassification.
+    assert_parsed("Salicornia cf. patula")
+        .species("Salicornia", "patula")
+        .type_(NameType::Informal)
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .nothing_else();
+}
+
+#[test]
+fn aff_binomial_with_authorship_stays_parsed() {
+    // aff. on a complete binomial WITH authorship — the clearest reason it must stay Parsed: a flat
+    // Informal anchor could not represent the species-level authorship.
+    assert_parsed("Turritella aff. adulterata Deshayes 1820-1851")
+        .species("Turritella", "adulterata")
+        .comb_authors(Some("1820"), &["Deshayes"])
+        .qualifiers(&[(NamePart::Specific, "aff.")])
+        .type_(NameType::Informal);
+}
+
+#[test]
+fn infraspecific_indeterminate_stays_parsed() {
+    // "Salix alba subsp. B" has a species epithet ("alba"), so it stays Parsed — a flat Informal
+    // could not hold an infraspecific-level designation hanging off a determined species.
+    assert_parsed("Salix alba subsp. B")
+        .infra_species("Salix", "alba", Rank::Subspecies, "B")
+        .type_(NameType::Informal);
+}
+
+#[test]
+fn bare_determined_genus_stays_parsed_scientific() {
+    // "Rhizobium" alone is a determined SCIENTIFIC monomial — NOT informal (no provisional marker).
+    assert_parsed("Rhizobium")
+        .monomial("Rhizobium")
+        .type_(NameType::Scientific)
+        .nothing_else();
+}
+
+// ---- Deferred rescue: anchorless / monomial-aggregate labels ----------------------------------
+
+#[test]
+fn anchorless_group_and_clade_labels_are_unparsable_other() {
+    // Monomial-aggregate ("Bartonella group") and clade labels ("Amauropeltoid clade") still ERROR
+    // (the "Genus group" → Informal rescue needs a preflight producer and is deferred — Phase 5 P2
+    // note). parse_result clamps their INFORMAL error type to OTHER, a valid 5.0.0 Unparsable; the
+    // raw parse() path still emits INFORMAL, keeping the frozen 4.2.0 golden untouched.
+    for input in ["Bartonella group", "Amauropeltoid clade", "Unnamed clade"] {
+        match nameparser::parse_result(input, None, None, None) {
+            ParseResult::Unparsable(e) => assert_eq!(
+                e.type_,
+                NameType::Other,
+                "`{input}` should be Unparsable(OTHER) after the clamp"
+            ),
+            other => panic!("expected `{input}` Unparsable(OTHER), got {other:?}"),
+        }
+    }
+}

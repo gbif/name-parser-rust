@@ -41,7 +41,8 @@
 
 use std::collections::BTreeMap;
 
-use nameparser::model::{NamePart, NameType, NomCode, ParsedName, Rank, State};
+use nameparser::model::{Informal, NamePart, NameType, NomCode, ParsedName, Rank, State};
+use nameparser::ParseResult;
 
 // ---- entry points -----------------------------------------------------------------------------
 
@@ -75,6 +76,50 @@ pub fn assert_name_hinted(
     match nameparser::parse(input, authorship, rank, code) {
         Ok(pn) => NameAssertion::new(pn),
         Err(e) => panic!("expected `{input}` to parse, but it was unparsable: {e:?}"),
+    }
+}
+
+// ---- 5.0.0 three-way entry points (parse_result, not the raw parse()) -------------------------
+
+/// Parse `input` through the 5.0.0 [`nameparser::parse_result`] and assert the outcome is an
+/// [`ParseResult::Informal`], starting a fluent [`InformalAssertion`] chain. Panics (loudly) if the
+/// name comes back `Parsed` or `Unparsable` instead. Use for the informal / semistructured band —
+/// a supraspecific taxon carrying a provisional designation with no species epithet.
+pub fn assert_informal(input: &str) -> InformalAssertion {
+    assert_informal_hinted(input, None, None, None)
+}
+
+/// [`assert_informal`] with the optional authorship / rank / code hints.
+pub fn assert_informal_hinted(
+    input: &str,
+    authorship: Option<&str>,
+    rank: Option<Rank>,
+    code: Option<NomCode>,
+) -> InformalAssertion {
+    match nameparser::parse_result(input, authorship, rank, code) {
+        ParseResult::Informal(inf) => InformalAssertion::new(inf),
+        ParseResult::Parsed(pn) => {
+            panic!("expected `{input}` to be an Informal result, but it Parsed: {pn:?}")
+        }
+        ParseResult::Unparsable(e) => {
+            panic!("expected `{input}` to be an Informal result, but it was Unparsable: {e:?}")
+        }
+    }
+}
+
+/// Like [`assert_name`] but asserts the 5.0.0 three-way `Parsed` VARIANT (via
+/// [`nameparser::parse_result`]), failing if the name comes back `Informal` or `Unparsable`. Use to
+/// pin the boundary cases that must STAY `Parsed` — cf./aff. binomials, infraspecific-indeterminate
+/// names (whose `specific_authorship` a flat `Informal` could not hold), a bare determined genus.
+pub fn assert_parsed(input: &str) -> NameAssertion {
+    match nameparser::parse_result(input, None, None, None) {
+        ParseResult::Parsed(pn) => NameAssertion::new(pn),
+        ParseResult::Informal(inf) => {
+            panic!("expected `{input}` to be Parsed, but it was Informal: {inf:?}")
+        }
+        ParseResult::Unparsable(e) => {
+            panic!("expected `{input}` to be Parsed, but it was Unparsable: {e:?}")
+        }
     }
 }
 
@@ -835,6 +880,96 @@ impl NameAssertion {
                 n.epithet_qualifier.as_ref().is_none_or(|m| m.is_empty()),
                 "unexpected epithetQualifier: {:?}",
                 n.epithet_qualifier
+            );
+        }
+    }
+}
+
+// ---- the Informal assertion builder -----------------------------------------------------------
+
+/// The two OPTIONAL [`Informal`] fields, tracked so [`InformalAssertion::nothing_else`] can check
+/// the untouched ones are absent. `taxon`/`taxon_rank`/`rank` are always populated on a valid
+/// informal result, so they have no "default" to check.
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+enum InfProp {
+    Phrase,
+    Code,
+}
+
+/// Fluent assertion over a [`ParseResult::Informal`], mirroring [`NameAssertion`]'s chaining style.
+/// Every method returns `self`; [`Self::nothing_else`] closes the chain by asserting the optional
+/// fields you did NOT mention (`phrase`, `code`) are absent — so a test pins the whole informal
+/// result, not just the parts it named.
+pub struct InformalAssertion {
+    inf: Informal,
+    tested: std::collections::HashSet<InfProp>,
+}
+
+impl InformalAssertion {
+    fn new(inf: Informal) -> Self {
+        InformalAssertion {
+            inf,
+            tested: std::collections::HashSet::new(),
+        }
+    }
+
+    /// Assert the supraspecific taxon anchor (`"Rhizobium"`, `"Ichneumonidae"`).
+    pub fn taxon(self, taxon: &str) -> Self {
+        assert_eq!(self.inf.taxon, taxon, "taxon mismatch");
+        self
+    }
+
+    /// Assert the anchor's rank (usually `Genus`, since the anchor sits in the genus slot).
+    pub fn taxon_rank(self, rank: Rank) -> Self {
+        assert_eq!(self.inf.taxon_rank, rank, "taxonRank mismatch for {:?}", self.inf.taxon);
+        self
+    }
+
+    /// Assert the informal name's own purported rank (`Species` for `"sp."`, `Unranked` for a group).
+    pub fn rank(self, rank: Rank) -> Self {
+        assert_eq!(self.inf.rank, rank, "rank mismatch for {:?}", self.inf.taxon);
+        self
+    }
+
+    /// Assert the distinguishing phrase (`"RMCC TR1811"`, `"1"`).
+    pub fn phrase(mut self, phrase: &str) -> Self {
+        assert_eq!(self.inf.phrase.as_deref(), Some(phrase), "phrase mismatch");
+        self.tested.insert(InfProp::Phrase);
+        self
+    }
+
+    /// Assert there is NO phrase — a bare `"Genus sp."`.
+    pub fn no_phrase(mut self) -> Self {
+        assert_eq!(
+            self.inf.phrase, None,
+            "expected no phrase, got {:?}",
+            self.inf.phrase
+        );
+        self.tested.insert(InfProp::Phrase);
+        self
+    }
+
+    /// Assert the nomenclatural code.
+    pub fn code(mut self, code: NomCode) -> Self {
+        assert_eq!(self.inf.code, Some(code), "code mismatch");
+        self.tested.insert(InfProp::Code);
+        self
+    }
+
+    /// Close the chain: every optional field not mentioned above (`phrase`, `code`) must be absent.
+    pub fn nothing_else(self) {
+        if !self.tested.contains(&InfProp::Phrase) {
+            assert!(
+                self.inf.phrase.is_none(),
+                "unexpected phrase: {:?}",
+                self.inf.phrase
+            );
+        }
+        if !self.tested.contains(&InfProp::Code) {
+            assert!(
+                self.inf.code.is_none(),
+                "unexpected code: {:?}",
+                self.inf.code
             );
         }
     }

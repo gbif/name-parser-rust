@@ -164,8 +164,8 @@ fn allowed_mismatches(key: &str) -> usize {
 /// 5.0.0 parser now captures the whole tag as the informal `phrase` instead of misreading it as an
 /// author — the Australian-herbarium locality convention (`Elaeocarpus sp. Rocky Creek`), a
 /// descriptive note (`Burkholderia sp. (Gigaspora margarita endosymbiont)`), or a near-determination
-/// + specimen code (`Lacanobia sp. nr. subjuncta Bold:Aab, 0925`). All three stay on the SAME side
-/// of the error/parsed partition and keep the same `type`/`code` (asserted 0-mismatch above); only
+/// with a specimen code (`Lacanobia sp. nr. subjuncta Bold:Aab, 0925`). All three stay on the SAME
+/// side of the error/parsed partition and keep the same `type`/`code` (asserted 0-mismatch above); only
 /// the within-`ParsedName` field shape (`phrase`/`warnings`/authorship) differs, by design. Their
 /// per-field diff is skipped here rather than count-capped in [`ALLOWLIST`] so the exact inputs are
 /// pinned, not a fuzzy tally. The curated informal golden that locks the NEW expected shape is P5's

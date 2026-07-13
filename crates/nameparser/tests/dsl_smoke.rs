@@ -29,6 +29,20 @@ fn unparsable_virus_carries_type_and_code() {
     assert_unparsable_code("Tobacco mosaic virus", NameType::Other, NomCode::Virus);
 }
 
+#[test]
+fn informal_and_parsed_variant_helpers_work_end_to_end() {
+    // assert_informal asserts the 5.0.0 `Informal` variant + its flat fields; `nothing_else()`
+    // closes on the optional phrase/code.
+    assert_informal("Serratia sp. RE1-2a")
+        .taxon("Serratia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("RE1-2a")
+        .nothing_else();
+    // assert_parsed asserts the `Parsed` variant — a species epithet is present, so it is NOT informal.
+    assert_parsed("Salicornia cf. patula").species("Salicornia", "patula");
+}
+
 // ---- smoke tests for the parseAuthorship-emulating + viral helpers (used by later waves) ----
 
 #[test]
