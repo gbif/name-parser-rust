@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! `nameparser-ffi` — a C-ABI `cdylib` wrapping [`nameparser::parse`] for the Java FFM (Panama)
+//! `nameparser-ffi` — a C-ABI `cdylib` wrapping [`nameparser::parse_name`] for the Java FFM (Panama)
 //! binding (`bindings/java/`). Exposes two `extern "C"` functions: [`np_abi_version`] and
 //! [`np_parse_struct`], the latter writing a flat fixed-layout binary struct into a caller-owned
 //! buffer — see the [`layout`] module doc for the byte-for-byte wire format and return-code
@@ -80,7 +80,7 @@ fn null_name_error() -> ParseError {
 /// Input handling — `name` required (null or non-UTF-8 folds to a "null name" error),
 /// `authorship`/`rank`/`code` nullable, `rank`/`code` resolved via
 /// [`Rank::from_name`]/[`NomCode::from_name`] — and every output field is read off a single
-/// [`nameparser::parse`] call's `ParsedName`.
+/// [`nameparser::parse_name`] call's `ParsedName`.
 ///
 /// # Safety
 ///
@@ -110,7 +110,7 @@ pub unsafe extern "C" fn np_parse_struct(
         let authorship = opt_str(authorship);
         let rank = opt_str(rank).and_then(Rank::from_name);
         let code = opt_str(code).and_then(NomCode::from_name);
-        match nameparser::parse(name, authorship, rank, code) {
+        match nameparser::parse_name(name, authorship, rank, code) {
             Ok(pn) => Ok(layout::encode(&pn, np_abi_version())),
             // 5.0.0 `ParseResult.Unparsable` (the Java record this header feeds) may only carry a
             // non-parsable type; the core error path can still tag an informal-but-unrepresentable

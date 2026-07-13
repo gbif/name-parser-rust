@@ -248,9 +248,9 @@ fn parse_names_impl(
     let auth = hint(&authorship);
     let mut c = Cols::with_capacity(scientificname.len());
     for name in &scientificname {
-        // 5.0.0 three-way (parse_result), NOT raw parse(): a supraspecific-provisional name becomes
+        // 5.0.0 three-way (parse), NOT raw parse(): a supraspecific-provisional name becomes
         // an `informal` row, and an informal-but-unrepresentable error is type-clamped to OTHER.
-        match ::nameparser_core::parse_result(name, auth, rank, code) {
+        match ::nameparser_core::parse(name, auth, rank, code) {
             ::nameparser_core::ParseResult::Parsed(pn) => c.push_ok(name, &pn),
             ::nameparser_core::ParseResult::Informal(inf) => c.push_informal(name, &inf),
             ::nameparser_core::ParseResult::Unparsable(e) => c.push_err(name, &e),
@@ -325,7 +325,7 @@ fn parse_name_json_impl(
 ) -> String {
     let rank = hint(&rank).and_then(Rank::from_name);
     let code = hint(&code).and_then(NomCode::from_name);
-    match ::nameparser_core::parse(&name, hint(&authorship), rank, code) {
+    match ::nameparser_core::parse_name(&name, hint(&authorship), rank, code) {
         Ok(pn) => serde_json::to_string(&pn).unwrap_or_else(|e| format!("{{\"error\":\"{e}\"}}")),
         Err(e) => unparsable_json(&e),
     }

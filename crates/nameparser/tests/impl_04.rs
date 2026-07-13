@@ -527,7 +527,7 @@ fn strains() {
     // real epithet `&str`, so this one asserts the fields directly instead of chaining through
     // the builder — the same DSL-gap workaround as `unparsable_placeholder`'s "Aster indet."
     // case in impl_03.rs.
-    let n = nameparser::parse("Endobugula sp. JYr4", None, None, None)
+    let n = nameparser::parse_name("Endobugula sp. JYr4", None, None, None)
         .expect("`Endobugula sp. JYr4` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Endobugula"));
@@ -541,7 +541,7 @@ fn strains() {
     // Java: `assertPhraseName(...).species("Lepidoptera", null)` — again a null specific
     // epithet, so this reproduces assert_phrase_name's own checks (canonical, phrase, rank,
     // type) plus the genus/epithet-absent assertions directly, the same workaround as above.
-    let n2 = nameparser::parse("Lepidoptera sp. JGP0404", None, None, None)
+    let n2 = nameparser::parse_name("Lepidoptera sp. JGP0404", None, None, None)
         .expect("`Lepidoptera sp. JGP0404` should parse");
     assert_eq!(
         n2.canonical_name().as_deref(),
@@ -612,13 +612,13 @@ fn strain_designations() {
 #[test]
 fn explicit_marker_keeps_specific_rank() {
     assert_eq!(
-        nameparser::parse("Canis lupus subsp. Linnaeus, 1758", None, None, None)
+        nameparser::parse_name("Canis lupus subsp. Linnaeus, 1758", None, None, None)
             .unwrap()
             .rank,
         Rank::Subspecies
     );
     assert_eq!(
-        nameparser::parse(
+        nameparser::parse_name(
             "Nitzschia sinuata var. (Grunow) Lange-Bert.",
             None,
             None,
@@ -629,13 +629,13 @@ fn explicit_marker_keeps_specific_rank() {
         Rank::Variety
     );
     assert_eq!(
-        nameparser::parse("Aphelocoma californica subsp.", None, None, None)
+        nameparser::parse_name("Aphelocoma californica subsp.", None, None, None)
             .unwrap()
             .rank,
         Rank::Subspecies
     );
     assert_eq!(
-        nameparser::parse("Aus bus var.", None, None, None)
+        nameparser::parse_name("Aus bus var.", None, None, None)
             .unwrap()
             .rank,
         Rank::Variety
@@ -764,7 +764,7 @@ fn sensu_lato_not_eating_uppercase_initials() {
         .nothing_else();
     // uppercase "S.L." is author initials, not a sensu marker
     assert!(
-        nameparser::parse("Quercus robur Author S.L.", None, None, None)
+        nameparser::parse_name("Quercus robur Author S.L.", None, None, None)
             .unwrap()
             .taxonomic_note
             .is_none()
@@ -776,12 +776,12 @@ fn sensu_lato_not_eating_uppercase_initials() {
 /// a MISSING_GENUS warning. (A7)
 #[test]
 fn missing_genus_not_particle() {
-    let n = nameparser::parse("van Berg", None, None, None)
+    let n = nameparser::parse_name("van Berg", None, None, None)
         .expect("`van Berg` should parse (not a placeholder)");
     assert_ne!(n.type_, NameType::Placeholder);
     assert!(!n.warnings.contains(&warnings::MISSING_GENUS.to_string()));
 
-    let n2 = nameparser::parse("del Rosario Author", None, None, None)
+    let n2 = nameparser::parse_name("del Rosario Author", None, None, None)
         .expect("`del Rosario Author` should parse (not a placeholder)");
     assert_ne!(n2.type_, NameType::Placeholder);
     assert!(!n2.warnings.contains(&warnings::MISSING_GENUS.to_string()));

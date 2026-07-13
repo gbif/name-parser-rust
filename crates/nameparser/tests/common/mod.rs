@@ -17,7 +17,7 @@
 //! the WHOLE parse, not just the parts you named.
 //!
 //! ## 5.0.0 three-way DSL (the authoritative spec — the golden is only a Rust regression snapshot)
-//! The three classifying entry points go through the exceptionless [`nameparser::parse_result`] and
+//! The three classifying entry points go through the exceptionless [`nameparser::parse`] and
 //! assert the actual 5.0.0 [`nameparser::ParseResult`] VARIANT, so a misclassification fails loudly:
 //! * [`assert_name`] (+ `_hinted`/`_rank`/`_code`/`_auth`) — asserts a [`ParseResult::Parsed`] name.
 //! * [`assert_informal`] (+ `_hinted`) — asserts a [`ParseResult::Informal`] (a supraspecific anchor
@@ -27,7 +27,7 @@
 //!
 //! The remaining helpers ([`assert_phrase_name`], [`assert_authorship`], [`assert_sensu`],
 //! [`assert_nom_note`], [`is_viral_name`], …) deliberately stay on the lower-level raw
-//! [`nameparser::parse`] path — they test the `ParsedName` atoms / `NameFormatter` renderings /
+//! [`nameparser::parse_name`] path — they test the `ParsedName` atoms / `NameFormatter` renderings /
 //! authorship directly, which is a distinct (still public) API from the three-way classification.
 //!
 //! ## Java → Rust mapping (for porting the suites)
@@ -60,7 +60,7 @@ use nameparser::ParseResult;
 
 // ---- entry points -----------------------------------------------------------------------------
 
-/// Parse `input` (no hints) through the 5.0.0 [`nameparser::parse_result`] and assert the outcome is
+/// Parse `input` (no hints) through the 5.0.0 [`nameparser::parse`] and assert the outcome is
 /// a [`ParseResult::Parsed`] name, starting an assertion chain. Panics (loudly) if the name comes
 /// back `Informal` or `Unparsable` — so a determined-name test that wrongly reclassifies as informal
 /// fails here, not silently. (The informal band is [`assert_informal`]; the junk band is
@@ -91,7 +91,7 @@ pub fn assert_name_hinted(
     rank: Option<Rank>,
     code: Option<NomCode>,
 ) -> NameAssertion {
-    match nameparser::parse_result(input, authorship, rank, code) {
+    match nameparser::parse(input, authorship, rank, code) {
         ParseResult::Parsed(pn) => NameAssertion::new(pn),
         ParseResult::Informal(inf) => {
             panic!("expected `{input}` to be a Parsed name, but it was Informal: {inf:?}")
@@ -102,9 +102,9 @@ pub fn assert_name_hinted(
     }
 }
 
-// ---- 5.0.0 three-way entry points (parse_result, not the raw parse()) -------------------------
+// ---- 5.0.0 three-way entry points (parse, not the raw parse_name()) ---------------------------
 
-/// Parse `input` through the 5.0.0 [`nameparser::parse_result`] and assert the outcome is an
+/// Parse `input` through the 5.0.0 [`nameparser::parse`] and assert the outcome is an
 /// [`ParseResult::Informal`], starting a fluent [`InformalAssertion`] chain. Panics (loudly) if the
 /// name comes back `Parsed` or `Unparsable` instead. Use for the informal / semistructured band —
 /// a supraspecific taxon carrying a provisional designation with no species epithet.
@@ -119,7 +119,7 @@ pub fn assert_informal_hinted(
     rank: Option<Rank>,
     code: Option<NomCode>,
 ) -> InformalAssertion {
-    match nameparser::parse_result(input, authorship, rank, code) {
+    match nameparser::parse(input, authorship, rank, code) {
         ParseResult::Informal(inf) => InformalAssertion::new(inf),
         ParseResult::Parsed(pn) => {
             panic!("expected `{input}` to be an Informal result, but it Parsed: {pn:?}")
@@ -141,7 +141,7 @@ pub fn assert_no_name(input: &str) {
 /// `assertUnparsable(name, type)` — the input must be a 5.0.0 [`ParseResult::Unparsable`] with the
 /// given `NameType` (the type is the CLAMPED one — `Unparsable` may only carry a non-parsable type).
 pub fn assert_unparsable(input: &str, type_: NameType) {
-    match nameparser::parse_result(input, None, None, None) {
+    match nameparser::parse(input, None, None, None) {
         ParseResult::Unparsable(e) => assert_eq!(
             e.type_, type_,
             "`{input}` unparsable as expected but with type {:?}, expected {type_:?}",
@@ -154,7 +154,7 @@ pub fn assert_unparsable(input: &str, type_: NameType) {
 /// `assertUnparsable(name, type, code)` — [`ParseResult::Unparsable`] with the given `NameType` AND
 /// `NomCode`.
 pub fn assert_unparsable_code(input: &str, type_: NameType, code: NomCode) {
-    match nameparser::parse_result(input, None, None, None) {
+    match nameparser::parse(input, None, None, None) {
         ParseResult::Unparsable(e) => {
             assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
             assert_eq!(
@@ -177,7 +177,7 @@ pub fn assert_unparsable_rank(input: &str, rank: Rank, type_: NameType) {
 /// `assertUnparsableName(name, rank, type, expectedName)` — unparsable (parsed with the rank
 /// hint) with the given `NameType`, and the echoed error name equals `expected_name`.
 pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected_name: &str) {
-    match nameparser::parse_result(input, None, Some(rank), None) {
+    match nameparser::parse(input, None, Some(rank), None) {
         ParseResult::Unparsable(e) => {
             assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
             assert_eq!(
@@ -192,7 +192,7 @@ pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected
 
 /// `assertSensu(raw, sensu)` — parse `raw` and assert its taxonomic (sensu/sec) note.
 pub fn assert_sensu(raw: &str, sensu: &str) {
-    let n = nameparser::parse(raw, None, None, None)
+    let n = nameparser::parse_name(raw, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{raw}` to parse: {e:?}"));
     assert_eq!(
         n.taxonomic_note.as_deref(),
@@ -210,7 +210,7 @@ pub fn assert_phrase_name(
     rank: Option<Rank>,
     phrase: &str,
 ) -> NameAssertion {
-    let n = nameparser::parse(sciname, None, None, None)
+    let n = nameparser::parse_name(sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
     assert_eq!(
         n.canonical_name().as_deref(),
@@ -228,7 +228,7 @@ pub fn assert_phrase_name(
 /// `assertNomNote(note, sciname)` — parse `sciname` and assert its nomenclatural note. Returns
 /// the assertion for further chaining.
 pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
-    let n = nameparser::parse(sciname, None, None, None)
+    let n = nameparser::parse_name(sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
     NameAssertion::new(n).nom_note(note)
 }
@@ -237,7 +237,7 @@ pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
 /// equals `note` (Java's helper is misnamed; it checks the nom-note). Returns the assertion.
 pub fn assert_cultivar(note: &str) -> NameAssertion {
     let sciname = format!("Abies alba {note}");
-    let n = nameparser::parse(&sciname, None, None, None)
+    let n = nameparser::parse_name(&sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
     NameAssertion::new(n).nom_note(note)
 }
@@ -261,7 +261,7 @@ pub fn assert_ex_authorship(
     ex_author: Option<&str>,
     expected_authors: &[&str],
 ) -> NameAssertion {
-    let full = nameparser::parse("Abies alba", Some(raw), Some(Rank::Species), None)
+    let full = nameparser::parse_name("Abies alba", Some(raw), Some(Rank::Species), None)
         .unwrap_or_else(|e| panic!("authorship `{raw}` should parse: {e:?}"));
     let auth = &full.combination_authorship;
     match ex_author {
@@ -316,7 +316,7 @@ pub fn assert_ex_authorship(
 /// code came out as `VIRUS` (on the parsed name, or on the unparsable error). NOT the core
 /// `viral::is_viral` word-primitive.
 pub fn is_viral_name(name: &str) -> bool {
-    match nameparser::parse(name, None, None, None) {
+    match nameparser::parse_name(name, None, None, None) {
         Ok(pn) => pn.code == Some(NomCode::Virus),
         Err(e) => e.type_ == NameType::Other && e.code == Some(NomCode::Virus),
     }

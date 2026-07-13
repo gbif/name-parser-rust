@@ -637,7 +637,7 @@ pub fn is_barcode_otu(name: &str) -> bool {
 // is_interesting — the "suspicious tail" predicate
 // ---------------------------------------------------------------------------------------
 
-/// The result of parsing one corpus row — an alias for [`nameparser::parse`]'s own return type,
+/// The result of parsing one corpus row — an alias for [`nameparser::parse_name`]'s own return type,
 /// named here to match the Java recon's `ParseResult`/`isInteresting` naming without
 /// introducing a new struct. [`Item`] pairs this with the `line`/`input` Java's `ParseResult`
 /// also carries.
@@ -887,7 +887,7 @@ pub fn select(args: &ValidateArgs) -> (Vec<Item>, ScanCounts) {
             continue;
         }
 
-        let outcome = nameparser::parse(name, None, None, None);
+        let outcome = nameparser::parse_name(name, None, None, None);
         counts.total += 1;
         let interesting_flag = is_interesting(&outcome);
         let item = Item {
@@ -1377,14 +1377,14 @@ mod tests {
 
     #[test]
     fn is_interesting_true_for_an_unparsable_name() {
-        let outcome = nameparser::parse("", None, None, None);
+        let outcome = nameparser::parse_name("", None, None, None);
         assert!(outcome.is_err());
         assert!(is_interesting(&outcome));
     }
 
     #[test]
     fn is_interesting_true_for_a_name_with_a_warning() {
-        let outcome = nameparser::parse("Abies null Hood", None, None, None);
+        let outcome = nameparser::parse_name("Abies null Hood", None, None, None);
         let pn = outcome.as_ref().expect("should parse");
         assert!(!pn.warnings.is_empty());
         assert!(is_interesting(&outcome));
@@ -1392,7 +1392,7 @@ mod tests {
 
     #[test]
     fn is_interesting_true_for_a_partial_state_name() {
-        let outcome = nameparser::parse("Foo bar (auct.) Rolfe", None, None, None);
+        let outcome = nameparser::parse_name("Foo bar (auct.) Rolfe", None, None, None);
         let pn = outcome.as_ref().expect("should parse");
         assert_eq!(pn.state, State::Partial);
         assert!(is_interesting(&outcome));
@@ -1405,7 +1405,7 @@ mod tests {
         // already covers; `Informal`/`Placeholder` are the reachable non-Scientific types on
         // the `Ok(..)` path, so one of those is what actually exercises the `type_ !=
         // NameType::Scientific` arm of the predicate on a successful parse.
-        let outcome = nameparser::parse("GenusANIC_3", None, None, None);
+        let outcome = nameparser::parse_name("GenusANIC_3", None, None, None);
         let pn = outcome.as_ref().expect("should parse");
         assert_eq!(pn.type_, NameType::Informal);
         assert!(is_interesting(&outcome));
@@ -1413,7 +1413,7 @@ mod tests {
 
     #[test]
     fn is_interesting_false_for_a_clean_scientific_complete_binomial() {
-        let outcome = nameparser::parse("Abies alba Mill.", None, None, None);
+        let outcome = nameparser::parse_name("Abies alba Mill.", None, None, None);
         let pn = outcome.as_ref().expect("should parse");
         assert!(pn.warnings.is_empty());
         assert_eq!(pn.state, State::Complete);
@@ -2043,7 +2043,7 @@ mod tests {
         // On failure, shape_json matches the report row's own "error" field (type/code?/
         // message) — NOT the prompt payload's reduced {type, message} "unparsable" shape (see
         // shape_json's doc comment for why byte-parity with render_row's error branch matters).
-        let err = nameparser::parse("Tobacco mosaic virus", None, None, None);
+        let err = nameparser::parse_name("Tobacco mosaic virus", None, None, None);
         assert!(err.is_err());
         let error_shape: serde_json::Value =
             serde_json::from_str(&shape_json(&err)).expect("must be valid JSON");
@@ -2201,7 +2201,7 @@ mod tests {
         Item {
             line,
             input: name.to_string(),
-            outcome: nameparser::parse(name, None, None, None),
+            outcome: nameparser::parse_name(name, None, None, None),
         }
     }
 
@@ -2212,7 +2212,7 @@ mod tests {
             Item {
                 line: 2,
                 input: "".to_string(),
-                outcome: nameparser::parse("", None, None, None),
+                outcome: nameparser::parse_name("", None, None, None),
             },
         ];
         assert!(items[0].outcome.is_ok());

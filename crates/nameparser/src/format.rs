@@ -931,7 +931,7 @@ mod tests {
     //! quoting, sanctioning author, cultivar, ascii folding, html) without needing the oracle
     //! present at test time.
 
-    use crate::parse;
+    use crate::parse_name as parse;
 
     /// Parse with the default (no hints) entry point; panics if the name is unparsable — every
     /// input below is a parseable name chosen precisely to exercise a formatter path.

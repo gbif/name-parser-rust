@@ -7,7 +7,7 @@
 //!
 //! ## `parse` (Phase 2 Task 1 — implemented)
 //!
-//! Streams a plain-text, one-name-per-line input through [`nameparser::parse`] and writes one
+//! Streams a plain-text, one-name-per-line input through [`nameparser::parse_name`] and writes one
 //! compact JSON object per line (JSONL), matching the Java CLI's `ParseCli`/`JsonlWriter`
 //! (Gson, no pretty-printing, nulls omitted) byte-for-byte — proven by
 //! `tests/parse_cli.rs`, which diffs this binary's output against the same
@@ -250,7 +250,7 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
             continue;
         };
 
-        let result = nameparser::parse(name, None, None, None);
+        let result = nameparser::parse_name(name, None, None, None);
         let is_ok = result.is_ok();
         // Echo the extracted (trimmed, first-tab-column) name in `input`, matching the Java CLI's
         // `ParseCli` (`input = row.name()`, a `PlainTextReader.trim()`-ed value) — verified
@@ -425,7 +425,7 @@ fn warmup(path: &Path) -> io::Result<()> {
         };
         let raw = line?;
         if let Some(name) = extract_benchmark_name(&raw) {
-            let _ = nameparser::parse(name, None, None, None);
+            let _ = nameparser::parse_name(name, None, None, None);
             n += 1;
         }
     }
@@ -448,7 +448,7 @@ fn run_timed(path: &Path) -> io::Result<BenchmarkReport> {
         };
 
         let t0 = Instant::now();
-        let result = nameparser::parse(name, None, None, None);
+        let result = nameparser::parse_name(name, None, None, None);
         let elapsed_nanos = t0.elapsed().as_nanos() as u64;
 
         if elapsed_nanos > SLOW_PARSE_THRESHOLD_NANOS {
@@ -1137,7 +1137,7 @@ mod tests {
 
     #[test]
     fn render_row_matches_the_documented_success_shape() {
-        let pn = nameparser::parse("Abies alba Mill.", None, None, None).unwrap();
+        let pn = nameparser::parse_name("Abies alba Mill.", None, None, None).unwrap();
         let row = render_row(2, "Abies alba Mill.", &Ok(pn));
         assert_eq!(
             row,

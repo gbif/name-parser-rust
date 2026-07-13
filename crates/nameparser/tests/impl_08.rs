@@ -104,7 +104,7 @@ fn virus_false_positive_animals() {
 #[test]
 fn virus_gate_no_catastrophic_backtracking() {
     let adversarial = format!("Rnavirus bus {}", "Aa.-".repeat(30));
-    match nameparser::parse(&adversarial, None, None, None) {
+    match nameparser::parse_name(&adversarial, None, None, None) {
         Ok(_) => {}
         Err(_) => {
             // expected — the point is that the classification returns fast, not that it parses.
@@ -371,7 +371,7 @@ fn indet_names() {
     // hardcodes infraspecific_epithet == None and takes an arbitrary rank, so it reproduces
     // Java's `.infraSpecies(genus, epithet, RANK, null)` exactly and can still finish with
     // `nothing_else()`.
-    let n = nameparser::parse("Trametes spec.", None, None, None)
+    let n = nameparser::parse_name("Trametes spec.", None, None, None)
         .expect("`Trametes spec.` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Trametes"));
@@ -382,7 +382,7 @@ fn indet_names() {
     assert_eq!(n.type_, NameType::Informal);
     assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);
 
-    let n = nameparser::parse("Trametes indet.", None, None, None)
+    let n = nameparser::parse_name("Trametes indet.", None, None, None)
         .expect("`Trametes indet.` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Trametes"));
@@ -393,7 +393,7 @@ fn indet_names() {
     assert_eq!(n.type_, NameType::Informal);
     assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);
 
-    let n = nameparser::parse("Camillina indet", None, None, None)
+    let n = nameparser::parse_name("Camillina indet", None, None, None)
         .expect("`Camillina indet` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Camillina"));
@@ -438,7 +438,7 @@ fn indet_names() {
     //        .type(NameType.INFORMAL)
     //        .nothingElse();
 
-    let n = nameparser::parse("Polygonum spec.", None, None, None)
+    let n = nameparser::parse_name("Polygonum spec.", None, None, None)
         .expect("`Polygonum spec.` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Polygonum"));
@@ -455,7 +455,7 @@ fn indet_names() {
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
 
-    let n = nameparser::parse("Mesocricetus sp.", None, None, None)
+    let n = nameparser::parse_name("Mesocricetus sp.", None, None, None)
         .expect("`Mesocricetus sp.` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Mesocricetus"));
@@ -479,7 +479,7 @@ fn indet_names() {
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
 
-    let n = nameparser::parse("Lepidoptera Hooker", None, Some(Rank::Species), None)
+    let n = nameparser::parse_name("Lepidoptera Hooker", None, Some(Rank::Species), None)
         .expect("`Lepidoptera Hooker` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Lepidoptera"));
@@ -505,7 +505,7 @@ fn rank_mismatch() {
     // `.cultivar(genus, null)` — the DSL's cultivar()/cultivar_rank() take the cultivar
     // epithet as a plain `&str` (no way to express "cultivar epithet explicitly absent"), so
     // this indeterminate-cultivar case is asserted directly against the parsed fields.
-    let n = nameparser::parse("Polygonum", None, Some(Rank::Cultivar), None)
+    let n = nameparser::parse_name("Polygonum", None, Some(Rank::Cultivar), None)
         .expect("`Polygonum` (rank=CULTIVAR) should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Polygonum"));
@@ -520,7 +520,7 @@ fn rank_mismatch() {
 
     // `.indet(genus, null, RANK)` — again a null epithet; ParsedName also has no ported
     // `isIndetermined()` (Java's own extra check here), so that one assertion is dropped.
-    let n = nameparser::parse("Polygonum", None, Some(Rank::Subspecies), None)
+    let n = nameparser::parse_name("Polygonum", None, Some(Rank::Subspecies), None)
         .expect("`Polygonum` (rank=SUBSPECIES) should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Polygonum"));

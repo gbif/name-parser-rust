@@ -469,7 +469,7 @@ fn bacteria_with_pathovar_rank() {
     // .infraSpecies(genus, epithet, PATHOVAR, null) — a null infraspecific epithet; direct-parse
     // fallback since the DSL's infra_species requires a non-null epithet, replicating the same
     // field assertions Java's infraSpecies(...) builder call would have made.
-    let n = nameparser::parse("Xanthomonas axonopodis pathovar.", None, None, None)
+    let n = nameparser::parse_name("Xanthomonas axonopodis pathovar.", None, None, None)
         .unwrap_or_else(|e| panic!("expected `Xanthomonas axonopodis pathovar.` to parse: {e:?}"));
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Xanthomonas"));
@@ -479,7 +479,7 @@ fn bacteria_with_pathovar_rank() {
     assert_eq!(n.type_, NameType::Informal);
     assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);
 
-    let n = nameparser::parse("Xanthomonas axonopodis pv.", None, None, None)
+    let n = nameparser::parse_name("Xanthomonas axonopodis pv.", None, None, None)
         .unwrap_or_else(|e| panic!("expected `Xanthomonas axonopodis pv.` to parse: {e:?}"));
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Xanthomonas"));

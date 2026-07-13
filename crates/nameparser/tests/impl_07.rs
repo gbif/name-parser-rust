@@ -97,7 +97,7 @@ fn long_name() {
     // still parses fine — the cap only rejects beyond 1000 chars.
     // Direct-parse fallback for Java's `parser.parseAuthorship(auth, code)`, which the DSL's
     // own `assert_ex_authorship` documents as `parse("Abies alba", auth, SPECIES, code)`.
-    let pa = nameparser::parse(
+    let pa = nameparser::parse_name(
         "Abies alba",
         Some(&format!("{authors}, 2015")),
         Some(Rank::Species),
@@ -125,7 +125,7 @@ fn long_name() {
     long_authorship.push_str("2015");
     // Direct-parse fallback for Java's `parser.parseAuthorship(...)` try/catch expecting an
     // UnparsableNameException with type OTHER.
-    match nameparser::parse(
+    match nameparser::parse_name(
         "Abies alba",
         Some(&long_authorship),
         Some(Rank::Species),
@@ -354,12 +354,12 @@ fn quote_normalisation() {
     // Direct-parse fallback: Java compares two `parser.parse(...)` results for structural
     // equality; `ParsedName` derives `PartialEq` so `assert_eq!` reproduces it directly.
     assert_eq!(
-        nameparser::parse("'Prosthète' Hesse 1861", None, None, None).unwrap(),
-        nameparser::parse("‘Prosthète’ Hesse 1861", None, None, None).unwrap()
+        nameparser::parse_name("'Prosthète' Hesse 1861", None, None, None).unwrap(),
+        nameparser::parse_name("‘Prosthète’ Hesse 1861", None, None, None).unwrap()
     );
     assert_eq!(
-        nameparser::parse("\"Prosthète\" Hesse 1861", None, None, None).unwrap(),
-        nameparser::parse("“Prosthète” Hesse 1861", None, None, None).unwrap()
+        nameparser::parse_name("\"Prosthète\" Hesse 1861", None, None, None).unwrap(),
+        nameparser::parse_name("“Prosthète” Hesse 1861", None, None, None).unwrap()
     );
 }
 

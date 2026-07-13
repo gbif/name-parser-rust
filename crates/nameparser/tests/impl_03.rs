@@ -408,7 +408,7 @@ fn not_names() {
 // https://code.iczn.org/types-in-the-species-group/article-72-general-provisions/ (ICZN Art. 72).
 #[test]
 fn autonym_authorship() {
-    use nameparser::parse;
+    use nameparser::parse_name as parse;
 
     // botanical: species author after the species epithet, none after the autonym
     let acer = parse(
@@ -505,7 +505,7 @@ fn unparsable_placeholder() {
     // fields instead of through the assert_name(...).nothing_else() chain — mirrors Java's
     // `.species("Aster", null).type(NameType.INFORMAL).warning(Warnings.INDETERMINED)`.
     let aster =
-        nameparser::parse("Aster indet.", None, None, None).expect("`Aster indet.` should parse");
+        nameparser::parse_name("Aster indet.", None, None, None).expect("`Aster indet.` should parse");
     assert!(aster.uninomial.is_none());
     assert_eq!(aster.genus.as_deref(), Some("Aster"));
     assert!(aster.infrageneric_epithet.is_none());
@@ -658,7 +658,7 @@ fn aggregates() {
 /// the no-hint `assert_unparsable` and the type+code `assert_unparsable_code`, so this one is
 /// reproduced locally rather than added to the shared `common` module.
 fn assert_unparsable_rank(input: &str, rank: Rank, type_: NameType) {
-    match nameparser::parse(input, None, Some(rank), None) {
+    match nameparser::parse_name(input, None, Some(rank), None) {
         Err(e) => assert_eq!(
             e.type_, type_,
             "`{input}` (rank {rank:?}) unparsable as expected but with type {:?}, expected {type_:?}",

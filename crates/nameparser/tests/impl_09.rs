@@ -84,7 +84,7 @@ fn authorship_only() {
     // Direct-parse fallback: the shared `assert_ex_authorship` DSL only forwards comb/bas/sanct
     // authorship onto its returned `NameAssertion`, dropping the nomenclatural note this
     // authorship string itself carries — checked directly against the full parse.
-    let n = nameparser::parse(
+    let n = nameparser::parse_name(
         "Abies alba",
         Some("(Ristorcelli & Van ty) Wedd. ex Sch. Bip. (nom. nud.)"),
         Some(Rank::Species),
@@ -255,7 +255,7 @@ fn authorship_only() {
 
     // Direct-parse fallback: `.doubtful()`/`.warning(...)` read fields the shared
     // `assert_authorship` DSL doesn't forward onto its returned `NameAssertion`.
-    let n = nameparser::parse(
+    let n = nameparser::parse_name(
         "Abies alba",
         Some("Istv?nffi, 1898"),
         Some(Rank::Species),
@@ -467,7 +467,7 @@ fn test_nomenclatural_notes_pattern() {
     // `ParsedAuthorship.copy()` never touches `type` — has no Rust equivalent (`NameType` is a
     // plain, non-nullable enum here), so that one check is dropped; the nomenclatural-note check
     // it chains is preserved below.
-    let n = nameparser::parse("Abies alba", Some("nom. illeg."), Some(Rank::Species), None)
+    let n = nameparser::parse_name("Abies alba", Some("nom. illeg."), Some(Rank::Species), None)
         .unwrap_or_else(|e| panic!("authorship `nom. illeg.` should parse: {e:?}"));
     assert_eq!(n.nomenclatural_note.as_deref(), Some("nom. illeg."));
 
@@ -633,7 +633,7 @@ fn assert_authorship_note(
     sensu: &str,
     nom_note: Option<&str>,
 ) {
-    let n = nameparser::parse("Abies alba", Some(raw), Some(Rank::Species), None)
+    let n = nameparser::parse_name("Abies alba", Some(raw), Some(Rank::Species), None)
         .unwrap_or_else(|e| panic!("authorship `{raw}` should parse: {e:?}"));
     assert_eq!(
         n.combination_authorship.year.as_deref(),

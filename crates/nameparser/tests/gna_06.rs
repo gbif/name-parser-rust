@@ -292,7 +292,7 @@ fn names_with_spec_nov_spec() {
     // "Lepidoptera sp. JGP0404" / impl_10's `phraseIndetName` cases: direct parse + explicit
     // field checks for the fields the Java chain touches (`.nothingElse()` itself isn't
     // replicated field-by-field, matching that same established precedent).
-    let n = nameparser::parse("Lampona spec Platnick, 2000", None, None, None)
+    let n = nameparser::parse_name("Lampona spec Platnick, 2000", None, None, None)
         .expect("`Lampona spec Platnick, 2000` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Lampona"));
@@ -309,7 +309,7 @@ fn names_with_spec_nov_spec() {
     assert_eq!(n.code, Some(NomCode::Zoological));
     assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);
 
-    let n = nameparser::parse("Gobiosoma spec (Ginsburg, 1939)", None, None, None)
+    let n = nameparser::parse_name("Gobiosoma spec (Ginsburg, 1939)", None, None, None)
         .expect("`Gobiosoma spec (Ginsburg, 1939)` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Gobiosoma"));
@@ -323,7 +323,7 @@ fn names_with_spec_nov_spec() {
     assert_eq!(n.code, Some(NomCode::Zoological));
     assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);
 
-    let n = nameparser::parse("Globigerina spec", None, None, None)
+    let n = nameparser::parse_name("Globigerina spec", None, None, None)
         .expect("`Globigerina spec` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Globigerina"));
@@ -340,7 +340,7 @@ fn names_with_spec_nov_spec() {
     //          .nomNote("nov spec")
     //          .nothingElse();
 
-    let n = nameparser::parse("Ctenotus spec.", None, None, None)
+    let n = nameparser::parse_name("Ctenotus spec.", None, None, None)
         .expect("`Ctenotus spec.` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Ctenotus"));
@@ -353,7 +353,7 @@ fn names_with_spec_nov_spec() {
 
     // Java `.phraseIndetName(genus, phrase, rank)` is a `NameAssertion` instance method with no
     // DSL equivalent either; same direct-parse workaround.
-    let n = nameparser::parse("Byrsophlebidae spec. 2", None, None, None)
+    let n = nameparser::parse_name("Byrsophlebidae spec. 2", None, None, None)
         .expect("`Byrsophlebidae spec. 2` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Byrsophlebidae"));

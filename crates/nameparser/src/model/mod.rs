@@ -42,7 +42,7 @@ impl ParseError {
     /// grouping (`"Bartonella group"`, `"Amauropeltoid clade"`) as `INFORMAL`, but the 5.0.0
     /// `ParseResult::Unparsable` variant — mirroring Java's, whose record rejects `isParsable()`
     /// types — may only carry a non-parsable type. Applied ONLY at the 5.0.0 boundaries
-    /// ([`crate::parse_result`] and the FFI); [`crate::parse`] (the raw path, cross-validated
+    /// ([`crate::parse`] and the FFI); [`crate::parse_name`] (the raw path, cross-validated
     /// byte-for-byte against Java 4.2.0) keeps the original `INFORMAL`, so the golden oracles are
     /// untouched. Rebuilds the message via [`Self::new`] so it names the clamped type.
     pub fn clamped_to_unparsable(self) -> ParseError {
@@ -65,7 +65,7 @@ impl ParseError {
 ///
 /// Deliberately a FLAT type, not a reused [`ParsedName`]: the anchor lives in one place
 /// ([`Self::taxon`] + [`Self::taxon_rank`]) and is never mislabelled as a backbone-validated
-/// "genus". Derived from an informal `ParsedName` at the [`crate::parse_result`] boundary. Only
+/// "genus". Derived from an informal `ParsedName` at the [`crate::parse`] boundary. Only
 /// names with NO species epithet land here; a binomial core (incl. cf./aff. and infraspecific-indet)
 /// stays [`crate::ParseResult::Parsed`] so its `specific_authorship` is preserved.
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]

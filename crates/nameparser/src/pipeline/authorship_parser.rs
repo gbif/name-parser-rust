@@ -6,7 +6,7 @@
 //! regex-free: pure `TokenKind` dispatch, `&str`/`char` tests, and two small fixed-string
 //! membership sets ([`AUTHOR_SUFFIXES`], [`GENERATIONAL_SUFFIXES`]).
 //!
-//! [`parse`] runs in three phases over `tokens[from..]` (`from` is the authorship-section
+//! [`parse_name`] runs in three phases over `tokens[from..]` (`from` is the authorship-section
 //! boundary found by `AuthorshipSplit`, Phase 1 Slice 3):
 //!   - **Phase A** — a leading `(...)` is a basionym candidate. [`find_close`] finds the
 //!     matching close paren (a plain depth counter). Inside the parens, a top-level colon

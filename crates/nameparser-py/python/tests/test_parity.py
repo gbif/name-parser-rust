@@ -220,7 +220,7 @@ def _render(v: object) -> str:
 
 # --- 5.0.0 three-way mapping of the oracle ------------------------------------------------------
 # The oracle CLI still emits the raw core `parse()` output (a ParsedName, or an error), while the
-# Python binding now returns the 5.0.0 three-way `parse_result()` — an `Informal` for a
+# Python binding now returns the 5.0.0 three-way `parse()` — an `Informal` for a
 # supraspecific-provisional name, and a type-clamped `Unparsable` for an informal-but-unrepresentable
 # error. To compare like-for-like, map each oracle row through the SAME split/clamp the binding
 # applies (deliberate mirrors of Rust `is_informal`/`to_informal`/`ParseError::clamped_to_unparsable`
@@ -349,7 +349,7 @@ def test_python_binding_matches_oracle_across_all_corpora():
                 # either producer (confirmed in the module docstring), this is the cheap,
                 # crash-proof form regardless. The oracle error is mapped through the 5.0.0
                 # Unparsable clamp (INFORMAL/SCIENTIFIC → OTHER, message rebuilt) that the binding's
-                # parse_result() applies but the raw parse() oracle does not.
+                # parse() applies but the raw parse() oracle does not.
                 oracle_error = oracle_outcome[1] or {}
                 oracle_message, oracle_type, oracle_code = _clamp_oracle_error(oracle_error)
                 error_mismatches: list[str] = []

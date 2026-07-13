@@ -5,7 +5,7 @@
 //! following Phase 1 Slice 4 change that ported `replace_homoglyphs`'s backing table,
 //! closing the field-parity gate's last residual).
 //!
-//! Diffs Rust `nameparser::parse()` against the golden SNAPSHOT
+//! Diffs Rust `nameparser::parse_name()` against the golden SNAPSHOT
 //! (`testdata/golden/expected-parse.jsonl`) over the ~8017-name benchmark corpus
 //! (`testdata/benchmark-data.txt`). **This is a Rust regression snapshot, not a live Java oracle**:
 //! the Java `NameParserImpl` was retired at 5.0.0, so the snapshot is regenerated FROM THE RUST CLI
@@ -267,7 +267,7 @@ fn matches_java_error_classification_over_corpus() {
             "line {line_no}: oracle row has neither/both error+parsed, input={input:?}"
         );
 
-        let rust_result = nameparser::parse(input, None, None, None);
+        let rust_result = nameparser::parse_name(input, None, None, None);
 
         match (java_error, rust_result) {
             (Some(err), Ok(_)) => {

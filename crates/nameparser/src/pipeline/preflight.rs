@@ -426,7 +426,7 @@ fn is_clean_genus_stem(stem: &str) -> bool {
 
 /// Build a complete supraspecific `Informal`-shaped `ParsedName` for a rescued monomial-aggregate /
 /// lineage grouping (5.0.0) and flag the pipeline to short-circuit ([`ParseContext::preflight_complete`]).
-/// The anchor goes in the `genus` slot (so `parse_result`'s `to_informal` derives `taxon_rank = GENUS`),
+/// The anchor goes in the `genus` slot (so `parse`'s `to_informal` derives `taxon_rank = GENUS`),
 /// `rank` is `UNRANKED` (the grouping carries no Linnean rank of its own), and the aggregate word
 /// becomes the `phrase`; `type = INFORMAL` routes it to `ParseResult::Informal`.
 fn rescue_informal_group(ctx: &mut ParseContext, taxon: &str, marker: &str) {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-//! The 5.0.0 informal / semistructured band, tested through the three-way `parse_result` via the
+//! The 5.0.0 informal / semistructured band, tested through the three-way `parse` via the
 //! fluent `assert_informal` / `assert_name` DSL helpers. Cases are lifted from the reservoir
 //! samples of the 67.5M verbatim-corpus study (`docs/superpowers/findings/`): overwhelmingly
 //! molecular / DNA-barcoding provisional species `Genus sp. <specimen/culture/BOLD code>`.
@@ -165,7 +165,7 @@ fn anchorless_clade_and_code_labels_are_unparsable_other() {
     // Anchorless phylogenetic clade labels ("Unnamed clade") and OTU-/strain-code lineage stems
     // ("NC12A-lineage") have no clean single-taxon anchor → Unparsable(OTHER).
     for input in ["Amauropeltoid clade", "Unnamed clade", "NC12A-lineage", "he2-lineage"] {
-        match nameparser::parse_result(input, None, None, None) {
+        match nameparser::parse(input, None, None, None) {
             ParseResult::Unparsable(e) => assert_eq!(
                 e.type_,
                 NameType::Other,

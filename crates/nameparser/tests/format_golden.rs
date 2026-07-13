@@ -91,7 +91,7 @@ fn regenerate() {
             continue;
         }
         let input = unescape(line.split('\t').next().unwrap_or(""));
-        let (ok, cells): (bool, [String; 5]) = match nameparser::parse(&input, None, None, None) {
+        let (ok, cells): (bool, [String; 5]) = match nameparser::parse_name(&input, None, None, None) {
             Ok(pn) => (
                 true,
                 [
@@ -165,7 +165,7 @@ fn matches_java_name_formatter_over_corpus() {
         let java_ok = cols[1] == "true";
         total += 1;
 
-        let rust = nameparser::parse(&input, None, None, None);
+        let rust = nameparser::parse_name(&input, None, None, None);
         match (java_ok, rust) {
             (true, Ok(pn)) => {
                 both_parsed += 1;

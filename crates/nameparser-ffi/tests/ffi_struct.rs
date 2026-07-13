@@ -6,7 +6,7 @@
 //! functions as the single source of truth for "what does this byte mean" — but never calling
 //! back into `layout::encode` itself, so an offset bug in the encoder isn't invisible to a
 //! decoder built the same way) and asserts every decoded field equals the SAME
-//! `nameparser::parse(...)` call `np_parse_struct` itself parses through.
+//! `nameparser::parse_name(...)` call `np_parse_struct` itself parses through.
 
 use std::ffi::CString;
 
@@ -454,7 +454,7 @@ fn assert_decoded_matches(name: &str, decoded: &Decoded, pn: &ParsedName) {
 #[test]
 fn binomial_with_combination_authorship_and_year() {
     let name = "Vulpes vulpes silaceus Miller, 1907";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     let buf = parse_struct_success(name);
     assert_abi_version_header(&buf);
     let decoded = decode(&buf);
@@ -483,7 +483,7 @@ fn binomial_with_combination_authorship_and_year() {
 #[test]
 fn autonym_decodes_matching_specific_and_infraspecific_epithets() {
     let name = "Trimezia spathata (Klatt) Baker subsp. spathata";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(
         pn.is_autonym(),
         "test name must actually exercise an autonym"
@@ -504,7 +504,7 @@ fn autonym_decodes_matching_specific_and_infraspecific_epithets() {
 #[test]
 fn hybrid_name_sets_notho_bits() {
     let name = "Rosa x rugotida Belder & Wijnands cv. 'Wageningen'";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(pn.notho.is_some(), "test name must actually exercise notho");
     let buf = parse_struct_success(name);
     assert_abi_version_header(&buf);
@@ -524,7 +524,7 @@ fn hybrid_name_sets_notho_bits() {
 #[test]
 fn name_with_warnings_populates_the_warnings_run_slot() {
     let name = "Acranthera athroophlebia Bremek. var.";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(
         !pn.warnings.is_empty(),
         "test name must actually carry a warning"
@@ -540,7 +540,7 @@ fn name_with_warnings_populates_the_warnings_run_slot() {
 #[test]
 fn ex_authors_populate_the_exauthors_run_slot() {
     let name = "Adenolepis calva Sch.Bip. ex Miq.";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(
         !pn.combination_authorship.ex_authors.is_empty(),
         "test name must actually carry an ex-author"
@@ -561,7 +561,7 @@ fn ex_authors_populate_the_exauthors_run_slot() {
 #[test]
 fn epithet_qualifier_run_slot_decodes_namepart_ordinal_and_string() {
     let name = "Turritella aff. adulterata Deshayes 1820-1851";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(
         pn.epithet_qualifier.is_some(),
         "test name must actually carry an epithet qualifier"
@@ -581,7 +581,7 @@ fn generic_authorship_with_combination_and_basionym_authors() {
     // Cordia (Adans.) Kuntze sect. Salimori:
     // genericAuthorship.combination=[Kuntze], genericAuthorship.basionym=[Adans.].
     let name = "Cordia (Adans.) Kuntze sect. Salimori";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(
         pn.generic_authorship.is_some(),
         "test name must actually carry a generic authorship"
@@ -612,7 +612,7 @@ fn generic_authorship_with_combination_and_basionym_authors() {
 fn generic_authorship_combination_only() {
     // Centaurea L. subg. Jacea: genericAuthorship.combination=[L.].
     let name = "Centaurea L. subg. Jacea";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(pn.generic_authorship.is_some());
     let buf = parse_struct_success(name);
     assert_abi_version_header(&buf);
@@ -637,7 +637,7 @@ fn specific_authorship_on_a_cultivar() {
     // Acer campestre L. cv. 'Elsrijk' Broerse:
     // specificAuthorship.combination=[L.], base combination=[Broerse].
     let name = "Acer campestre L. cv. 'Elsrijk' Broerse";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(
         pn.specific_authorship.is_some(),
         "test name must actually carry a specific authorship"
@@ -665,7 +665,7 @@ fn specific_authorship_on_another_cultivar() {
     // Alnus elliptica Req. cv. 'itolanda' Door.:
     // specificAuthorship.combination=[Req.], base combination=[Door.].
     let name = "Alnus elliptica Req. cv. 'itolanda' Door.";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert!(pn.specific_authorship.is_some());
     let buf = parse_struct_success(name);
     assert_abi_version_header(&buf);
@@ -690,7 +690,7 @@ fn imprint_year_alongside_a_year_on_the_base_combination() {
     // Gemmata Franzmann & Skerman, 1985, 1984:
     // combinationAuthorship year=1985, imprintYear=1984.
     let name = "Gemmata Franzmann & Skerman, 1985, 1984";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert_eq!(
         pn.combination_authorship.imprint_year.as_deref(),
         Some("1984"),
@@ -715,7 +715,7 @@ fn imprint_year_alongside_a_year_on_the_base_combination() {
 fn bracketed_imprint_year_with_no_regular_year() {
     // Anthoscopus Cabanis [1851]: combinationAuthorship imprintYear=1851, no year.
     let name = "Anthoscopus Cabanis [1851]";
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert_eq!(
         pn.combination_authorship.imprint_year.as_deref(),
         Some("1851")
@@ -736,7 +736,7 @@ fn bracketed_imprint_year_with_no_regular_year() {
 #[test]
 fn unparsable_virus_returns_minus_one_with_header_carrying_type_and_code() {
     let name = "Tobacco mosaic virus";
-    let err = nameparser::parse(name, None, None, None).expect_err("must be unparsable");
+    let err = nameparser::parse_name(name, None, None, None).expect_err("must be unparsable");
 
     let name_c = cstr(name);
     let mut buf = vec![0u8; layout::HEADER_SIZE];
@@ -804,7 +804,7 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
     assert_eq!(ret1, needed as i64);
     buf.truncate(ret1 as usize);
 
-    let pn = nameparser::parse(name, None, None, None).expect("must parse");
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     let decoded = decode(&buf);
     assert_decoded_matches(name, &decoded, &pn);
 }

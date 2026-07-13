@@ -3,7 +3,7 @@
 //! Integration test: `nameparser-cli parse` end-to-end through the *compiled binary* (not
 //! just the library function) — proves the CLI wrapper's JSONL envelope (line numbering, key
 //! order/omission, compact-JSON formatting) reproduces the Java CLI's `JsonlWriter`/Gson
-//! output, not just that `nameparser::parse()` itself has field parity (which
+//! output, not just that `nameparser::parse_name()` itself has field parity (which
 //! `crates/nameparser/tests/parse_golden.rs` already proves, via `serde_json::Value` diffing
 //! that deliberately ignores JSON-object key order and array order for `warnings`/`notho`/
 //! `epithetQualifier`).

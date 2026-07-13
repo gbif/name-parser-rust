@@ -176,7 +176,7 @@ fn manuscript_names() {
         Some(Rank::Species),
         "1",
     );
-    let n = nameparser::parse("Verticordia sp.1", None, None, None)
+    let n = nameparser::parse_name("Verticordia sp.1", None, None, None)
         .expect("`Verticordia sp.1` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Verticordia"));
@@ -192,7 +192,7 @@ fn manuscript_names() {
         Some(Rank::Species),
         "species 1",
     );
-    let n = nameparser::parse("Allium species 1", None, None, None)
+    let n = nameparser::parse_name("Allium species 1", None, None, None)
         .expect("`Allium species 1` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Allium"));
@@ -201,7 +201,7 @@ fn manuscript_names() {
     assert!(n.infraspecific_epithet.is_none());
 
     assert_phrase_name("Bryozoan sp. E", "Bryozoan sp. E", Some(Rank::Species), "E");
-    let n = nameparser::parse("Bryozoan sp. E", None, None, None)
+    let n = nameparser::parse_name("Bryozoan sp. E", None, None, None)
         .expect("`Bryozoan sp. E` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Bryozoan"));
@@ -222,7 +222,7 @@ fn phrase_names() {
     // below, which has real authorship). `phraseIndetName` itself is a `NameAssertion` instance
     // method with no DSL equivalent, so each case below is a direct parse + field assertions
     // instead — the same DSL-gap workaround as impl_04's "Lepidoptera sp. JGP0404" case.
-    let n = nameparser::parse(
+    let n = nameparser::parse_name(
         "Prostanthera sp. Somersbey (B.J.Conn 4024)",
         None,
         None,
@@ -238,7 +238,7 @@ fn phrase_names() {
     assert_eq!(n.phrase.as_deref(), Some("Somersbey (B.J.Conn 4024)"));
     assert_eq!(n.type_, NameType::Informal);
 
-    let n2 = nameparser::parse("Pultenaea sp. 'Olinda' (Coveny 6616)", None, None, None)
+    let n2 = nameparser::parse_name("Pultenaea sp. 'Olinda' (Coveny 6616)", None, None, None)
         .expect("`Pultenaea sp. 'Olinda' (Coveny 6616)` should parse");
     assert!(n2.uninomial.is_none());
     assert_eq!(n2.genus.as_deref(), Some("Pultenaea"));
@@ -249,7 +249,7 @@ fn phrase_names() {
     assert_eq!(n2.phrase.as_deref(), Some("'Olinda' (Coveny 6616)"));
     assert_eq!(n2.type_, NameType::Informal);
 
-    let n3 = nameparser::parse(
+    let n3 = nameparser::parse_name(
         "Pterostylis sp. Sandheath (D.Murfet 3190) R.J.Bates",
         None,
         None,
@@ -276,7 +276,7 @@ fn phrase_names() {
 
     assert_name("Acacia mutabilis Maslin subsp. Young River (G.F. Craig 2052)")
         .comb_authors(None, &["Maslin"]);
-    let n4 = nameparser::parse(
+    let n4 = nameparser::parse_name(
         "Acacia mutabilis Maslin subsp. Young River (G.F. Craig 2052)",
         None,
         None,
@@ -295,7 +295,7 @@ fn phrase_names() {
     assert_eq!(n4.phrase.as_deref(), Some("Young River (G.F. Craig 2052)"));
     assert_eq!(n4.type_, NameType::Informal);
 
-    let n5 = nameparser::parse(
+    let n5 = nameparser::parse_name(
         "Dampiera sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)",
         None,
         None,
@@ -316,7 +316,7 @@ fn phrase_names() {
     );
     assert_eq!(n5.type_, NameType::Informal);
 
-    let n6 = nameparser::parse(
+    let n6 = nameparser::parse_name(
         "Dampiera     sp    Central  Wheatbelt (L.W.Sage,   F.Hort,   C.A.Hollister   LWS2321)",
         None,
         None,
@@ -337,7 +337,7 @@ fn phrase_names() {
     );
     assert_eq!(n6.type_, NameType::Informal);
 
-    let n7 = nameparser::parse(
+    let n7 = nameparser::parse_name(
         "Toechima sp. East Alligator (J.Russell-Smith 8418) NT Herbarium",
         None,
         None,
@@ -356,7 +356,7 @@ fn phrase_names() {
     );
     assert_eq!(n7.type_, NameType::Informal);
 
-    let n8 = nameparser::parse(
+    let n8 = nameparser::parse_name(
         "Acacia sp. Mount Hilditch (M.E. Trudgen 19134)",
         None,
         None,
@@ -429,7 +429,7 @@ fn test_nom_status_remarks() {
     // Java: `.species("Abies", null)` — a null specific epithet; `species()` requires a real
     // epithet `&str`, so this one is asserted directly against the parsed fields, the same
     // DSL-gap workaround as impl_03's "Aster indet." case.
-    let n = nameparser::parse("Abies sp. nov.", None, None, None)
+    let n = nameparser::parse_name("Abies sp. nov.", None, None, None)
         .expect("`Abies sp. nov.` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Abies"));

@@ -11,7 +11,7 @@ use nameparser::model::{NamePart, NameType, NomCode, Rank};
 // a reference lists page numbers (which can fall in the year range) before the publication year.
 #[test]
 fn published_in_year() {
-    use nameparser::parse;
+    use nameparser::parse_name as parse;
 
     // trailing year 1988 even though the page range "1658-1662" earlier looks year-shaped
     let n = parse(

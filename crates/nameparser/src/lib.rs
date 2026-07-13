@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
-//! A faithful Rust port of the GBIF scientific name parser. [`parse`] turns a scientific name into
+//! A faithful Rust port of the GBIF scientific name parser. [`parse_name`] turns a scientific name into
 //! its structured atoms — genus, epithets, authorship, rank, nomenclatural code, notes, warnings —
 //! as a [`model::ParsedName`]. Byte-for-byte cross-validated against the Java `name-parser`
 //! (`NameParserImpl`) over 11,302 + 6.4M names (0 diffs). The same engine also ships as a native
@@ -16,16 +16,17 @@ pub mod viral;
 
 use model::{Informal, NameType, NomCode, ParseError, ParsedName, Rank};
 
-/// Lower-level entry point: parses a scientific name — optionally alongside a separately supplied
+/// The lower-level raw parse: a scientific name — optionally alongside a separately supplied
 /// authorship string, a requested [`Rank`] and a requested [`NomCode`] — into a [`ParsedName`], or
 /// `Err(`[`ParseError`]`)` when the input cannot be parsed into a meaningful name. Delegates to
 /// [`pipeline::run`].
 ///
-/// This is the raw `ParsedName`/error path (used by the golden oracle and anything that wants the
-/// full structured atoms directly). For the 5.0.0 exceptionless three-way API — the shape the Java
-/// binding, Python, R and the CLI expose — use [`parse_result`], which additionally splits the
-/// informal / semistructured band off into [`ParseResult::Informal`].
-pub fn parse(
+/// This is the raw `ParsedName`/error path — informal names come back as `Ok(ParsedName)` with
+/// `type == INFORMAL`, NOT split off. It backs the golden snapshot, the FFI/CLI/R encoders (which
+/// need the full `ParsedName` and derive the three-way at their own boundary), and any caller that
+/// wants the structured atoms directly. **Most callers want [`parse`] instead** — the primary 5.0.0
+/// exceptionless entry point that returns the three-way [`ParseResult`].
+pub fn parse_name(
     name: &str,
     authorship: Option<&str>,
     rank: Option<Rank>,
@@ -34,19 +35,19 @@ pub fn parse(
     pipeline::run(name, authorship, rank, code)
 }
 
-/// The 5.0.0 exceptionless result of [`parse_result`], mirroring Java
+/// The 5.0.0 exceptionless result of [`parse`], mirroring Java
 /// `org.gbif.nameparser.api.ParseResult`: a structurally [`Parsed`](ParseResult::Parsed) name, an
 /// [`Informal`](ParseResult::Informal) semistructured name (a taxon anchor carrying a provisional
 /// designation, e.g. `Rhizobium sp. RMCC TR1811`), or an [`Unparsable`](ParseResult::Unparsable)
 /// classification (virus, hybrid formula, placeholder, BOLD BIN, ...). The 5.5%-of-corpus informal
-/// band is split off from `Parsed` at the [`parse_result`] boundary — see the verbatim-corpus study
+/// band is split off from `Parsed` at the [`parse`] boundary — see the verbatim-corpus study
 /// in `docs/superpowers/findings/`.
 ///
 /// `Parsed` is far larger than the other two variants (it wraps the ~1 KB [`ParsedName`] vs ~56 B
 /// for [`Informal`]/[`ParseError`]), so `clippy::large_enum_variant` fires — but `Parsed` is the
 /// dominant outcome (≈89% of the corpus) and the value is decomposed immediately at the call
 /// boundary, so boxing it would add a heap allocation to the common path for no real gain. This
-/// mirrors [`parse`]'s own `Result<ParsedName, ParseError>`, which carries the identical size
+/// mirrors [`parse_name`]'s own `Result<ParsedName, ParseError>`, which carries the identical size
 /// profile unboxed.
 #[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -95,14 +96,14 @@ impl ParseResult {
     }
 }
 
-/// The 5.0.0 exceptionless entry point: like [`parse`], but classifies the outcome into the
-/// three-way [`ParseResult`] (`Parsed | Informal | Unparsable`) that the Java API and every binding
-/// expose. The informal split is applied here — a supraspecific taxon carrying a provisional
-/// designation with NO species epithet becomes [`ParseResult::Informal`]; a name with a species
-/// epithet (including cf./aff. and infraspecific-indeterminate binomials) stays
+/// The primary 5.0.0 exceptionless entry point (mirrors Java `NameParser.parse()`): classifies a
+/// scientific name into the three-way [`ParseResult`] (`Parsed | Informal | Unparsable`) that every
+/// binding exposes, never throwing. The informal split is applied here — a supraspecific taxon
+/// carrying a provisional designation with NO species epithet becomes [`ParseResult::Informal`]; a
+/// name with a species epithet (including cf./aff. and infraspecific-indeterminate binomials) stays
 /// [`ParseResult::Parsed`], so its `specific_authorship` — which a flat anchor could not represent —
-/// is preserved.
-pub fn parse_result(
+/// is preserved. For the raw `ParsedName`/error shape (no informal split), use [`parse_name`].
+pub fn parse(
     name: &str,
     authorship: Option<&str>,
     rank: Option<Rank>,
@@ -158,27 +159,27 @@ mod tests {
 
     #[test]
     fn parse_delegates_to_pipeline_run() {
-        let pn = parse("Abies alba", None, None, None).expect("should parse");
+        let pn = parse_name("Abies alba", None, None, None).expect("should parse");
         assert_eq!(pn.type_, NameType::Scientific);
     }
 
     #[test]
     fn parse_rejects_empty_input() {
-        let err = parse("", None, None, None).unwrap_err();
+        let err = parse_name("", None, None, None).unwrap_err();
         assert_eq!(err.type_, NameType::Other);
     }
 
-    /// The three-way [`parse_result`] classifier + the flat [`Informal`] derivation, on cases whose
+    /// The three-way [`parse`] classifier + the flat [`Informal`] derivation, on cases whose
     /// outcome is independent of the (separate) trailing-tag-capture parser change: an already-captured
     /// phrase (`Serratia sp. RE1-2a`), a bare `Genus sp.`, and a numbered placeholder route to
     /// `Informal`; a binomial core (species epithet present) and a bare determined genus stay `Parsed`;
     /// empty input is `Unparsable`.
     #[test]
-    fn parse_result_classifies_three_way() {
+    fn parse_classifies_three_way() {
         use model::Rank;
 
         // --- Informal: supraspecific anchor + provisional designation, no species epithet ---
-        match parse_result("Serratia sp. RE1-2a", None, None, None) {
+        match parse("Serratia sp. RE1-2a", None, None, None) {
             ParseResult::Informal(i) => {
                 assert_eq!(i.taxon, "Serratia");
                 assert_eq!(i.taxon_rank, Rank::Genus);
@@ -188,7 +189,7 @@ mod tests {
             other => panic!("expected Informal, got {other:?}"),
         }
         // bare "Genus sp." — no tag to capture
-        match parse_result("Rhizobium sp.", None, None, None) {
+        match parse("Rhizobium sp.", None, None, None) {
             ParseResult::Informal(i) => {
                 assert_eq!(i.taxon, "Rhizobium");
                 assert_eq!(i.taxon_rank, Rank::Genus);
@@ -198,7 +199,7 @@ mod tests {
             other => panic!("expected Informal, got {other:?}"),
         }
         // numbered placeholder
-        match parse_result("Allium sp. 1", None, None, None) {
+        match parse("Allium sp. 1", None, None, None) {
             ParseResult::Informal(i) => {
                 assert_eq!(i.taxon, "Allium");
                 assert_eq!(i.phrase.as_deref(), Some("1"));
@@ -210,22 +211,22 @@ mod tests {
         // infraspecific-indeterminate — authorship would land in specific_authorship, unrepresentable flat
         assert!(
             matches!(
-                parse_result("Salix alba subsp. B", None, None, None),
+                parse("Salix alba subsp. B", None, None, None),
                 ParseResult::Parsed(_)
             ),
             "infraspecific-indet binomial must stay Parsed"
         );
         // cf. qualifier on a complete binomial — the qualifier is an annotation, not a reclassification
-        match parse_result("Salicornia cf. patula", None, None, None) {
+        match parse("Salicornia cf. patula", None, None, None) {
             ParseResult::Parsed(pn) => assert_eq!(pn.specific_epithet.as_deref(), Some("patula")),
             other => panic!("expected Parsed, got {other:?}"),
         }
         // a plain determined binomial and a bare determined genus
-        assert!(parse_result("Abies alba", None, None, None).is_parsable());
-        assert!(parse_result("Rhizobium", None, None, None).is_parsable());
+        assert!(parse("Abies alba", None, None, None).is_parsable());
+        assert!(parse("Rhizobium", None, None, None).is_parsable());
 
         // --- Unparsable ---
-        match parse_result("", None, None, None) {
+        match parse("", None, None, None) {
             ParseResult::Unparsable(e) => assert_eq!(e.type_, NameType::Other),
             other => panic!("expected Unparsable, got {other:?}"),
         }
@@ -253,7 +254,7 @@ mod tests {
         assert_eq!(other.clone().clamped_to_unparsable(), other);
 
         // end to end: an anchorless clade label is Unparsable(OTHER)
-        match parse_result("Amauropeltoid clade", None, None, None) {
+        match parse("Amauropeltoid clade", None, None, None) {
             ParseResult::Unparsable(e) => assert_eq!(e.type_, NameType::Other),
             other => panic!("expected Unparsable(OTHER), got {other:?}"),
         }
