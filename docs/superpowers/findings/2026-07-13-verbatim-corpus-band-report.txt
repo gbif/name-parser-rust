@@ -1,0 +1,533 @@
+TOTAL rows: 67,192,265
+
+=== outcome distribution (top 25) ===
+    59,779,793  88.968%  parsed:SCIENTIFIC
+     3,699,795   5.506%  parsed:INFORMAL
+     3,289,532   4.896%  error:OTHER
+       226,073   0.336%  parsed:PLACEHOLDER
+       108,393   0.161%  error:FORMULA
+        84,083   0.125%  error:PLACEHOLDER
+         4,596   0.007%  error:INFORMAL
+
+=== cross-cutting prevalence across ALL parsed rows ===
+  parsed with a phrase:           3,105,962
+  parsed with a qualifier:          160,627
+  parsed indetermined:            6,306,195
+
+=== SEMISTRUCTURED band sub-bands ===
+  band total: 3,701,271  (5.508% of all rows)
+     3,105,962   83.92% of band   3:phrase
+       381,914   10.32% of band   2:indetermined
+       213,395    5.77% of band   1:determined+annotated
+
+=== anchor kind per sub-band (genus vs higher uninomial) ===
+  1:determined+annotated   genus                     213,395
+  2:indetermined           genus                     376,847
+  2:indetermined           uninomial(higher)           5,067
+  3:phrase                 genus                   3,104,732
+  3:phrase                 uninomial(higher)           1,230
+
+=== anchor rank per sub-band (top 30) ===
+  3:phrase                 rank=SPECIES             3,097,706
+  2:indetermined           rank=SPECIES               374,568
+  1:determined+annotated   rank=SPECIES               160,591
+  1:determined+annotated   rank=STRAIN                 13,314
+  1:determined+annotated   rank=INFRASUBSPECIFIC_NAME       12,480
+  1:determined+annotated   rank=INFRASPECIFIC_NAME       10,826
+  1:determined+annotated   rank=VARIETY                 6,343
+  2:indetermined           rank=UNRANKED                4,776
+  1:determined+annotated   rank=SUBSPECIES              4,290
+  3:phrase                 rank=INFRAGENERIC_NAME        3,401
+  2:indetermined           rank=INFRAGENERIC_NAME        2,218
+  1:determined+annotated   rank=SEROVAR                 1,765
+  3:phrase                 rank=CULTIVAR                1,476
+  1:determined+annotated   rank=FORM                    1,438
+  1:determined+annotated   rank=ABERRATION              1,416
+  3:phrase                 rank=SUBSPECIES              1,208
+  3:phrase                 rank=UNRANKED                1,196
+  1:determined+annotated   rank=BIOVAR                    640
+  3:phrase                 rank=VARIETY                   491
+  3:phrase                 rank=FORM                      242
+  1:determined+annotated   rank=SPECIES_AGGREGATE          195
+  2:indetermined           rank=FORM                      179
+  3:phrase                 rank=STRAIN                    127
+  3:phrase                 rank=INFRASPECIFIC_NAME           55
+  2:indetermined           rank=SUBSPECIES                 54
+  2:indetermined           rank=SECTION_BOTANY             39
+  3:phrase                 rank=FAMILY                     34
+  2:indetermined           rank=VARIETY                    28
+  1:determined+annotated   rank=PATHOVAR                   28
+  1:determined+annotated   rank=SUBVARIETY                 25
+
+=== qualifier values (top 20) ===
+      93,534  'cf.'
+      35,391  'aff.'
+      30,032  '?'
+
+=== phrase leading token (top 30) ===
+      42,397  '1'
+      30,166  '2'
+      16,570  '3'
+      11,948  '4'
+       8,767  '5'
+       8,291  '9'
+       6,771  '6'
+       6,174  '10'
+       5,936  '7'
+       4,872  '11'
+       4,837  '8'
+       4,258  'species'
+       4,216  '13'
+       3,927  '12'
+       2,612  '14'
+       2,445  '01'
+       2,444  'A'
+       2,437  '09'
+       2,174  '15'
+       1,972  '16'
+       1,941  '08'
+       1,915  "'Peltigera"
+       1,784  '19'
+       1,758  'ANIC1'
+       1,746  '18'
+       1,647  '17'
+       1,518  '20'
+       1,446  '22'
+       1,425  '21'
+       1,304  '23'
+
+=== reservoir samples per bucket ===
+--- 1:determined+annotated  (n≈213,395) ---
+    Salicornia cf. patula Freitag 31.302   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Ficus cf. trigonata CAM-2005   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Russula cf. olivobrunnea VH-2016   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Lactifluus cf. volemus AV-KD-KVP09-121   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Russula aff. annulata subsp. aurantia   ‹phrase=None rank=SUBSPECIES qual={'INFRASPECIFIC': 'aff.'}›
+    Paracomesoma cf. elegans 90P20G16   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Propionibacterium sp. canine oral taxon 300   ‹phrase=None rank=INFRASUBSPECIFIC_NAME qual=None›
+    Cercospora cf. flagellaris CPC 4411   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Mimocystites? izyrakensis   ‹phrase=None rank=SPECIES qual={'SPECIFIC': '?'}›
+    Caprella cf. penantis PTALT4218   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Leptogenys cf. myops ZB43910   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Lycoperdon cf. pyriforme   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Achyrospermum cf. schimperi Hedren 601   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Neobulimina? erugatiformis   ‹phrase=None rank=SPECIES qual={'SPECIFIC': '?'}›
+    Gravicalymene cf. angustior   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Ocinebrina cf. edwardsii BAU923.3   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Sicarius aff. cariri IBSP 162286   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Bela ? turcica   ‹phrase=None rank=SPECIES qual={'SPECIFIC': '?'}›
+    Culicoides aff. fulvithorax/ochrothorax GA-fuo1-D437   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Brachygobius aff. nunus mitotype2   ‹phrase=None rank=INFRASPECIFIC_NAME qual={'INFRASPECIFIC': 'aff.'}›
+    Didymocyrtis cf. epiphyscia Ertz 17411 (BR)   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Salicornia aff. perennans Freitag 33.055a   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Ocinebrina cf. edwardsii BAU1299.7   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Leptorhynchos squamatus subsp. B   ‹phrase=None rank=SUBSPECIES qual=None›
+    Chromodoris cf. africana WAM S70791   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Pygopleurus purpureus ab.   ‹phrase=None rank=ABERRATION qual=None›
+    Acanthocope cf. galatheae DSB_1447   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Podagrionella sp. ambatobeensis gr.   ‹phrase=None rank=INFRASPECIFIC_NAME qual=None›
+    Perizoma? albifascia   ‹phrase=None rank=SPECIES qual={'SPECIFIC': '?'}›
+    Planiliza cf. subviridis Ex59C9   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Lophiotoma cf. acuta NP-2008   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Candidatus Pelagibacter ubique strain HIMB058   ‹phrase=None rank=STRAIN qual=None›
+    Monograptus cf. c.   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Odontoperla cf. schneiderae complex sp. JMH1389   ‹phrase=None rank=INFRASUBSPECIFIC_NAME qual={'INFRASPECIFIC': 'cf.'}›
+    Trachinocephalus aff. myops TM6_4   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Crepidostomum cf. nemachilus D2_4   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Synodus cf. tectus FOAL222-10   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Hammoderus? inermis   ‹phrase=None rank=SPECIES qual={'SPECIFIC': '?'}›
+    Liljeborgia cf. quadridentata UE-2006   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Lyophyllum cf. rhopalopodium AB99-10-232   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Pterostylis sp. crinkled leaf (G.J.Keighery 13426)   ‹phrase=None rank=SUBSPECIES qual=None›
+    Inocybe aff. inodora   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Croton cf. lundellii Sima 1839   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Etlingera aff. muluensis Mood and Pedersen 1402   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Gammarus cf. fossarum 1SK18   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Triops cf. australiensis P.92170   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Acetobacter sp. enrichment culture clone ECT.1c1   ‹phrase=None rank=INFRASUBSPECIFIC_NAME qual=None›
+    Fusarium aff. xylarioides W7477b   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Proasellus sp. n. Pontclot   ‹phrase=None rank=SPECIES qual=None›
+    Scytonema cf. mirabile ER0515.01   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Eriella? minima   ‹phrase=None rank=SPECIES qual={'SPECIFIC': '?'}›
+    Potosia cupriflua ab.   ‹phrase=None rank=ABERRATION qual=None›
+    Ceriodaphnia cf. reticulata HE-408.1   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Terschellingia sp. n. Ugent CeMoFe159P16F14   ‹phrase=None rank=SPECIES qual=None›
+    Lactifluus aff. leucophaeus EDC-2013   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Hypostomus cf. macrops HYPMS9003   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Anochetus cf. graeffei CAS ENT 0267971-D11   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Gammarus cf. komareki SRD2   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'cf.'}›
+    Boophis aff. mandraka   ‹phrase=None rank=SPECIES qual={'SPECIFIC': 'aff.'}›
+    Plectropoma maculatum var. var. C   ‹phrase=None rank=VARIETY qual=None›
+
+--- 2:indetermined  (n≈381,914) ---
+    Ichneumonidae sp. UAM Ento 145060   ‹phrase=None rank=SPECIES qual=None›
+    Symplocos sp. (Boonjie B.P.Hyland 2753) Queensland Herbarium   ‹phrase=None rank=SPECIES qual=None›
+    Bensingtonia sp.   ‹phrase=None rank=SPECIES qual=None›
+    Rhizobium sp. RMCC TR1811   ‹phrase=None rank=SPECIES qual=None›
+    Graptemys sp.   ‹phrase=None rank=SPECIES qual=None›
+    Chlorococcum sp. Elm MV-2021   ‹phrase=None rank=SPECIES qual=None›
+    Paratylenchus sp. NL PRS-2020   ‹phrase=None rank=SPECIES qual=None›
+    Scirtidae sp. UAM Ento 84144   ‹phrase=None rank=SPECIES qual=None›
+    Criconema sp. Prairie TSH-2020   ‹phrase=None rank=SPECIES qual=None›
+    Fusarium sp. F.17.10   ‹phrase=None rank=SPECIES qual=None›
+    Gobio sp. volgensis   ‹phrase=None rank=SPECIES qual=None›
+    Cydosia cf.   ‹phrase=None rank=UNRANKED qual={'SPECIFIC': 'cf.'}›
+    Cladiella species NIWA G. Williams   ‹phrase=None rank=SPECIES qual=None›
+    Hymenorus sp. BYU CO172   ‹phrase=None rank=SPECIES qual=None›
+    Anopheles sp. SMRU:METF 58279   ‹phrase=None rank=SPECIES qual=None›
+    Melittia sp.   ‹phrase=None rank=SPECIES qual=None›
+    Eudontomyzon sp.   ‹phrase=None rank=SPECIES qual=None›
+    Pseudomonas sp. PkFr+CA_5   ‹phrase=None rank=SPECIES qual=None›
+    Gryon sp. USNM ENT 01335812   ‹phrase=None rank=SPECIES qual=None›
+    Trigonocerca sp.   ‹phrase=None rank=SPECIES qual=None›
+    Parastethynium sp.   ‹phrase=None rank=SPECIES qual=None›
+    Rutkowskiella cf. R. tumula   ‹phrase=None rank=UNRANKED qual={'SPECIFIC': 'cf.'}›
+    Scina sp. USNM IZ 1448928   ‹phrase=None rank=SPECIES qual=None›
+    Staphylococcus sp. BcA6.1   ‹phrase=None rank=SPECIES qual=None›
+    Weissella sp. ZKNR   ‹phrase=None rank=SPECIES qual=None›
+    Strumella sp.   ‹phrase=None rank=SPECIES qual=None›
+    Anaerovibrio sp.   ‹phrase=None rank=SPECIES qual=None›
+    Colpodellidae sp. HN   ‹phrase=None rank=SPECIES qual=None›
+    Complexobursa sp.   ‹phrase=None rank=SPECIES qual=None›
+    Mesobatrachia sp. T3.7   ‹phrase=None rank=SPECIES qual=None›
+    Cyrtodactylus sp. Huon Peninsula   ‹phrase=None rank=SPECIES qual=None›
+    Acanthophyllum (Neostringophyllum) aff. Acanthophyllum (N.) concavum   ‹phrase=None rank=INFRAGENERIC_NAME qual={'SPECIFIC': 'aff.'}›
+    Sarcocystis sp. H2   ‹phrase=None rank=SPECIES qual=None›
+    Trichoderma sp. GJS 99-17   ‹phrase=None rank=SPECIES qual=None›
+    Tolypothrix sp. LCRNK.16   ‹phrase=None rank=SPECIES qual=None›
+    Rhizobium sp. Lv6.1Se   ‹phrase=None rank=SPECIES qual=None›
+    Elachistidae sp. LA2011_687   ‹phrase=None rank=SPECIES qual=None›
+    Nitrosopumilus sp. D6   ‹phrase=None rank=SPECIES qual=None›
+    Aphonopelma sp. APH_0178   ‹phrase=None rank=SPECIES qual=None›
+    fungal sp. ARIZ B097   ‹phrase=None rank=SPECIES qual=None›
+    fungal sp. ZH S7-4-1   ‹phrase=None rank=SPECIES qual=None›
+    Hyalotheca sp. Whare   ‹phrase=None rank=SPECIES qual=None›
+    Nebalia sp. YavarosN   ‹phrase=None rank=SPECIES qual=None›
+    Phoma sp. FCUL 070108CP4   ‹phrase=None rank=SPECIES qual=None›
+    Kraemeria sp.   ‹phrase=None rank=SPECIES qual=None›
+    Miriamica sp. KSP_4486   ‹phrase=None rank=SPECIES qual=None›
+    Exoclimenella sp. JOD_0440   ‹phrase=None rank=SPECIES qual=None›
+    Penicillium sp. W/Lz/4/6   ‹phrase=None rank=SPECIES qual=None›
+    Ectemnius sp.   ‹phrase=None rank=SPECIES qual=None›
+    Corallocarpus sp. Holstein et al. 92   ‹phrase=None rank=SPECIES qual=None›
+    Eudistoma sp.   ‹phrase=None rank=SPECIES qual=None›
+    Fulvivirga sp.   ‹phrase=None rank=SPECIES qual=None›
+    Haplochromis sp. Nchwera River   ‹phrase=None rank=SPECIES qual=None›
+    Ceroptres sp. COI-D AF-2023a   ‹phrase=None rank=SPECIES qual=None›
+    Propsephus sp   ‹phrase=None rank=SPECIES qual=None›
+    Leifsonia sp. I8   ‹phrase=None rank=SPECIES qual=None›
+    Blastocystis sp. A8   ‹phrase=None rank=SPECIES qual=None›
+    Trypanosoma sp. Ts-Caa-PO   ‹phrase=None rank=SPECIES qual=None›
+    Holcoglossum sp. bingzhongluo   ‹phrase=None rank=SPECIES qual=None›
+    Solanum sp. (Gloucester Island G.N.Batianoff+ 9403312)   ‹phrase=None rank=SPECIES qual=None›
+
+--- 3:phrase  (n≈3,105,962) ---
+    Serratia sp. RE1-2a   ‹phrase='RE1-2a' rank=SPECIES qual=None›
+    Plasmodium sp. SYBOR9   ‹phrase='SYBOR9' rank=SPECIES qual=None›
+    Trebouxia sp. P-205-IIa   ‹phrase='P-205-IIa' rank=SPECIES qual=None›
+    Mycopan sp. 'OH01'   ‹phrase="'OH01'" rank=SPECIES qual=None›
+    Synechococcus sp. MV1716   ‹phrase='MV1716' rank=SPECIES qual=None›
+    Trypanosoma sp. TSC13   ‹phrase='TSC13' rank=SPECIES qual=None›
+    Synopeas sp. BIOUG13708-G12   ‹phrase='BIOUG13708-G12' rank=SPECIES qual=None›
+    Colwellia sp. BRX8-4   ‹phrase='BRX8-4' rank=SPECIES qual=None›
+    Megascolecidae sp. Me_59   ‹phrase='Me_59' rank=SPECIES qual=None›
+    Miridae sp. sc_07812   ‹phrase='sc_07812' rank=SPECIES qual=None›
+    Dolichopodidae sp. BIOUG21067-C04   ‹phrase='BIOUG21067-C04' rank=SPECIES qual=None›
+    Lasius sp. DNAS-3BB-5SII   ‹phrase='DNAS-3BB-5SII' rank=SPECIES qual=None›
+    Rhizobium sp. ZY7-2   ‹phrase='ZY7-2' rank=SPECIES qual=None›
+    Mycoplasma sp. Sgv2e   ‹phrase='Sgv2e' rank=SPECIES qual=None›
+    Micromonospora sp. MIA03   ‹phrase='MIA03' rank=SPECIES qual=None›
+    Potamonautes sp. Himev1   ‹phrase='Himev1' rank=SPECIES qual=None›
+    Eupithecia sp. BIOUG19354-B10   ‹phrase='BIOUG19354-B10' rank=SPECIES qual=None›
+    Microcystis sp. CYN10   ‹phrase='CYN10' rank=SPECIES qual=None›
+    Alysiinae sp. BIOUG32276-D03   ‹phrase='BIOUG32276-D03' rank=SPECIES qual=None›
+    Pleophylla sp. BNHM834764   ‹phrase='BNHM834764' rank=SPECIES qual=None›
+    Limnophyes sp. BIOUG25004-G09   ‹phrase='BIOUG25004-G09' rank=SPECIES qual=None›
+    Proctotrupidae sp. JBHCI390-11   ‹phrase='JBHCI390-11' rank=SPECIES qual=None›
+    Escherichia sp. UIWRF0206   ‹phrase='UIWRF0206' rank=SPECIES qual=None›
+    Aphytis sp. BIOUG31992-A12   ‹phrase='BIOUG31992-A12' rank=SPECIES qual=None›
+    Orthocladiinae sp. BIOUG19150-E09   ‹phrase='BIOUG19150-E09' rank=SPECIES qual=None›
+    Collembola sp. 093-3_Coll-11   ‹phrase='093' rank=SPECIES qual=None›
+    Bacillaceae bacterium M1-C3   ‹phrase='M1-C3' rank=SPECIES qual=None›
+    Cecidomyiinae sp. BIOUG20495-D09   ‹phrase='BIOUG20495-D09' rank=SPECIES qual=None›
+    Streptomyces sp. NPDC001796   ‹phrase='NPDC001796' rank=SPECIES qual=None›
+    Spelobia sp. BIOUG25744-B05   ‹phrase='BIOUG25744-B05' rank=SPECIES qual=None›
+    Smithora sp. 1naiadum   ‹phrase='1' rank=SPECIES qual=None›
+    Smittia sp. BIOUG20380-F03   ‹phrase='BIOUG20380-F03' rank=SPECIES qual=None›
+    Streptomyces sp. SCAU7006   ‹phrase='SCAU7006' rank=SPECIES qual=None›
+    Enterobacter sp. 2126   ‹phrase='2126' rank=SPECIES qual=None›
+    Helconinae sp. BBHYK508-10   ‹phrase='BBHYK508-10' rank=SPECIES qual=None›
+    Pestalotiopsis sp. Y20-11   ‹phrase='Y20-11' rank=SPECIES qual=None›
+    Scapheremaeus sp. BIOUG22108-F11   ‹phrase='BIOUG22108-F11' rank=SPECIES qual=None›
+    Orthocladiinae sp. BIOUG22389-B08   ‹phrase='BIOUG22389-B08' rank=SPECIES qual=None›
+    Chrysomelidae sp. INDOBIOSYS-CCDB25605-A07   ‹phrase='INDOBIOSYS-CCDB25605-A07' rank=SPECIES qual=None›
+    Bartonella sp. DB-2019   ‹phrase='DB-2019' rank=SPECIES qual=None›
+    Trigonopoma sp. BIF8638   ‹phrase='BIF8638' rank=SPECIES qual=None›
+    Rhodococcus sp. C3R4_pA   ‹phrase='C3R4_pA' rank=SPECIES qual=None›
+    Rhodobacter sp. GWS-AG-H302   ‹phrase='GWS-AG-H302' rank=SPECIES qual=None›
+    Bradyrhizobium sp. 13LoS106_4   ‹phrase='13' rank=SPECIES qual=None›
+    Dushia sp. NH-2018   ‹phrase='NH-2018' rank=SPECIES qual=None›
+    Micromonospora sp. NAR01   ‹phrase='NAR01' rank=SPECIES qual=None›
+    Telenomus sp. BIOUG25292-E11   ‹phrase='BIOUG25292-E11' rank=SPECIES qual=None›
+    Cecidomyiidae sp. BIOUG32603-C06   ‹phrase='BIOUG32603-C06' rank=SPECIES qual=None›
+    Anystidae sp. BIOUG07623-B01   ‹phrase='BIOUG07623-B01' rank=SPECIES qual=None›
+    Limnophyes sp. JWDCG828-10   ‹phrase='JWDCG828-10' rank=SPECIES qual=None›
+    Aeribacillus sp. G19M001   ‹phrase='G19M001' rank=SPECIES qual=None›
+    Orthocladiinae sp. BIOUG21642-C09   ‹phrase='BIOUG21642-C09' rank=SPECIES qual=None›
+    Chrysomeloidea sp. 7 XZ-2019   ‹phrase='7' rank=SPECIES qual=None›
+    Pseudomonas sp. LL50   ‹phrase='LL50' rank=SPECIES qual=None›
+    Diapriidae sp. BIOUG23942-F12   ‹phrase='BIOUG23942-F12' rank=SPECIES qual=None›
+    Hemerobius sp. BIOUG26751-E02   ‹phrase='BIOUG26751-E02' rank=SPECIES qual=None›
+    Isotomidae sp. BIOUG01753-E06   ‹phrase='BIOUG01753-E06' rank=SPECIES qual=None›
+    Agaricales sp. HS-2021a   ‹phrase='HS-2021a' rank=SPECIES qual=None›
+    Bifidobacterium sp. HGAT8   ‹phrase='HGAT8' rank=SPECIES qual=None›
+    Bipolaris maydis Hm338   ‹phrase='Hm338' rank=SPECIES qual=None›
+
+--- ERR:FORMULA  (n≈108,393) ---
+    [Physarum viride + Acanthamoeba royreba]
+    [Leptochilus decurrens + Leptochilus axillaris]
+    [Dipsastraea matthaii + Dipsastraea pallida]
+    [Stylaster elassotomus + Stylaster biflabellum]
+    [Mimosa levenensis + Mimosa nossibiensis var. nossibiensis]
+    Limonium binervosum x Limonium vulgare
+    [Petroica boodang leggi + Pachycephalopsis poliosoma poliosoma]
+    [Bauhinia andrieuxii + Bauhinia chapulhuacania]
+    [Octopus sp. xSA-MG-2004 + Octopus sp. 10-MG-2004]
+    Senecio squalidus x vulgaris = S. x baxteri
+    Paulownia fortunei x Paulownia tomentosa
+    [Amentotaxus argotaenia + Amentotaxus yunnanensis]
+    Spiranthes cernua x Spiranthes magnicamporum
+    Rosa gallica x canina subsp. kosinsciana
+    Paralychnophora bicolor x Paralychnophora patriciana
+    [Chionochloa conspicua subsp. cunninghamii + Chionochloa beddiei]
+    Heliconius erato cyrbia x Heliconius himera
+    Cynotilapia afra x Pseudotropheus zebra
+    [Mascagnia polybotrya + Mascagnia tomentosa]
+    Urolophus sp 3 [Sainbury et al 1985: 54 + fig opposite]
+    [Laniarius aethiopicus aethiopicus + Laniarius bicolor sticturus]
+    Pteridium esculentum × Pteridium revolutum
+    [Sphyrapicus nuchalis + Sphyrapicus varius]
+    [Arachniodes sporadosora + Arachniodes standishii]
+    Luzula luzulina x pilosa
+    Aconitum hiroshi-igarashii Kadota × A. ikedae Kadota
+    [Hypoponera inexorata + Hypoponera opacior]
+    Trichoglossus chlorolepidotus x T. haematodus
+    [Ansonia torrentis + Ansonia longidigita]
+    [Eumunida annulosa + Lithodes couesi]
+    Rosa gallica x omissa var. schulzei
+    [Ficus sansibarica subsp. sansibarica + Ficus bubu]
+    [Phylloscopus coronatus + Seicercus ijimae]
+    [Pseudophoxinus ninae + Pseudophoxinus anatolicus]
+    [Benitochromis ufermanni + Congochromis cf. sabinae JS-2011]
+    [Phytophthora captiosa + Phytophthora fallax]
+    Carabus cychroides x depressus
+    [Neosciomyza luteipennis + Helcomyza mirabilis]
+    [Limnococcus limneticus Svet06 + Gloeocapsa sp. PCC 73106]
+    [Pselaphacus signatus + Toramus sp. 2-JAR-2003]
+    [Bursera longipes + Bursera grandifolia]
+    Rosa caesia caesia x sherardii (f x m)
+    [Acacia dictyoneura + Acacia redolens]
+    [Machaerium uncinatum + Machaerium declinatum]
+    [Plestiodon parviauriculatus + Plestiodon egregius lividus]
+    Aspidium cristatum x spinulosum
+    [Hypericum lloydii + Hypericum lissophloeus]
+    [Exoneura robusta + Exoneura nigrescens]
+    [Ruprechtia lundii + Ruprechtia latifunda]
+    [Cupido comyntas + Tongeia fischeri]
+    Lampropeltis getula getula x Lampropeltis floridana
+    [Hemiculter lucidus + Pseudohemiculter hainanensis]
+    [Carcharhinus isodon + Carcharhinus porosus]
+    Papio hamadryas hamadryas x Papio hamadryas anubis
+    [Prosaptia rhodocarpa + Prosaptia contigua]
+    Semisulcospira libertina x Semisulcospira miurai
+    [Luisia trichorrhiza + Luisia amesiana]
+    Polygonum hydropiperoides × Polygonum lapathifolium
+    Viola canina x persicifolia
+    Callithrix jacchus penicillata x C. j. jacchus
+
+--- ERR:INFORMAL  (n≈4,596) ---
+    Carpelimus group
+    Pandivirilia group
+    Haenydra lineage
+    Trebouxia sp. 'simplex clade'
+    Trebouxia sp. clade II LM-2014
+    Cranaphis group
+    Enicospilus group
+    Tomituka complex
+    Apheloria clade A PEM-2009
+    Solariellidae clade C sp. 1 LS-2013
+    Lyponia complex
+    Scoloplos cf. armiger 'intertidal clade'
+    Chiltoniidae sp. Clade 2 TB-2009
+    Oecetis complex
+    Epimelitta group
+    Urginea-clade
+    Sylvaemus group
+    Manumiella complex
+    Lyonetia group
+    Gardenieae complex
+    Culicoides scoticus clade 2 HK-2023a
+    Polyporales sp. 'phlebioid clade' IB14
+    SAR86 clade
+    Zymobacter group
+    Schistidium cf. pulchrum clade 5 LLF-2016
+    Venusta group
+    Symbiodinium sp. clade B isolate HIAp
+    prasinophyte sp. RCC3376 (clade VIIA)
+    Symbiodinium sp. clade A19
+    Symbiodinium sp. clade C Lh1
+    Idiothrips complex
+    Dino-Group-II-Clade-46
+    Prymnesium parvum species complex clade B
+    Rubus complex
+    Symbiodinium sp. clade B1 ex Exaiptasia pallida
+    Orphulella group
+    Radix cf. plicatula TS-2021 Clade I
+    Gardenieae - Pavetteae clade
+    Antonina group
+    Conioselinum chinense clade
+    Russula aff. amoenolens clade 6 PGA-2012
+    Liolaemus sp. clade 3 KSanchez-2023
+    Novel-clade-3
+    Prasinophyceae sp. RCC1019 (clade 7X-A3)
+    Sceliphron complex
+    SAR92 clade environmental samples
+    Tineidae clade b
+    Novel Clade 4
+    Symbiodinium sp. A001/clade D1a
+    Solariellidae clade B sp. 3 LS-2013
+    Kodamaea/Candida clade
+    Epuraea complex
+    Moina cf. micrura clade J DPK-2016
+    Afenestrata group
+    Arcyria sp. RTA clade 1
+    Neacomys sp. 'clade 3'
+    indigoferoid/millettioid clade
+    Trechisibus group
+    Spirogyra sp. clade D-E2 CC-2012
+    Malachius group
+
+--- ERR:OTHER  (n≈3,289,532) ---
+    BOLD:ADF8483
+    SH1239572.09FU
+    SH0141037.10FU
+    BOLD:AAF2570
+    SH1058937.10FU
+    Hymenoptera sp. BOLD:AAD4794
+    SH1113483.10FU
+    Enterobacter phage Tyrion
+    BOLD:AAU4897
+    SH0106603.10FU
+    BOLD:ADC3553
+    Staphylinidae sp. BOLD:ABA8115
+    Influenza A virus (A/mallard duck/Ohio/16OS0732/2016(H4N6))
+    MWBO01 sp002071685
+    SH0917125.09FU
+    BOLD:ACU3306
+    SH528223.07FU
+    SH1258035.10FU
+    SH0908789.09FU
+    BOLD:ABA2911
+    Influenza A virus (A/Mississippi/4066/2014(H3N2))
+    SH0925028.10FU
+    Dolichopodidae sp. BOLD:AAO7784
+    Diptera sp. BOLD:AAO4259
+    SH0137511.10FU
+    Phoridae sp. BOLD:ACE7989
+    Empidinae sp. BOLD:AAF9761
+    BOLD:ACB6570
+    SH1210179.10FU
+    Dasychira plagiata nucleopolyhedrovirus
+    SH0126953.10FU
+    SH1585052.08FU
+    SH0042950.10FU
+    Hymenoptera sp. BOLD:AAG7502
+    SH188462.07FU
+    SH1151532.09FU
+    SH1042294.10FU
+    SH1598585.08FU
+    SH1508313.08FU
+    Perciformes sp. BOLD:AAD3854
+    BOLD:AFN1676
+    BOLD:ACE2204
+    SH0881520.10FU
+    BOLD:AEQ0146
+    BOLD:AFN8304
+    Beloniformes sp. BOLD:AAO1583
+    Microbacterium phage StrawberryJamm
+    SH0152730.10FU
+    Influenza A virus (A/swine/Minnesota/02817/2009(H1N1))
+    SH1397670.10FU
+    BOLD:ADF9775
+    Vibrio phage X29
+    Beloniformes sp. BOLD:AAE2803
+    Influenza A virus (A/SCk/HK/YU663/2003(H9N2))
+    Campiglossa sp. BOLD:AAB7672
+    SH1598331.08FU
+    Propionibacterium virus PFR1
+    SH1281001.09FU
+    SH3592696.08FU
+    Influenza A virus (A/Illinois/60/2016(H3N2))
+
+--- ERR:PLACEHOLDER  (n≈84,083) ---
+    uncultured bacterium ctg7180000001433
+    uncultured bacterium zdt-25h12
+    uncultured Alteromonas sp. AD1000-G12-21
+    uncultured bacterium D7a
+    uncultured Exilispira sp.
+    ? anopica
+    uncultured Goniomonas sp.
+    uncultured Vulcanibacillus sp.
+    uncultured bacterium BD_contig01572
+    uncultured bacterium BD_contig03752
+    uncultured bacterium ctg7180000000841
+    uncultured marine thaumarchaeote KM3_35_E05
+    unidentified soil organism R6-24
+    Not assigned Enterobacteria phage W*8
+    uncultured Prochlorococcus marinus clone HOT0M-1A11
+    uncultured Cafeteria sp.
+    uncultured compost bacterium 5-11
+    uncultured Chondromyces sp.
+    uncultured Sterkiella
+    Not assigned Herpesvirus cyclopsis
+    uncultured Dicranidion
+    uncultured Ustilaginomycotina
+    uncultured Cyanobacteria bacterium
+    uncultured bacterium VC2.1 Bac35
+    ? clivosus
+    uncultured bacterium ACE-33
+    uncultured bacterium Bio5
+    uncultured Palaeococcus sp.
+    Columnella species indeterminate E838
+    uncultured bacterium adhufec367
+    uncultured Alkalispirillum sp.
+    uncultured marine thaumarchaeote KM3_30_B03
+    uncultured thermal soil bacterium
+    ? barkudensis
+    uncultured marine thaumarchaeote KM3_28_B05
+    uncultured marine thaumarchaeote SAT1000_53_A12
+    uncultured bacterium BD_contig00109
+    uncultured marine thaumarchaeote KM3_65_D11
+    Euconnus (Incertae sedis) constrictus Reitter & Croissandeau, 1890
+    uncultured bacterium Oim30
+    uncultured Banisveld landfill bacterium BVC88
+    ? rotundata
+    uncultured bacterium contig00165
+    uncultured Umbilicariales
+    uncultured gamma proteobacterium B2M60
+    uncultured marine thaumarchaeote KM3_06_B06
+    uncultured Candidatus Midichloriaceae bacterium
+    uncultured Peltaster
+    uncultured archaeon S15-23
+    Asterotexales incertae sedis
+    ? nudifemoratus
+    uncultured marine group II euryarchaeote HF130_31B11
+    unidentified nematode Sourhope farm
+    uncultured Phytoactinopolyspora sp.
+    uncultured bacterium BD_contig00975
+    ? ibaguensis
+    uncultured vent bacterium ML-3a
+    uncultured actinomycete GT37-3
+    uncultured bacterium BD_contig00038
+    uncultured CFB group bacterium kpj254f
+
