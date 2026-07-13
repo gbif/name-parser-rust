@@ -6,6 +6,7 @@ import org.gbif.nameparser.api.CombinedAuthorship;
 import org.gbif.nameparser.api.NamePart;
 import org.gbif.nameparser.api.NameType;
 import org.gbif.nameparser.api.NomCode;
+import org.gbif.nameparser.api.ParseResult;
 import org.gbif.nameparser.api.ParsedName;
 import org.gbif.nameparser.api.Rank;
 import org.gbif.nameparser.api.UnparsableNameException;
@@ -189,6 +190,71 @@ final class StructCodec {
     NameType type = enumByOrdinal(NameType.values(), nameTypeOrd, "name_type");
     NomCode code = codeOrd == ABSENT_ENUM ? null : enumByOrdinal(NomCode.values(), codeOrd, "code");
     return new UnparsableNameException(type, code, originalName);
+  }
+
+  /**
+   * Builds the {@link ParseResult.Unparsable} for a {@code -1} result buffer — the 5.0.0
+   * exceptionless counterpart to {@link #unparsableException}. The Rust FFI already clamped a
+   * parsable error type (INFORMAL/SCIENTIFIC) to OTHER before encoding (see
+   * {@code ParseError::clamped_to_unparsable}), so the {@code name_type} read here is always a
+   * non-parsable type and the {@link ParseResult.Unparsable} record's own {@code isParsable()}
+   * guard never trips.
+   */
+  static ParseResult unparsableResult(MemorySegment header, String originalName) {
+    int nameTypeOrd = header.get(LE_INT, OFF_NAME_TYPE);
+    int codeOrd = header.get(LE_INT, OFF_CODE);
+    NameType type = enumByOrdinal(NameType.values(), nameTypeOrd, "name_type");
+    NomCode code = codeOrd == ABSENT_ENUM ? null : enumByOrdinal(NomCode.values(), codeOrd, "code");
+    return new ParseResult.Unparsable(type, code, originalName);
+  }
+
+  // ================================================================================================
+  // 5.0.0 three-way split — applied to a decoded ParsedName. A DELIBERATE, minimal mirror of the
+  // Rust core's `is_informal` + `to_informal` (crates/nameparser/src/lib.rs): both are pure
+  // functions of the ParsedName fields the wire already carries (type, specificEpithet, genus,
+  // uninomial, infragenericEpithet, rank, phrase, code), so no dedicated wire payload is needed for
+  // `Informal`. KEEP IN SYNC with lib.rs; NameParserRustSmokeTest locks the outputs against the
+  // Rust-authoritative values. See docs/superpowers/findings/ for the corpus study that drove it.
+  // ================================================================================================
+
+  /**
+   * Splits a successfully decoded {@link ParsedName} into the 5.0.0 {@link ParseResult}: an
+   * {@link ParseResult.Informal} for a supraspecific taxon carrying a provisional designation with
+   * no species epithet, else a {@link ParseResult.Parsed}. A name with a species epithet (incl.
+   * cf./aff. and infraspecific-indeterminate binomials) stays {@code Parsed} so its
+   * {@code specificAuthorship} — unrepresentable by a flat anchor — is preserved.
+   */
+  static ParseResult toParseResult(ParsedName pn) {
+    if (isInformal(pn)) {
+      String taxon;
+      Rank taxonRank;
+      if (pn.getGenus() != null) {
+        // the overwhelming "Genus sp. <tag>" majority — anchor sits in the genus slot
+        taxon = pn.getGenus();
+        taxonRank = Rank.GENUS;
+      } else if (pn.getUninomial() != null) {
+        taxon = pn.getUninomial();
+        taxonRank = pn.getRank();
+      } else {
+        taxon = pn.getInfragenericEpithet();
+        taxonRank = pn.getRank();
+      }
+      return new ParseResult.Informal(taxon, taxonRank, pn.getRank(), pn.getPhrase(), pn.getCode());
+    }
+    return new ParseResult.Parsed(pn);
+  }
+
+  /**
+   * The informal discriminator — mirror of Rust {@code lib.rs::is_informal}: an INFORMAL-typed name
+   * with a real supraspecific anchor but no species epithet. Keying on the specific epithet routes
+   * cf./aff. and infraspecific-indeterminate binomials to {@code Parsed} automatically.
+   */
+  private static boolean isInformal(ParsedName pn) {
+    return pn.getType() == NameType.INFORMAL
+        && pn.getSpecificEpithet() == null
+        && (pn.getGenus() != null
+            || pn.getUninomial() != null
+            || pn.getInfragenericEpithet() != null);
   }
 
   // ================================================================================================

@@ -3,9 +3,8 @@ package org.gbif.nameparser.rust;
 
 import org.gbif.nameparser.api.NameParser;
 import org.gbif.nameparser.api.NomCode;
-import org.gbif.nameparser.api.ParsedName;
+import org.gbif.nameparser.api.ParseResult;
 import org.gbif.nameparser.api.Rank;
-import org.gbif.nameparser.api.UnparsableNameException;
 
 import javax.annotation.Nullable;
 
@@ -30,8 +29,7 @@ import javax.annotation.Nullable;
 public class NameParserRust implements NameParser {
 
   @Override
-  public ParsedName parse(String scientificName, @Nullable String authorship, @Nullable Rank rank, @Nullable NomCode code)
-      throws UnparsableNameException {
+  public ParseResult parse(String scientificName, @Nullable String authorship, @Nullable Rank rank, @Nullable NomCode code) {
     return Ffi.callParseStruct(scientificName,
         authorship, rank == null ? null : rank.name(), code == null ? null : code.name());
   }

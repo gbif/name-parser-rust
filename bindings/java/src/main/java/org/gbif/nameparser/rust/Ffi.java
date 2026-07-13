@@ -1,8 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 package org.gbif.nameparser.rust;
 
-import org.gbif.nameparser.api.ParsedName;
-import org.gbif.nameparser.api.UnparsableNameException;
+import org.gbif.nameparser.api.ParseResult;
 
 import java.lang.foreign.Arena;
 import java.lang.foreign.FunctionDescriptor;
@@ -228,24 +227,22 @@ final class Ffi {
   }
 
   /**
-   * Calls {@code np_parse_struct} over the FFM boundary and decodes its flat binary result into
-   * a {@link ParsedName} via {@link StructCodec#decode}. {@code authorship}/{@code rank}/{@code
-   * code} are each marshalled as {@link MemorySegment#NULL} when null.
+   * Calls {@code np_parse_struct} over the FFM boundary and turns its flat binary result into the
+   * 5.0.0 {@link ParseResult} (never throwing for an unparsable name): a {@code -1} header becomes
+   * {@link StructCodec#unparsableResult}, and a success buffer is decoded via
+   * {@link StructCodec#decode} then split into {@code Parsed}/{@code Informal} by
+   * {@link StructCodec#toParseResult}. {@code authorship}/{@code rank}/{@code code} are each
+   * marshalled as {@link MemorySegment#NULL} when null.
    *
    * <p>Implements the overflow-retry protocol {@code np_parse_struct} documents (see {@code
    * layout.rs}): a first attempt against a {@link #INITIAL_STRUCT_BUFFER_BYTES}-byte scratch
    * buffer, and -- only if that overflows -- exactly one retry against a buffer sized to the
    * reported {@code needed} count. Both calls happen inside the same confined {@link Arena}, and
    * {@link StructCodec#decode} runs before that arena closes (it copies every string it needs
-   * into plain Java {@code String}s, so the returned {@link ParsedName} holds no live reference
-   * into native memory once this method returns).
-   *
-   * @throws UnparsableNameException translated from the native {@code -1} return (the header
-   *     carries the {@code NameType}/{@code NomCode} to attach to it; see {@link
-   *     StructCodec#unparsableException}).
+   * into plain Java {@code String}s, so the returned result holds no live reference into native
+   * memory once this method returns).
    */
-  static ParsedName callParseStruct(String name, String authorship, String rank, String code)
-      throws UnparsableNameException {
+  static ParseResult callParseStruct(String name, String authorship, String rank, String code) {
     try (Arena arena = Arena.ofConfined()) {
       MemorySegment n = arena.allocateFrom(name);
       MemorySegment au = authorship == null ? MemorySegment.NULL : arena.allocateFrom(authorship);
@@ -279,9 +276,9 @@ final class Ffi {
             "nameparser-ffi internal error: np_parse_struct returned -2 (caught panic) for name '" + name + "'");
       }
       if (ret == -1) {
-        throw StructCodec.unparsableException(out, name);
+        return StructCodec.unparsableResult(out, name);
       }
-      return StructCodec.decode(out, (int) ret);
+      return StructCodec.toParseResult(StructCodec.decode(out, (int) ret));
     }
   }
 

@@ -13,9 +13,9 @@
     VERSIONING: this binding shares the Rust ENGINE's version — the Cargo [workspace.package]
     version at this repo's root (gbif-name-parser, 0.1.x today) — released in lockstep with the
     CLI/Python/R bindings, so one version across all bindings means one engine. It is NOT the
-    version of the api it implements: `org.gbif:name-parser-api` (4.x, a dependency below) is
-    independently versioned and pinned. The bindings sit at 0.x while new / gathering real-use
-    feedback, and graduate to the product's 4.x line once stable. Keep <version> below in sync
+    version of the api it implements: `org.gbif:name-parser-api` (5.0.0-SNAPSHOT, a dependency
+    below) is independently versioned and pinned. The bindings sit at 0.x while new / gathering
+    real-use feedback, and graduate to the product's 5.x line once stable. Keep <version> below in sync
     with the Cargo workspace version — scripts/bump-version.sh does this; see RELEASE.md.
   -->
   <groupId>org.gbif.nameparser</groupId>
@@ -72,20 +72,23 @@
   </properties>
 
   <dependencies>
-    <!-- The oracle model/interfaces: ParsedName, NameParser, UnparsableNameException, the enums.
-         Released 4.2.0 (resolvable from repository.gbif.org via the <repositories> block below;
-         also cached in ~/.m2) — see bindings/java/README.md. -->
+    <!-- The 5.0.0 exceptionless API this binding implements: NameParser (now returning
+         ParseResult), the three-way ParseResult (Parsed | Informal | Unparsable), ParsedName,
+         UnparsableNameException, the enums. 5.0.0-SNAPSHOT resolves from repository.gbif.org via
+         the <repositories> block below (also cached in ~/.m2) — see bindings/java/README.md.
+         NOTE: 5.0.0 is api-ONLY — the Java NameParserImpl reference impl was removed, so this
+         Rust binding is the sole implementation (Phase 5 cutover). -->
     <dependency>
       <groupId>org.gbif</groupId>
       <artifactId>name-parser-api</artifactId>
-      <version>4.2.0</version>
+      <version>5.0.0-SNAPSHOT</version>
     </dependency>
 
     <!-- TEST-ONLY. The binding itself no longer uses Gson (the struct wire path rebuilds
-         ParsedName via StructCodec's setters, not reflection). ParityTest still uses Gson as its
-         comparison tool: it serializes both the Rust-built and oracle-built ParsedNames to JSON
-         trees and diffs them field-by-field with an order-insensitive carve-out. Test scope, so
-         consumers of this artifact do NOT inherit Gson. -->
+         ParsedName via StructCodec's setters, not reflection). Retained for the P5 frozen-golden
+         parity gate, which will diff the Rust-built ParsedName against the frozen 4.2.0 oracle
+         JSON (testdata/golden-4.2.0/expected-parse.jsonl). Test scope, so consumers of this
+         artifact do NOT inherit Gson. -->
     <dependency>
       <groupId>com.google.code.gson</groupId>
       <artifactId>gson</artifactId>
@@ -93,15 +96,10 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- Test-only: the Java oracle implementation, for future parity testing
-         (bindings/java's ParityTest) against this JSON-over-FFM path. Not used by the
-         smoke test itself. -->
-    <dependency>
-      <groupId>org.gbif</groupId>
-      <artifactId>name-parser</artifactId>
-      <version>4.2.0</version>
-      <scope>test</scope>
-    </dependency>
+    <!-- NOTE: the org.gbif:name-parser (Java NameParserImpl reference impl) test dependency was
+         REMOVED at 5.0.0 — that artifact no longer exists (api-only 5.0.0), and the Rust binding is
+         now the sole implementation. The old live-oracle ParityTest was retired with it; P5 rebuilds
+         a frozen-golden gate against testdata/golden-4.2.0/ that needs no live Java oracle. -->
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -111,7 +109,7 @@
     </dependency>
   </dependencies>
 
-  <!-- Resolve org.gbif deps (name-parser-api / name-parser) from GBIF's Nexus, since this
+  <!-- Resolve the org.gbif name-parser-api dependency from GBIF's Nexus, since this
        standalone POM has no motherpom to supply them. -->
   <repositories>
     <repository>
