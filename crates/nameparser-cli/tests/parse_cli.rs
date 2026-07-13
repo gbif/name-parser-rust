@@ -171,6 +171,65 @@ fn parse_stdin_to_stdout_matches_a_verified_java_cli_transcript() {
     );
 }
 
+/// `--three-way` opts into the 5.0.0 `parse()` classification: a scientific name still renders as a
+/// `parsed` row and a non-name as an `error` row (both byte-identical to the default oracle shape),
+/// but a semistructured name now becomes its own `informal` object carrying the flat anchor plus its
+/// `canonical` rendering — instead of the default's `parsed` row with `type=INFORMAL`.
+#[test]
+fn parse_three_way_emits_a_distinct_informal_row_with_canonical() {
+    let output = {
+        use std::io::Write as _;
+        use std::process::Stdio;
+        let mut child = Command::new(env!("CARGO_BIN_EXE_nameparser-cli"))
+            .args(["parse", "--input=-", "--output=-", "--quiet", "--three-way"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn nameparser-cli");
+        child
+            .stdin
+            .take()
+            .expect("stdin was piped")
+            .write_all(b"Abies alba Mill.\nRhizobium sp. RMCC TR1811\nTobacco mosaic virus\n")
+            .expect("failed to write to child stdin");
+        child.wait_with_output().expect("failed to wait on child")
+    };
+
+    assert!(
+        output.status.success(),
+        "nameparser-cli exited with {:?}\nstderr: {}",
+        output.status.code(),
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let actual = String::from_utf8(output.stdout).expect("stdout must be valid UTF-8");
+    let lines: Vec<&str> = actual.lines().collect();
+    assert_eq!(lines.len(), 3, "expected exactly 3 JSONL rows, got: {actual:?}");
+
+    // scientific -> the same `parsed` object the default (oracle) mode emits
+    assert_eq!(
+        lines[0],
+        r#"{"line":1,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}}"#
+    );
+    // semistructured -> a distinct `informal` object with its flat anchor + canonical
+    assert_eq!(
+        lines[1],
+        r#"{"line":2,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
+    );
+    // non-name -> the same `error` object the default mode emits
+    assert_eq!(
+        lines[2],
+        r#"{"line":3,"input":"Tobacco mosaic virus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Tobacco mosaic virus"}}"#
+    );
+
+    // the unconditional summary counts the three buckets (not two)
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("1 parsed, 1 informal, 1 unparsable"),
+        "expected the three-way summary, got: {stderr}"
+    );
+}
+
 /// The `parse` command echoes the EXTRACTED (trimmed, first-tab-column) name in the `input`
 /// field — matching the Java CLI (`ParseCli` sets `input = row.name()`, a `PlainTextReader.trim()`
 /// value, verified byte-for-byte against the shaded jar). A leading/trailing-space input is

@@ -14,6 +14,10 @@
 //! `testdata/expected-parse.jsonl` Java-CLI-generated oracle the core crate's own golden
 //! harness (`crates/nameparser/tests/parse_golden.rs`) uses.
 //!
+//! `--three-way` opts into the 5.0.0 [`nameparser::parse`] classification instead: a `parsed` or
+//! `error` row exactly as above, plus a distinct `informal` object (its flat anchor + a `canonical`
+//! string) for semistructured names. The default (oracle) output is left untouched by the flag.
+//!
 //! Deferred (not implemented by this task — see the crate's own doc comments at the deferral
 //! points below for the exact scope):
 //!   - ColDP TSV/CSV auto-detection (`InputDetector`/`ColdpReader` in Java) — this CLI only
@@ -80,7 +84,8 @@ use std::path::Path;
 use std::time::Instant;
 
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use nameparser::model::{NameType, ParseError, ParsedName};
+use nameparser::model::{Informal, NameType, ParseError, ParsedName};
+use nameparser::ParseResult;
 use serde_json::Value;
 
 /// Print a progress line to stderr every this-many parsed rows (unless `--quiet`). Matches
@@ -180,6 +185,13 @@ struct ParseArgs {
     /// Suppress per-batch progress lines (the final summary still prints).
     #[arg(long)]
     quiet: bool,
+
+    /// Emit the 5.0.0 three-way result: `parsed`/`error` rows as usual, plus a distinct
+    /// `informal` object (with its `canonical` rendering) for semistructured names — instead of
+    /// the default, which folds informal names into a `parsed` row with `type=INFORMAL`. The
+    /// default output is the bindings' parity oracle and is left untouched by this flag.
+    #[arg(long)]
+    three_way: bool,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
@@ -241,6 +253,7 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
     let mut line_no: u64 = 0;
     let mut total: u64 = 0;
     let mut ok: u64 = 0;
+    let mut informal: u64 = 0;
     let mut unparsable: u64 = 0;
 
     for line in reader.lines() {
@@ -250,19 +263,30 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
             continue;
         };
 
-        let result = nameparser::parse_name(name, None, None, None);
-        let is_ok = result.is_ok();
-        // Echo the extracted (trimmed, first-tab-column) name in `input`, matching the Java CLI's
-        // `ParseCli` (`input = row.name()`, a `PlainTextReader.trim()`-ed value) — verified
-        // byte-for-byte against the shaded jar on a padded input.
-        writeln!(writer, "{}", render_row(line_no, name, &result))?;
+        // Either way the extracted (trimmed, first-tab-column) name is echoed in `input`, matching
+        // the Java CLI's `ParseCli` (`input = row.name()`, a `PlainTextReader.trim()`-ed value).
+        if args.three_way {
+            // 5.0.0 three-way classification via `parse()` — informal names become their own row.
+            let result = nameparser::parse(name, None, None, None);
+            match &result {
+                ParseResult::Parsed(_) => ok += 1,
+                ParseResult::Informal(_) => informal += 1,
+                ParseResult::Unparsable(_) => unparsable += 1,
+            }
+            writeln!(writer, "{}", render_result_row(line_no, name, &result))?;
+        } else {
+            // Default: the raw two-way `parse_name` shape that is the bindings' parity oracle —
+            // verified byte-for-byte against the shaded jar on a padded input.
+            let result = nameparser::parse_name(name, None, None, None);
+            if result.is_ok() {
+                ok += 1;
+            } else {
+                unparsable += 1;
+            }
+            writeln!(writer, "{}", render_row(line_no, name, &result))?;
+        }
 
         total += 1;
-        if is_ok {
-            ok += 1;
-        } else {
-            unparsable += 1;
-        }
         if !args.quiet && total.is_multiple_of(PROGRESS_EVERY) {
             eprintln!("  {total} parsed (line {line_no})");
         }
@@ -271,7 +295,11 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
 
     // Unconditional, like Java's `summary.printf(...)` outside the `if (!quiet)` guard —
     // only the periodic progress lines above are gated by `--quiet`.
-    eprintln!("Parsed {total} names ({ok} ok, {unparsable} unparsable)");
+    if args.three_way {
+        eprintln!("Parsed {total} names ({ok} parsed, {informal} informal, {unparsable} unparsable)");
+    } else {
+        eprintln!("Parsed {total} names ({ok} ok, {unparsable} unparsable)");
+    }
     Ok(())
 }
 
@@ -315,36 +343,81 @@ pub(crate) fn render_row(
     result: &Result<ParsedName, ParseError>,
 ) -> String {
     let mut out = String::with_capacity(128);
+    append_envelope_head(&mut out, line_no, name);
+    match result {
+        Ok(pn) => append_parsed(&mut out, pn),
+        Err(e) => append_error(&mut out, e),
+    }
+    out.push('}');
+    out
+}
+
+/// The `--three-way` sibling of [`render_row`]: renders a [`ParseResult`] (the 5.0.0 three-way
+/// outcome from [`nameparser::parse`]) — a `parsed` object or an `error` object exactly as
+/// [`render_row`] emits them, plus a third `informal` object for a semistructured name, carrying
+/// the flat anchor (`taxon`, `taxonRank`, `rank`, and `phrase`/`code` when present) and its
+/// `canonical` rendering (e.g. `"Rhizobium sp. RMCC TR1811"`). Same order-safe hand-assembly.
+pub(crate) fn render_result_row(line_no: u64, name: &str, result: &ParseResult) -> String {
+    let mut out = String::with_capacity(160);
+    append_envelope_head(&mut out, line_no, name);
+    match result {
+        ParseResult::Parsed(pn) => append_parsed(&mut out, pn),
+        ParseResult::Informal(inf) => append_informal(&mut out, inf),
+        ParseResult::Unparsable(e) => append_error(&mut out, e),
+    }
+    out.push('}');
+    out
+}
+
+// ---- shared field-builders for the row envelope + each variant object. Hand-assembled to
+// preserve declaration order (this crate's serde_json is BTreeMap-backed — see render_row's doc). ----
+
+fn append_envelope_head(out: &mut String, line_no: u64, name: &str) {
     out.push_str("{\"line\":");
     out.push_str(&line_no.to_string());
     out.push_str(",\"input\":");
     out.push_str(&serde_json::to_string(name).expect("a &str always serializes to a JSON string"));
-    match result {
-        Ok(pn) => {
-            out.push_str(",\"parsed\":");
-            out.push_str(&serde_json::to_string(pn).expect("ParsedName always serializes to JSON"));
-        }
-        Err(e) => {
-            out.push_str(",\"error\":{\"type\":");
-            out.push_str(
-                &serde_json::to_string(&e.type_).expect("NameType always serializes to JSON"),
-            );
-            if let Some(code) = &e.code {
-                out.push_str(",\"code\":");
-                out.push_str(
-                    &serde_json::to_string(code).expect("NomCode always serializes to JSON"),
-                );
-            }
-            out.push_str(",\"message\":");
-            out.push_str(
-                &serde_json::to_string(&e.message)
-                    .expect("a String always serializes to a JSON string"),
-            );
-            out.push('}');
-        }
+}
+
+fn append_parsed(out: &mut String, pn: &ParsedName) {
+    out.push_str(",\"parsed\":");
+    out.push_str(&serde_json::to_string(pn).expect("ParsedName always serializes to JSON"));
+}
+
+fn append_error(out: &mut String, e: &ParseError) {
+    out.push_str(",\"error\":{\"type\":");
+    out.push_str(&serde_json::to_string(&e.type_).expect("NameType always serializes to JSON"));
+    if let Some(code) = &e.code {
+        out.push_str(",\"code\":");
+        out.push_str(&serde_json::to_string(code).expect("NomCode always serializes to JSON"));
     }
+    out.push_str(",\"message\":");
+    out.push_str(
+        &serde_json::to_string(&e.message).expect("a String always serializes to a JSON string"),
+    );
     out.push('}');
-    out
+}
+
+fn append_informal(out: &mut String, inf: &Informal) {
+    // Field order mirrors the core `Informal` struct's `#[derive(Serialize)]` (taxon, taxonRank,
+    // rank, phrase, code), then the derived `canonical` — kept in sync by the render tests.
+    out.push_str(",\"informal\":{\"taxon\":");
+    out.push_str(&serde_json::to_string(&inf.taxon).expect("a String always serializes to a JSON string"));
+    out.push_str(",\"taxonRank\":");
+    out.push_str(&serde_json::to_string(&inf.taxon_rank).expect("Rank always serializes to JSON"));
+    out.push_str(",\"rank\":");
+    out.push_str(&serde_json::to_string(&inf.rank).expect("Rank always serializes to JSON"));
+    if let Some(phrase) = &inf.phrase {
+        out.push_str(",\"phrase\":");
+        out.push_str(&serde_json::to_string(phrase).expect("a String always serializes to a JSON string"));
+    }
+    if let Some(code) = &inf.code {
+        out.push_str(",\"code\":");
+        out.push_str(&serde_json::to_string(code).expect("NomCode always serializes to JSON"));
+    }
+    out.push_str(",\"canonical\":");
+    out.push_str(&serde_json::to_string(&inf.canonical_name()).expect("a String always serializes to a JSON string"));
+    out.push('}');
 }
 
 /// Opens the `parse` input stream: `None` or the literal `-` means stdin; anything else is a
@@ -1174,6 +1247,46 @@ mod tests {
         let err = ParseError::new(NameType::Other, None, "a \"quoted\" name");
         let row = render_row(1, "a \"quoted\" name", &Err(err));
         assert!(row.starts_with(r#"{"line":1,"input":"a \"quoted\" name","error":"#));
+    }
+
+    // ---- three-way (`--three-way`) rows ----
+
+    #[test]
+    fn render_result_row_parsed_is_byte_identical_to_the_two_way_parsed_shape() {
+        // A structurally parsed name renders as the exact same `parsed` object the oracle emits.
+        let name = "Abies alba Mill.";
+        let two_way = render_row(2, name, &nameparser::parse_name(name, None, None, None));
+        let three_way = render_result_row(2, name, &nameparser::parse(name, None, None, None));
+        assert_eq!(three_way, two_way);
+    }
+
+    #[test]
+    fn render_result_row_unparsable_is_byte_identical_to_the_two_way_error_shape() {
+        // An unparsable name renders as the exact same `error` object the oracle emits.
+        let name = "Tobacco mosaic virus";
+        let two_way = render_row(1, name, &nameparser::parse_name(name, None, None, None));
+        let three_way = render_result_row(1, name, &nameparser::parse(name, None, None, None));
+        assert_eq!(three_way, two_way);
+    }
+
+    #[test]
+    fn render_result_row_informal_carries_the_flat_anchor_and_canonical() {
+        let name = "Rhizobium sp. RMCC TR1811";
+        let row = render_result_row(3, name, &nameparser::parse(name, None, None, None));
+        assert_eq!(
+            row,
+            r#"{"line":3,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
+        );
+    }
+
+    #[test]
+    fn render_result_row_bare_informal_omits_the_absent_phrase() {
+        let name = "Rhizobium sp.";
+        let row = render_result_row(1, name, &nameparser::parse(name, None, None, None));
+        assert_eq!(
+            row,
+            r#"{"line":1,"input":"Rhizobium sp.","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","canonical":"Rhizobium sp."}}"#
+        );
     }
 
     // ---- benchmark ----
