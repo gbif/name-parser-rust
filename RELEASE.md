@@ -18,7 +18,7 @@ version number means the **same underlying Rust engine** everywhere.
 | Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ ready |
 | CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ ready |
 | Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ ready (one-time PyPI setup) |
-| Rust engine | `gbif-name-parser` | crates.io | `cargo publish` | ⚠️ not yet wired |
+| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ ready (one-time crates.io setup) |
 | R | `nameparser` | CRAN | manual submission | ⚠️ not yet wired |
 
 ---
@@ -27,18 +27,22 @@ version number means the **same underlying Rust engine** everywhere.
 
 Do these once (per registry / per person with release rights).
 
-- **PyPI (Trusted Publishing — no token stored).** On <https://pypi.org> add a Trusted Publisher
-  for project `gbif-name-parser`: owner `gbif`, repo `name-parser-rust`, workflow
-  `python-release.yml`, **environment `pypi`**. Create a **`pypi`** environment under the repo's
-  GitHub *Settings → Environments* (optionally require a reviewer to gate each release).
-  - *Dry-run channel (recommended before the first real publish):* do the same on
-    <https://test.pypi.org> with **environment `testpypi`**, and create a `testpypi` GitHub
-    environment.
+- **PyPI (Trusted Publishing — no token stored).** The GitHub `pypi` and `testpypi` environments
+  **already exist** (repo *Settings → Environments*; `pypi` is gated behind a required reviewer).
+  The remaining step is on PyPI: at <https://pypi.org> → *Publishing → Add a pending publisher*
+  for project `gbif-name-parser` — owner `gbif`, repo `name-parser-rust`, workflow
+  `python-release.yml`, **environment `pypi`**.
+  - *Dry-run channel (recommended before the first real publish):* the same on
+    <https://test.pypi.org> with **environment `testpypi`**.
+- **crates.io (Trusted Publishing — no token stored).** The GitHub `crates-io` environment
+  **already exists** (gated behind a required reviewer). The remaining step is on crates.io: open
+  the `gbif-name-parser` crate → *Settings → Trusted Publishing → Add* — owner `gbif`, repo
+  `name-parser-rust`, workflow `crate-release.yml`, **environment `crates-io`**. (First publish
+  only: the crate must exist — use crates.io's pending-publisher flow, or one manual `cargo
+  publish` to create it, then rely on the workflow thereafter.)
 - **Jenkins (Java).** The Multibranch job already deploys snapshots. Release credentials
   (`gbif-release` / `gbif-snapshot`) live only in the Jenkins-managed `settings.xml` — never in
   the repo.
-- **crates.io** *(when enabling — see §2)*: a crates.io API token (`cargo login`), and flip the
-  core crate to publishable.
 - **CRAN** *(when enabling — see §2)*: a maintainer email + the manual submission form.
 
 ---
@@ -109,11 +113,22 @@ sdist and publishes to PyPI via Trusted Publishing. A guard fails the run if the
 ### Rust engine → crates.io
 
 The core crate `gbif-name-parser` is crates.io-ready (`cargo publish --dry-run -p gbif-name-parser`
-passes). **This must precede a CRAN release** — the R package vendors the core *from* crates.io.
+passes) and wired to publish via Trusted Publishing (OIDC — no stored token). **This must precede a
+CRAN release** — the R package vendors the core *from* crates.io.
 
-1. `cargo login <token>` once (a crates.io API token).
-2. `cargo publish -p gbif-name-parser` at the bumped version. (`nameparser-cli`/`-ffi`/`-py` stay
-   `publish = false` — they are not library crates.)
+**Dry-run first** (recommended): *Actions → "Publish crate" → Run workflow* → runs `cargo publish
+--dry-run` (packages + verifies, never publishes). Then the real release:
+
+```sh
+git tag crate-v0.1.0 && git push origin crate-v0.1.0
+```
+
+`.github/workflows/crate-release.yml` guards the tag against the engine version (root `Cargo.toml`
+`[workspace.package]`), authenticates via OIDC (`rust-lang/crates-io-auth-action`), and runs
+`cargo publish -p gbif-name-parser`. The `crates-io` GitHub environment is gated behind a required
+reviewer, so the run pauses for approval before the (irreversible) upload.
+(`nameparser-cli`/`-ffi`/`-py` stay `publish = false` — they are not library crates.) Needs the
+one-time crates.io Trusted-Publisher registration (§0).
 
 ### R → CRAN — *needs crates.io first*
 
