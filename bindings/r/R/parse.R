@@ -3,11 +3,16 @@
 #' @param scientificname character vector of scientific names.
 #' @param authorship,rank,code optional scalar (length-1) hints applied to every name;
 #'   `rank`/`code` use the parser's SCREAMING_SNAKE_CASE names (e.g. "SPECIES", "ZOOLOGICAL").
-#' @return a tibble, one row per input name; unparsable names have `parsed = FALSE`.
-#'   Besides the parsed atoms, five `NameFormatter` rendering columns are included:
+#' @return a tibble, one row per input name. The `result` column carries the 5.0.0 three-way
+#'   outcome — `"parsed"`, `"informal"` or `"unparsable"` — and `parsed` is the convenience boolean
+#'   (`TRUE` only for `"parsed"`). An **informal** name (a supraspecific taxon carrying a provisional
+#'   designation, e.g. `"Rhizobium sp. RMCC TR1811"`) is flat: its `taxon` + `taxonRank` + `rank` +
+#'   `phrase` + `code` are populated and every ParsedName-specific column is `NA` (the anchor lives
+#'   in `taxon`, never a mislabelled `genus`). A name with a species epithet (incl. cf./aff.) stays
+#'   `"parsed"`. Besides the parsed atoms, five `NameFormatter` rendering columns are included:
 #'   `canonical` (full name with authorship), `canonicalWithoutAuthorship`,
 #'   `canonicalMinimal` (bare parts, folded to ascii), `canonicalComplete` and
-#'   `authorshipComplete` — all `NA` on unparsable rows.
+#'   `authorshipComplete` — all `NA` on informal + unparsable rows.
 #' @export
 parse_names <- function(scientificname, authorship = NULL, rank = NULL, code = NULL) {
   stopifnot(is.character(scientificname))

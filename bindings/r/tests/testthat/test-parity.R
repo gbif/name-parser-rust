@@ -27,8 +27,18 @@ testthat::test_that("parse_name_json matches the Java CLI oracle over the benchm
     if (!is.null(o$warnings)) o$warnings <- sort(unlist(o$warnings))
     jsonlite::toJSON(o, auto_unbox = TRUE, null = "null")
   }
+  # Inputs the 5.0.0 parser deliberately parses differently from the frozen 4.2.0 oracle — the
+  # informal "tag capture" enhancement (Phase 5): a yearless "Genus sp. <tag>" now captures the tag
+  # as the phrase (parse_name_json uses the raw parse() path, which carries the enhancement) instead
+  # of the 4.2.0 oracle's misread author. Kept 1:1 with parse_golden::INFORMAL_5_0_0_DIVERGENCES.
+  informal_divergences <- c(
+    "Lacanobia sp. nr. subjuncta Bold:Aab, 0925",
+    "Burkholderia sp. (Gigaspora margarita endosymbiont)",
+    "Elaeocarpus sp. Rocky Creek"
+  )
   mismatches <- 0L
   for (i in seq_along(names_vec)) {
+    if (names_vec[i] %in% informal_divergences) next
     got <- jsonlite::fromJSON(parse_name_json(names_vec[i]), simplifyVector = FALSE)
     exp_line <- jsonlite::fromJSON(expected[i], simplifyVector = FALSE)
     # oracle rows are {"line":N,"input":..,"parsed":{..}} or {..,"error":{..}}

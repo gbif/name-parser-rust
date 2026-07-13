@@ -106,6 +106,49 @@ test_that("warnings column carries a real (non-empty) warning, not just NA", {
   expect_equal(out$warnings, "question marks removed")
 })
 
+test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)", {
+  out <- parse_names(c("Serratia sp. RE1-2a",        # informal, tag already captured
+                       "Rhizobium sp. RMCC TR1811",   # multi-token tag-capture rescue
+                       "Rhizobium sp.",               # bare "Genus sp." -> no phrase
+                       "Abies alba Mill.",            # parsed
+                       "Tobacco mosaic virus"))       # unparsable
+  # the new 5.0.0 three-way discriminator + informal-anchor columns
+  expect_true(all(c("result", "taxon", "taxonRank") %in% names(out)))
+  expect_equal(out$result, c("informal", "informal", "informal", "parsed", "unparsable"))
+  expect_equal(out$parsed, c(FALSE, FALSE, FALSE, TRUE, FALSE))  # TRUE only for "parsed"
+
+  # informal row 1: Serratia sp. RE1-2a (values are Rust/Java-authoritative)
+  expect_equal(out$taxon[1], "Serratia")
+  expect_equal(out$taxonRank[1], "GENUS")
+  expect_equal(out$rank[1], "SPECIES")
+  expect_equal(out$phrase[1], "RE1-2a")
+  expect_equal(out$type[1], "INFORMAL")
+  expect_true(is.na(out$genus[1]))    # the anchor lives in `taxon`, never a mislabelled genus
+  expect_true(is.na(out$error[1]))
+
+  # informal row 2: the ~382k tag-capture rescue — whole verbatim tail becomes the phrase
+  expect_equal(out$taxon[2], "Rhizobium")
+  expect_equal(out$phrase[2], "RMCC TR1811")
+
+  # informal row 3: bare "Genus sp." -> no phrase
+  expect_equal(out$taxon[3], "Rhizobium")
+  expect_true(is.na(out$phrase[3]))
+
+  # parsed + unparsable rows carry NA in the informal-only columns
+  expect_true(is.na(out$taxon[4]))
+  expect_true(is.na(out$taxonRank[4]))
+  expect_true(is.na(out$taxon[5]))
+})
+
+test_that("a cf. binomial stays a parsed row, not informal", {
+  # a species epithet is present (binomial core) -> stays Parsed so specificAuthorship survives
+  out <- parse_names("Salicornia cf. patula")
+  expect_equal(out$result, "parsed")
+  expect_true(out$parsed)
+  expect_equal(out$specificEpithet, "patula")
+  expect_true(is.na(out$taxon))
+})
+
 test_that("parse_name_json's error envelope matches the FFI/CLI shape exactly", {
   # Byte-for-byte the same shape nameparser-ffi's `unparsable_json` and nameparser-cli's
   # `render_row` produce: {"type",["code" only when Some],"message"} -- no "name" key,
