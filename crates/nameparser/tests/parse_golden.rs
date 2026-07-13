@@ -5,9 +5,14 @@
 //! following Phase 1 Slice 4 change that ported `replace_homoglyphs`'s backing table,
 //! closing the field-parity gate's last residual).
 //!
-//! Diffs Rust `nameparser::parse()` against the real Java CLI oracle
-//! (`testdata/expected-parse.jsonl`) over the ~8017-name benchmark corpus
-//! (`testdata/benchmark-data.txt`). Two independent gates, BOTH asserted:
+//! Diffs Rust `nameparser::parse()` against the golden SNAPSHOT
+//! (`testdata/golden/expected-parse.jsonl`) over the ~8017-name benchmark corpus
+//! (`testdata/benchmark-data.txt`). **This is a Rust regression snapshot, not a live Java oracle**:
+//! the Java `NameParserImpl` was retired at 5.0.0, so the snapshot is regenerated FROM THE RUST CLI
+//! and re-baselined (regenerate + review the git diff) whenever behaviour changes intentionally —
+//! the file's git history is the intentional-change log. Its ancestry is the Java 4.2.0 output the
+//! port was cross-validated against; Rust is the reference implementation now. Two gates, BOTH
+//! asserted (a "Java"/"error"/"parsed" below is a snapshot row, not a live Java call):
 //!
 //!   1. **Error classification (asserted 0, unchanged since Task 6).** The parsed/unparsable
 //!      PARTITION (Java `error` <=> Rust `Err`; Java `parsed` <=> Rust `Ok`), and, for rows
@@ -40,12 +45,13 @@
 //!      `warnings` (the `replace_homoglyphs` stub, StripAndStash step 13 — since ported in
 //!      full, closing that gap to 0).
 //!
-//! Regenerate the oracle with (see the Task 6 brief for the authoritative command):
+//! Re-baseline the snapshot from the current Rust CLI, then REVIEW the git diff (the
+//! intentional-change log) before committing:
 //! ```text
-//! export PATH="$HOME/.cargo/bin:$PATH"; [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-//! JAR=$(ls /Users/markus/code/gbif/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar | head -1)
-//! java -jar "$JAR" parse --input=- --output=- --format=jsonl \
-//!   < testdata/benchmark-data.txt > testdata/expected-parse.jsonl 2>/dev/null
+//! cargo build --release -p nameparser-cli
+//! ./target/release/nameparser-cli parse --input=testdata/benchmark-data.txt \
+//!   --output=testdata/golden/expected-parse.jsonl --quiet
+//! git diff testdata/golden/expected-parse.jsonl
 //! ```
 
 use std::collections::HashMap;
@@ -158,24 +164,6 @@ fn allowed_mismatches(key: &str) -> usize {
         .unwrap_or(0)
 }
 
-/// Inputs the 5.0.0 parser DELIBERATELY parses differently from the frozen 4.2.0 Java oracle —
-/// the informal / semistructured "tag capture" enhancement (Phase 5, `docs/superpowers/findings/`).
-/// For a supraspecific indeterminate name (`Genus sp. <tag>`) with a yearless trailing tag, the
-/// 5.0.0 parser now captures the whole tag as the informal `phrase` instead of misreading it as an
-/// author — the Australian-herbarium locality convention (`Elaeocarpus sp. Rocky Creek`), a
-/// descriptive note (`Burkholderia sp. (Gigaspora margarita endosymbiont)`), or a near-determination
-/// with a specimen code (`Lacanobia sp. nr. subjuncta Bold:Aab, 0925`). All three stay on the SAME
-/// side of the error/parsed partition and keep the same `type`/`code` (asserted 0-mismatch above); only
-/// the within-`ParsedName` field shape (`phrase`/`warnings`/authorship) differs, by design. Their
-/// per-field diff is skipped here rather than count-capped in [`ALLOWLIST`] so the exact inputs are
-/// pinned, not a fuzzy tally. The curated informal golden that locks the NEW expected shape is P5's
-/// job; this set only prevents the intended change from failing the 4.2.0 regression gate.
-const INFORMAL_5_0_0_DIVERGENCES: &[&str] = &[
-    "Lacanobia sp. nr. subjuncta Bold:Aab, 0925",
-    "Burkholderia sp. (Gigaspora margarita endosymbiont)",
-    "Elaeocarpus sp. Rocky Creek",
-];
-
 /// Order-insensitive equality for a JSON value Java serialises from a `Set`/`Map`-like
 /// collection: `warnings`'s `HashSet<String>`, `notho`'s `EnumSet<NamePart>` (both -> a JSON
 /// array) and `epithetQualifier`'s `EnumMap<NamePart, String>` (-> a JSON object). Java's
@@ -238,7 +226,7 @@ fn fields_equal(key: &str, jv: Option<&serde_json::Value>, rv: Option<&serde_jso
 fn matches_java_error_classification_over_corpus() {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../testdata/expected-parse.jsonl"
+        "/../../testdata/golden/expected-parse.jsonl"
     );
     let data = match std::fs::read_to_string(path) {
         Ok(d) => d,
@@ -320,12 +308,6 @@ fn matches_java_error_classification_over_corpus() {
                 // Both parsed. Diff every field of the full `ParsedName` wire shape —
                 // asserted 0 below (modulo ALLOWLIST), see the module doc.
                 both_parsed += 1;
-                // Deliberate 5.0.0 informal tag-capture divergences — see
-                // INFORMAL_5_0_0_DIVERGENCES. Same partition + type/code as Java (checked above);
-                // only the within-ParsedName shape differs, by design, so skip the field diff.
-                if INFORMAL_5_0_0_DIVERGENCES.contains(&input) {
-                    continue;
-                }
                 let java_obj = java_parsed
                     .expect("java_error is None so java_parsed is Some (asserted above)");
                 let rust_value =

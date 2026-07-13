@@ -78,6 +78,11 @@ pub(crate) struct ParseContext {
     /// the "(Adans.) Kuntze" in "Cordia (Adans.) Kuntze sect. Salimori"). Parsed and set
     /// as `ParsedName::generic_authorship` by Pipeline.
     pub pending_generic_author: Option<String>,
+    /// Set by Preflight (5.0.0) when it rescues an anchored informal grouping (`"Bartonella group"`,
+    /// `"Vermistella-lineage"`) by building a complete `Informal`-shaped `ParsedName` directly rather
+    /// than erroring. `Pipeline::run` then returns `ctx.name` as-is and skips the whole
+    /// tokenizer/classifier/assembler back end.
+    pub preflight_complete: bool,
 }
 
 impl ParseContext {
@@ -117,6 +122,7 @@ impl ParseContext {
             pending_imprint_year: None,
             pending_specific_author: None,
             pending_generic_author: None,
+            preflight_complete: false,
         }
     }
 

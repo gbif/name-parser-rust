@@ -27,19 +27,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Frozen-golden parity gate: {@link NameParserRust} (over the real FFM boundary) vs the frozen 4.2.0
- * oracle {@code testdata/golden-4.2.0/expected-parse.jsonl} — the same oracle {@code parse_golden.rs}
- * and the Python/R bindings validate against. Replaces the retired live-{@code NameParserImpl}
- * ParityTest: 5.0.0 is api-only, so there is no live Java oracle; the frozen JSONL <em>is</em> the
- * oracle. It re-validates the whole {@link StructCodec} decode over the ~8k-name benchmark corpus
- * (the {@code NameParserRustSmokeTest} only spot-checks a handful).
+ * Regression-snapshot parity gate: {@link NameParserRust} (over the real FFM boundary) vs the Rust
+ * golden snapshot {@code testdata/golden/expected-parse.jsonl} — the same snapshot
+ * {@code parse_golden.rs} and the R binding validate against, regenerated from the Rust CLI (the Java
+ * {@code NameParserImpl} is gone, so it is the current-Rust output, not a Java oracle). It
+ * re-validates the whole {@link StructCodec} decode over the ~8k-name benchmark corpus (the
+ * {@code NameParserRustSmokeTest} only spot-checks a handful).
  *
- * <p>The oracle is the raw core {@code parse()} output (a {@code ParsedName}, or an error), while
- * {@link NameParserRust} returns the 5.0.0 three-way {@link ParseResult}. So each oracle row is
- * mapped through the SAME split + clamp the binding applies — deliberate mirrors of the Rust core's
+ * <p>The snapshot is the raw core {@code parse()} output (a {@code ParsedName}, or an error), while
+ * {@link NameParserRust} returns the 5.0.0 three-way {@link ParseResult}. So each row is mapped
+ * through the SAME split + clamp the binding applies — deliberate mirrors of the Rust core's
  * {@code is_informal} / {@code to_informal} / {@code ParseError::clamped_to_unparsable} — before
- * comparing. The engine output underneath is identical, so this is a 0-diff gate, modulo the
- * documented informal tag-capture divergences ({@link #INFORMAL_5_0_0_DIVERGENCES}).
+ * comparing. The engine output underneath is identical, so this is a 0-diff gate.
  *
  * <p>Parsed rows compare as full {@code ParsedName} JSON trees (via one {@link #GSON}), with
  * {@code warnings}/{@code notho}/{@code epithetQualifier} compared order-insensitively — the same
@@ -49,21 +48,12 @@ class ParityTest {
 
   private static final File GOLDEN =
       new File(System.getProperty("nameparser.testdata.dir", "../../testdata"),
-          "golden-4.2.0/expected-parse.jsonl");
+          "golden/expected-parse.jsonl");
 
   /** Java {@code HashSet} vs Rust {@code Vec} order, and enum-map order — compared as sets. Copied
    *  verbatim from {@code parse_golden.rs}'s / the CLI's {@code UNORDERED_FIELD_KEYS}. */
   private static final Set<String> UNORDERED_FIELD_KEYS =
       Set.of("warnings", "notho", "epithetQualifier");
-
-  /** Inputs the 5.0.0 parser DELIBERATELY parses differently from the frozen 4.2.0 oracle — the
-   *  informal "tag capture" enhancement (Phase 5). Kept 1:1 with
-   *  {@code parse_golden::INFORMAL_5_0_0_DIVERGENCES}: same error/parsed partition + type/code, only
-   *  the within-result field shape differs, by design. */
-  private static final Set<String> INFORMAL_5_0_0_DIVERGENCES = Set.of(
-      "Lacanobia sp. nr. subjuncta Bold:Aab, 0925",
-      "Burkholderia sp. (Gigaspora margarita endosymbiont)",
-      "Elaeocarpus sp. Rocky Creek");
 
   private static final Gson GSON = new GsonBuilder().create();
   private static final int MAX_EXAMPLES = 20;
@@ -71,8 +61,8 @@ class ParityTest {
   private final NameParserRust rust = new NameParserRust();
 
   @Test
-  void matchesTheFrozen420GoldenOverTheBenchmarkCorpus() throws IOException {
-    assertTrue(GOLDEN.isFile(), "frozen golden not found: " + GOLDEN.getAbsolutePath()
+  void matchesTheRustGoldenSnapshotOverTheBenchmarkCorpus() throws IOException {
+    assertTrue(GOLDEN.isFile(), "golden snapshot not found: " + GOLDEN.getAbsolutePath()
         + " -- set -Dnameparser.testdata.dir=<repo>/testdata");
 
     List<String> lines = Files.readAllLines(GOLDEN.toPath(), StandardCharsets.UTF_8);
@@ -87,9 +77,6 @@ class ParityTest {
       JsonObject row = GSON.fromJson(line, JsonObject.class);
       String input = row.get("input").getAsString();
       compared++;
-      if (INFORMAL_5_0_0_DIVERGENCES.contains(input)) {
-        continue;
-      }
 
       String mismatch = compare(rust.parse(input, null, null, null), row);
       if (mismatch != null) {
@@ -101,13 +88,13 @@ class ParityTest {
     }
 
     System.out.println(String.format(Locale.ROOT,
-        "ParityTest (NameParserRust vs frozen 4.2.0 golden): %d compared, %d diffs", compared, diffs));
+        "ParityTest (NameParserRust vs Rust golden snapshot): %d compared, %d diffs", compared, diffs));
     assertTrue(compared >= 8000, "only " + compared + " rows compared — is the golden truncated?");
     if (diffs > 0) {
       System.err.println("First " + examples.size() + " of " + diffs + " diff(s):");
       examples.forEach(System.err::println);
     }
-    assertEquals(0, diffs, diffs + " row(s) differ from the frozen 4.2.0 golden — see stdout/stderr");
+    assertEquals(0, diffs, diffs + " row(s) differ from the Rust golden snapshot — see stdout/stderr");
   }
 
   /**

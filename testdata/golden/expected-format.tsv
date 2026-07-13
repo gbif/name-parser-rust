@@ -4444,7 +4444,7 @@ Thryothorus leucotis spp. bogotensis	true	Thryothorus leucotis spp bogotensis	Th
 Endoxyla sp. GM-, 2003	true	Endoxyla sp.	Endoxyla sp.	Endoxyla	Endoxyla sp.	GM, 2003
 X Aegilotrichum sp.	true	× Aegilotrichum sp.	× Aegilotrichum sp.	Aegilotrichum	× Aegilotrichum sp.	
 Liopropoma sp.2 Not applicable	true	Liopropoma sp. 2	Liopropoma sp. 2	Liopropoma	Liopropoma sp. 2	
-Lacanobia sp. nr. subjuncta Bold:Aab, 0925	true	Lacanobia sp.	Lacanobia sp.	Lacanobia	Lacanobia sp.	subjuncta Bold : Aab
+Lacanobia sp. nr. subjuncta Bold:Aab, 0925	true	Lacanobia sp. nr. subjuncta Bold:Aab, 0925	Lacanobia sp. nr. subjuncta Bold:Aab, 0925	Lacanobia	Lacanobia sp. nr. subjuncta Bold:Aab, 0925	
 Lacanobia nr. subjuncta Bold:Aab, 0925	true	Lacanobia nr subjuncta Bold : Aab	Lacanobia nr	Lacanobia nr	Lacanobia nr subjuncta Bold : Aab	subjuncta Bold : Aab
 Abturia cf. alabamensis (Morton )	true	Abturia cf. alabamensis (Morton)	Abturia cf. alabamensis	Abturia alabamensis	Abturia cf. alabamensis (Morton)	(Morton)
 Abturia cf alabamensis (Morton )	true	Abturia cf. alabamensis (Morton)	Abturia cf. alabamensis	Abturia alabamensis	Abturia cf. alabamensis (Morton)	(Morton)
@@ -4724,7 +4724,7 @@ Allium ampeloprasumphytoplasma	true	Allium ampeloprasumphytoplasma	Allium ampelo
 Alstroemeria sp. phytoplasma	true	Alstroemeria sp.	Alstroemeria sp.	Alstroemeria	Alstroemeria sp.	
 Alvinella pompejana symbiont	true	Alvinella pompejana symbiont	Alvinella pompejana symbiont	Alvinella pompejana symbiont	Alvinella pompejana symbiont	
 Acyrthosiphon kondoi endosymbiont	true	Acyrthosiphon kondoi endosymbiont	Acyrthosiphon kondoi endosymbiont	Acyrthosiphon kondoi endosymbiont	Acyrthosiphon kondoi endosymbiont	
-Burkholderia sp. (Gigaspora margarita endosymbiont)	true	Burkholderia sp.	Burkholderia sp.	Burkholderia	Burkholderia sp.	(Gigaspora margarita endosymbiont)
+Burkholderia sp. (Gigaspora margarita endosymbiont)	true	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia	Burkholderia sp. (Gigaspora margarita endosymbiont)	
 Dictyochloropsis symbiontica Tschermak-Woess	true	Dictyochloropsis symbiontica Tschermak-Woess	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica Tschermak-Woess	Tschermak-Woess
 Dylakosoma symbionticum var. valens Skuja	true	Dylakosoma symbionticum var. valens Skuja	Dylakosoma symbionticum var. valens	Dylakosoma symbionticum valens	Dylakosoma symbionticum var. valens Skuja	Skuja
 Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont	Wolbachia endosymbiont	Wolbachia endosymbiont of Leptogenys gracilis	of Leptogenys gracilis
@@ -4908,8 +4908,8 @@ Achillea millefolium agg. L.	true	Achillea millefolium L.	Achillea millefolium	A
 Strumigenys koningsbergeri-group	true	Strumigenys koningsbergeri	Strumigenys koningsbergeri	Strumigenys koningsbergeri	Strumigenys koningsbergeri	
 Selenophorus parumpunctatus species group	true	Selenophorus parumpunctatus	Selenophorus parumpunctatus	Selenophorus parumpunctatus	Selenophorus parumpunctatus	
 Monomorium monomorium group	true	Monomorium monomorium	Monomorium monomorium	Monomorium monomorium	Monomorium monomorium	
-Iteaphila-group	false					
-Bartonella group	false					
+Iteaphila-group	true	Iteaphila group	Iteaphila group	Iteaphila	Iteaphila group	
+Bartonella group	true	Bartonella group	Bartonella group	Bartonella	Bartonella group	
 Achillea millefolium L.	true	Achillea millefolium L.	Achillea millefolium	Achillea millefolium	Achillea millefolium L.	L.
 "Candidatus Endowatersipora" Anderson and Haygood, 2007	true	"Candidatus Endowatersipora" Anderson & Haygood 2007	"Candidatus Endowatersipora"	"Candidatus Endowatersipora"	"Candidatus Endowatersipora" Anderson & Haygood 2007	Anderson & Haygood 2007
 Candidatus Phytoplasma allocasuarinae	true	"Candidatus Phytoplasma allocasuarinae"	"Candidatus Phytoplasma allocasuarinae"	"Candidatus Phytoplasma allocasuarinae"	"Candidatus Phytoplasma allocasuarinae"	
@@ -5335,7 +5335,7 @@ Acacia sp. Manmanning (BR Maslin 7711) [aff. multispicata]	true	Acacia sp. Manma
 Atrichornis (Rahcinta) sp Glory (BR Maslin 7711)	true	Atrichornis sp. Glory (BR Maslin 7711)	Atrichornis sp. Glory (BR Maslin 7711)	Atrichornis	Atrichornis (Rahcinta) sp. Glory (BR Maslin 7711)	
 Acacia mutabilis subsp. Young River (G.F.Craig 2052)	true	Acacia mutabilis ssp. Young River (G.F.Craig 2052)	Acacia mutabilis ssp. Young River (G.F.Craig 2052)	Acacia mutabilis	Acacia mutabilis ssp. Young River (G.F.Craig 2052)	
 Acacia mutabilis Maslin subsp. Young River (G.F.Craig 2052)	true	Acacia mutabilis ssp. Young River (G.F.Craig 2052)	Acacia mutabilis ssp. Young River (G.F.Craig 2052)	Acacia mutabilis	Acacia mutabilis ssp. Young River (G.F.Craig 2052)	Maslin
-Elaeocarpus sp. Rocky Creek	true	Elaeocarpus sp.	Elaeocarpus sp.	Elaeocarpus	Elaeocarpus sp.	Rocky Creek
+Elaeocarpus sp. Rocky Creek	true	Elaeocarpus sp. Rocky Creek	Elaeocarpus sp. Rocky Creek	Elaeocarpus	Elaeocarpus sp. Rocky Creek	
 Acacia sp. "Morning Glory"	true	Acacia sp. "Morning Glory"	Acacia sp. "Morning Glory"	Acacia	Acacia sp. "Morning Glory"	
 Vaucheria longicaulis var. bengalensis Islam, nom. illeg.	true	Vaucheria longicaulis var. bengalensis Islam	Vaucheria longicaulis var. bengalensis	Vaucheria longicaulis bengalensis	Vaucheria longicaulis var. bengalensis Islam, nom. illeg.	Islam
 Dorataspidae nom. correct	true	Dorataspidae	Dorataspidae	Dorataspidae	Dorataspidae, nom. correct	

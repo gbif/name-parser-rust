@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::model::{NameType, NomCode, ParseError};
+use crate::model::{NameType, NomCode, ParseError, Rank, State};
 use crate::pipeline::ParseContext;
 use crate::unicode::java_trim;
 use crate::viral::is_viral;
@@ -194,20 +194,24 @@ static INDET_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
 static CLADE_KEYWORD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)(?-u:\bclade\b)").unwrap());
 
-// Monomial aggregate forms: "Iteaphila-group" / "Bartonella group" — informal
-// taxonomic group labels that can refer to any rank, so we reject them as INFORMAL.
-/// Java: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
+// Monomial aggregate forms: "Iteaphila-group" / "Bartonella group" / "Foo-complex" — a single
+// Title-case uninomial + an aggregate marker. Since the stem is regex-constrained to a Title-case
+// all-letter word it is ALWAYS a clean genus-shaped anchor, so 5.0.0 RESCUES these into an
+// `Informal` (anchor = the monomial, phrase = the marker) rather than erroring. Captures: group 1 =
+// the stem, group 2 = the marker word. (Match set is unchanged from the Java port; capture groups
+// added for stem/marker extraction.) Java origin: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 static MONOMIAL_AGGREGATE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[\p{Lu}][\p{L}]+(?:-group|\s+group|-complex|\s+complex)$").unwrap()
+    Regex::new(r"^([\p{Lu}][\p{L}]+)(?:-|\s+)(group|complex)$").unwrap()
 });
 
-// "-lineage" / " lineage" labels ("Vermistella-lineage", "NC12A-lineage", "he2-lineage"):
-// informal phylogenetic lineage names that, like the -group / -complex aggregates, can
-// refer to any rank. Unlike those, the stem is often an OTU-/strain-like code with digits
-// or a lowercase start, so the stem accepts any letter case and embedded digits.
-/// Java: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
+// "-lineage" / " lineage" labels ("Vermistella-lineage", "NC12A-lineage", "he2-lineage"): informal
+// phylogenetic lineage names. The stem accepts any letter case and embedded digits, so it may be a
+// clean genus ("Vermistella") OR an OTU-/strain-like code ("NC12A", "he2"). 5.0.0 rescues only the
+// clean-genus stems into an `Informal` (see `is_clean_genus_stem`); code-shaped stems have no real
+// anchor and stay Unparsable(OTHER). Captures: group 1 = the stem, group 2 = "lineage". Java origin:
+// `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 static LINEAGE_LABEL: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[\p{L}][\p{L}\d]*(?:-lineage|\s+lineage)$").unwrap());
+    LazyLock::new(|| Regex::new(r"^([\p{L}][\p{L}\d]*)(?:-|\s+)(lineage)$").unwrap());
 
 // ---------- Precompiled in-method literals ----------
 /// Java: no flags. No `\s`/`\d`/`\w`/`\b`; called via `.matches()` on an UNANCHORED Java
@@ -324,18 +328,24 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // legacy vernacular virus names become OTHER + NomCode::Virus.
     apply_virus_gate(&s, ctx, original)?;
 
-    // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a
-    // single uninomial followed by an aggregate marker is an informal taxonomic grouping
-    // label that the parser model can't represent.
-    if MONOMIAL_AGGREGATE.is_match(&s) {
-        return Err(ParseError::new(NameType::Informal, None, original));
+    // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a single
+    // Title-case uninomial + an aggregate marker. The stem is always a clean genus-shaped anchor, so
+    // 5.0.0 RESCUES this into an `Informal` (anchor = the monomial, phrase = the marker) rather than
+    // erroring. (Was `Err(INFORMAL)` in 4.2.0 — see docs/superpowers/findings/.)
+    if let Some(caps) = MONOMIAL_AGGREGATE.captures(&s) {
+        rescue_informal_group(ctx, &caps[1], &caps[2]);
+        return Ok(());
     }
 
-    // "-lineage" / " lineage" labels — informal phylogenetic lineage names (any rank).
-    // Checked before the OTU/code rejections below so digit/lowercase stems like
-    // "NC12A-lineage" and "he2-lineage" are flagged INFORMAL rather than OTHER.
-    if LINEAGE_LABEL.is_match(&s) {
-        return Err(ParseError::new(NameType::Informal, None, original));
+    // "-lineage" / " lineage" labels. RESCUE to `Informal` only when the stem is a clean genus
+    // ("Vermistella-lineage"); an OTU-/strain-like code stem ("NC12A-lineage", "he2-lineage") has no
+    // real anchor and stays Unparsable(OTHER). (Was `Err(INFORMAL)` for both in 4.2.0.)
+    if let Some(caps) = LINEAGE_LABEL.captures(&s) {
+        if is_clean_genus_stem(&caps[1]) {
+            rescue_informal_group(ctx, &caps[1], &caps[2]);
+            return Ok(());
+        }
+        return Err(ParseError::new(NameType::Other, None, original));
     }
 
     // Leading "?? …" — a run of two or more question marks is junk, not a missing-genus
@@ -351,9 +361,11 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
 
-    // Phylogenetic clade label — not a Linnean name.
+    // Phylogenetic clade label ("Amauropeltoid clade", "Unnamed clade") — an anchorless informal
+    // grouping the model can't hang off a single taxon → Unparsable(OTHER). (Was `Err(INFORMAL)` in
+    // 4.2.0; 5.0.0 forbids a parsable type in an unparsable result, and these have no clean anchor.)
     if CLADE_KEYWORD.is_match(&s) {
-        return Err(ParseError::new(NameType::Informal, None, original));
+        return Err(ParseError::new(NameType::Other, None, original));
     }
 
     // Pure code-like NO_NAME — use the normalised (trimmed) form as the exception name.
@@ -402,6 +414,28 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     }
 
     Ok(())
+}
+
+/// True if `stem` is a clean genus-shaped anchor for the 5.0.0 informal-group rescue: Title-case
+/// (uppercase first) AND all-alphabetic (no digits). Excludes OTU-/strain-like code stems ("NC12A",
+/// "he2") that carry no real taxon anchor. (The monomial-aggregate stem is already regex-constrained
+/// to this shape; only the looser lineage stem needs the runtime check.)
+fn is_clean_genus_stem(stem: &str) -> bool {
+    stem.chars().next().is_some_and(char::is_uppercase) && stem.chars().all(char::is_alphabetic)
+}
+
+/// Build a complete supraspecific `Informal`-shaped `ParsedName` for a rescued monomial-aggregate /
+/// lineage grouping (5.0.0) and flag the pipeline to short-circuit ([`ParseContext::preflight_complete`]).
+/// The anchor goes in the `genus` slot (so `parse_result`'s `to_informal` derives `taxon_rank = GENUS`),
+/// `rank` is `UNRANKED` (the grouping carries no Linnean rank of its own), and the aggregate word
+/// becomes the `phrase`; `type = INFORMAL` routes it to `ParseResult::Informal`.
+fn rescue_informal_group(ctx: &mut ParseContext, taxon: &str, marker: &str) {
+    ctx.name.genus = Some(taxon.to_string());
+    ctx.name.rank = Rank::Unranked;
+    ctx.name.phrase = Some(marker.to_string());
+    ctx.name.type_ = NameType::Informal;
+    ctx.name.state = State::Complete;
+    ctx.preflight_complete = true;
 }
 
 /// Port of Java `private static void applyVirusGate(String s, ParseContext ctx, String
@@ -589,6 +623,15 @@ mod tests {
         run(input, &mut ctx)
     }
 
+    /// Run preflight and return the ctx, asserting it RESCUED the input into a complete informal
+    /// name (5.0.0) rather than erroring — for inspecting the rescued `ctx.name`.
+    fn rescued(input: &str) -> ParseContext {
+        let mut ctx = ParseContext::new(input.to_string(), None, None, None);
+        run(input, &mut ctx).unwrap_or_else(|e| panic!("`{input}` should be rescued, got {e:?}"));
+        assert!(ctx.preflight_complete, "`{input}` should set preflight_complete");
+        ctx
+    }
+
     // ---------- category: virus ----------
 
     #[test]
@@ -660,24 +703,42 @@ mod tests {
         assert_eq!(err.name, "BOLD:ACW2100");
     }
 
-    // ---------- category: informal ----------
+    // ---------- category: informal (5.0.0 — anchored groupings RESCUED, anchorless → OTHER) --------
 
     #[test]
-    fn monomial_group_aggregate_is_informal() {
-        let err = check("Iteaphila-group").unwrap_err();
-        assert_eq!(err.type_, NameType::Informal);
+    fn monomial_group_aggregate_rescued_to_informal() {
+        // The stem is always a clean genus-shaped anchor → always rescued.
+        let ctx = rescued("Iteaphila-group");
+        assert_eq!(ctx.name.type_, NameType::Informal);
+        assert_eq!(ctx.name.genus.as_deref(), Some("Iteaphila"));
+        assert_eq!(ctx.name.phrase.as_deref(), Some("group"));
+        assert_eq!(ctx.name.rank, Rank::Unranked);
+        assert!(ctx.name.specific_epithet.is_none());
+        // spaced + "complex" variants likewise
+        assert_eq!(rescued("Bartonella group").name.genus.as_deref(), Some("Bartonella"));
+        assert_eq!(rescued("Foo-complex").name.phrase.as_deref(), Some("complex"));
     }
 
     #[test]
-    fn lineage_label_is_informal() {
-        let err = check("Vermistella-lineage").unwrap_err();
-        assert_eq!(err.type_, NameType::Informal);
+    fn lineage_with_clean_genus_stem_rescued_to_informal() {
+        let ctx = rescued("Vermistella-lineage");
+        assert_eq!(ctx.name.type_, NameType::Informal);
+        assert_eq!(ctx.name.genus.as_deref(), Some("Vermistella"));
+        assert_eq!(ctx.name.phrase.as_deref(), Some("lineage"));
     }
 
     #[test]
-    fn clade_keyword_is_informal() {
-        let err = check("Amauropeltoid clade").unwrap_err();
-        assert_eq!(err.type_, NameType::Informal);
+    fn lineage_with_code_stem_is_unparsable_other() {
+        // OTU-/strain-like code stems have no real anchor → Unparsable(OTHER), not rescued.
+        assert_eq!(check("NC12A-lineage").unwrap_err().type_, NameType::Other);
+        assert_eq!(check("he2-lineage").unwrap_err().type_, NameType::Other);
+    }
+
+    #[test]
+    fn clade_keyword_is_unparsable_other() {
+        // Clade labels are anchorless phylogenetic groupings → OTHER (5.0.0; was INFORMAL).
+        assert_eq!(check("Amauropeltoid clade").unwrap_err().type_, NameType::Other);
+        assert_eq!(check("Unnamed clade").unwrap_err().type_, NameType::Other);
     }
 
     // ---------- category: other (junk / non-names) ----------

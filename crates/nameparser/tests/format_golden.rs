@@ -1,32 +1,28 @@
 // SPDX-License-Identifier: Apache-2.0
-//! NameFormatter golden harness — cross-validates the Rust [`ParsedName`] formatter
-//! (`src/format.rs`, the port of Java `org.gbif.nameparser.util.NameFormatter`) against the
-//! real Java `NameFormatter` over the ~8017-name benchmark corpus.
+//! NameFormatter golden harness — regression-checks the Rust [`ParsedName`] formatter
+//! (`src/format.rs`, the port of Java `org.gbif.nameparser.util.NameFormatter`) over the
+//! ~8017-name benchmark corpus.
 //!
-//! The oracle `testdata/expected-format.tsv` has one row per corpus line, produced by the
-//! Java `FormatOracle` (parse with `NameParserImpl`, then apply the five public
-//! `NameFormatter` renderings):
+//! The snapshot `testdata/golden/expected-format.tsv` has one row per corpus line — the FIVE public
+//! `NameFormatter` renderings of the parse of each input:
 //!
 //! ```text
 //! input \t ok \t canonical \t canonicalWithoutAuthorship \t canonicalMinimal \t canonicalComplete \t authorshipComplete
 //! ```
 //!
-//! For every row where BOTH sides parse (Java `ok=true` and Rust `parse` returns `Ok`), this
-//! diffs all five renderings. Because the Rust parser already reproduces Java's `ParsedName`
-//! byte-for-byte (`parse_golden.rs`, 0 diffs), any difference here is a pure
-//! formatter-logic difference — asserted to 0. Rows only one side parses are a parse-partition
-//! matter already gated by `parse_golden.rs`; they're reported here but don't fail this test.
+//! **This is a Rust regression snapshot, not a live Java oracle**: the Java `NameParserImpl` /
+//! `FormatOracle` are gone, so the snapshot is regenerated from the current Rust formatter (the
+//! `#[ignore]`d [`regenerate`] test below) and re-baselined when behaviour changes intentionally.
+//! Its ancestry is the Java `FormatOracle` output the port was cross-validated against. For every
+//! row where BOTH sides parse this diffs all five renderings, asserted to 0; rows only one side
+//! parses are a parse-partition matter already gated by `parse_golden.rs`, reported but not failed.
 //!
-//! Regenerate the oracle (Java 25 + the name-parser-cli shaded jar on the classpath):
+//! Re-baseline, then REVIEW the git diff (the intentional-change log) before committing:
 //! ```text
-//! [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-//! JAR=$(ls /Users/markus/code/gbif/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar | head -1)
-//! javac -cp "$JAR" -d <scratch> FormatOracle.java
-//! java -cp "$JAR:<scratch>" FormatOracle < testdata/benchmark-data.txt > testdata/expected-format.tsv
+//! cargo test -p gbif-name-parser --test format_golden regenerate -- --ignored
+//! git diff testdata/golden/expected-format.tsv
 //! ```
-//! The `FormatOracle.java` source lives at `tools/FormatOracle.java` (see `tools/README.md`
-//! for the full regenerate recipe). The `.tsv` is git-ignored; this test SKIPs when it is
-//! absent, and the always-on structural coverage lives in `src/format.rs`'s own unit tests.
+//! The always-on structural coverage lives in `src/format.rs`'s own unit tests.
 
 /// The five rendering columns, in TSV order after `input`/`ok`. Each names the Java method it
 /// came from and the Rust method it is diffed against, so a failure message is self-explaining.
@@ -40,18 +36,6 @@ const COLUMNS: [&str; 5] = [
 
 /// Cap on how many example mismatches are printed per column.
 const EXAMPLE_CAP: usize = 8;
-
-/// Inputs the 5.0.0 parser deliberately parses differently from the frozen 4.2.0 Java oracle — the
-/// informal "tag capture" enhancement (Phase 5) — so their formatted forms differ too: the newly
-/// captured `phrase` now renders (`"Elaeocarpus sp. Rocky Creek"`) where Java dropped it
-/// (`"Elaeocarpus sp."`). Kept 1:1 with `parse_golden::INFORMAL_5_0_0_DIVERGENCES` (the two golden
-/// binaries share no module). Skipped here so the intended change doesn't trip the 4.2.0 formatter
-/// regression gate; the curated NEW-shape golden is P5's job.
-const INFORMAL_5_0_0_DIVERGENCES: &[&str] = &[
-    "Lacanobia sp. nr. subjuncta Bold:Aab, 0925",
-    "Burkholderia sp. (Gigaspora margarita endosymbiont)",
-    "Elaeocarpus sp. Rocky Creek",
-];
 
 /// Reverse the `FormatOracle.esc` escaping (`\\`, `\t`, `\r`, `\n`).
 fn unescape(s: &str) -> String {
@@ -83,6 +67,61 @@ fn nz(s: Option<String>) -> String {
     s.unwrap_or_default()
 }
 
+/// The `FormatOracle.esc` escaping (inverse of [`unescape`]): `\\`, `\t`, `\r`, `\n`.
+fn esc(s: &str) -> String {
+    s.replace('\\', "\\\\")
+        .replace('\t', "\\t")
+        .replace('\r', "\\r")
+        .replace('\n', "\\n")
+}
+
+/// Regenerate `testdata/golden/expected-format.tsv` from the CURRENT Rust formatter output — the
+/// re-base workflow (this golden is a Rust regression SNAPSHOT, not a live Java oracle; the Java
+/// `NameParserImpl`/`FormatOracle` are gone). Reuses the existing row set (the corpus inputs in
+/// column 0) and rewrites the `ok` + 5 rendering columns. Run with:
+/// `cargo test -p gbif-name-parser --test format_golden regenerate -- --ignored`; then REVIEW the
+/// git diff (it is the intentional-change log) before committing.
+#[test]
+#[ignore = "regeneration utility — rewrites the golden snapshot; run manually then review the diff"]
+fn regenerate() {
+    let data = std::fs::read_to_string(GOLDEN_PATH).expect("existing golden to reuse its input rows");
+    let mut out = String::with_capacity(data.len());
+    for line in data.lines() {
+        if line.is_empty() {
+            continue;
+        }
+        let input = unescape(line.split('\t').next().unwrap_or(""));
+        let (ok, cells): (bool, [String; 5]) = match nameparser::parse(&input, None, None, None) {
+            Ok(pn) => (
+                true,
+                [
+                    nz(pn.canonical_name()),
+                    nz(pn.canonical_name_without_authorship()),
+                    nz(pn.canonical_name_minimal()),
+                    nz(pn.canonical_name_complete()),
+                    nz(pn.authorship_complete()),
+                ],
+            ),
+            Err(_) => (false, Default::default()),
+        };
+        out.push_str(&esc(&input));
+        out.push('\t');
+        out.push_str(if ok { "true" } else { "false" });
+        for cell in &cells {
+            out.push('\t');
+            out.push_str(&esc(cell));
+        }
+        out.push('\n');
+    }
+    std::fs::write(GOLDEN_PATH, out).expect("write regenerated golden");
+    eprintln!("regenerated {GOLDEN_PATH}");
+}
+
+const GOLDEN_PATH: &str = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../testdata/golden/expected-format.tsv"
+);
+
 struct Mismatch {
     line: usize,
     input: String,
@@ -92,10 +131,7 @@ struct Mismatch {
 
 #[test]
 fn matches_java_name_formatter_over_corpus() {
-    let path = concat!(
-        env!("CARGO_MANIFEST_DIR"),
-        "/../../testdata/expected-format.tsv"
-    );
+    let path = GOLDEN_PATH;
     let data = match std::fs::read_to_string(path) {
         Ok(d) => d,
         Err(_) => {
@@ -133,11 +169,6 @@ fn matches_java_name_formatter_over_corpus() {
         match (java_ok, rust) {
             (true, Ok(pn)) => {
                 both_parsed += 1;
-                // Deliberate 5.0.0 informal tag-capture divergences (see the const's doc): the
-                // captured phrase now renders where Java dropped it. Skip the formatter diff.
-                if INFORMAL_5_0_0_DIVERGENCES.contains(&input.as_str()) {
-                    continue;
-                }
                 let rust_vals = [
                     nz(pn.canonical_name()),
                     nz(pn.canonical_name_without_authorship()),

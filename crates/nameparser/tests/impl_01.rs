@@ -276,12 +276,14 @@ fn nom_superfl() {
 /// https://github.com/gbif/name-parser/issues/68
 #[test]
 fn clade_names() {
-    // keyword clade to throw unparsable
-    assert_unparsable("Amauropeltoid clade", NameType::Informal);
+    // "clade" — an anchorless phylogenetic label. 5.0.0: Unparsable(OTHER) (the Java 4.2.0 original
+    // flagged it INFORMAL, but 5.0.0 forbids a parsable type in an unparsable result and a clade
+    // has no clean single-taxon anchor — see pipeline::preflight).
+    assert_unparsable("Amauropeltoid clade", NameType::Other);
     // Java also passes an explicit `Rank.UNRANKED` hint here — the same default the 2-arg
     // `assertUnparsable`/`assert_unparsable` overload already parses with, so the two calls
     // are behaviourally identical.
-    assert_unparsable("Cyanobacteriota/Melainabacteria clade", NameType::Informal);
+    assert_unparsable("Cyanobacteriota/Melainabacteria clade", NameType::Other);
     // no clades
     assert_name("Endococcus cladiae Zhurb. & Pino-Bodas")
         .species("Endococcus", "cladiae")

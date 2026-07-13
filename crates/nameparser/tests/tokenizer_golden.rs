@@ -35,7 +35,7 @@ fn rust_stream(name: &str) -> String {
 fn matches_java_tokenizer_over_corpus() {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../../testdata/expected-tokens.tsv"
+        "/../../testdata/golden/expected-tokens.tsv"
     );
     let data = match std::fs::read_to_string(path) {
         Ok(d) => d,

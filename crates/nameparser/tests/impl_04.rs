@@ -5,23 +5,40 @@ use common::*;
 use nameparser::model::warnings;
 use nameparser::model::{NamePart, NameType, NomCode, Rank};
 
+/// 5.0.0 (diverges from the Java 4.2.0 original, which flagged these `Unparsable(INFORMAL)`): a
+/// monomial-aggregate is a real anchored informal grouping, so it is RESCUED to an `Informal` — the
+/// monomial is the anchor, the aggregate word the phrase (see `pipeline::preflight`).
 #[test]
-fn unparsable_placeholders() {
-    assert_unparsable("Iteaphila-group", NameType::Informal);
-    assert_unparsable("Bartonella group", NameType::Informal);
+fn monomial_aggregate_groups_are_informal() {
+    assert_informal("Iteaphila-group")
+        .taxon("Iteaphila")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .phrase("group")
+        .nothing_else();
+    assert_informal("Bartonella group")
+        .taxon("Bartonella")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .phrase("group")
+        .nothing_else();
 }
 
-/// "-lineage" labels are informal phylogenetic group names that, like the "-group" /
-/// "-complex" aggregates, can refer to any rank and so are treated as INFORMAL.
-/// Unlike those, the stem is often an OTU-/strain-like code with digits or a lowercase
-/// start (NC12A-lineage, he2-lineage).
+/// "-lineage" labels. 5.0.0: a clean-genus stem is RESCUED to an `Informal` (`Vermistella-lineage`);
+/// an OTU-/strain-like code stem (`NC12A-lineage`, `he2-lineage`) has no real anchor and stays
+/// `Unparsable(OTHER)`. (The Java 4.2.0 original flagged all of them `INFORMAL`.)
 #[test]
-fn lineage_informal() {
-    assert_unparsable("Vermistella-lineage", NameType::Informal);
-    assert_unparsable("Flamella-lineage", NameType::Informal);
-    assert_unparsable("Pessonella-lineage", NameType::Informal);
-    assert_unparsable("NC12A-lineage", NameType::Informal);
-    assert_unparsable("he2-lineage", NameType::Informal);
+fn lineage_labels_rescued_or_other() {
+    assert_informal("Vermistella-lineage")
+        .taxon("Vermistella")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .phrase("lineage")
+        .nothing_else();
+    assert_informal("Flamella-lineage").taxon("Flamella").phrase("lineage").nothing_else();
+    assert_informal("Pessonella-lineage").taxon("Pessonella").phrase("lineage").nothing_else();
+    assert_unparsable("NC12A-lineage", NameType::Other);
+    assert_unparsable("he2-lineage", NameType::Other);
 }
 
 /// Regression tests graduated from TODO-names.txt: names that the parser now handles

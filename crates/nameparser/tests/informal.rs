@@ -140,20 +140,36 @@ fn bare_determined_genus_stays_parsed_scientific() {
         .nothing_else();
 }
 
-// ---- Deferred rescue: anchorless / monomial-aggregate labels ----------------------------------
+// ---- Monomial-aggregate / lineage groupings: anchored → Informal, anchorless → OTHER -----------
 
 #[test]
-fn anchorless_group_and_clade_labels_are_unparsable_other() {
-    // Monomial-aggregate ("Bartonella group") and clade labels ("Amauropeltoid clade") still ERROR
-    // (the "Genus group" → Informal rescue needs a preflight producer and is deferred — Phase 5 P2
-    // note). parse_result clamps their INFORMAL error type to OTHER, a valid 5.0.0 Unparsable; the
-    // raw parse() path still emits INFORMAL, keeping the frozen 4.2.0 golden untouched.
-    for input in ["Bartonella group", "Amauropeltoid clade", "Unnamed clade"] {
+fn monomial_aggregate_groups_are_rescued_to_informal() {
+    // 5.0.0 rescue (see pipeline::preflight): an anchored monomial-aggregate (group/complex) or a
+    // clean-genus "-lineage" becomes an Informal — the monomial is the anchor, the marker the phrase.
+    assert_informal("Bartonella group")
+        .taxon("Bartonella")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .phrase("group")
+        .nothing_else();
+    assert_informal("Vermistella-lineage")
+        .taxon("Vermistella")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .phrase("lineage")
+        .nothing_else();
+}
+
+#[test]
+fn anchorless_clade_and_code_labels_are_unparsable_other() {
+    // Anchorless phylogenetic clade labels ("Unnamed clade") and OTU-/strain-code lineage stems
+    // ("NC12A-lineage") have no clean single-taxon anchor → Unparsable(OTHER).
+    for input in ["Amauropeltoid clade", "Unnamed clade", "NC12A-lineage", "he2-lineage"] {
         match nameparser::parse_result(input, None, None, None) {
             ParseResult::Unparsable(e) => assert_eq!(
                 e.type_,
                 NameType::Other,
-                "`{input}` should be Unparsable(OTHER) after the clamp"
+                "`{input}` should be Unparsable(OTHER)"
             ),
             other => panic!("expected `{input}` Unparsable(OTHER), got {other:?}"),
         }

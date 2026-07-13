@@ -231,22 +231,30 @@ mod tests {
         }
     }
 
-    /// The 5.0.0 boundary clamp: the raw [`parse`] path keeps the core's `INFORMAL` error type for
-    /// an informal-but-unrepresentable grouping (`"Amauropeltoid clade"`) — preserving 4.2.0 golden
-    /// parity — while [`parse_result`] clamps it to `OTHER` so the `Unparsable` result is legal
-    /// under the 5.0.0 model (which, like Java, forbids a parsable type in `Unparsable`).
+    /// The 5.0.0 boundary clamp — a defensive invariant that `Unparsable` may only carry a
+    /// non-parsable type. Since the preflight informal-group rescue landed, NO real input produces an
+    /// error:INFORMAL anymore (anchored groupings are rescued to `Informal`; the rest emit OTHER —
+    /// see `pipeline::preflight`), so this exercises the clamp DIRECTLY on a synthetic `ParseError`,
+    /// then confirms an anchorless clade label is `Unparsable(OTHER)` end to end.
     #[test]
-    fn parse_result_clamps_informal_error_to_other() {
-        // raw path: still INFORMAL (matches the frozen Java 4.2.0 oracle)
-        let raw = parse("Amauropeltoid clade", None, None, None).unwrap_err();
-        assert_eq!(raw.type_, NameType::Informal);
+    fn clamped_to_unparsable_forces_a_nonparsable_type() {
+        use model::{NomCode, ParseError};
 
-        // 5.0.0 path: clamped to OTHER, and never Informal/Parsed (no anchor to hang off)
+        // a parsable error type is forced to OTHER; code preserved, message rebuilt for the new type
+        let clamped = ParseError::new(NameType::Informal, Some(NomCode::Bacterial), "X group")
+            .clamped_to_unparsable();
+        assert_eq!(clamped.type_, NameType::Other);
+        assert!(!clamped.type_.is_parsable());
+        assert_eq!(clamped.code, Some(NomCode::Bacterial));
+        assert_eq!(clamped.message, "Unparsable OTHER name: X group");
+
+        // a non-parsable error is left untouched
+        let other = ParseError::new(NameType::Other, None, "junk");
+        assert_eq!(other.clone().clamped_to_unparsable(), other);
+
+        // end to end: an anchorless clade label is Unparsable(OTHER)
         match parse_result("Amauropeltoid clade", None, None, None) {
-            ParseResult::Unparsable(e) => {
-                assert_eq!(e.type_, NameType::Other);
-                assert!(!e.type_.is_parsable(), "Unparsable must carry a non-parsable type");
-            }
+            ParseResult::Unparsable(e) => assert_eq!(e.type_, NameType::Other),
             other => panic!("expected Unparsable(OTHER), got {other:?}"),
         }
     }

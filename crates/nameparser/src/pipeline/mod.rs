@@ -109,6 +109,13 @@ pub fn run(
 
     preflight::run(name, &mut ctx)?;
 
+    // 5.0.0: Preflight may RESCUE an anchored informal grouping ("Bartonella group",
+    // "Vermistella-lineage") into a complete Informal-shaped ParsedName instead of erroring — return
+    // it as-is, skipping the tokenizer/classifier/assembler (there is nothing left to parse).
+    if ctx.preflight_complete {
+        return Ok(ctx.name);
+    }
+
     // Java `Pipeline.run`: `StripAndStash.run(ctx); if (!hasLetter(ctx.working)) throw new
     // UnparsableNameException(NameType.OTHER, scientificName);` (Pipeline.java:70-73) — a
     // 4th inline guard, distinct from Preflight and from the 3 guards at the top of this
