@@ -123,6 +123,7 @@ test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)"
   expect_equal(out$rank[1], "SPECIES")
   expect_equal(out$phrase[1], "RE1-2a")
   expect_equal(out$type[1], "INFORMAL")
+  expect_equal(out$canonical[1], "Serratia sp. RE1-2a")  # informal rows round-trip to a canonical name
   expect_true(is.na(out$genus[1]))    # the anchor lives in `taxon`, never a mislabelled genus
   expect_true(is.na(out$error[1]))
 
@@ -133,11 +134,14 @@ test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)"
   # informal row 3: bare "Genus sp." -> no phrase
   expect_equal(out$taxon[3], "Rhizobium")
   expect_true(is.na(out$phrase[3]))
+  expect_equal(out$canonical[3], "Rhizobium sp.")  # bare "Genus sp." canonical (synthesised marker)
 
   # parsed + unparsable rows carry NA in the informal-only columns
   expect_true(is.na(out$taxon[4]))
   expect_true(is.na(out$taxonRank[4]))
   expect_true(is.na(out$taxon[5]))
+  expect_equal(out$canonical[4], "Abies alba Mill.")  # a parsed row still renders its own canonical
+  expect_true(is.na(out$canonical[5]))                # an unparsable row has no canonical
 })
 
 test_that("a cf. binomial stays a parsed row, not informal", {

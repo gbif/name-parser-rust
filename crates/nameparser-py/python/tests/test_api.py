@@ -18,6 +18,15 @@ import pytest
 import nameparser
 
 
+def sci(name: str, *args, **kwargs) -> nameparser.ParsedName:
+    """`parse()` a name known to be scientific, narrowed to `ParsedName` for the type checker —
+    `parse()` returns `ParsedName | Informal` in 5.0.0, so a `ParsedName`-field access needs the
+    variant pinned. Doubles as an assertion that these inputs really do parse to a `ParsedName`."""
+    r = nameparser.parse(name, *args, **kwargs)
+    assert isinstance(r, nameparser.ParsedName)
+    return r
+
+
 def test_vulpes_subspecies_core_fields_and_combination_authorship():
     # Golden reference row 1 (see crates/nameparser/src/model/name.rs's
     # `wire_matches_reference_row_1_vulpes_vulpes_silaceus`).
@@ -47,7 +56,7 @@ def test_vulpes_subspecies_core_fields_and_combination_authorship():
 
 
 def test_hybrid_name_sets_notho():
-    pn = nameparser.parse("×Abies alba nothovar. rubra")
+    pn = sci("×Abies alba nothovar. rubra")
     assert pn.notho is not None
     assert pn.notho != []
     assert all(isinstance(part, str) for part in pn.notho)
@@ -55,7 +64,7 @@ def test_hybrid_name_sets_notho():
 
 
 def test_name_with_multiple_warnings():
-    pn = nameparser.parse("Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii")
+    pn = sci("Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii")
     assert len(pn.warnings) >= 2
     assert all(isinstance(w, str) for w in pn.warnings)
     assert "name was quadrinomial" in pn.warnings
@@ -142,7 +151,7 @@ def test_to_dict_uses_wire_field_names_and_string_enums():
 
 
 def test_type_attribute_not_type_underscore():
-    pn = nameparser.parse("Homo sapiens")
+    pn = sci("Homo sapiens")
     assert pn.type == "SCIENTIFIC"
     assert not hasattr(pn, "type_")
 
@@ -151,20 +160,20 @@ def test_classes_report_the_nameparser_module_not_builtins():
     # Regression guard for the Task 1 report's flagged follow-up: `#[pyclass]` needs
     # `module = "nameparser"` or `type(x)` shows as `builtins.X` instead of
     # `nameparser.X`.
-    pn = nameparser.parse("Abies alba Mill.")
+    pn = sci("Abies alba Mill.")
     assert type(pn).__module__ == "nameparser"
     assert type(pn.combination_authorship).__module__ == "nameparser"
 
 
 def test_authorship_to_dict_and_repr():
-    pn = nameparser.parse("Abies alba Mill.")
+    pn = sci("Abies alba Mill.")
     ca = pn.combination_authorship
     assert ca.to_dict() == {"authors": ["Mill."], "exAuthors": []}
     assert "Mill." in repr(ca)
 
 
 def test_parsed_name_repr_includes_rank_and_name_atoms():
-    pn = nameparser.parse("Abies alba Mill.")
+    pn = sci("Abies alba Mill.")
     r = repr(pn)
     assert "Abies" in r
     assert "alba" in r
@@ -173,7 +182,7 @@ def test_parsed_name_repr_includes_rank_and_name_atoms():
 
 def test_name_formatter_renderings():
     # Expected values are Java-authoritative (real NameFormatter over the same inputs).
-    pn = nameparser.parse("Abies alba Mill.")
+    pn = sci("Abies alba Mill.")
     assert pn.canonical_name() == "Abies alba Mill."
     assert pn.canonical_name_without_authorship() == "Abies alba"
     assert pn.canonical_name_minimal() == "Abies alba"
@@ -182,17 +191,17 @@ def test_name_formatter_renderings():
     assert str(pn) == "Abies alba Mill."  # __str__ is the canonical name
 
     # authorship-less name -> None
-    assert nameparser.parse("Abies alba").authorship_complete() is None
+    assert sci("Abies alba").authorship_complete() is None
 
     # minimal drops the infrageneric genus + rank marker
-    assert nameparser.parse("Astragalus subg. Cercidothrix").canonical_name_minimal() == "Cercidothrix"
+    assert sci("Astragalus subg. Cercidothrix").canonical_name_minimal() == "Cercidothrix"
 
     # notho hybrid marker with its space
     assert nameparser.parse("×Agropogon littoralis").canonical_name() == "× Agropogon littoralis"
 
     # html markup italicises the name parts
     assert (
-        nameparser.parse("Abies alba Mill.").canonical_name_complete_html()
+        sci("Abies alba Mill.").canonical_name_complete_html()
         == "<i>Abies</i> <i>alba</i> Mill."
     )
 
@@ -218,6 +227,8 @@ def test_informal_molecular_provisional_species():
         "phrase": "RE1-2a",
     }
     assert "Serratia" in repr(r)
+    assert r.canonical_name() == "Serratia sp. RE1-2a"  # round-trips to the canonical string
+    assert str(r) == "Serratia sp. RE1-2a"  # __str__ is the canonical name, as for ParsedName
 
 
 def test_informal_multi_token_specimen_tag_is_captured_as_phrase():
@@ -235,6 +246,7 @@ def test_informal_bare_genus_sp_has_no_phrase():
     assert r.taxon == "Rhizobium"
     assert r.rank == "SPECIES"
     assert r.phrase is None
+    assert r.canonical_name() == "Rhizobium sp."  # bare "Genus sp." — synthesised marker, no phrase
 
 
 def test_cf_binomial_stays_parsed_not_informal():

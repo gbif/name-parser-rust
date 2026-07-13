@@ -199,7 +199,11 @@ impl Cols {
         self.rank.push(enum_name(&inf.rank));
         self.code.push(enum_name(&inf.code));
         self.phrase.push(inf.phrase.clone());
-        // every remaining ParsedName-specific column is NA for an informal result
+        // the round-trip canonical name — the single canonical form an informal name has, so the
+        // `canonical` column is populated for informal rows too (not just parsed ones)
+        self.canonical.push(Some(inf.canonical_name()));
+        // every remaining ParsedName-specific column is NA for an informal result (the
+        // authorship-/rank-variant canonical_* renderings have no informal equivalent)
         for col in [
             &mut self.uninomial, &mut self.genus, &mut self.infrageneric_epithet,
             &mut self.specific_epithet, &mut self.infraspecific_epithet,
@@ -210,7 +214,7 @@ impl Cols {
             &mut self.combination_year, &mut self.basionym_authors,
             &mut self.basionym_ex_authors, &mut self.basionym_year,
             &mut self.sanctioning_author, &mut self.warnings,
-            &mut self.canonical, &mut self.canonical_without_authorship,
+            &mut self.canonical_without_authorship,
             &mut self.canonical_minimal, &mut self.canonical_complete,
             &mut self.authorship_complete,
         ] {

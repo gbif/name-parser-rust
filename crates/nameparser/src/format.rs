@@ -21,8 +21,9 @@ use std::sync::LazyLock;
 use regex::Regex;
 use unicode_normalization::UnicodeNormalization;
 
-use crate::model::enums::{NamePart, NomCode, Rank};
+use crate::model::enums::{NamePart, NameType, NomCode, Rank};
 use crate::model::name::{Authorship, CombinedAuthorship, ParsedName};
+use crate::model::Informal;
 use crate::unicode::java_trim;
 
 const HYBRID_MARKER: char = '×';
@@ -94,6 +95,30 @@ struct Flags {
     show_extra_authorship: bool,
     /// add html `<i>` markup around the italicised parts
     html: bool,
+}
+
+impl Informal {
+    /// The canonical string form of this informal name — e.g. `"Rhizobium sp. RMCC TR1811"`,
+    /// `"Ichneumonidae sp."`, `"Bartonella group"`. Mirrors Java `NameFormatter.canonical(Informal)`:
+    /// it rebuilds the equivalent `INFORMAL` [`ParsedName`] — the [`Informal::taxon`] in the genus
+    /// slot, or the uninomial slot for a non-genus anchor — and renders it through
+    /// [`ParsedName::canonical_name_without_authorship`], so the synthetic `sp.` marker and the
+    /// phrase land exactly where the parser would place them. Never empty: falls back to the bare
+    /// taxon should the rebuilt name render nothing. Named to parallel
+    /// [`ParsedName::canonical_name`] so bindings expose one method across both result variants.
+    pub fn canonical_name(&self) -> String {
+        let pn = ParsedName {
+            type_: NameType::Informal,
+            rank: self.rank,
+            code: self.code,
+            phrase: self.phrase.clone(),
+            genus: (self.taxon_rank == Rank::Genus).then(|| self.taxon.clone()),
+            uninomial: (self.taxon_rank != Rank::Genus).then(|| self.taxon.clone()),
+            ..ParsedName::default()
+        };
+        pn.canonical_name_without_authorship()
+            .unwrap_or_else(|| self.taxon.clone())
+    }
 }
 
 impl ParsedName {
@@ -937,6 +962,39 @@ mod tests {
     /// input below is a parseable name chosen precisely to exercise a formatter path.
     fn p(input: &str) -> crate::model::ParsedName {
         parse(input, None, None, None).unwrap_or_else(|_| panic!("should parse: {input:?}"))
+    }
+
+    #[test]
+    fn informal_canonical_rebuilds_the_parser_rendering() {
+        use crate::model::enums::Rank;
+        use crate::model::Informal;
+        let inf = |taxon: &str, taxon_rank, rank, phrase: Option<&str>| Informal {
+            taxon: taxon.into(),
+            taxon_rank,
+            rank,
+            phrase: phrase.map(str::to_string),
+            code: None,
+        };
+        // genus-anchored provisional species with a captured phrase tag
+        assert_eq!(
+            inf("Rhizobium", Rank::Genus, Rank::Species, Some("RMCC TR1811")).canonical_name(),
+            "Rhizobium sp. RMCC TR1811"
+        );
+        // numbered placeholder
+        assert_eq!(
+            inf("Allium", Rank::Genus, Rank::Species, Some("1")).canonical_name(),
+            "Allium sp. 1"
+        );
+        // bare "Genus sp." — no phrase (a higher-taxon anchor still sits in the genus slot)
+        assert_eq!(
+            inf("Ichneumonidae", Rank::Genus, Rank::Species, None).canonical_name(),
+            "Ichneumonidae sp."
+        );
+        // informal group — UNRANKED, the phrase carries the designation (no synthetic sp.)
+        assert_eq!(
+            inf("Bartonella", Rank::Genus, Rank::Unranked, Some("group")).canonical_name(),
+            "Bartonella group"
+        );
     }
 
     #[test]

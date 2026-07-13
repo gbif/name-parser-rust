@@ -169,6 +169,51 @@ class ParsedName:
         ...
     def __repr__(self) -> str: ...
 
+class Informal:
+    """An informal / semistructured name — the 5.0.0 three-way `parse()` result for a real
+    supraspecific taxon carrying a provisional, non-code designation instead of a determined
+    species epithet: a molecular provisional species (`Rhizobium sp. RMCC TR1811`), a numbered
+    placeholder (`Allium sp. 1`), or an informal group (`Bartonella group`). Distinct from
+    `ParsedName` — it carries no structured name; the anchor lives in `taxon`, never a mislabelled
+    `genus` — so `isinstance(result, Informal)` tells the two apart. Mirrors the core `Informal` /
+    Java `ParseResult.Informal`.
+    """
+
+    @property
+    def taxon(self) -> str:
+        """The supraspecific taxon it hangs off (`"Rhizobium"`, `"Ichneumonidae"`) — the parser's
+        best guess, NOT validated against a taxonomic backbone."""
+        ...
+    @property
+    def taxon_rank(self) -> str:
+        """That taxon's rank as a wire name, usually `"GENUS"` (the anchor sits in the genus slot)."""
+        ...
+    @property
+    def rank(self) -> str:
+        """The rank the informal name purports to be — `"SPECIES"` for `"sp."`, `"UNRANKED"` for a group."""
+        ...
+    @property
+    def phrase(self) -> str | None:
+        """The distinguishing designator (`"RMCC TR1811"`, `"1"`); `None` for a bare `"Genus sp."`."""
+        ...
+    @property
+    def code(self) -> str | None:
+        """The `NomCode` wire name when known, else `None`."""
+        ...
+
+    def canonical_name(self) -> str:
+        """The canonical string form, e.g. `"Rhizobium sp. RMCC TR1811"`, `"Bartonella group"` —
+        parallels `ParsedName.canonical_name` so either result variant renders with the same
+        method. Always a string (never `None`)."""
+        ...
+    def __str__(self) -> str: ...
+
+    def to_dict(self) -> dict[str, Any]:
+        """The complete `Informal` structure straight from the core's `serde::Serialize` impl, keyed
+        by its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`)."""
+        ...
+    def __repr__(self) -> str: ...
+
 class UnparsableNameError(Exception):
     """Raised by `parse()` when `name` cannot be parsed into a `ParsedName`. Mirrors Java's
     `org.gbif.nameparser.api.UnparsableNameException` (`getType()`/`getCode()`/`getName()`).
@@ -193,13 +238,15 @@ def parse(
     authorship: str | None = ...,
     rank: str | None = ...,
     code: str | None = ...,
-) -> ParsedName:
+) -> ParsedName | Informal:
     """Parses one scientific name (optionally with a separately-supplied authorship string,
     and/or a rank/nomenclatural-code hint). `rank`/`code`, when given, are the same
     SCREAMING_SNAKE_CASE wire names `ParsedName.rank`/`.code` return (e.g. `"SPECIES"`,
     `"ZOOLOGICAL"`); an unrecognized hint string is treated as absent, not an error.
 
-    Raises `UnparsableNameError` if `name` cannot be parsed.
+    Returns a `ParsedName` for a structurally parsed name, or an `Informal` for a semistructured
+    one (`isinstance(result, Informal)` distinguishes them). Raises `UnparsableNameError` if
+    `name` is not a name at all (a virus, hybrid formula, placeholder, …).
     """
     ...
 
@@ -208,12 +255,12 @@ def parse_all(
     authorship: str | None = ...,
     rank: str | None = ...,
     code: str | None = ...,
-) -> list[ParsedName | None]:
+) -> list[ParsedName | Informal | None]:
     """Parses a batch of names in one call; `authorship`/`rank`/`code` are the same optional
     hints `parse()` takes, applied uniformly to every name in `names`.
 
-    Never raises mid-batch: each result element is a `ParsedName` on success, or `None` (NOT
-    a raised `UnparsableNameError`) for any name the core cannot parse. Call `parse()` on a
-    specific name individually to get its `UnparsableNameError` (with `.name_type`/`.code`).
+    Never raises mid-batch: each result element is a `ParsedName` or an `Informal` on success, or
+    `None` (NOT a raised `UnparsableNameError`) for any name the core cannot parse. Call `parse()`
+    on a specific name individually to get its `UnparsableNameError` (with `.name_type`/`.code`).
     """
     ...

@@ -438,6 +438,14 @@ impl PyInformal {
         Ok(pythonize::pythonize(py, &self.inner.code)?.into())
     }
 
+    /// The canonical string form of this informal name — e.g. `"Rhizobium sp. RMCC TR1811"`,
+    /// `"Ichneumonidae sp."`, `"Bartonella group"`. Parallels [`PyParsedName::canonical_name`] so
+    /// callers render either result variant with the same method; always a string (never `None`,
+    /// unlike a `ParsedName` that can render empty).
+    fn canonical_name(&self) -> String {
+        self.inner.canonical_name()
+    }
+
     /// The complete `Informal` structure straight from the core's `serde::Serialize` impl, keyed by
     /// its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`) — the parity oracle + escape
     /// hatch, matching [`PyParsedName::to_dict`].
@@ -450,6 +458,11 @@ impl PyInformal {
             "Informal(taxon={:?}, rank={:?}, phrase={:?})",
             self.inner.taxon, self.inner.rank, self.inner.phrase
         )
+    }
+
+    /// `str(informal)` is the canonical informal name (matching `str(parsed_name)`).
+    fn __str__(&self) -> String {
+        self.inner.canonical_name()
     }
 }
 

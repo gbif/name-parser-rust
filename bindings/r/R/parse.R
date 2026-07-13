@@ -7,12 +7,14 @@
 #'   outcome — `"parsed"`, `"informal"` or `"unparsable"` — and `parsed` is the convenience boolean
 #'   (`TRUE` only for `"parsed"`). An **informal** name (a supraspecific taxon carrying a provisional
 #'   designation, e.g. `"Rhizobium sp. RMCC TR1811"`) is flat: its `taxon` + `taxonRank` + `rank` +
-#'   `phrase` + `code` are populated and every ParsedName-specific column is `NA` (the anchor lives
+#'   `phrase` + `code` are populated and every ParsedName-specific atom is `NA` (the anchor lives
 #'   in `taxon`, never a mislabelled `genus`). A name with a species epithet (incl. cf./aff.) stays
 #'   `"parsed"`. Besides the parsed atoms, five `NameFormatter` rendering columns are included:
 #'   `canonical` (full name with authorship), `canonicalWithoutAuthorship`,
 #'   `canonicalMinimal` (bare parts, folded to ascii), `canonicalComplete` and
-#'   `authorshipComplete` — all `NA` on informal + unparsable rows.
+#'   `authorshipComplete`. `canonical` is populated for **informal** rows too — an informal name's
+#'   single canonical form (e.g. `"Rhizobium sp. RMCC TR1811"`); the other four are `NA` on informal
+#'   rows, and all five are `NA` on unparsable rows.
 #' @export
 parse_names <- function(scientificname, authorship = NULL, rank = NULL, code = NULL) {
   stopifnot(is.character(scientificname))

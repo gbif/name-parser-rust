@@ -13,11 +13,18 @@ parse_names(scientificname, authorship = NULL, rank = NULL, code = NULL)
 \code{rank}/\code{code} use the parser's SCREAMING_SNAKE_CASE names (e.g. "SPECIES", "ZOOLOGICAL").}
 }
 \value{
-a tibble, one row per input name; unparsable names have \code{parsed = FALSE}.
-Besides the parsed atoms, five \code{NameFormatter} rendering columns are included:
+a tibble, one row per input name. The \code{result} column carries the 5.0.0 three-way
+outcome — \code{"parsed"}, \code{"informal"} or \code{"unparsable"} — and \code{parsed} is the convenience boolean
+(\code{TRUE} only for \code{"parsed"}). An \strong{informal} name (a supraspecific taxon carrying a provisional
+designation, e.g. \code{"Rhizobium sp. RMCC TR1811"}) is flat: its \code{taxon} + \code{taxonRank} + \code{rank} +
+\code{phrase} + \code{code} are populated and every ParsedName-specific atom is \code{NA} (the anchor lives
+in \code{taxon}, never a mislabelled \code{genus}). A name with a species epithet (incl. cf./aff.) stays
+\code{"parsed"}. Besides the parsed atoms, five \code{NameFormatter} rendering columns are included:
 \code{canonical} (full name with authorship), \code{canonicalWithoutAuthorship},
 \code{canonicalMinimal} (bare parts, folded to ascii), \code{canonicalComplete} and
-\code{authorshipComplete} — all \code{NA} on unparsable rows.
+\code{authorshipComplete}. \code{canonical} is populated for \strong{informal} rows too — an informal name's
+single canonical form (e.g. \code{"Rhizobium sp. RMCC TR1811"}); the other four are \code{NA} on informal
+rows, and all five are \code{NA} on unparsable rows.
 }
 \description{
 Parse scientific names into a tibble (one row per name).
