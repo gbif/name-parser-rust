@@ -87,6 +87,18 @@ class NameParserRustSmokeTest {
   }
 
   @Test
+  void unparsableOtuNameIsReturnedInItsCanonicalUppercaseForm() {
+    // ABI 3: the Rust core canonicalizes a UNITE species-hypothesis id to uppercase, and that
+    // canonicalized ParseError.name now survives the FFI — so the binding returns "SH..." for a
+    // lowercase "sh..." input, matching the core/CLI/Python/R and the CoL backend's expectation.
+    ParseResult result = parser.parse("sh19186714.17fu", null, null, null);
+
+    ParseResult.Unparsable u = assertInstanceOf(ParseResult.Unparsable.class, result);
+    assertEquals(NameType.OTHER, u.type());
+    assertEquals("SH19186714.17FU", u.name());
+  }
+
+  @Test
   void hybridNothoSetIsDecodedFromTheStructWire() throws UnparsableNameException {
     ParsedName pn = parser.parse("Salix ×capreola", null, null, null).orElseThrow();
 

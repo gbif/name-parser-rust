@@ -29,10 +29,12 @@ use nameparser::model::{NameType, NomCode, ParseError, Rank};
 /// Bump on any change to the `extern "C"` surface itself (a new, changed, or removed
 /// function/signature) — NOT on changes to the core parser's output. **Version 2** dropped the
 /// former JSON wire path (`np_parse_json`/`np_free`), leaving [`np_parse_struct`] the only parse
-/// function.
+/// function. **Version 3** appends the error name to the unparsable wire
+/// ([`layout::OFF_UNPARSABLE_NAME_LEN`]), so the binding returns the core's (possibly
+/// canonicalized) `ParseError.name` rather than echoing the caller's input string.
 #[no_mangle]
 pub extern "C" fn np_abi_version() -> u32 {
-    std::panic::catch_unwind(|| 2u32).unwrap_or(0)
+    std::panic::catch_unwind(|| 3u32).unwrap_or(0)
 }
 
 /// SAFETY: `p` must be either null or a valid, NUL-terminated C string for the duration of
@@ -71,11 +73,13 @@ fn null_name_error() -> ParseError {
 /// mapping. Return convention:
 ///
 /// - `>= 0`: success — the number of bytes written to `out`.
-/// - `-1`: unparsable name — `out` receives only the header (`status`, `name_type`, `code`;
-///   see [`layout::encode_unparsable`]), so the caller can still throw with the right enums.
+/// - `-1`: unparsable name — `out` receives the header (`status`, `name_type`, `code`) followed
+///   by the error name (a `u32` length + its UTF-8 bytes; see [`layout::encode_unparsable`]), so
+///   the caller returns both the right enums AND the core's (possibly canonicalized) name.
 /// - `-2`: an internal panic was caught; `out` is untouched.
 /// - overflow (the encoded size exceeds `out_cap`): `out` is untouched, returns `-(needed as
-///   i64 + 3)`, so the caller recovers `needed = -ret - 3` and retries with a bigger buffer.
+///   i64 + 3)`, so the caller recovers `needed = -ret - 3` and retries with a bigger buffer — for
+///   BOTH the success and the (now variable-length) unparsable buffers.
 ///
 /// Input handling — `name` required (null or non-UTF-8 folds to a "null name" error),
 /// `authorship`/`rank`/`code` nullable, `rank`/`code` resolved via
@@ -125,10 +129,7 @@ pub unsafe extern "C" fn np_parse_struct(
     });
     match result {
         Ok(Ok(buf)) => write_success(&buf, out, out_cap),
-        Ok(Err(header)) => {
-            write_clamped_header(&header, out, out_cap);
-            -1
-        }
+        Ok(Err(buf)) => write_unparsable(&buf, out, out_cap),
         Err(_) => -2,
     }
 }
@@ -144,13 +145,17 @@ fn write_success(buf: &[u8], out: *mut u8, out_cap: usize) -> i64 {
     buf.len() as i64
 }
 
-/// Copies as much of `header` as fits `out_cap` into `out`, silently truncating if `out_cap <
-/// layout::HEADER_SIZE` — used only by [`np_parse_struct`]'s unparsable path, which always
-/// returns `-1` regardless of truncation (callers should supply at least
-/// [`layout::HEADER_SIZE`] bytes to reliably decode it; see the `layout` module doc).
-fn write_clamped_header(header: &[u8], out: *mut u8, out_cap: usize) {
-    let n = header.len().min(out_cap);
-    unsafe { copy_into(&header[..n], out) };
+/// Writes the unparsable buffer (`header` + `u32 name_len` + name bytes) into `out`, or — if it
+/// doesn't fit `out_cap` — touches `out` not at all and returns the negative-needed overflow code,
+/// the SAME `-(len + 3)` protocol as [`write_success`] (so [`np_parse_struct`]'s existing
+/// caller-side retry handles a long error name transparently). On a successful write returns `-1`,
+/// the unparsable status code.
+fn write_unparsable(buf: &[u8], out: *mut u8, out_cap: usize) -> i64 {
+    if buf.len() > out_cap {
+        return -(buf.len() as i64 + 3);
+    }
+    unsafe { copy_into(buf, out) };
+    -1
 }
 
 /// Shared `copy_nonoverlapping` wrapper: a no-op for an empty slice, so a null/dangling `out`
@@ -174,8 +179,8 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn np_abi_version_is_2() {
-        assert_eq!(np_abi_version(), 2);
+    fn np_abi_version_is_3() {
+        assert_eq!(np_abi_version(), 3);
     }
 
     #[test]
@@ -249,8 +254,8 @@ mod tests {
     }
 
     #[test]
-    fn np_parse_struct_null_name_returns_minus_one_with_header_only() {
-        let mut buf = vec![0xAAu8; layout::HEADER_SIZE];
+    fn np_parse_struct_null_name_returns_minus_one_with_header_and_empty_name() {
+        let mut buf = vec![0xAAu8; 128];
         let ret = unsafe {
             np_parse_struct(
                 std::ptr::null(),
@@ -274,12 +279,19 @@ mod tests {
                 .unwrap(),
         );
         assert_eq!(name_type, layout::name_type_ordinal(NameType::Other));
+        // the null-name error carries an empty name string (length 0)
+        let name_len = u32::from_le_bytes(
+            buf[layout::OFF_UNPARSABLE_NAME_LEN..layout::OFF_UNPARSABLE_NAME_LEN + 4]
+                .try_into()
+                .unwrap(),
+        );
+        assert_eq!(name_len, 0);
     }
 
     #[test]
-    fn np_parse_struct_unparsable_virus_returns_minus_one_with_type_and_code() {
+    fn np_parse_struct_unparsable_virus_returns_minus_one_with_type_code_and_name() {
         let name = CString::new("Tobacco mosaic virus").unwrap();
-        let mut buf = vec![0u8; layout::HEADER_SIZE];
+        let mut buf = vec![0u8; 128];
         let ret = unsafe {
             np_parse_struct(
                 name.as_ptr(),
@@ -297,5 +309,33 @@ mod tests {
                 .unwrap(),
         );
         assert_eq!(code, layout::nomcode_ordinal(NomCode::Virus));
+        // ABI 3: the error name rides the wire, so the binding need not echo its input.
+        let name_len = u32::from_le_bytes(
+            buf[layout::OFF_UNPARSABLE_NAME_LEN..layout::OFF_UNPARSABLE_NAME_LEN + 4]
+                .try_into()
+                .unwrap(),
+        ) as usize;
+        let start = layout::OFF_UNPARSABLE_NAME_LEN + 4;
+        assert_eq!(&buf[start..start + name_len], b"Tobacco mosaic virus");
+    }
+
+    #[test]
+    fn np_parse_struct_unparsable_overflows_when_buffer_too_small_for_the_name() {
+        let name = CString::new("Tobacco mosaic virus").unwrap();
+        // Header fits but leaves no room for the name → overflow, `out` untouched, `-(needed + 3)`.
+        let mut buf = vec![0u8; layout::HEADER_SIZE];
+        let ret = unsafe {
+            np_parse_struct(
+                name.as_ptr(),
+                std::ptr::null(),
+                std::ptr::null(),
+                std::ptr::null(),
+                buf.as_mut_ptr(),
+                buf.len(),
+            )
+        };
+        // needed = HEADER_SIZE + 4 (u32 len) + "Tobacco mosaic virus".len() = 36 + 4 + 20 = 60
+        let needed = layout::HEADER_SIZE + 4 + "Tobacco mosaic virus".len();
+        assert_eq!(ret, -(needed as i64 + 3));
     }
 }

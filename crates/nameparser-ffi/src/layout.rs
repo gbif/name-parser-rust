@@ -230,8 +230,16 @@ pub const OFF_NOTHO_BITS: usize = 29;
 pub const OFF_PUBLISHED_IN_YEAR: usize = 32;
 
 /// Total header size in bytes — also the minimum `out_cap` a caller must supply to reliably
-/// decode the unparsable path's header-only write (see the module doc's "Return convention").
+/// decode the unparsable path's header (see the module doc's "Return convention").
 pub const HEADER_SIZE: usize = 36;
+
+/// Unparsable-path only: at [`HEADER_SIZE`] sits a `u32` byte-length of the error name, with the
+/// UTF-8 name bytes immediately after (at `HEADER_SIZE + 4`). This lets the binding return the
+/// core's [`ParseError::name`] — which may be canonicalized (OTU `sh…`→`SH…`, or an extracted
+/// substring) and so differ from the caller's input string — instead of echoing the input.
+/// (Success/informal buffers reuse this same region for their string table; the two are told
+/// apart by `status`.)
+pub const OFF_UNPARSABLE_NAME_LEN: usize = HEADER_SIZE;
 
 /// `status` header field value on the success path.
 pub const STATUS_SUCCESS: i32 = 0;
@@ -776,8 +784,12 @@ pub fn encode_unparsable(err: &ParseError, abi_version: u32) -> Vec<u8> {
         notho_bits: 0,
         published_in_year: -1,
     };
-    let mut buf = Vec::with_capacity(HEADER_SIZE);
+    let name = err.name.as_bytes();
+    let mut buf = Vec::with_capacity(HEADER_SIZE + 4 + name.len());
     header.write_to(&mut buf);
+    // OFF_UNPARSABLE_NAME_LEN: u32 length prefix, then the (possibly canonicalized) name bytes.
+    buf.extend_from_slice(&(name.len() as u32).to_le_bytes());
+    buf.extend_from_slice(name);
     buf
 }
 
@@ -804,14 +816,16 @@ mod tests {
     }
 
     #[test]
-    fn encode_unparsable_is_exactly_header_size_bytes() {
+    fn encode_unparsable_carries_header_then_the_name() {
         let err = ParseError::new(
             NameType::Other,
             Some(NomCode::Virus),
             "Tobacco mosaic virus",
         );
         let buf = encode_unparsable(&err, 1);
-        assert_eq!(buf.len(), HEADER_SIZE);
+        let name = b"Tobacco mosaic virus";
+        // header, then a u32 name length, then the UTF-8 name bytes
+        assert_eq!(buf.len(), HEADER_SIZE + 4 + name.len());
         assert_eq!(
             u32::from_le_bytes(
                 buf[OFF_ABI_VERSION..OFF_ABI_VERSION + 4]
@@ -836,6 +850,15 @@ mod tests {
             i32::from_le_bytes(buf[OFF_NAME_TYPE..OFF_NAME_TYPE + 4].try_into().unwrap()),
             name_type_ordinal(NameType::Other)
         );
+        assert_eq!(
+            u32::from_le_bytes(
+                buf[OFF_UNPARSABLE_NAME_LEN..OFF_UNPARSABLE_NAME_LEN + 4]
+                    .try_into()
+                    .unwrap()
+            ),
+            name.len() as u32
+        );
+        assert_eq!(&buf[OFF_UNPARSABLE_NAME_LEN + 4..], name);
     }
 
     #[test]

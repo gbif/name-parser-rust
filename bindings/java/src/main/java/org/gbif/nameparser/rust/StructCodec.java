@@ -70,6 +70,10 @@ final class StructCodec {
   private static final int ORIGINAL_SPELLING_UNKNOWN = 2;
 
   private static final int STRING_TABLE_OFFSET = HEADER_SIZE; // 36
+  // Unparsable path only (ABI 3): a u32 name length at HEADER_SIZE, then the inline UTF-8 name
+  // bytes -- the same post-header region the success path uses for its string table, told apart by
+  // status. Lets the binding return the core's (possibly canonicalized) ParseError.name.
+  private static final int OFF_UNPARSABLE_NAME_LEN = HEADER_SIZE; // 36
   private static final int NUM_STRING_SLOTS = 17;
   private static final int STRING_REF_SIZE = 8;
   private static final int STRING_TABLE_SIZE = 4 + NUM_STRING_SLOTS * STRING_REF_SIZE; // 140
@@ -120,10 +124,10 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 2) {
+    if (abi != 3) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 2 -- rebuild the cdylib "
+              + ", StructCodec was written against 3 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
@@ -179,17 +183,18 @@ final class StructCodec {
   // ================================================================================================
 
   /**
-   * Reads the {@code name_type}/{@code code} header fields from a {@code -1} (unparsable)
-   * result buffer and builds the exception {@link Ffi#callParseStruct} throws for it. {@code
-   * originalName} is the caller's own input string (not read off the wire -- the unparsable
-   * header carries no name).
+   * Reads the {@code name_type}/{@code code} header fields plus the error {@code name} from a
+   * {@code -1} (unparsable) result buffer and builds the exception {@link Ffi#callParseStruct}
+   * throws for it. The name comes off the wire (ABI 3) so a canonicalized form (OTU {@code
+   * sh…}→{@code SH…}, an extracted substring) is preserved; {@code originalName} is only a fallback
+   * for the empty-name case (see {@link #unparsableName}).
    */
-  static UnparsableNameException unparsableException(MemorySegment header, String originalName) {
-    int nameTypeOrd = header.get(LE_INT, OFF_NAME_TYPE);
-    int codeOrd = header.get(LE_INT, OFF_CODE);
+  static UnparsableNameException unparsableException(MemorySegment seg, String originalName) {
+    int nameTypeOrd = seg.get(LE_INT, OFF_NAME_TYPE);
+    int codeOrd = seg.get(LE_INT, OFF_CODE);
     NameType type = enumByOrdinal(NameType.values(), nameTypeOrd, "name_type");
     NomCode code = codeOrd == ABSENT_ENUM ? null : enumByOrdinal(NomCode.values(), codeOrd, "code");
-    return new UnparsableNameException(type, code, originalName);
+    return new UnparsableNameException(type, code, unparsableName(seg, originalName));
   }
 
   /**
@@ -200,12 +205,28 @@ final class StructCodec {
    * non-parsable type and the {@link ParseResult.Unparsable} record's own {@code isParsable()}
    * guard never trips.
    */
-  static ParseResult unparsableResult(MemorySegment header, String originalName) {
-    int nameTypeOrd = header.get(LE_INT, OFF_NAME_TYPE);
-    int codeOrd = header.get(LE_INT, OFF_CODE);
+  static ParseResult unparsableResult(MemorySegment seg, String originalName) {
+    int nameTypeOrd = seg.get(LE_INT, OFF_NAME_TYPE);
+    int codeOrd = seg.get(LE_INT, OFF_CODE);
     NameType type = enumByOrdinal(NameType.values(), nameTypeOrd, "name_type");
     NomCode code = codeOrd == ABSENT_ENUM ? null : enumByOrdinal(NomCode.values(), codeOrd, "code");
-    return new ParseResult.Unparsable(type, code, originalName);
+    return new ParseResult.Unparsable(type, code, unparsableName(seg, originalName));
+  }
+
+  /**
+   * The ABI-3 unparsable-path error name: a {@code u32} length at {@link #OFF_UNPARSABLE_NAME_LEN}
+   * then that many inline UTF-8 bytes -- the core's {@code ParseError.name}, which may be
+   * canonicalized (OTU {@code sh…}→{@code SH…}, an extracted substring) and so differ from the
+   * caller's input. Falls back to {@code originalName} only when the wire name is empty (a
+   * null/blank input the core reports with no name text).
+   */
+  private static String unparsableName(MemorySegment seg, String originalName) {
+    long len = Integer.toUnsignedLong(seg.get(LE_INT, OFF_UNPARSABLE_NAME_LEN));
+    if (len == 0) {
+      return originalName;
+    }
+    byte[] bytes = seg.asSlice(OFF_UNPARSABLE_NAME_LEN + 4, len).toArray(ValueLayout.JAVA_BYTE);
+    return new String(bytes, StandardCharsets.UTF_8);
   }
 
   // ================================================================================================

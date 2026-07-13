@@ -734,12 +734,12 @@ fn bracketed_imprint_year_with_no_regular_year() {
 }
 
 #[test]
-fn unparsable_virus_returns_minus_one_with_header_carrying_type_and_code() {
+fn unparsable_virus_returns_minus_one_with_header_and_name() {
     let name = "Tobacco mosaic virus";
     let err = nameparser::parse_name(name, None, None, None).expect_err("must be unparsable");
 
     let name_c = cstr(name);
-    let mut buf = vec![0u8; layout::HEADER_SIZE];
+    let mut buf = vec![0u8; 256];
     let ret = unsafe {
         np_parse_struct(
             name_c.as_ptr(),
@@ -766,6 +766,47 @@ fn unparsable_virus_returns_minus_one_with_header_carrying_type_and_code() {
     // must be the absent sentinel, not left over from some other value.
     assert_eq!(header.rank, layout::ABSENT_ENUM);
     assert_eq!(header.state, layout::ABSENT_ENUM);
+    // ABI 3: the error name rides the wire (here byte-identical to the input).
+    assert_eq!(unparsable_wire_name(&buf), err.name);
+}
+
+/// Reads the ABI-3 unparsable-path error name (`u32` length + UTF-8 bytes at
+/// [`layout::OFF_UNPARSABLE_NAME_LEN`]) out of a `-1` result buffer.
+fn unparsable_wire_name(buf: &[u8]) -> String {
+    let len = u32::from_le_bytes(
+        buf[layout::OFF_UNPARSABLE_NAME_LEN..layout::OFF_UNPARSABLE_NAME_LEN + 4]
+            .try_into()
+            .unwrap(),
+    ) as usize;
+    let start = layout::OFF_UNPARSABLE_NAME_LEN + 4;
+    String::from_utf8(buf[start..start + len].to_vec()).unwrap()
+}
+
+#[test]
+fn unparsable_otu_wire_name_is_the_canonicalized_uppercase_form() {
+    // The whole point of ABI 3: the OTU/SH canonicalization the core applies to `ParseError.name`
+    // must survive the FFI. Input is lowercase; the wire name is the uppercased canonical form.
+    let name = "sh19186714.17fu";
+    let err = nameparser::parse_name(name, None, None, None).expect_err("must be unparsable");
+    assert_eq!(
+        err.name, "SH19186714.17FU",
+        "core canonicalizes SH ids to uppercase"
+    );
+
+    let name_c = cstr(name);
+    let mut buf = vec![0u8; 256];
+    let ret = unsafe {
+        np_parse_struct(
+            name_c.as_ptr(),
+            std::ptr::null(),
+            std::ptr::null(),
+            std::ptr::null(),
+            buf.as_mut_ptr(),
+            buf.len(),
+        )
+    };
+    assert_eq!(ret, -1);
+    assert_eq!(unparsable_wire_name(&buf), "SH19186714.17FU");
 }
 
 #[test]
@@ -810,6 +851,6 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
 }
 
 #[test]
-fn np_abi_version_is_2() {
-    assert_eq!(nameparser_ffi::np_abi_version(), 2);
+fn np_abi_version_is_3() {
+    assert_eq!(nameparser_ffi::np_abi_version(), 3);
 }

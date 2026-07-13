@@ -48,7 +48,7 @@ final class Ffi {
    * {@code nameparser-ffi}'s own {@code np_abi_version()} on any change to the extern "C"
    * surface itself.
    */
-  private static final int EXPECTED_ABI_VERSION = 2;
+  private static final int EXPECTED_ABI_VERSION = 3;
 
   private static final Linker LINKER = Linker.nativeLinker();
   private static final MethodHandle ABI_VERSION;
@@ -187,11 +187,11 @@ final class Ffi {
    *  in the 11,302-name corpus, still 0 diffs) with this constant temporarily set as low as 64.
    *
    *  <p><b>Must stay &ge; {@link StructCodec#HEADER_SIZE} (36).</b> The unparsable path (native
-   *  return {@code -1}) writes only a header, clamped to {@code min(HEADER_SIZE, out_cap)} (see
-   *  {@code layout.rs}'s "Unparsable path" doc) and is never overflow-coded/retried -- so a
-   *  smaller value here would truncate that header and make {@link StructCodec#unparsableException}
-   *  read past the buffer for every unparsable name. This invariant is enforced at class-init time
-   *  by the {@code static} block below (not merely documented). */
+   *  return {@code -1}) writes the header followed by the error name (ABI 3) and — like the success
+   *  path — overflow-codes and is retried when the whole buffer doesn't fit (see {@code layout.rs}'s
+   *  "Return convention"). At 4096 that retry is only ever hit for an unusually long name; the floor
+   *  keeps even the first write from truncating the header. This invariant is enforced at class-init
+   *  time by the {@code static} block below (not merely documented). */
   private static final long INITIAL_STRUCT_BUFFER_BYTES = 4096;
 
   static {
@@ -204,7 +204,7 @@ final class Ffi {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "INITIAL_STRUCT_BUFFER_BYTES (" + INITIAL_STRUCT_BUFFER_BYTES
               + ") must be >= StructCodec.HEADER_SIZE (" + StructCodec.HEADER_SIZE
-              + "): the unparsable path writes a header-only buffer that would otherwise be truncated"));
+              + "): the unparsable path's header+name write would otherwise be truncated"));
     }
   }
 
@@ -265,7 +265,9 @@ final class Ffi {
         cap = Math.max(StructCodec.HEADER_SIZE, needed);
         out = arena.allocate(cap);
         ret = invokeParseStruct(n, au, r, c, out, cap);
-        if (ret < 0) {
+        // -1 (unparsable — now variable-length, so it too can overflow the first buffer) is a
+        // valid retry outcome; only a caught panic (-2) or a second overflow is a real failure.
+        if (ret < -1) {
           throw new IllegalStateException("nameparser-ffi: np_parse_struct still failed (ret=" + ret
               + ") after retrying with the exact reported size (" + needed + " bytes) for name '" + name + "'");
         }
