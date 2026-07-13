@@ -204,7 +204,11 @@ fn parse_three_way_emits_a_distinct_informal_row_with_canonical() {
     );
     let actual = String::from_utf8(output.stdout).expect("stdout must be valid UTF-8");
     let lines: Vec<&str> = actual.lines().collect();
-    assert_eq!(lines.len(), 3, "expected exactly 3 JSONL rows, got: {actual:?}");
+    assert_eq!(
+        lines.len(),
+        3,
+        "expected exactly 3 JSONL rows, got: {actual:?}"
+    );
 
     // scientific -> the same `parsed` object the default (oracle) mode emits
     assert_eq!(

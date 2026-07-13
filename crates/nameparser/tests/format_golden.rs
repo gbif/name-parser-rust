@@ -84,26 +84,28 @@ fn esc(s: &str) -> String {
 #[test]
 #[ignore = "regeneration utility — rewrites the golden snapshot; run manually then review the diff"]
 fn regenerate() {
-    let data = std::fs::read_to_string(GOLDEN_PATH).expect("existing golden to reuse its input rows");
+    let data =
+        std::fs::read_to_string(GOLDEN_PATH).expect("existing golden to reuse its input rows");
     let mut out = String::with_capacity(data.len());
     for line in data.lines() {
         if line.is_empty() {
             continue;
         }
         let input = unescape(line.split('\t').next().unwrap_or(""));
-        let (ok, cells): (bool, [String; 5]) = match nameparser::parse_name(&input, None, None, None) {
-            Ok(pn) => (
-                true,
-                [
-                    nz(pn.canonical_name()),
-                    nz(pn.canonical_name_without_authorship()),
-                    nz(pn.canonical_name_minimal()),
-                    nz(pn.canonical_name_complete()),
-                    nz(pn.authorship_complete()),
-                ],
-            ),
-            Err(_) => (false, Default::default()),
-        };
+        let (ok, cells): (bool, [String; 5]) =
+            match nameparser::parse_name(&input, None, None, None) {
+                Ok(pn) => (
+                    true,
+                    [
+                        nz(pn.canonical_name()),
+                        nz(pn.canonical_name_without_authorship()),
+                        nz(pn.canonical_name_minimal()),
+                        nz(pn.canonical_name_complete()),
+                        nz(pn.authorship_complete()),
+                    ],
+                ),
+                Err(_) => (false, Default::default()),
+            };
         out.push_str(&esc(&input));
         out.push('\t');
         out.push_str(if ok { "true" } else { "false" });

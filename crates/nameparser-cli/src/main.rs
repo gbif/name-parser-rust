@@ -296,7 +296,9 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
     // Unconditional, like Java's `summary.printf(...)` outside the `if (!quiet)` guard —
     // only the periodic progress lines above are gated by `--quiet`.
     if args.three_way {
-        eprintln!("Parsed {total} names ({ok} parsed, {informal} informal, {unparsable} unparsable)");
+        eprintln!(
+            "Parsed {total} names ({ok} parsed, {informal} informal, {unparsable} unparsable)"
+        );
     } else {
         eprintln!("Parsed {total} names ({ok} ok, {unparsable} unparsable)");
     }
@@ -402,21 +404,28 @@ fn append_informal(out: &mut String, inf: &Informal) {
     // Field order mirrors the core `Informal` struct's `#[derive(Serialize)]` (taxon, taxonRank,
     // rank, phrase, code), then the derived `canonical` — kept in sync by the render tests.
     out.push_str(",\"informal\":{\"taxon\":");
-    out.push_str(&serde_json::to_string(&inf.taxon).expect("a String always serializes to a JSON string"));
+    out.push_str(
+        &serde_json::to_string(&inf.taxon).expect("a String always serializes to a JSON string"),
+    );
     out.push_str(",\"taxonRank\":");
     out.push_str(&serde_json::to_string(&inf.taxon_rank).expect("Rank always serializes to JSON"));
     out.push_str(",\"rank\":");
     out.push_str(&serde_json::to_string(&inf.rank).expect("Rank always serializes to JSON"));
     if let Some(phrase) = &inf.phrase {
         out.push_str(",\"phrase\":");
-        out.push_str(&serde_json::to_string(phrase).expect("a String always serializes to a JSON string"));
+        out.push_str(
+            &serde_json::to_string(phrase).expect("a String always serializes to a JSON string"),
+        );
     }
     if let Some(code) = &inf.code {
         out.push_str(",\"code\":");
         out.push_str(&serde_json::to_string(code).expect("NomCode always serializes to JSON"));
     }
     out.push_str(",\"canonical\":");
-    out.push_str(&serde_json::to_string(&inf.canonical_name()).expect("a String always serializes to a JSON string"));
+    out.push_str(
+        &serde_json::to_string(&inf.canonical_name())
+            .expect("a String always serializes to a JSON string"),
+    );
     out.push('}');
 }
 

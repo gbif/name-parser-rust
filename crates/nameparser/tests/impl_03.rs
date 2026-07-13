@@ -504,8 +504,8 @@ fn unparsable_placeholder() {
     // "epithet explicitly absent"), so this one case is asserted directly against the parsed
     // fields instead of through the assert_name(...).nothing_else() chain — mirrors Java's
     // `.species("Aster", null).type(NameType.INFORMAL).warning(Warnings.INDETERMINED)`.
-    let aster =
-        nameparser::parse_name("Aster indet.", None, None, None).expect("`Aster indet.` should parse");
+    let aster = nameparser::parse_name("Aster indet.", None, None, None)
+        .expect("`Aster indet.` should parse");
     assert!(aster.uninomial.is_none());
     assert_eq!(aster.genus.as_deref(), Some("Aster"));
     assert!(aster.infrageneric_epithet.is_none());

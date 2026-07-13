@@ -200,9 +200,8 @@ static CLADE_KEYWORD: LazyLock<Regex> =
 // `Informal` (anchor = the monomial, phrase = the marker) rather than erroring. Captures: group 1 =
 // the stem, group 2 = the marker word. (Match set is unchanged from the Java port; capture groups
 // added for stem/marker extraction.) Java origin: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
-static MONOMIAL_AGGREGATE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^([\p{Lu}][\p{L}]+)(?:-|\s+)(group|complex)$").unwrap()
-});
+static MONOMIAL_AGGREGATE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{L}]+)(?:-|\s+)(group|complex)$").unwrap());
 
 // "-lineage" / " lineage" labels ("Vermistella-lineage", "NC12A-lineage", "he2-lineage"): informal
 // phylogenetic lineage names. The stem accepts any letter case and embedded digits, so it may be a
@@ -628,7 +627,10 @@ mod tests {
     fn rescued(input: &str) -> ParseContext {
         let mut ctx = ParseContext::new(input.to_string(), None, None, None);
         run(input, &mut ctx).unwrap_or_else(|e| panic!("`{input}` should be rescued, got {e:?}"));
-        assert!(ctx.preflight_complete, "`{input}` should set preflight_complete");
+        assert!(
+            ctx.preflight_complete,
+            "`{input}` should set preflight_complete"
+        );
         ctx
     }
 
@@ -715,8 +717,14 @@ mod tests {
         assert_eq!(ctx.name.rank, Rank::Unranked);
         assert!(ctx.name.specific_epithet.is_none());
         // spaced + "complex" variants likewise
-        assert_eq!(rescued("Bartonella group").name.genus.as_deref(), Some("Bartonella"));
-        assert_eq!(rescued("Foo-complex").name.phrase.as_deref(), Some("complex"));
+        assert_eq!(
+            rescued("Bartonella group").name.genus.as_deref(),
+            Some("Bartonella")
+        );
+        assert_eq!(
+            rescued("Foo-complex").name.phrase.as_deref(),
+            Some("complex")
+        );
     }
 
     #[test]
@@ -737,7 +745,10 @@ mod tests {
     #[test]
     fn clade_keyword_is_unparsable_other() {
         // Clade labels are anchorless phylogenetic groupings → OTHER (5.0.0; was INFORMAL).
-        assert_eq!(check("Amauropeltoid clade").unwrap_err().type_, NameType::Other);
+        assert_eq!(
+            check("Amauropeltoid clade").unwrap_err().type_,
+            NameType::Other
+        );
         assert_eq!(check("Unnamed clade").unwrap_err().type_, NameType::Other);
     }
 

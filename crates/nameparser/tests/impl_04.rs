@@ -35,8 +35,14 @@ fn lineage_labels_rescued_or_other() {
         .rank(Rank::Unranked)
         .phrase("lineage")
         .nothing_else();
-    assert_informal("Flamella-lineage").taxon("Flamella").phrase("lineage").nothing_else();
-    assert_informal("Pessonella-lineage").taxon("Pessonella").phrase("lineage").nothing_else();
+    assert_informal("Flamella-lineage")
+        .taxon("Flamella")
+        .phrase("lineage")
+        .nothing_else();
+    assert_informal("Pessonella-lineage")
+        .taxon("Pessonella")
+        .phrase("lineage")
+        .nothing_else();
     assert_unparsable("NC12A-lineage", NameType::Other);
     assert_unparsable("he2-lineage", NameType::Other);
 }

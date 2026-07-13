@@ -130,7 +130,6 @@ pub fn assert_informal_hinted(
     }
 }
 
-
 /// `assertNoName(name)` — the input must be unparsable. Java asserts `NameType.NO_NAME`, but the
 /// 4.2.0 `NameType` this port targets has only 5 variants (see the mapping note in the module
 /// doc), so a definitively-not-a-name input classifies as `Other` here.
@@ -929,13 +928,21 @@ impl InformalAssertion {
 
     /// Assert the anchor's rank (usually `Genus`, since the anchor sits in the genus slot).
     pub fn taxon_rank(self, rank: Rank) -> Self {
-        assert_eq!(self.inf.taxon_rank, rank, "taxonRank mismatch for {:?}", self.inf.taxon);
+        assert_eq!(
+            self.inf.taxon_rank, rank,
+            "taxonRank mismatch for {:?}",
+            self.inf.taxon
+        );
         self
     }
 
     /// Assert the informal name's own purported rank (`Species` for `"sp."`, `Unranked` for a group).
     pub fn rank(self, rank: Rank) -> Self {
-        assert_eq!(self.inf.rank, rank, "rank mismatch for {:?}", self.inf.taxon);
+        assert_eq!(
+            self.inf.rank, rank,
+            "rank mismatch for {:?}",
+            self.inf.taxon
+        );
         self
     }
 

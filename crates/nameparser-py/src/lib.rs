@@ -551,7 +551,9 @@ fn parse_all(
         .iter()
         .map(
             |name| match ::nameparser::parse(name, authorship, rank, code) {
-                ::nameparser::ParseResult::Parsed(pn) => Some(PyParsedName { inner: pn }.into_py(py)),
+                ::nameparser::ParseResult::Parsed(pn) => {
+                    Some(PyParsedName { inner: pn }.into_py(py))
+                }
                 ::nameparser::ParseResult::Informal(inf) => {
                     Some(PyInformal { inner: inf }.into_py(py))
                 }

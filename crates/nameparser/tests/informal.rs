@@ -164,7 +164,12 @@ fn monomial_aggregate_groups_are_rescued_to_informal() {
 fn anchorless_clade_and_code_labels_are_unparsable_other() {
     // Anchorless phylogenetic clade labels ("Unnamed clade") and OTU-/strain-code lineage stems
     // ("NC12A-lineage") have no clean single-taxon anchor → Unparsable(OTHER).
-    for input in ["Amauropeltoid clade", "Unnamed clade", "NC12A-lineage", "he2-lineage"] {
+    for input in [
+        "Amauropeltoid clade",
+        "Unnamed clade",
+        "NC12A-lineage",
+        "he2-lineage",
+    ] {
         match nameparser::parse(input, None, None, None) {
             ParseResult::Unparsable(e) => assert_eq!(
                 e.type_,
