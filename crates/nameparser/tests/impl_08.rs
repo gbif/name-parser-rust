@@ -216,11 +216,14 @@ fn initials_after_surname() {
 /// Make sure we can handle both cases.
 #[test]
 fn redundant_authorship() {
-    assert_name_auth("Euplectus cavicollis LeConte, J. L., 1878", "LeConte, J. L., 1878")
-        .species("Euplectus", "cavicollis")
-        .comb_authors(Some("1878"), &["J.L.LeConte"])
-        .code(NomCode::Zoological)
-        .nothing_else();
+    assert_name_auth(
+        "Euplectus cavicollis LeConte, J. L., 1878",
+        "LeConte, J. L., 1878",
+    )
+    .species("Euplectus", "cavicollis")
+    .comb_authors(Some("1878"), &["J.L.LeConte"])
+    .code(NomCode::Zoological)
+    .nothing_else();
 
     // Java calls this as `assertName(rawName, (String)null, canonical)` — the cast
     // disambiguates method overload resolution only (a bare `null` is ambiguous between the
@@ -298,7 +301,12 @@ fn bold_placeholder() {
 #[test]
 fn null_name_parts() {
     assert_name("Austrorhynchus pectatus null pectatus")
-        .infra_species("Austrorhynchus", "pectatus", Rank::InfraspecificName, "pectatus")
+        .infra_species(
+            "Austrorhynchus",
+            "pectatus",
+            Rank::InfraspecificName,
+            "pectatus",
+        )
         .doubtful()
         .warning(&[warnings::NULL_EPITHET])
         .nothing_else();

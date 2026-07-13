@@ -30,8 +30,12 @@ fn misc_annotations() {
     assert_name("Acarospora cratericola cratericola Shenk 1974 species complex")
         .infra_species("Acarospora", "cratericola", Rank::Subspecies, "cratericola")
         .comb_authors(Some("1974"), &["Shenk"]);
-    assert_name("Parus caeruleus species complex")
-        .binomial("Parus", None, "caeruleus", Rank::SpeciesAggregate);
+    assert_name("Parus caeruleus species complex").binomial(
+        "Parus",
+        None,
+        "caeruleus",
+        Rank::SpeciesAggregate,
+    );
     // skipped: Crenarchaeote enrichment culture clone OREC-B1022
     //   — env-sample annotation pattern not implemented (parses as messy trinomial)
     // skipped: Diodora dorsata  CF
@@ -214,7 +218,10 @@ fn no_parsing_bacterium_candidatus() {
     assert_name("Candidatus").monomial("Candidatus");
     assert_name("Candidatus Puniceispirillum Oh, Kwon, Kang, Kang, Lee, Kim & Cho, 2010")
         .monomial("Puniceispirillum")
-        .comb_authors(Some("2010"), &["Oh", "Kwon", "Kang", "Kang", "Lee", "Kim", "Cho"])
+        .comb_authors(
+            Some("2010"),
+            &["Oh", "Kwon", "Kang", "Kang", "Lee", "Kim", "Cho"],
+        )
         .candidatus();
     assert_name("Candidatus Halobonum")
         .monomial("Halobonum")
@@ -294,7 +301,10 @@ fn names_with_spec_nov_spec() {
     assert!(n.infraspecific_epithet.is_none());
     assert_eq!(n.rank, Rank::Species);
     assert_eq!(n.combination_authorship.year.as_deref(), Some("2000"));
-    assert_eq!(n.combination_authorship.authors, vec!["Platnick".to_string()]);
+    assert_eq!(
+        n.combination_authorship.authors,
+        vec!["Platnick".to_string()]
+    );
     assert_eq!(n.type_, NameType::Informal);
     assert_eq!(n.code, Some(NomCode::Zoological));
     assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);

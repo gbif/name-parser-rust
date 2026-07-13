@@ -156,7 +156,7 @@ fn matches_java_name_formatter_over_corpus() {
                     line: line_no,
                     input: input.clone(),
                     java: format!("ok={java_ok}"),
-                    rust: format!("{}", if rust.is_ok() { "Ok" } else { "Err" }),
+                    rust: (if rust.is_ok() { "Ok" } else { "Err" }).to_string(),
                 });
             }
         }
@@ -168,7 +168,10 @@ fn matches_java_name_formatter_over_corpus() {
         partition_mismatches.len()
     );
     for m in partition_mismatches.iter().take(20) {
-        eprintln!("  PARTITION line {}: {:?} — java {}, rust {}", m.line, m.input, m.java, m.rust);
+        eprintln!(
+            "  PARTITION line {}: {:?} — java {}, rust {}",
+            m.line, m.input, m.java, m.rust
+        );
     }
     for i in 0..5 {
         let pct = if both_parsed == 0 {
@@ -183,7 +186,11 @@ fn matches_java_name_formatter_over_corpus() {
     }
     for i in 0..5 {
         if !examples[i].is_empty() {
-            eprintln!("  --- {} (first {} example(s)) ---", COLUMNS[i], examples[i].len());
+            eprintln!(
+                "  --- {} (first {} example(s)) ---",
+                COLUMNS[i],
+                examples[i].len()
+            );
             for m in &examples[i] {
                 eprintln!(
                     "    line {}: {:?}\n      java={:?}\n      rust={:?}",

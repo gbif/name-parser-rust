@@ -41,9 +41,7 @@
 
 use std::collections::BTreeMap;
 
-use nameparser::model::{
-    NamePart, NameType, NomCode, ParsedName, Rank, State,
-};
+use nameparser::model::{NamePart, NameType, NomCode, ParsedName, Rank, State};
 
 // ---- entry points -----------------------------------------------------------------------------
 
@@ -104,9 +102,16 @@ pub fn assert_unparsable_code(input: &str, type_: NameType, code: NomCode) {
     match nameparser::parse(input, None, None, None) {
         Err(e) => {
             assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
-            assert_eq!(e.code, Some(code), "`{input}`: code {:?} != {code:?}", e.code);
+            assert_eq!(
+                e.code,
+                Some(code),
+                "`{input}`: code {:?} != {code:?}",
+                e.code
+            );
         }
-        Ok(pn) => panic!("expected `{input}` unparsable ({type_:?}/{code:?}) but it parsed: {pn:?}"),
+        Ok(pn) => {
+            panic!("expected `{input}` unparsable ({type_:?}/{code:?}) but it parsed: {pn:?}")
+        }
     }
 }
 
@@ -122,7 +127,11 @@ pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected
     match nameparser::parse(input, None, Some(rank), None) {
         Err(e) => {
             assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
-            assert_eq!(e.name, expected_name, "`{input}`: name {:?} != {expected_name:?}", e.name);
+            assert_eq!(
+                e.name, expected_name,
+                "`{input}`: name {:?} != {expected_name:?}",
+                e.name
+            );
         }
         Ok(pn) => panic!("expected `{input}` to be unparsable ({type_:?}) but it parsed: {pn:?}"),
     }
@@ -132,7 +141,11 @@ pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected
 pub fn assert_sensu(raw: &str, sensu: &str) {
     let n = nameparser::parse(raw, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{raw}` to parse: {e:?}"));
-    assert_eq!(n.taxonomic_note.as_deref(), Some(sensu), "sensu mismatch for `{raw}`");
+    assert_eq!(
+        n.taxonomic_note.as_deref(),
+        Some(sensu),
+        "sensu mismatch for `{raw}`"
+    );
 }
 
 /// `assertPhraseName(sciname, canonicalName, rank, phrase)` — parse, assert the `phrase`, the
@@ -205,12 +218,20 @@ pub fn assert_ex_authorship(
             auth.ex_authors
         ),
         Some(ex) => {
-            assert_eq!(auth.ex_authors.len(), 1, "expected exactly 1 exAuthor for `{raw}`");
+            assert_eq!(
+                auth.ex_authors.len(),
+                1,
+                "expected exactly 1 exAuthor for `{raw}`"
+            );
             assert_eq!(auth.ex_authors[0], ex, "exAuthor mismatch for `{raw}`");
         }
     }
     if !expected_authors.is_empty() {
-        assert_eq!(auth.authors, str_vec(expected_authors), "authors mismatch for `{raw}`");
+        assert_eq!(
+            auth.authors,
+            str_vec(expected_authors),
+            "authors mismatch for `{raw}`"
+        );
     }
     // Authorship-only assertion, mirroring Java's `NameAssertion(ParsedAuthorship)` =
     // `new ParsedName(); n.copy(pa)`: the 16 ParsedName-own fields reset to their defaults
@@ -254,9 +275,35 @@ pub fn is_viral_name(name: &str) -> bool {
 /// at their default (mirrors Java `NameAssertion.NP`).
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 enum Np {
-    Type, Epithets, Infragen, Phrase, Cultivar, Extinct, Candidate, Notho, Sic, Auth, ExAuth,
-    Bas, ExBas, Generic, Specific, Sanct, Rank, TaxNote, NomNote, PublishedIn, PublishedInPage,
-    ImprintYear, Doubtful, State, Code, Remains, Warning, Manuscript, Qualifiers,
+    Type,
+    Epithets,
+    Infragen,
+    Phrase,
+    Cultivar,
+    Extinct,
+    Candidate,
+    Notho,
+    Sic,
+    Auth,
+    ExAuth,
+    Bas,
+    ExBas,
+    Generic,
+    Specific,
+    Sanct,
+    Rank,
+    TaxNote,
+    NomNote,
+    PublishedIn,
+    PublishedInPage,
+    ImprintYear,
+    Doubtful,
+    State,
+    Code,
+    Remains,
+    Warning,
+    Manuscript,
+    Qualifiers,
 }
 
 pub struct NameAssertion {
@@ -266,7 +313,10 @@ pub struct NameAssertion {
 
 impl NameAssertion {
     fn new(n: ParsedName) -> Self {
-        NameAssertion { n, tested: std::collections::HashSet::new() }
+        NameAssertion {
+            n,
+            tested: std::collections::HashSet::new(),
+        }
     }
 
     fn mark(mut self, props: &[Np]) -> Self {
@@ -321,7 +371,13 @@ impl NameAssertion {
         self.binomial(genus, Some(infrageneric), epithet, Rank::Species)
     }
 
-    pub fn binomial(self, genus: &str, infrageneric: Option<&str>, epithet: &str, rank: Rank) -> Self {
+    pub fn binomial(
+        self,
+        genus: &str,
+        infrageneric: Option<&str>,
+        epithet: &str,
+        rank: Rank,
+    ) -> Self {
         assert!(self.n.uninomial.is_none());
         assert_eq!(self.n.genus.as_deref(), Some(genus));
         assert_eq!(self.n.infrageneric_epithet.as_deref(), infrageneric);
@@ -331,7 +387,13 @@ impl NameAssertion {
         self.mark(&[Np::Epithets, Np::Infragen, Np::Rank])
     }
 
-    pub fn infra_species(self, genus: &str, epithet: &str, rank: Rank, infra_epithet: &str) -> Self {
+    pub fn infra_species(
+        self,
+        genus: &str,
+        epithet: &str,
+        rank: Rank,
+        infra_epithet: &str,
+    ) -> Self {
         assert!(self.n.uninomial.is_none());
         assert_eq!(self.n.genus.as_deref(), Some(genus));
         assert_eq!(self.n.specific_epithet.as_deref(), Some(epithet));
@@ -376,7 +438,11 @@ impl NameAssertion {
 
     /// Combination authors of the genus authorship (infrageneric names, e.g. Kuntze of "(Adans.) Kuntze").
     pub fn generic_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
-        let ga = self.n.generic_authorship.as_ref().expect("genericAuthorship set");
+        let ga = self
+            .n
+            .generic_authorship
+            .as_ref()
+            .expect("genericAuthorship set");
         assert_eq!(ga.combination_authorship.year.as_deref(), year);
         assert_eq!(ga.combination_authorship.authors, str_vec(authors));
         self.mark(&[Np::Generic])
@@ -384,7 +450,11 @@ impl NameAssertion {
 
     /// Basionym authors of the genus authorship (e.g. Adans. of "(Adans.) Kuntze").
     pub fn generic_bas_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
-        let ga = self.n.generic_authorship.as_ref().expect("genericAuthorship set");
+        let ga = self
+            .n
+            .generic_authorship
+            .as_ref()
+            .expect("genericAuthorship set");
         assert_eq!(ga.basionym_authorship.year.as_deref(), year);
         assert_eq!(ga.basionym_authorship.authors, str_vec(authors));
         self.mark(&[Np::Generic])
@@ -392,7 +462,11 @@ impl NameAssertion {
 
     /// Combination authors of the species authorship (below-species names, e.g. L. before a cultivar).
     pub fn specific_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
-        let sa = self.n.specific_authorship.as_ref().expect("specificAuthorship set");
+        let sa = self
+            .n
+            .specific_authorship
+            .as_ref()
+            .expect("specificAuthorship set");
         assert_eq!(sa.combination_authorship.year.as_deref(), year);
         assert_eq!(sa.combination_authorship.authors, str_vec(authors));
         self.mark(&[Np::Specific])
@@ -428,12 +502,20 @@ impl NameAssertion {
     }
 
     pub fn sic(self) -> Self {
-        assert_eq!(self.n.original_spelling, Some(true), "expected [sic] (originalSpelling=true)");
+        assert_eq!(
+            self.n.original_spelling,
+            Some(true),
+            "expected [sic] (originalSpelling=true)"
+        );
         self.mark(&[Np::Sic])
     }
 
     pub fn corrig(self) -> Self {
-        assert_eq!(self.n.original_spelling, Some(false), "expected corrig. (originalSpelling=false)");
+        assert_eq!(
+            self.n.original_spelling,
+            Some(false),
+            "expected corrig. (originalSpelling=false)"
+        );
         self.mark(&[Np::Sic])
     }
 
@@ -558,8 +640,11 @@ impl NameAssertion {
 
     /// Java `qualifiers(part, value, part, value, ...)` → pairs.
     pub fn qualifiers(self, pairs: &[(NamePart, &str)]) -> Self {
-        let map: &BTreeMap<NamePart, String> =
-            self.n.epithet_qualifier.as_ref().expect("epithetQualifier set");
+        let map: &BTreeMap<NamePart, String> = self
+            .n
+            .epithet_qualifier
+            .as_ref()
+            .expect("epithetQualifier set");
         for (part, qual) in pairs {
             assert_eq!(map.get(part).map(String::as_str), Some(*qual));
         }
@@ -576,19 +661,39 @@ impl NameAssertion {
         let untested = |p: Np| !self.tested.contains(&p);
 
         if untested(Np::Epithets) {
-            assert!(n.uninomial.is_none(), "unexpected uninomial: {:?}", n.uninomial);
+            assert!(
+                n.uninomial.is_none(),
+                "unexpected uninomial: {:?}",
+                n.uninomial
+            );
             assert!(n.genus.is_none(), "unexpected genus: {:?}", n.genus);
-            assert!(n.specific_epithet.is_none(), "unexpected specificEpithet: {:?}", n.specific_epithet);
-            assert!(n.infraspecific_epithet.is_none(), "unexpected infraspecificEpithet: {:?}", n.infraspecific_epithet);
+            assert!(
+                n.specific_epithet.is_none(),
+                "unexpected specificEpithet: {:?}",
+                n.specific_epithet
+            );
+            assert!(
+                n.infraspecific_epithet.is_none(),
+                "unexpected infraspecificEpithet: {:?}",
+                n.infraspecific_epithet
+            );
         }
         if untested(Np::Infragen) {
-            assert!(n.infrageneric_epithet.is_none(), "unexpected infragenericEpithet: {:?}", n.infrageneric_epithet);
+            assert!(
+                n.infrageneric_epithet.is_none(),
+                "unexpected infragenericEpithet: {:?}",
+                n.infrageneric_epithet
+            );
         }
         if untested(Np::Phrase) {
             assert!(n.phrase.is_none(), "unexpected phrase: {:?}", n.phrase);
         }
         if untested(Np::Cultivar) {
-            assert!(n.cultivar_epithet.is_none(), "unexpected cultivarEpithet: {:?}", n.cultivar_epithet);
+            assert!(
+                n.cultivar_epithet.is_none(),
+                "unexpected cultivarEpithet: {:?}",
+                n.cultivar_epithet
+            );
         }
         if untested(Np::Candidate) {
             assert!(!n.candidatus, "unexpected candidatus");
@@ -597,48 +702,101 @@ impl NameAssertion {
             assert!(!n.extinct, "unexpected extinct");
         }
         if untested(Np::Notho) {
-            assert!(n.notho.as_ref().map_or(true, |v| v.is_empty()), "unexpected notho: {:?}", n.notho);
+            assert!(
+                n.notho.as_ref().is_none_or(|v| v.is_empty()),
+                "unexpected notho: {:?}",
+                n.notho
+            );
         }
         if untested(Np::Sic) {
-            assert!(n.original_spelling.is_none(), "unexpected originalSpelling: {:?}", n.original_spelling);
+            assert!(
+                n.original_spelling.is_none(),
+                "unexpected originalSpelling: {:?}",
+                n.original_spelling
+            );
         }
         if untested(Np::Auth) {
-            assert!(n.combination_authorship.year.is_none(), "unexpected comb year");
-            assert!(!n.combination_authorship.has_authors(), "unexpected comb authors");
+            assert!(
+                n.combination_authorship.year.is_none(),
+                "unexpected comb year"
+            );
+            assert!(
+                !n.combination_authorship.has_authors(),
+                "unexpected comb authors"
+            );
         }
         if untested(Np::ExAuth) {
-            assert!(n.combination_authorship.ex_authors.is_empty(), "unexpected comb exAuthors");
+            assert!(
+                n.combination_authorship.ex_authors.is_empty(),
+                "unexpected comb exAuthors"
+            );
         }
         if untested(Np::Bas) {
             assert!(n.basionym_authorship.year.is_none(), "unexpected bas year");
-            assert!(!n.basionym_authorship.has_authors(), "unexpected bas authors");
+            assert!(
+                !n.basionym_authorship.has_authors(),
+                "unexpected bas authors"
+            );
         }
         if untested(Np::ExBas) {
-            assert!(n.basionym_authorship.ex_authors.is_empty(), "unexpected bas exAuthors");
+            assert!(
+                n.basionym_authorship.ex_authors.is_empty(),
+                "unexpected bas exAuthors"
+            );
         }
         if untested(Np::Generic) {
-            assert!(n.generic_authorship.as_ref().map_or(true, |a| !a.has_authorship()), "unexpected genericAuthorship");
+            assert!(
+                n.generic_authorship
+                    .as_ref()
+                    .is_none_or(|a| !a.has_authorship()),
+                "unexpected genericAuthorship"
+            );
         }
         if untested(Np::Specific) {
-            assert!(n.specific_authorship.as_ref().map_or(true, |a| !a.has_authorship()), "unexpected specificAuthorship");
+            assert!(
+                n.specific_authorship
+                    .as_ref()
+                    .is_none_or(|a| !a.has_authorship()),
+                "unexpected specificAuthorship"
+            );
         }
         if untested(Np::Sanct) {
-            assert!(n.sanctioning_author.is_none(), "unexpected sanctioningAuthor: {:?}", n.sanctioning_author);
+            assert!(
+                n.sanctioning_author.is_none(),
+                "unexpected sanctioningAuthor: {:?}",
+                n.sanctioning_author
+            );
         }
         if untested(Np::Rank) {
             assert_eq!(n.rank, Rank::Unranked, "unexpected rank");
         }
         if untested(Np::TaxNote) {
-            assert!(n.taxonomic_note.is_none(), "unexpected taxonomicNote: {:?}", n.taxonomic_note);
+            assert!(
+                n.taxonomic_note.is_none(),
+                "unexpected taxonomicNote: {:?}",
+                n.taxonomic_note
+            );
         }
         if untested(Np::NomNote) {
-            assert!(n.nomenclatural_note.is_none(), "unexpected nomenclaturalNote: {:?}", n.nomenclatural_note);
+            assert!(
+                n.nomenclatural_note.is_none(),
+                "unexpected nomenclaturalNote: {:?}",
+                n.nomenclatural_note
+            );
         }
         if untested(Np::PublishedIn) {
-            assert!(n.published_in.is_none(), "unexpected publishedIn: {:?}", n.published_in);
+            assert!(
+                n.published_in.is_none(),
+                "unexpected publishedIn: {:?}",
+                n.published_in
+            );
         }
         if untested(Np::PublishedInPage) {
-            assert!(n.published_in_page.is_none(), "unexpected publishedInPage: {:?}", n.published_in_page);
+            assert!(
+                n.published_in_page.is_none(),
+                "unexpected publishedInPage: {:?}",
+                n.published_in_page
+            );
         }
         if untested(Np::ImprintYear) {
             assert!(self.imprint_year_of().is_none(), "unexpected imprintYear");
@@ -656,16 +814,28 @@ impl NameAssertion {
             assert!(n.code.is_none(), "unexpected code: {:?}", n.code);
         }
         if untested(Np::Remains) {
-            assert!(n.unparsed.is_none(), "unexpected unparsed: {:?}", n.unparsed);
+            assert!(
+                n.unparsed.is_none(),
+                "unexpected unparsed: {:?}",
+                n.unparsed
+            );
         }
         if untested(Np::Warning) {
-            assert!(n.warnings.is_empty(), "unexpected warnings: {:?}", n.warnings);
+            assert!(
+                n.warnings.is_empty(),
+                "unexpected warnings: {:?}",
+                n.warnings
+            );
         }
         if untested(Np::Manuscript) {
             assert!(!n.manuscript, "unexpected manuscript");
         }
         if untested(Np::Qualifiers) {
-            assert!(n.epithet_qualifier.as_ref().map_or(true, |m| m.is_empty()), "unexpected epithetQualifier: {:?}", n.epithet_qualifier);
+            assert!(
+                n.epithet_qualifier.as_ref().is_none_or(|m| m.is_empty()),
+                "unexpected epithetQualifier: {:?}",
+                n.epithet_qualifier
+            );
         }
     }
 }

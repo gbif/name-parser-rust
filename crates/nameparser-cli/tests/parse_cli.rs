@@ -66,7 +66,9 @@ fn rows_match(a: &str, b: &str) -> bool {
 #[test]
 fn parse_over_the_benchmark_corpus_matches_the_java_cli_oracle() {
     let Ok(expected) = std::fs::read_to_string(ORACLE) else {
-        eprintln!("SKIP: oracle {ORACLE} not found — see parse_golden.rs's module doc to regenerate it");
+        eprintln!(
+            "SKIP: oracle {ORACLE} not found — see parse_golden.rs's module doc to regenerate it"
+        );
         return;
     };
     assert!(
@@ -149,7 +151,11 @@ fn parse_stdin_to_stdout_matches_a_verified_java_cli_transcript() {
     );
     let actual = String::from_utf8(output.stdout).expect("stdout must be valid UTF-8");
     let lines: Vec<&str> = actual.lines().collect();
-    assert_eq!(lines.len(), 3, "expected exactly 3 JSONL rows, got: {actual:?}");
+    assert_eq!(
+        lines.len(),
+        3,
+        "expected exactly 3 JSONL rows, got: {actual:?}"
+    );
 
     assert_eq!(
         lines[0],

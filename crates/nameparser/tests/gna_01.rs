@@ -7,8 +7,7 @@ use nameparser::model::{NomCode, Rank};
 #[test]
 fn uninomials_without_authorship() {
     // group: Uninomials without authorship
-    assert_name("Pseudocercospora")
-        .monomial("Pseudocercospora");
+    assert_name("Pseudocercospora").monomial("Pseudocercospora");
 }
 
 #[test]
@@ -39,7 +38,10 @@ fn uninomials_with_authorship() {
         .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xiangwei Liu"]);
     assert_name("Aboilomimus sichuanensis ornatus Liu, Xiang-wei, M. Zhou, W Bi & L. Tang, 2009")
         .infra_species("Aboilomimus", "sichuanensis", Rank::Subspecies, "ornatus")
-        .comb_authors(Some("2009"), &["Liu", "Xiang-wei", "M.Zhou", "W.Bi", "L.Tang"])
+        .comb_authors(
+            Some("2009"),
+            &["Liu", "Xiang-wei", "M.Zhou", "W.Bi", "L.Tang"],
+        )
         .code(NomCode::Zoological);
     assert_name("Pseudocercospora Speg.")
         .monomial("Pseudocercospora")
@@ -102,8 +104,7 @@ fn two_letter_genus_names_legacy_genera_not_allowed_anymore() {
     assert_name("Ea Distant 1911")
         .monomial("Ea")
         .comb_authors(Some("1911"), &["Distant"]);
-    assert_name("Do")
-        .monomial("Do");
+    assert_name("Do").monomial("Do");
     assert_name("Ge Nicéville 1895")
         .monomial("Ge")
         .comb_authors(Some("1895"), &["Nicéville"]);
@@ -125,10 +126,8 @@ fn two_letter_genus_names_legacy_genera_not_allowed_anymore() {
     assert_name("Oa Girault 1929")
         .monomial("Oa")
         .comb_authors(Some("1929"), &["Girault"]);
-    assert_name("Oo")
-        .monomial("Oo");
-    assert_name("Nu")
-        .monomial("Nu");
+    assert_name("Oo").monomial("Oo");
+    assert_name("Nu").monomial("Nu");
     assert_name("Ra Whitley 1931")
         .monomial("Ra")
         .comb_authors(Some("1931"), &["Whitley"]);
@@ -164,20 +163,13 @@ fn two_letter_genus_names_legacy_genera_not_allowed_anymore() {
 #[test]
 fn binomials_without_authorship() {
     // group: Binomials without authorship
-    assert_name("Notopholia corrusca")
-        .species("Notopholia", "corrusca");
-    assert_name("Cyathicula scelobelonium")
-        .species("Cyathicula", "scelobelonium");
-    assert_name("Pseudocercospora     dendrobii")
-        .species("Pseudocercospora", "dendrobii");
-    assert_name("Cucurbita pepo")
-        .species("Cucurbita", "pepo");
-    assert_name("Hirsutëlla male")
-        .species("Hirsutëlla", "male");
-    assert_name("Aëtosaurus ferratus")
-        .species("Aëtosaurus", "ferratus");
-    assert_name("Remera cvancarai")
-        .species("Remera", "cvancarai");
+    assert_name("Notopholia corrusca").species("Notopholia", "corrusca");
+    assert_name("Cyathicula scelobelonium").species("Cyathicula", "scelobelonium");
+    assert_name("Pseudocercospora     dendrobii").species("Pseudocercospora", "dendrobii");
+    assert_name("Cucurbita pepo").species("Cucurbita", "pepo");
+    assert_name("Hirsutëlla male").species("Hirsutëlla", "male");
+    assert_name("Aëtosaurus ferratus").species("Aëtosaurus", "ferratus");
+    assert_name("Remera cvancarai").species("Remera", "cvancarai");
 }
 
 #[test]
@@ -203,7 +195,10 @@ fn binomials_with_authorship() {
 
     assert_name("Mico rondoni Ferrari, Sena, M. P. C. Schneider, & e Silva Júnior, 2010")
         .species("Mico", "rondoni")
-        .comb_authors(Some("2010"), &["Ferrari", "Sena", "M.P.C.Schneider", "e Silva Júnior"])
+        .comb_authors(
+            Some("2010"),
+            &["Ferrari", "Sena", "M.P.C.Schneider", "e Silva Júnior"],
+        )
         .code(NomCode::Zoological)
         .nothing_else();
 
@@ -564,15 +559,23 @@ fn binomials_with_authorship() {
 
     assert_name("Gerrhonotus lazcanoi Banda-Leal, Manuel Nevárez-de los Reyes and Bryson, 2017")
         .species("Gerrhonotus", "lazcanoi")
-        .comb_authors(Some("2017"), &["Banda-Leal", "Manuel Nevárez-de los Reyes", "Bryson"])
+        .comb_authors(
+            Some("2017"),
+            &["Banda-Leal", "Manuel Nevárez-de los Reyes", "Bryson"],
+        )
         .code(NomCode::Zoological)
         .nothing_else();
 
-    assert_name("Lynceus huentelauquensis  Sigvardt, Rogers, De los Ríos, Palero, and Olesen, 2019")
-        .species("Lynceus", "huentelauquensis")
-        .comb_authors(Some("2019"), &["Sigvardt", "Rogers", "De los Ríos", "Palero", "Olesen"])
-        .code(NomCode::Zoological)
-        .nothing_else();
+    assert_name(
+        "Lynceus huentelauquensis  Sigvardt, Rogers, De los Ríos, Palero, and Olesen, 2019",
+    )
+    .species("Lynceus", "huentelauquensis")
+    .comb_authors(
+        Some("2019"),
+        &["Sigvardt", "Rogers", "De los Ríos", "Palero", "Olesen"],
+    )
+    .code(NomCode::Zoological)
+    .nothing_else();
 
     assert_name("Echiophis brunneus (Castro-Aguirre & Suárez de los Cobos, 1983)")
         .species("Echiophis", "brunneus")

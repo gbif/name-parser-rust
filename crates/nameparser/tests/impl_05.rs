@@ -35,11 +35,20 @@ fn published_in_year() {
         None,
     )
     .unwrap();
-    assert_eq!(n2.published_in.as_deref(), Some("Actes Soc. Hist. Nat. Paris 1: 109 (1792)"));
+    assert_eq!(
+        n2.published_in.as_deref(),
+        Some("Actes Soc. Hist. Nat. Paris 1: 109 (1792)")
+    );
     assert_eq!(n2.published_in_year, Some(1792));
 
     // a reference without a year → null
-    let n3 = parse("Xolisma turquini Small apud Britton & Wilson", None, None, None).unwrap();
+    let n3 = parse(
+        "Xolisma turquini Small apud Britton & Wilson",
+        None,
+        None,
+        None,
+    )
+    .unwrap();
     assert_eq!(n3.published_in.as_deref(), Some("Britton & Wilson"));
     assert_eq!(n3.published_in_year, None);
 }
@@ -221,7 +230,9 @@ fn hybrid_formulas() {
 
     assert_hybrid_formula("Asplenium rhizophyllum DC. x ruta-muraria E.L. Braun 1939");
     assert_hybrid_formula("Arthopyrenia hyalospora X Hydnellum scrobiculatum");
-    assert_hybrid_formula("Arthopyrenia hyalospora (Banker) D. Hall X Hydnellum scrobiculatum D.E. Stuntz");
+    assert_hybrid_formula(
+        "Arthopyrenia hyalospora (Banker) D. Hall X Hydnellum scrobiculatum D.E. Stuntz",
+    );
     assert_hybrid_formula("Arthopyrenia hyalospora × ? ");
     assert_hybrid_formula("Agrostis L. × Polypogon Desf. ");
     assert_hybrid_formula("Agrostis stolonifera L. × Polypogon monspeliensis (L.) Desf. ");
@@ -275,12 +286,29 @@ fn o_tu() {
     assert_unparsable("SH191814.04FU", NameType::Other);
     assert_unparsable("BOLD:ACW2100", NameType::Other);
     assert_unparsable("BOLD:ACW2100", NameType::Other);
-    assert_unparsable_name(" BOLD:ACW2100 ", Rank::Unranked, NameType::Other, "BOLD:ACW2100");
-    assert_unparsable_name("Festuca sp. BOLD:ACW2100", Rank::Unranked, NameType::Other, "BOLD:ACW2100");
-    assert_unparsable_name("sh460441.07fu", Rank::Unranked, NameType::Other, "SH460441.07FU");
+    assert_unparsable_name(
+        " BOLD:ACW2100 ",
+        Rank::Unranked,
+        NameType::Other,
+        "BOLD:ACW2100",
+    );
+    assert_unparsable_name(
+        "Festuca sp. BOLD:ACW2100",
+        Rank::Unranked,
+        NameType::Other,
+        "BOLD:ACW2100",
+    );
+    assert_unparsable_name(
+        "sh460441.07fu",
+        Rank::Unranked,
+        NameType::Other,
+        "SH460441.07FU",
+    );
 
     // no OTU names
-    assert_name("Boldenaria").monomial("Boldenaria").nothing_else();
+    assert_name("Boldenaria")
+        .monomial("Boldenaria")
+        .nothing_else();
 
     assert_name("Boldea").monomial("Boldea").nothing_else();
 
@@ -635,22 +663,26 @@ fn author_variations() {
         .code(NomCode::Botanical)
         .nothing_else();
 
-    assert_name("Abies alba (Huguet del Villar) S. Rivas-Martínez, F. Fernández González & D. Sánchez-Mata")
-        .species("Abies", "alba")
-        .bas_authors(None, &["Huguet del Villar"])
-        .comb_authors(
-            None,
-            &["S.Rivas-Martínez", "F.Fernández González", "D.Sánchez-Mata"],
-        )
-        .code(NomCode::Botanical)
-        .nothing_else();
+    assert_name(
+        "Abies alba (Huguet del Villar) S. Rivas-Martínez, F. Fernández González & D. Sánchez-Mata",
+    )
+    .species("Abies", "alba")
+    .bas_authors(None, &["Huguet del Villar"])
+    .comb_authors(
+        None,
+        &["S.Rivas-Martínez", "F.Fernández González", "D.Sánchez-Mata"],
+    )
+    .code(NomCode::Botanical)
+    .nothing_else();
 
-    assert_name("Sida kohautiana var. corchorifolia (H. da C. Monteiro Filho) H. da C. Monteiro Filho")
-        .infra_species("Sida", "kohautiana", Rank::Variety, "corchorifolia")
-        .bas_authors(None, &["H.da C.Monteiro Filho"])
-        .comb_authors(None, &["H.da C.Monteiro Filho"])
-        .code(NomCode::Botanical)
-        .nothing_else();
+    assert_name(
+        "Sida kohautiana var. corchorifolia (H. da C. Monteiro Filho) H. da C. Monteiro Filho",
+    )
+    .infra_species("Sida", "kohautiana", Rank::Variety, "corchorifolia")
+    .bas_authors(None, &["H.da C.Monteiro Filho"])
+    .comb_authors(None, &["H.da C.Monteiro Filho"])
+    .code(NomCode::Botanical)
+    .nothing_else();
 
     assert_name("Stenosigma humerale Giordani Soika, 1990")
         .species("Stenosigma", "humerale")
@@ -670,7 +702,12 @@ fn author_variations() {
         .nothing_else();
 
     assert_name("Tetralobus flabellicornis subsp. flabellicornis (Linnaeus, 1767) Linnaeus 1767")
-        .infra_species("Tetralobus", "flabellicornis", Rank::Subspecies, "flabellicornis")
+        .infra_species(
+            "Tetralobus",
+            "flabellicornis",
+            Rank::Subspecies,
+            "flabellicornis",
+        )
         .bas_authors(Some("1767"), &["Linnaeus"])
         .comb_authors(Some("1767"), &["Linnaeus"])
         .nothing_else();

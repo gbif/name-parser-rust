@@ -59,7 +59,12 @@ fn sic() {
         .nothing_else();
 
     assert_name("Cochlostyla (Dryocochlias) satyrus palawanensis [sic]")
-        .infra_species("Cochlostyla", "satyrus", Rank::InfraspecificName, "palawanensis")
+        .infra_species(
+            "Cochlostyla",
+            "satyrus",
+            Rank::InfraspecificName,
+            "palawanensis",
+        )
         .infrageneric("Dryocochlias")
         .sic()
         .nothing_else();
@@ -70,7 +75,12 @@ fn sic() {
         .nothing_else();
 
     assert_name("†Melanopsis (Melanopsis) pterochyla pterochyla [sic]")
-        .infra_species("Melanopsis", "pterochyla", Rank::InfraspecificName, "pterochyla")
+        .infra_species(
+            "Melanopsis",
+            "pterochyla",
+            Rank::InfraspecificName,
+            "pterochyla",
+        )
         .infrageneric("Melanopsis")
         .extinct()
         .sic()
@@ -194,7 +204,12 @@ fn square_genera() {
 #[test]
 fn tinfr() {
     assert_name("Hieracium vulgatum t.infr. arrectariicaule Sudre")
-        .infra_species("Hieracium", "vulgatum", Rank::InfraspecificName, "arrectariicaule")
+        .infra_species(
+            "Hieracium",
+            "vulgatum",
+            Rank::InfraspecificName,
+            "arrectariicaule",
+        )
         .comb_authors(None, &["Sudre"])
         .nothing_else();
 }

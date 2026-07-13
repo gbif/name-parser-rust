@@ -35,7 +35,10 @@ fn unparsable_virus_carries_type_and_code() {
 fn authorship_helpers_parse_bare_authorship() {
     // Java-authoritative from testAuthorteam.
     assert_authorship("Petzold & G.Kirchn.", &["Petzold", "G.Kirchn."]);
-    assert_authorship("Balsamo M Fregni E Tongiorgi MA", &["M.Balsamo", "E.Fregni", "M.A.Tongiorgi"]);
+    assert_authorship(
+        "Balsamo M Fregni E Tongiorgi MA",
+        &["M.Balsamo", "E.Fregni", "M.A.Tongiorgi"],
+    );
     assert_single_author("L.");
     assert_single_author("C.E.M.Bicudo");
 }

@@ -571,7 +571,12 @@ fn write_dry_run_report(
         writeln!(
             writer,
             "{}",
-            render_row_with_verdict(item.line as u64, &item.input, &item.outcome, verdict.as_ref())
+            render_row_with_verdict(
+                item.line as u64,
+                &item.input,
+                &item.outcome,
+                verdict.as_ref()
+            )
         )?;
     }
     writer.flush()
@@ -1815,7 +1820,10 @@ mod tests {
         // must too — previously it opened the cache but never read it on the dry-run path.
         let dir = temp_dir_for("dry-run-cache");
         let output = dir.join("report.jsonl");
-        let items = vec![ok_item(1, "Abies alba Mill."), ok_item(2, "Quercus robur L.")];
+        let items = vec![
+            ok_item(1, "Abies alba Mill."),
+            ok_item(2, "Quercus robur L."),
+        ];
         let model = "claude-opus-4-8"; // what resolve_model("anthropic", None) yields
         let mut cache = cache::VerdictCache::disabled();
         // Pre-populate a verdict for item 1 ONLY, keyed exactly as the dry-run path looks it up.

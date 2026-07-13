@@ -170,7 +170,12 @@ fn manuscript_names() {
     // `species()` requires a real epithet `&str`, so this reproduces assert_phrase_name's own
     // checks (canonical, phrase, rank, type) plus the genus/epithet-absent assertions directly
     // — the same DSL-gap workaround as impl_04's "Lepidoptera sp. JGP0404" case.
-    assert_phrase_name("Verticordia sp.1", "Verticordia sp. 1", Some(Rank::Species), "1");
+    assert_phrase_name(
+        "Verticordia sp.1",
+        "Verticordia sp. 1",
+        Some(Rank::Species),
+        "1",
+    );
     let n = nameparser::parse("Verticordia sp.1", None, None, None)
         .expect("`Verticordia sp.1` should parse");
     assert!(n.uninomial.is_none());
@@ -181,7 +186,12 @@ fn manuscript_names() {
 
     // Spelled-out "species N" placeholder keeps the verbatim marker word in the phrase and
     // renders it as-is ("Allium species 1"), not collapsed to the synthetic "sp." marker.
-    assert_phrase_name("Allium species 1", "Allium species 1", Some(Rank::Species), "species 1");
+    assert_phrase_name(
+        "Allium species 1",
+        "Allium species 1",
+        Some(Rank::Species),
+        "species 1",
+    );
     let n = nameparser::parse("Allium species 1", None, None, None)
         .expect("`Allium species 1` should parse");
     assert!(n.uninomial.is_none());
@@ -212,8 +222,13 @@ fn phrase_names() {
     // below, which has real authorship). `phraseIndetName` itself is a `NameAssertion` instance
     // method with no DSL equivalent, so each case below is a direct parse + field assertions
     // instead — the same DSL-gap workaround as impl_04's "Lepidoptera sp. JGP0404" case.
-    let n = nameparser::parse("Prostanthera sp. Somersbey (B.J.Conn 4024)", None, None, None)
-        .expect("`Prostanthera sp. Somersbey (B.J.Conn 4024)` should parse");
+    let n = nameparser::parse(
+        "Prostanthera sp. Somersbey (B.J.Conn 4024)",
+        None,
+        None,
+        None,
+    )
+    .expect("`Prostanthera sp. Somersbey (B.J.Conn 4024)` should parse");
     assert!(n.uninomial.is_none());
     assert_eq!(n.genus.as_deref(), Some("Prostanthera"));
     assert!(n.infrageneric_epithet.is_none());
@@ -247,7 +262,10 @@ fn phrase_names() {
     assert!(n3.specific_epithet.is_none());
     assert!(n3.infraspecific_epithet.is_none());
     assert_eq!(n3.rank, Rank::Species);
-    assert_eq!(n3.phrase.as_deref(), Some("Sandheath (D.Murfet 3190) R.J.Bates"));
+    assert_eq!(
+        n3.phrase.as_deref(),
+        Some("Sandheath (D.Murfet 3190) R.J.Bates")
+    );
     assert_eq!(n3.type_, NameType::Informal);
 
     // Check to make sure base name is parsed before haring off into the wilderness
@@ -283,7 +301,9 @@ fn phrase_names() {
         None,
         None,
     )
-    .expect("`Dampiera sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)` should parse");
+    .expect(
+        "`Dampiera sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)` should parse",
+    );
     assert!(n5.uninomial.is_none());
     assert_eq!(n5.genus.as_deref(), Some("Dampiera"));
     assert!(n5.infrageneric_epithet.is_none());
@@ -336,15 +356,23 @@ fn phrase_names() {
     );
     assert_eq!(n7.type_, NameType::Informal);
 
-    let n8 = nameparser::parse("Acacia sp. Mount Hilditch (M.E. Trudgen 19134)", None, None, None)
-        .expect("`Acacia sp. Mount Hilditch (M.E. Trudgen 19134)` should parse");
+    let n8 = nameparser::parse(
+        "Acacia sp. Mount Hilditch (M.E. Trudgen 19134)",
+        None,
+        None,
+        None,
+    )
+    .expect("`Acacia sp. Mount Hilditch (M.E. Trudgen 19134)` should parse");
     assert!(n8.uninomial.is_none());
     assert_eq!(n8.genus.as_deref(), Some("Acacia"));
     assert!(n8.infrageneric_epithet.is_none());
     assert!(n8.specific_epithet.is_none());
     assert!(n8.infraspecific_epithet.is_none());
     assert_eq!(n8.rank, Rank::Species);
-    assert_eq!(n8.phrase.as_deref(), Some("Mount Hilditch (M.E. Trudgen 19134)"));
+    assert_eq!(
+        n8.phrase.as_deref(),
+        Some("Mount Hilditch (M.E. Trudgen 19134)")
+    );
     assert_eq!(n8.type_, NameType::Informal);
 }
 
@@ -360,14 +388,10 @@ fn all_caps_authors_with_page() {
 
 #[test]
 fn test_cultivar_pattern() {
-    assert_name("Abutilon 'Kentish Belle'")
-        .cultivar("Abutilon", "Kentish Belle");
-    assert_name("Abutilon 'Nabob'")
-        .cultivar("Abutilon", "Nabob");
-    assert_name("Abutilon \"Dall\"")
-        .cultivar("Abutilon", "Dall");
-    assert_name("Arachis pintoi cv. 'Belmonte'")
-        .cultivar_sp("Arachis", "pintoi", "Belmonte");
+    assert_name("Abutilon 'Kentish Belle'").cultivar("Abutilon", "Kentish Belle");
+    assert_name("Abutilon 'Nabob'").cultivar("Abutilon", "Nabob");
+    assert_name("Abutilon \"Dall\"").cultivar("Abutilon", "Dall");
+    assert_name("Arachis pintoi cv. 'Belmonte'").cultivar_sp("Arachis", "pintoi", "Belmonte");
     assert_name("Sorbus hupehensis C.K.Schneid. cv. 'November pink'")
         .cultivar_sp("Sorbus", "hupehensis", "November pink")
         .comb_authors(None, &["C.K.Schneid."]);
@@ -427,7 +451,12 @@ fn senior_epithet() {
         .nothing_else();
 
     assert_name("Xylocopa (Koptortosoma) senior clitelligera Friese")
-        .infra_species("Xylocopa", "senior", Rank::InfraspecificName, "clitelligera")
+        .infra_species(
+            "Xylocopa",
+            "senior",
+            Rank::InfraspecificName,
+            "clitelligera",
+        )
         .infrageneric("Koptortosoma")
         .comb_authors(None, &["Friese"])
         .nothing_else();

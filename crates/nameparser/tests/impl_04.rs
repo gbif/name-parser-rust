@@ -199,11 +199,13 @@ fn todo_names() {
         .published_in("Kuntze ex Kuntze")
         .nothing_else();
 
-    assert_name("Pseudostenophylax clavatus Tian & Li in Tian, Li, Yang & Sun, in Chen, editor, 1993")
-        .species("Pseudostenophylax", "clavatus")
-        .comb_authors(Some("1993"), &["Tian", "Li"])
-        .published_in("Tian, Li, Yang & Sun, in Chen, editor, 1993")
-        .nothing_else();
+    assert_name(
+        "Pseudostenophylax clavatus Tian & Li in Tian, Li, Yang & Sun, in Chen, editor, 1993",
+    )
+    .species("Pseudostenophylax", "clavatus")
+    .comb_authors(Some("1993"), &["Tian", "Li"])
+    .published_in("Tian, Li, Yang & Sun, in Chen, editor, 1993")
+    .nothing_else();
 
     assert_name("Kanimia nitida (DC:) Baker")
         .species("Kanimia", "nitida")
@@ -329,10 +331,12 @@ fn todo_names_unsupported() {
         .code(NomCode::Botanical);
 
     // basionym Grunow (publ. in Cleve & Müller), combination D.G. Mann (in Round et al., 1990).
-    assert_name("Tryblionella marginulata (Grunow in Cleve & M?ller) D.G. Mann in Round et al., 1990")
-        .species("Tryblionella", "marginulata")
-        .bas_authors(None, &["Grunow"])
-        .comb_authors(None, &["D.G.Mann"]);
+    assert_name(
+        "Tryblionella marginulata (Grunow in Cleve & M?ller) D.G. Mann in Round et al., 1990",
+    )
+    .species("Tryblionella", "marginulata")
+    .bas_authors(None, &["Grunow"])
+    .comb_authors(None, &["D.G.Mann"]);
 
     // The trailing "?" must not survive inside the year ("1978?").
     assert_name("Psilopteryx psorosa subsp. retezatica Botosaneanu & ?Schneider, 1978?")
@@ -369,7 +373,10 @@ fn rank_explicit() {
 
     // higher ranks should be marked as doubtful
     for r in Rank::ALL {
-        if r.other_or_unranked() || r.is_species_or_below() || r.get_major_rank() == Rank::DivisionZoology {
+        if r.other_or_unranked()
+            || r.is_species_or_below()
+            || r.get_major_rank() == Rank::DivisionZoology
+        {
             continue;
         }
         let mut ass = assert_name_rank("Achillea millefolium L.", r)
@@ -439,19 +446,39 @@ fn candidatus() {
 #[test]
 fn odd_fungi_ranks() {
     assert_name("Cyphelium disseminatum ⍺ subsessile")
-        .infra_species("Cyphelium", "disseminatum", Rank::InfraspecificName, "subsessile")
+        .infra_species(
+            "Cyphelium",
+            "disseminatum",
+            Rank::InfraspecificName,
+            "subsessile",
+        )
         .nothing_else();
 
     assert_name("Capitularia fimbriata *** carpophora")
-        .infra_species("Capitularia", "fimbriata", Rank::InfraspecificName, "carpophora")
+        .infra_species(
+            "Capitularia",
+            "fimbriata",
+            Rank::InfraspecificName,
+            "carpophora",
+        )
         .nothing_else();
 
     assert_name("Cyphelium disseminatum c subsessile")
-        .infra_species("Cyphelium", "disseminatum", Rank::InfraspecificName, "subsessile")
+        .infra_species(
+            "Cyphelium",
+            "disseminatum",
+            Rank::InfraspecificName,
+            "subsessile",
+        )
         .nothing_else();
 
     assert_name("Cyphelium disseminatum g subsessile")
-        .infra_species("Cyphelium", "disseminatum", Rank::InfraspecificName, "subsessile")
+        .infra_species(
+            "Cyphelium",
+            "disseminatum",
+            Rank::InfraspecificName,
+            "subsessile",
+        )
         .nothing_else();
 }
 
@@ -459,11 +486,21 @@ fn odd_fungi_ranks() {
 #[ignore = "very odd names - rare and no priority"]
 fn odd_fungi_ranks_unsupported() {
     assert_name("Capitularia fimbriata ⍺ vulgaris 3 tubaeformis *** carpophora")
-        .infra_species("Capitularia", "fimbriata", Rank::InfraspecificName, "carpophora")
+        .infra_species(
+            "Capitularia",
+            "fimbriata",
+            Rank::InfraspecificName,
+            "carpophora",
+        )
         .nothing_else();
 
     assert_name("Capitularia pyxidata ß longipes H. carpophora Floerke")
-        .infra_species("Capitularia", "pyxidata", Rank::InfraspecificName, "carpophora")
+        .infra_species(
+            "Capitularia",
+            "pyxidata",
+            Rank::InfraspecificName,
+            "carpophora",
+        )
         .nothing_else();
 }
 
@@ -489,7 +526,10 @@ fn strains() {
     // type) plus the genus/epithet-absent assertions directly, the same workaround as above.
     let n2 = nameparser::parse("Lepidoptera sp. JGP0404", None, None, None)
         .expect("`Lepidoptera sp. JGP0404` should parse");
-    assert_eq!(n2.canonical_name().as_deref(), Some("Lepidoptera sp. JGP0404"));
+    assert_eq!(
+        n2.canonical_name().as_deref(),
+        Some("Lepidoptera sp. JGP0404")
+    );
     assert_eq!(n2.rank, Rank::Species);
     assert_eq!(n2.type_, NameType::Informal);
     assert!(n2.uninomial.is_none());
@@ -515,11 +555,14 @@ fn strains() {
 #[test]
 fn strain_designations() {
     // glued dot before the quote, with a redundant leading "strain" marker
-    assert_name_rank("Aphanizomenon flos-aquae strain str .'Aph K2'", Rank::Strain)
-        .binomial("Aphanizomenon", None, "flos-aquae", Rank::Strain)
-        .phrase("Aph K2")
-        .type_(NameType::Informal)
-        .nothing_else();
+    assert_name_rank(
+        "Aphanizomenon flos-aquae strain str .'Aph K2'",
+        Rank::Strain,
+    )
+    .binomial("Aphanizomenon", None, "flos-aquae", Rank::Strain)
+    .phrase("Aph K2")
+    .type_(NameType::Informal)
+    .nothing_else();
 
     // "str ." spaced dot + glued quote
     assert_name_rank("Aphanizomenon flos-aquae str .'Aph K2'", Rank::Strain)
@@ -536,11 +579,14 @@ fn strain_designations() {
         .nothing_else();
 
     // designation with digits and slashes stays verbatim
-    assert_name_rank("Aphanizomenon gracile str .'Heaney 1986/Camb140 1/1'", Rank::Strain)
-        .binomial("Aphanizomenon", None, "gracile", Rank::Strain)
-        .phrase("Heaney 1986/Camb140 1/1")
-        .type_(NameType::Informal)
-        .nothing_else();
+    assert_name_rank(
+        "Aphanizomenon gracile str .'Heaney 1986/Camb140 1/1'",
+        Rank::Strain,
+    )
+    .binomial("Aphanizomenon", None, "gracile", Rank::Strain)
+    .phrase("Heaney 1986/Camb140 1/1")
+    .type_(NameType::Informal)
+    .nothing_else();
 }
 
 /// A name carrying an explicit infraspecific rank marker keeps that specific rank (SUBSPECIES,
@@ -549,19 +595,32 @@ fn strain_designations() {
 #[test]
 fn explicit_marker_keeps_specific_rank() {
     assert_eq!(
-        nameparser::parse("Canis lupus subsp. Linnaeus, 1758", None, None, None).unwrap().rank,
+        nameparser::parse("Canis lupus subsp. Linnaeus, 1758", None, None, None)
+            .unwrap()
+            .rank,
         Rank::Subspecies
     );
     assert_eq!(
-        nameparser::parse("Nitzschia sinuata var. (Grunow) Lange-Bert.", None, None, None).unwrap().rank,
+        nameparser::parse(
+            "Nitzschia sinuata var. (Grunow) Lange-Bert.",
+            None,
+            None,
+            None
+        )
+        .unwrap()
+        .rank,
         Rank::Variety
     );
     assert_eq!(
-        nameparser::parse("Aphelocoma californica subsp.", None, None, None).unwrap().rank,
+        nameparser::parse("Aphelocoma californica subsp.", None, None, None)
+            .unwrap()
+            .rank,
         Rank::Subspecies
     );
     assert_eq!(
-        nameparser::parse("Aus bus var.", None, None, None).unwrap().rank,
+        nameparser::parse("Aus bus var.", None, None, None)
+            .unwrap()
+            .rank,
         Rank::Variety
     );
 }

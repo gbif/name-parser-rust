@@ -127,7 +127,9 @@ fn string_index_out_of_bounds_exception() {
     assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & Y.H.Tseng ");
     assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp  Y.H.Tseng ");
     assert_name("Salix morrisonicola var. takasagoalpina (Koidz.) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp; Y.H.Tseng");
-    assert_name("Ficus ernanii Carauta, Pederneir., P.P.Souza, A.F.P.Machado, M.D.M.Vianna & amp; Romaniuc");
+    assert_name(
+        "Ficus ernanii Carauta, Pederneir., P.P.Souza, A.F.P.Machado, M.D.M.Vianna & amp; Romaniuc",
+    );
 }
 
 #[test]
@@ -346,7 +348,13 @@ fn test_authorteam() {
     assert_single_author("Linnaeus filius");
     assert_authorship(
         "Bollmann, M.Y.Cortés, Kleijne, J.B.Østerg. & Jer.R.Young",
-        &["Bollmann", "M.Y.Cortés", "Kleijne", "J.B.Østerg.", "Jer.R.Young"],
+        &[
+            "Bollmann",
+            "M.Y.Cortés",
+            "Kleijne",
+            "J.B.Østerg.",
+            "Jer.R.Young",
+        ],
     );
     assert_authorship(
         "Branco, M.T.P.Azevedo, Sant'Anna & Komárek",

@@ -1157,7 +1157,11 @@ mod tests {
 
     #[test]
     fn render_row_includes_code_when_present() {
-        let err = ParseError::new(NameType::Other, Some(NomCode::Virus), "Tobacco mosaic virus");
+        let err = ParseError::new(
+            NameType::Other,
+            Some(NomCode::Virus),
+            "Tobacco mosaic virus",
+        );
         let row = render_row(1, "Tobacco mosaic virus", &Err(err));
         assert_eq!(
             row,
@@ -1224,7 +1228,7 @@ mod tests {
     #[test]
     fn percentile_matches_the_java_nearest_rank_formula_on_a_10_element_series() {
         let sorted: Vec<u64> = (1..=10).collect(); // 1..=10
-        // ceil(50/100 * 10) - 1 = 4 -> sorted[4] == 5
+                                                   // ceil(50/100 * 10) - 1 = 4 -> sorted[4] == 5
         assert_eq!(percentile(&sorted, 50), 5);
         // ceil(95/100 * 10) - 1 = ceil(9.5) - 1 = 10 - 1 = 9 -> sorted[9] == 10
         assert_eq!(percentile(&sorted, 95), 10);
@@ -1256,7 +1260,9 @@ mod tests {
             },
         };
         let mut buf: Vec<u8> = Vec::new();
-        report.print(&mut buf).expect("writing to a Vec<u8> cannot fail");
+        report
+            .print(&mut buf)
+            .expect("writing to a Vec<u8> cannot fail");
         let out = String::from_utf8(buf).expect("report is ASCII/UTF-8");
         assert_eq!(
             out,
@@ -1282,7 +1288,9 @@ mod tests {
             by_type: [0u64; NAME_TYPE_COUNT],
         };
         let mut buf: Vec<u8> = Vec::new();
-        report.print(&mut buf).expect("writing to a Vec<u8> cannot fail");
+        report
+            .print(&mut buf)
+            .expect("writing to a Vec<u8> cannot fail");
         assert_eq!(String::from_utf8(buf).unwrap(), "No timings collected.\n");
     }
 

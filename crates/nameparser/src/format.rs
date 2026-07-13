@@ -335,7 +335,13 @@ fn append_rank_marker(
 }
 
 /// Java `NameFormatter.appendGenus(sb, n, hybridMarker, showQualifier, html)`.
-fn append_genus(sb: &mut String, n: &ParsedName, hybrid_marker: bool, show_qualifier: bool, html: bool) {
+fn append_genus(
+    sb: &mut String,
+    n: &ParsedName,
+    hybrid_marker: bool,
+    show_qualifier: bool,
+    html: bool,
+) {
     if show_qualifier && n.has_epithet_qualifier(NamePart::Generic) {
         sb.push_str(qualifier(n, NamePart::Generic));
         sb.push(' ');
@@ -424,7 +430,12 @@ fn join_authors(authors: &[String], max_authors: Option<usize>) -> String {
 }
 
 /// Java `NameFormatter.appendAuthorship(StringBuilder, Authorship, boolean, NomCode)`.
-fn append_authorship(sb: &mut String, auth: &Authorship, include_year: bool, code: Option<NomCode>) {
+fn append_authorship(
+    sb: &mut String,
+    auth: &Authorship,
+    include_year: bool,
+    code: Option<NomCode>,
+) {
     if !auth.exists() {
         return;
     }
@@ -505,7 +516,12 @@ fn append_name_authorship(sb: &mut String, n: &ParsedName, include_year: bool) {
 }
 
 /// Append a nested `CombinedAuthorship` slot (generic or specific authorship).
-fn append_combined_authorship(sb: &mut String, c: &CombinedAuthorship, include_year: bool, code: Option<NomCode>) {
+fn append_combined_authorship(
+    sb: &mut String,
+    c: &CombinedAuthorship,
+    include_year: bool,
+    code: Option<NomCode>,
+) {
     append_authorship_parts(
         sb,
         &c.basionym_authorship,
@@ -932,7 +948,10 @@ mod tests {
             Some("Abies alba")
         );
         assert_eq!(n.canonical_name_minimal().as_deref(), Some("Abies alba"));
-        assert_eq!(n.canonical_name_complete().as_deref(), Some("Abies alba Mill."));
+        assert_eq!(
+            n.canonical_name_complete().as_deref(),
+            Some("Abies alba Mill.")
+        );
         assert_eq!(n.authorship_complete().as_deref(), Some("Mill."));
     }
 
@@ -961,9 +980,15 @@ mod tests {
     #[test]
     fn botanical_autonym_keeps_marker_but_minimal_drops_it() {
         let n = p("Acer rubrum var. rubrum");
-        assert_eq!(n.canonical_name().as_deref(), Some("Acer rubrum var. rubrum"));
+        assert_eq!(
+            n.canonical_name().as_deref(),
+            Some("Acer rubrum var. rubrum")
+        );
         // canonicalMinimal drops the rank marker: three bare epithets.
-        assert_eq!(n.canonical_name_minimal().as_deref(), Some("Acer rubrum rubrum"));
+        assert_eq!(
+            n.canonical_name_minimal().as_deref(),
+            Some("Acer rubrum rubrum")
+        );
     }
 
     #[test]
@@ -1030,7 +1055,10 @@ mod tests {
     #[test]
     fn notho_genus_hybrid_marker_with_space() {
         let n = p("×Agropogon littoralis");
-        assert_eq!(n.canonical_name().as_deref(), Some("× Agropogon littoralis"));
+        assert_eq!(
+            n.canonical_name().as_deref(),
+            Some("× Agropogon littoralis")
+        );
         // minimal drops the hybrid marker.
         assert_eq!(
             n.canonical_name_minimal().as_deref(),
@@ -1045,7 +1073,10 @@ mod tests {
             n.canonical_name().as_deref(),
             Some("Salix × capreola Andersson")
         );
-        assert_eq!(n.canonical_name_minimal().as_deref(), Some("Salix capreola"));
+        assert_eq!(
+            n.canonical_name_minimal().as_deref(),
+            Some("Salix capreola")
+        );
     }
 
     #[test]
@@ -1055,7 +1086,10 @@ mod tests {
             n.canonical_name().as_deref(),
             Some("Acer campestre 'Elsrijk'")
         );
-        assert_eq!(n.canonical_name_minimal().as_deref(), Some("Acer campestre"));
+        assert_eq!(
+            n.canonical_name_minimal().as_deref(),
+            Some("Acer campestre")
+        );
     }
 
     #[test]
@@ -1073,7 +1107,10 @@ mod tests {
     #[test]
     fn minimal_folds_ligatures_and_diacritics_to_ascii() {
         // decompose expands the "æ" ligature; foldToAscii's NFD strips the "ü" umlaut.
-        assert_eq!(p("Læptura").canonical_name_minimal().as_deref(), Some("Laeptura"));
+        assert_eq!(
+            p("Læptura").canonical_name_minimal().as_deref(),
+            Some("Laeptura")
+        );
         assert_eq!(
             p("Rübsaamenia excelsa").canonical_name_minimal().as_deref(),
             Some("Rubsaamenia excelsa")
@@ -1098,13 +1135,18 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(pn.canonical_name().as_deref(), Some("Aaa bbb null"));
-        assert_eq!(pn.canonical_name_complete().as_deref(), Some("Aaa bbb null"));
+        assert_eq!(
+            pn.canonical_name_complete().as_deref(),
+            Some("Aaa bbb null")
+        );
     }
 
     #[test]
     fn complete_html_italicises_name_parts() {
         assert_eq!(
-            p("Abies alba Mill.").canonical_name_complete_html().as_deref(),
+            p("Abies alba Mill.")
+                .canonical_name_complete_html()
+                .as_deref(),
             Some("<i>Abies</i> <i>alba</i> Mill.")
         );
         // notho marker sits (un-italicised) between the italic parts.

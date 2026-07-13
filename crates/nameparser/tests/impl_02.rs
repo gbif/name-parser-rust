@@ -212,13 +212,15 @@ fn author_with_publication() {
         .nom_note("pro syn.")
         .nothing_else();
 
-    assert_name("Aegiphila pyramidata Rich. ex Moldenke, Phytologia 1: 204, in obs., pro syn. (1937).")
-        .species("Aegiphila", "pyramidata")
-        .comb_authors(Some("1937"), &["Moldenke"])
-        .comb_ex_authors(&["Rich."])
-        .published_in("Phytologia 1: 204, (1937)")
-        .nom_note("in obs., pro syn.")
-        .nothing_else();
+    assert_name(
+        "Aegiphila pyramidata Rich. ex Moldenke, Phytologia 1: 204, in obs., pro syn. (1937).",
+    )
+    .species("Aegiphila", "pyramidata")
+    .comb_authors(Some("1937"), &["Moldenke"])
+    .comb_ex_authors(&["Rich."])
+    .published_in("Phytologia 1: 204, (1937)")
+    .nom_note("in obs., pro syn.")
+    .nothing_else();
 
     assert_name("Amplexoididae Wang, Guang-Xu in Wang, He, Tang & Percival, 2018")
         .monomial("Amplexoididae")
@@ -226,11 +228,13 @@ fn author_with_publication() {
         .published_in("Wang, He, Tang & Percival, 2018")
         .nothing_else();
 
-    assert_name("Roelofinae St Laurent & Kawahara in St Laurent, Mielke, Herbin, Dexter & Kawahara 2020")
-        .monomial("Roelofinae")
-        .comb_authors(Some("2020"), &["St Laurent", "Kawahara"])
-        .published_in("St Laurent, Mielke, Herbin, Dexter & Kawahara 2020")
-        .nothing_else();
+    assert_name(
+        "Roelofinae St Laurent & Kawahara in St Laurent, Mielke, Herbin, Dexter & Kawahara 2020",
+    )
+    .monomial("Roelofinae")
+    .comb_authors(Some("2020"), &["St Laurent", "Kawahara"])
+    .published_in("St Laurent, Mielke, Herbin, Dexter & Kawahara 2020")
+    .nothing_else();
 
     assert_name("Charlottea Whalen & Carter in Carter, Whalen & Guex, 1998")
         .monomial("Charlottea")

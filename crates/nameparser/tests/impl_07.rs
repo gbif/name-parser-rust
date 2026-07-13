@@ -39,13 +39,53 @@ fn long_name() {
         .comb_authors(
             Some("2015"),
             &[
-                "Berger", "Hawks", "de Ruiter", "Churchill", "Schmid", "Delezene", "Kivell",
-                "Garvin", "Williams", "DeSilva", "Skinner", "Musiba", "Cameron", "Holliday",
-                "Harcourt-Smith", "Ackermann", "Bastir", "Bogin", "Bolter", "Brophy", "Cofran",
-                "Congdon", "Deane", "Dembo", "Drapeau", "Elliott", "Feuerriegel",
-                "Garcia-Martinez", "Green", "Gurtov", "Irish", "Kruger", "Laird", "Marchi",
-                "Meyer", "Nalla", "Negash", "Orr", "Radovcic", "Schroeder", "Scott",
-                "Throckmorton", "Tocheri", "VanSickle", "Walker", "Wei", "Zipfel",
+                "Berger",
+                "Hawks",
+                "de Ruiter",
+                "Churchill",
+                "Schmid",
+                "Delezene",
+                "Kivell",
+                "Garvin",
+                "Williams",
+                "DeSilva",
+                "Skinner",
+                "Musiba",
+                "Cameron",
+                "Holliday",
+                "Harcourt-Smith",
+                "Ackermann",
+                "Bastir",
+                "Bogin",
+                "Bolter",
+                "Brophy",
+                "Cofran",
+                "Congdon",
+                "Deane",
+                "Dembo",
+                "Drapeau",
+                "Elliott",
+                "Feuerriegel",
+                "Garcia-Martinez",
+                "Green",
+                "Gurtov",
+                "Irish",
+                "Kruger",
+                "Laird",
+                "Marchi",
+                "Meyer",
+                "Nalla",
+                "Negash",
+                "Orr",
+                "Radovcic",
+                "Schroeder",
+                "Scott",
+                "Throckmorton",
+                "Tocheri",
+                "VanSickle",
+                "Walker",
+                "Wei",
+                "Zipfel",
             ],
         )
         .sensu(&format!("sec. {authors}"))
@@ -85,7 +125,12 @@ fn long_name() {
     long_authorship.push_str("2015");
     // Direct-parse fallback for Java's `parser.parseAuthorship(...)` try/catch expecting an
     // UnparsableNameException with type OTHER.
-    match nameparser::parse("Abies alba", Some(&long_authorship), Some(Rank::Species), None) {
+    match nameparser::parse(
+        "Abies alba",
+        Some(&long_authorship),
+        Some(Rank::Species),
+        None,
+    ) {
         Err(e) => assert_eq!(e.type_, NameType::Other),
         Ok(pn) => panic!("expected over-long authorship to be rejected, got: {pn:?}"),
     }
@@ -148,12 +193,21 @@ fn taxonomic_notes() {
         .sensu("according to Hollerback & Krasavina, 1971")
         .nothing_else();
 
-    assert_sensu("Vespa emarginata Linnaeus, 1758: Fabricius, 1793", "Fabricius, 1793");
+    assert_sensu(
+        "Vespa emarginata Linnaeus, 1758: Fabricius, 1793",
+        "Fabricius, 1793",
+    );
     assert_sensu("Trifolium repens sensu Baker f.", "sensu Baker f.");
     assert_sensu("Achillea millefolium sensu latu", "sensu latu");
     assert_sensu("Achillea millefolium s.str.", "s.str.");
-    assert_sensu("Achillea millefolium sec. Greuter 2009", "sec. Greuter 2009");
-    assert_sensu("Globularia cordifolia L. excl. var. (emend. Lam.)", "excl. var. (emend. Lam.)");
+    assert_sensu(
+        "Achillea millefolium sec. Greuter 2009",
+        "sec. Greuter 2009",
+    );
+    assert_sensu(
+        "Globularia cordifolia L. excl. var. (emend. Lam.)",
+        "excl. var. (emend. Lam.)",
+    );
 
     assert_name("Ramaria subbotrytis (Coker) Corner 1950 ss. auct. europ.")
         .species("Ramaria", "subbotrytis")
@@ -333,7 +387,9 @@ fn viral_names() {
     assert!(is_viral_name("Sapovirus Hu/GI/Nsc, 150/PA/Bra/, 1993"));
     assert!(is_viral_name("Aspergillus mycovirus, 1816"));
     assert!(is_viral_name("Hantavirus sdp2 Yxl-, 2008"));
-    assert!(is_viral_name("Norovirus Nizhny Novgorod /, 2461 / Rus /, 2007"));
+    assert!(is_viral_name(
+        "Norovirus Nizhny Novgorod /, 2461 / Rus /, 2007"
+    ));
     assert!(is_viral_name("Carrot carlavirus WM-, 2008"));
     assert!(is_viral_name("C2-like viruses"));
     assert!(is_viral_name("C1 bacteriophage"));

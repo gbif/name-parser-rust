@@ -13,7 +13,13 @@ fn authorship_only_notes() {
     assert_authorship_note("(auct.) auct.", None, &[], "auct.", None);
 
     // taxonomic note + nomenclatural note are split into their own fields
-    assert_authorship_note("auct., nom. subnud.", None, &[], "auct.", Some("nom. subnud."));
+    assert_authorship_note(
+        "auct., nom. subnud.",
+        None,
+        &[],
+        "auct.",
+        Some("nom. subnud."),
+    );
 
     // a parenthesised "(sensu …)" is the taxonomic note; the trailing name is the author
     assert_authorship_note(
@@ -91,8 +97,14 @@ fn authorship_only() {
         vec!["Ristorcelli".to_string(), "Van ty".to_string()]
     );
     assert_eq!(n.combination_authorship.year, None);
-    assert_eq!(n.combination_authorship.authors, vec!["Sch.Bip.".to_string()]);
-    assert_eq!(n.combination_authorship.ex_authors, vec!["Wedd.".to_string()]);
+    assert_eq!(
+        n.combination_authorship.authors,
+        vec!["Sch.Bip.".to_string()]
+    );
+    assert_eq!(
+        n.combination_authorship.ex_authors,
+        vec!["Wedd.".to_string()]
+    );
     assert_eq!(n.nomenclatural_note.as_deref(), Some("nom. nud."));
 
     assert_authorship("(Wang & Liu, 1996)", &[])
@@ -144,12 +156,15 @@ fn authorship_only() {
         .comb_authors(None, &["A.Murray bis"])
         .nothing_else();
 
-    assert_authorship("Castellano, S.L. Mill., L. Singh bis & T.N. Lakh. 2012", &[])
-        .comb_authors(
-            Some("2012"),
-            &["Castellano", "S.L.Mill.", "L.Singh bis", "T.N.Lakh."],
-        )
-        .nothing_else();
+    assert_authorship(
+        "Castellano, S.L. Mill., L. Singh bis & T.N. Lakh. 2012",
+        &[],
+    )
+    .comb_authors(
+        Some("2012"),
+        &["Castellano", "S.L.Mill.", "L.Singh bis", "T.N.Lakh."],
+    )
+    .nothing_else();
 
     assert_authorship("(Beurm., Gougerot & Vaucher bis) M. Ota", &[])
         .bas_authors(None, &["Beurm.", "Gougerot", "Vaucher bis"])
@@ -240,12 +255,23 @@ fn authorship_only() {
 
     // Direct-parse fallback: `.doubtful()`/`.warning(...)` read fields the shared
     // `assert_authorship` DSL doesn't forward onto its returned `NameAssertion`.
-    let n = nameparser::parse("Abies alba", Some("Istv?nffi, 1898"), Some(Rank::Species), None)
-        .unwrap_or_else(|e| panic!("authorship should parse: {e:?}"));
+    let n = nameparser::parse(
+        "Abies alba",
+        Some("Istv?nffi, 1898"),
+        Some(Rank::Species),
+        None,
+    )
+    .unwrap_or_else(|e| panic!("authorship should parse: {e:?}"));
     assert_eq!(n.combination_authorship.year.as_deref(), Some("1898"));
-    assert_eq!(n.combination_authorship.authors, vec!["Istvnffi".to_string()]);
+    assert_eq!(
+        n.combination_authorship.authors,
+        vec!["Istvnffi".to_string()]
+    );
     assert!(n.doubtful);
-    assert_eq!(n.warnings, vec![warnings::QUESTION_MARKS_REMOVED.to_string()]);
+    assert_eq!(
+        n.warnings,
+        vec![warnings::QUESTION_MARKS_REMOVED.to_string()]
+    );
 
     assert_authorship("F.S.Castracane degli Antelminelli", &[])
         .comb_authors(None, &["F.S.Castracane degli Antelminelli"])
@@ -445,12 +471,18 @@ fn test_nomenclatural_notes_pattern() {
         .unwrap_or_else(|e| panic!("authorship `nom. illeg.` should parse: {e:?}"));
     assert_eq!(n.nomenclatural_note.as_deref(), Some("nom. illeg."));
 
-    assert_nom_note("nom. illeg.", "Vaucheria longicaulis var. bengalensis Islam, nom. illeg.");
+    assert_nom_note(
+        "nom. illeg.",
+        "Vaucheria longicaulis var. bengalensis Islam, nom. illeg.",
+    );
     assert_nom_note("nom. correct", "Dorataspidae nom. correct");
     assert_nom_note("nom. transf.", "Ethmosphaeridae nom. transf.");
     assert_nom_note("nom. ambig.", "Fucus ramosissimus Oeder, nom. ambig.");
     assert_nom_note("nom. nov.", "Myrionema majus Foslie, nom. nov.");
-    assert_nom_note("nom. utique rej.", "Corydalis bulbosa (L.) DC., nom. utique rej.");
+    assert_nom_note(
+        "nom. utique rej.",
+        "Corydalis bulbosa (L.) DC., nom. utique rej.",
+    );
     assert_nom_note(
         "nom. cons. prop.",
         "Anthoceros agrestis var. agrestis Paton nom. cons. prop.",
@@ -467,9 +499,15 @@ fn test_nomenclatural_notes_pattern() {
         "nom. inval.",
         "Fucus vesiculosus forma volubilis (Goodenough & Woodward) H.T. Powell, nom. inval",
     );
-    assert_nom_note("nom. nud.", "Sao hispanica R. & E. Richter nom. nud. in Sampelayo 1935");
+    assert_nom_note(
+        "nom. nud.",
+        "Sao hispanica R. & E. Richter nom. nud. in Sampelayo 1935",
+    );
     assert_nom_note("nom. illeg.", "Hallo (nom.illeg.)");
-    assert_nom_note("nom. super.", "Calamagrostis cinnoides W. Bart. nom. super.");
+    assert_nom_note(
+        "nom. super.",
+        "Calamagrostis cinnoides W. Bart. nom. super.",
+    );
     assert_nom_note(
         "nom. nud.",
         "Iridaea undulosa var. papillosa Bory de Saint-Vincent, nom. nud.",
@@ -487,7 +525,10 @@ fn test_nomenclatural_notes_pattern() {
         "nom. nud.",
         "Cryptomys \"Kasama\" Kawalika et al., 2001, nom. nud. (Kasama, Zambia) .",
     );
-    assert_nom_note("nom. super.", "Calamagrostis cinnoides W. Bart. nom. super.");
+    assert_nom_note(
+        "nom. super.",
+        "Calamagrostis cinnoides W. Bart. nom. super.",
+    );
     assert_nom_note("nom. dub.", "Pandanus odorifer (Forssk.) Kuntze, nom. dub.");
     assert_nom_note("nom. rejic.", "non Clarisia Abat, 1792, nom. rejic.");
     assert_nom_note(
@@ -499,18 +540,39 @@ fn test_nomenclatural_notes_pattern() {
         "\"Pseudomonas denitrificans\" (Christensen, 1903) Bergey et al., 1923, nom. rejic.",
     );
     assert_nom_note("nom. nov.", "Tipula rubiginosa Loew, 1863, nom. nov.");
-    assert_nom_note("nom. prov.", "Amanita pruittii A.H.Sm. ex Tulloss & J.Lindgr., nom. prov.");
+    assert_nom_note(
+        "nom. prov.",
+        "Amanita pruittii A.H.Sm. ex Tulloss & J.Lindgr., nom. prov.",
+    );
     assert_nom_note("nom. cons.", "Ramonda Rich., nom. cons.");
     assert_nom_note(
         "nom. cons.",
         "Kluyver and van Niel, 1936 emend. Barker, 1956 (Approved Lists, 1980) , nom. cons., emend. Mah and Kuhn, 1984",
     );
-    assert_nom_note("nom. superfl.", "Coccocypselum tontanea (Aubl.) Kunth, nom. superfl.");
-    assert_nom_note("nom. ambig.", "Lespedeza bicolor var. intermedia Maxim. , nom. ambig.");
-    assert_nom_note("nom. praeoccup.", "Erebia aethiops uralensis Goltz, 1930 nom. praeoccup.");
-    assert_nom_note("comb. nov. ined.", "Ipomopsis tridactyla (Rydb.) Wilken, comb. nov. ined.");
-    assert_nom_note("sp. nov. ined.", "Orobanche riparia Collins, sp. nov. ined.");
-    assert_nom_note("gen. nov.", "Anchimolgidae gen. nov. New Caledonia-Rjh-, 2004");
+    assert_nom_note(
+        "nom. superfl.",
+        "Coccocypselum tontanea (Aubl.) Kunth, nom. superfl.",
+    );
+    assert_nom_note(
+        "nom. ambig.",
+        "Lespedeza bicolor var. intermedia Maxim. , nom. ambig.",
+    );
+    assert_nom_note(
+        "nom. praeoccup.",
+        "Erebia aethiops uralensis Goltz, 1930 nom. praeoccup.",
+    );
+    assert_nom_note(
+        "comb. nov. ined.",
+        "Ipomopsis tridactyla (Rydb.) Wilken, comb. nov. ined.",
+    );
+    assert_nom_note(
+        "sp. nov. ined.",
+        "Orobanche riparia Collins, sp. nov. ined.",
+    );
+    assert_nom_note(
+        "gen. nov.",
+        "Anchimolgidae gen. nov. New Caledonia-Rjh-, 2004",
+    );
     assert_nom_note("gen. nov. ined.", "Stebbinsoseris gen. nov. ined.");
     assert_nom_note("var. nov.", "Euphorbia rossiana var. nov. Steinmann, 1199");
 }
@@ -573,12 +635,24 @@ fn assert_authorship_note(
 ) {
     let n = nameparser::parse("Abies alba", Some(raw), Some(Rank::Species), None)
         .unwrap_or_else(|e| panic!("authorship `{raw}` should parse: {e:?}"));
-    assert_eq!(n.combination_authorship.year.as_deref(), year, "year mismatch for `{raw}`");
+    assert_eq!(
+        n.combination_authorship.year.as_deref(),
+        year,
+        "year mismatch for `{raw}`"
+    );
     assert_eq!(
         n.combination_authorship.authors,
         authors.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
         "authors mismatch for `{raw}`"
     );
-    assert_eq!(n.taxonomic_note.as_deref(), Some(sensu), "sensu mismatch for `{raw}`");
-    assert_eq!(n.nomenclatural_note.as_deref(), nom_note, "nomNote mismatch for `{raw}`");
+    assert_eq!(
+        n.taxonomic_note.as_deref(),
+        Some(sensu),
+        "sensu mismatch for `{raw}`"
+    );
+    assert_eq!(
+        n.nomenclatural_note.as_deref(),
+        nom_note,
+        "nomNote mismatch for `{raw}`"
+    );
 }

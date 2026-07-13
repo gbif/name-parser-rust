@@ -55,8 +55,7 @@ fn utf80x3000_character_ideographic_space() {
 #[test]
 fn names_with_ex_as_sp_epithet() {
     // group: Names with 'ex' as sp. epithet
-    assert_name("Acanthochiton exquisitus")
-        .species("Acanthochiton", "exquisitus");
+    assert_name("Acanthochiton exquisitus").species("Acanthochiton", "exquisitus");
 }
 
 #[test]
@@ -67,7 +66,10 @@ fn names_with_spanish_y_instead_of() {
         .bas_authors(Some("1896"), &["Martínez", "Fernández-Castillo"]);
     assert_name("Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802")
         .species("Dicranum", "saxatile")
-        .comb_authors(Some("1802"), &["Lagasca", "Segura", "García", "Clemente", "Rubio"]);
+        .comb_authors(
+            Some("1802"),
+            &["Lagasca", "Segura", "García", "Clemente", "Rubio"],
+        );
     assert_name("Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967")
         .species_ig("Carabus", "Tanaocarabus", "hendrichsi")
         .comb_authors(Some("1967"), &["Bolvar", "Pieltain", "Rotger", "Coronado"]);
@@ -151,8 +153,7 @@ fn treating_al_as_et_al_binomials() {
 #[test]
 fn authors_do_not_start_with_apostrophe() {
     // group: Authors do not start with apostrophe
-    assert_name("Nereidavus kulkovi 'Kulkov")
-        .species("Nereidavus", "kulkovi");
+    assert_name("Nereidavus kulkovi 'Kulkov").species("Nereidavus", "kulkovi");
 }
 
 #[test]
@@ -175,7 +176,10 @@ fn names_that_contain_of() {
     // to the comb authorship.
     assert_name("Musca capraria Trustees of the British Museum (Natural History), 1939")
         .species("Musca", "capraria")
-        .comb_authors(Some("1939"), &["Trustees of the British Museum Natural History"]);
+        .comb_authors(
+            Some("1939"),
+            &["Trustees of the British Museum Natural History"],
+        );
     assert_name("Nassellarid genera of uncertain affinities")
         .species("Nassellarid", "genera")
         .comb_authors(None, &["of uncertain affinities"]);
@@ -190,8 +194,7 @@ fn names_that_contain_of() {
 #[test]
 fn cultivars() {
     // group: Cultivars — quoted cultivar epithet is captured as cultivarEpithet.
-    assert_name("Sarracenia flava 'Maxima'")
-        .cultivar_sp("Sarracenia", "flava", "Maxima");
+    assert_name("Sarracenia flava 'Maxima'").cultivar_sp("Sarracenia", "flava", "Maxima");
 }
 
 #[test]
@@ -240,12 +243,10 @@ fn ignoring_serovar_serotype() {
     // formal nomenclatural ranks.
     assert_name("Aggregatibacter actinomycetemcomitans serotype d str. SA508")
         .species("Aggregatibacter", "actinomycetemcomitans");
-    assert_name("Streptococcus pyogenes (serotype M18)")
-        .species("Streptococcus", "pyogenes");
+    assert_name("Streptococcus pyogenes (serotype M18)").species("Streptococcus", "pyogenes");
     assert_name("Actinobacillus pleuropneumoniae serovar 2 strain S1536")
         .species("Actinobacillus", "pleuropneumoniae");
-    assert_name("Leptospira interrogans serovar Fugis")
-        .species("Leptospira", "interrogans");
+    assert_name("Leptospira interrogans serovar Fugis").species("Leptospira", "interrogans");
 }
 
 #[test]
@@ -376,8 +377,12 @@ fn removing_nomenclatural_annotations() {
         .bas_authors(Some("1990"), &["Osada", "Kobayasi"])
         .code(NomCode::Zoological)
         .nom_note("comb. nov.");
-    assert_name("Methanosarcina barkeri str. fusaro")
-        .infra_species("Methanosarcina", "barkeri", Rank::Strain, "fusaro");
+    assert_name("Methanosarcina barkeri str. fusaro").infra_species(
+        "Methanosarcina",
+        "barkeri",
+        Rank::Strain,
+        "fusaro",
+    );
     assert_name("Arthopyrenia hyalospora (Nyl.) R.C. Harris comb. nov.")
         .species("Arthopyrenia", "hyalospora")
         .comb_authors(None, &["R.C.Harris"])

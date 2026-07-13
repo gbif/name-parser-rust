@@ -16,12 +16,15 @@ fn capital_monomial() {
 #[test]
 fn infra_species() {
     // bad rank given
-    assert_name_rank("Poa pratensis subsp. anceps (Gaudin) Dumort., 1824", Rank::Species)
-        .infra_species("Poa", "pratensis", Rank::Subspecies, "anceps")
-        .bas_authors(None, &["Gaudin"])
-        .comb_authors(Some("1824"), &["Dumort."])
-        .warning(&[warnings::SUBSPECIES_ASSIGNED])
-        .nothing_else();
+    assert_name_rank(
+        "Poa pratensis subsp. anceps (Gaudin) Dumort., 1824",
+        Rank::Species,
+    )
+    .infra_species("Poa", "pratensis", Rank::Subspecies, "anceps")
+    .bas_authors(None, &["Gaudin"])
+    .comb_authors(Some("1824"), &["Dumort."])
+    .warning(&[warnings::SUBSPECIES_ASSIGNED])
+    .nothing_else();
 
     assert_name("Abies alba ssp. alpina Mill.")
         .infra_species("Abies", "alba", Rank::Subspecies, "alpina")
@@ -41,7 +44,12 @@ fn infra_species() {
         .nothing_else();
 
     assert_name("Agaricus compactus sarcocephalus (Fr.) Fr. ")
-        .infra_species("Agaricus", "compactus", Rank::InfraspecificName, "sarcocephalus")
+        .infra_species(
+            "Agaricus",
+            "compactus",
+            Rank::InfraspecificName,
+            "sarcocephalus",
+        )
         .comb_authors(None, &["Fr."])
         .bas_authors(None, &["Fr."])
         .code(NomCode::Botanical)
@@ -61,9 +69,12 @@ fn infra_species() {
         .warning(&[warnings::QUADRINOMIAL, removed_prefix_msg.as_str()])
         .nothing_else();
 
-    assert_name_rank("Achillea millefolium var. pallidotegula", Rank::InfraspecificName)
-        .infra_species("Achillea", "millefolium", Rank::Variety, "pallidotegula")
-        .nothing_else();
+    assert_name_rank(
+        "Achillea millefolium var. pallidotegula",
+        Rank::InfraspecificName,
+    )
+    .infra_species("Achillea", "millefolium", Rank::Variety, "pallidotegula")
+    .nothing_else();
 
     assert_name_rank("Monograptus turriculatus mut. minor", Rank::Mutatio)
         .infra_species("Monograptus", "turriculatus", Rank::Mutatio, "minor")
@@ -140,7 +151,12 @@ fn four_parted_names() {
         .nothing_else();
 
     assert_name("Bombus sichelii alticola latofasciatus")
-        .infra_species("Bombus", "sichelii", Rank::InfrasubspecificName, "latofasciatus")
+        .infra_species(
+            "Bombus",
+            "sichelii",
+            Rank::InfrasubspecificName,
+            "latofasciatus",
+        )
         .nothing_else();
 
     assert_name("Acipenser gueldenstaedti colchicus natio danubicus Movchan, 1967")
@@ -158,7 +174,9 @@ fn four_parted_names() {
 #[test]
 fn monomial() {
     assert_name("Animalia").monomial("Animalia").nothing_else();
-    assert_name("Polychaeta").monomial("Polychaeta").nothing_else();
+    assert_name("Polychaeta")
+        .monomial("Polychaeta")
+        .nothing_else();
     assert_name("Chrysopetalidae")
         .monomial("Chrysopetalidae")
         .nothing_else();
@@ -393,15 +411,30 @@ fn autonym_authorship() {
     use nameparser::parse;
 
     // botanical: species author after the species epithet, none after the autonym
-    let acer = parse("Acer rubrum L. var. rubrum", None, None, Some(NomCode::Botanical)).unwrap();
+    let acer = parse(
+        "Acer rubrum L. var. rubrum",
+        None,
+        None,
+        Some(NomCode::Botanical),
+    )
+    .unwrap();
     assert_eq!(acer.specific_epithet.as_deref(), Some("rubrum"));
     assert_eq!(acer.infraspecific_epithet.as_deref(), Some("rubrum"));
     assert!(acer.is_autonym());
     assert_eq!(acer.authorship_complete().as_deref(), Some("L."));
-    assert_eq!(acer.canonical_name().as_deref(), Some("Acer rubrum L. var. rubrum"));
+    assert_eq!(
+        acer.canonical_name().as_deref(),
+        Some("Acer rubrum L. var. rubrum")
+    );
 
     // botanical recombination with basionym + combination author before the marker
-    let trim = parse("Trimezia spathata (Klatt) Baker subsp. spathata", None, None, None).unwrap();
+    let trim = parse(
+        "Trimezia spathata (Klatt) Baker subsp. spathata",
+        None,
+        None,
+        None,
+    )
+    .unwrap();
     assert!(trim.is_autonym());
     assert_eq!(trim.specific_epithet.as_deref(), Some("spathata"));
     assert_eq!(trim.infraspecific_epithet.as_deref(), Some("spathata"));
@@ -414,7 +447,13 @@ fn autonym_authorship() {
     );
 
     // zoological autonym: author at the very end, no rank marker
-    let vul = parse("Vulpes vulpes vulpes Linnaeus, 1758", None, None, Some(NomCode::Zoological)).unwrap();
+    let vul = parse(
+        "Vulpes vulpes vulpes Linnaeus, 1758",
+        None,
+        None,
+        Some(NomCode::Zoological),
+    )
+    .unwrap();
     assert!(vul.is_autonym());
     assert_eq!(
         vul.canonical_name().as_deref(),
@@ -422,9 +461,18 @@ fn autonym_authorship() {
     );
 
     // botanical autonym with no author renders cleanly without one
-    let bare = parse("Acer rubrum var. rubrum", None, None, Some(NomCode::Botanical)).unwrap();
+    let bare = parse(
+        "Acer rubrum var. rubrum",
+        None,
+        None,
+        Some(NomCode::Botanical),
+    )
+    .unwrap();
     assert!(bare.is_autonym());
-    assert_eq!(bare.canonical_name().as_deref(), Some("Acer rubrum var. rubrum"));
+    assert_eq!(
+        bare.canonical_name().as_deref(),
+        Some("Acer rubrum var. rubrum")
+    );
 }
 
 #[test]
@@ -433,7 +481,10 @@ fn unparsable_placeholder() {
     assert_unparsable("[unassigned] Cladobranchia", NameType::Placeholder);
     assert_unparsable("Biota incertae sedis", NameType::Placeholder);
     assert_unparsable("Unaccepted", NameType::Placeholder);
-    assert_unparsable("uncultured Verrucomicrobiales bacterium", NameType::Placeholder);
+    assert_unparsable(
+        "uncultured Verrucomicrobiales bacterium",
+        NameType::Placeholder,
+    );
     assert_unparsable("uncultured Vibrio sp.", NameType::Placeholder);
     assert_unparsable("uncultured virus", NameType::Placeholder);
     // ITIS placeholders:
@@ -453,8 +504,8 @@ fn unparsable_placeholder() {
     // "epithet explicitly absent"), so this one case is asserted directly against the parsed
     // fields instead of through the assert_name(...).nothing_else() chain — mirrors Java's
     // `.species("Aster", null).type(NameType.INFORMAL).warning(Warnings.INDETERMINED)`.
-    let aster = nameparser::parse("Aster indet.", None, None, None)
-        .expect("`Aster indet.` should parse");
+    let aster =
+        nameparser::parse("Aster indet.", None, None, None).expect("`Aster indet.` should parse");
     assert!(aster.uninomial.is_none());
     assert_eq!(aster.genus.as_deref(), Some("Aster"));
     assert!(aster.infrageneric_epithet.is_none());
@@ -476,13 +527,15 @@ fn unparsable_placeholder() {
 
 #[test]
 fn placeholder() {
-    assert_name("denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017")
-        .species("?", "denheyeri")
-        .comb_authors(Some("2017"), &["Eghbalian", "Khanjani", "Ueckermann"])
-        .type_(NameType::Placeholder)
-        .published_in("Eghbalian, Khanjani & Ueckermann, 2017")
-        .warning(&[warnings::MISSING_GENUS])
-        .nothing_else();
+    assert_name(
+        "denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017",
+    )
+    .species("?", "denheyeri")
+    .comb_authors(Some("2017"), &["Eghbalian", "Khanjani", "Ueckermann"])
+    .type_(NameType::Placeholder)
+    .published_in("Eghbalian, Khanjani & Ueckermann, 2017")
+    .warning(&[warnings::MISSING_GENUS])
+    .nothing_else();
 
     assert_name("\"? gryphoidis")
         .species("?", "gryphoidis")
@@ -521,14 +574,24 @@ fn sanctioned() {
         .nothing_else();
 
     assert_name("Agaricus compactus sarcocephalus (Fr. : Fr.) Fr. ")
-        .infra_species("Agaricus", "compactus", Rank::InfraspecificName, "sarcocephalus")
+        .infra_species(
+            "Agaricus",
+            "compactus",
+            Rank::InfraspecificName,
+            "sarcocephalus",
+        )
         .comb_authors(None, &["Fr."])
         .bas_authors(None, &["Fr."])
         .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Agaricus compactus sarcocephalus (Fr. : Fr.) Fr. ")
-        .infra_species("Agaricus", "compactus", Rank::InfraspecificName, "sarcocephalus")
+        .infra_species(
+            "Agaricus",
+            "compactus",
+            Rank::InfraspecificName,
+            "sarcocephalus",
+        )
         .comb_authors(None, &["Fr."])
         .bas_authors(None, &["Fr."])
         .code(NomCode::Botanical)
@@ -566,11 +629,21 @@ fn aggregates() {
         .nothing_else();
 
     assert_name("Strumigenys koningsbergeri-group")
-        .binomial("Strumigenys", None, "koningsbergeri", Rank::SpeciesAggregate)
+        .binomial(
+            "Strumigenys",
+            None,
+            "koningsbergeri",
+            Rank::SpeciesAggregate,
+        )
         .nothing_else();
 
     assert_name("Selenophorus parumpunctatus species group")
-        .binomial("Selenophorus", None, "parumpunctatus", Rank::SpeciesAggregate)
+        .binomial(
+            "Selenophorus",
+            None,
+            "parumpunctatus",
+            Rank::SpeciesAggregate,
+        )
         .nothing_else();
 
     assert_name("Monomorium monomorium group")

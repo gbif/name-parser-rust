@@ -136,35 +136,81 @@ fn infraspecies_without_rank_iczn() {
         .comb_authors(Some("1875"), &["Tapparone-Canefri"])
         .code(NomCode::Zoological);
     assert_name("Cypraeovula (Luponia) amphithales perdentata")
-        .infra_species("Cypraeovula", "amphithales", Rank::InfraspecificName, "perdentata")
+        .infra_species(
+            "Cypraeovula",
+            "amphithales",
+            Rank::InfraspecificName,
+            "perdentata",
+        )
         .infrageneric("Luponia");
-    assert_name("Triticum repens vulgäre")
-        .infra_species("Triticum", "repens", Rank::InfraspecificName, "vulgäre");
+    assert_name("Triticum repens vulgäre").infra_species(
+        "Triticum",
+        "repens",
+        Rank::InfraspecificName,
+        "vulgäre",
+    );
     assert_name("Hydnellum scrobiculatum zonatum (Batsch) K. A. Harrison 1961")
-        .infra_species("Hydnellum", "scrobiculatum", Rank::InfraspecificName, "zonatum")
+        .infra_species(
+            "Hydnellum",
+            "scrobiculatum",
+            Rank::InfraspecificName,
+            "zonatum",
+        )
         .comb_authors(Some("1961"), &["K.A.Harrison"])
         .bas_authors(None, &["Batsch"]);
     assert_name("Hydnellum scrobiculatum zonatum (Banker) D. Hall & D.E. Stuntz 1972")
-        .infra_species("Hydnellum", "scrobiculatum", Rank::InfraspecificName, "zonatum")
+        .infra_species(
+            "Hydnellum",
+            "scrobiculatum",
+            Rank::InfraspecificName,
+            "zonatum",
+        )
         .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
         .bas_authors(None, &["Banker"]);
     assert_name("Hydnellum (Hydnellum) scrobiculatum zonatum (Banker) D. Hall & D.E. Stuntz 1972")
-        .infra_species("Hydnellum", "scrobiculatum", Rank::InfraspecificName, "zonatum")
+        .infra_species(
+            "Hydnellum",
+            "scrobiculatum",
+            Rank::InfraspecificName,
+            "zonatum",
+        )
         .infrageneric("Hydnellum")
         .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
         .bas_authors(None, &["Banker"]);
-    assert_name("Hydnellum scrobiculatum zonatum")
-        .infra_species("Hydnellum", "scrobiculatum", Rank::InfraspecificName, "zonatum");
-    assert_name("Mus musculus hortulanus")
-        .infra_species("Mus", "musculus", Rank::InfraspecificName, "hortulanus");
-    assert_name("Ortygospiza atricollis mülleri")
-        .infra_species("Ortygospiza", "atricollis", Rank::InfraspecificName, "mülleri");
+    assert_name("Hydnellum scrobiculatum zonatum").infra_species(
+        "Hydnellum",
+        "scrobiculatum",
+        Rank::InfraspecificName,
+        "zonatum",
+    );
+    assert_name("Mus musculus hortulanus").infra_species(
+        "Mus",
+        "musculus",
+        Rank::InfraspecificName,
+        "hortulanus",
+    );
+    assert_name("Ortygospiza atricollis mülleri").infra_species(
+        "Ortygospiza",
+        "atricollis",
+        Rank::InfraspecificName,
+        "mülleri",
+    );
     assert_name("Caulerpa fastigiata confervoides P. L. Crouan & H. M. Crouan ex Weber-van Bosse")
-        .infra_species("Caulerpa", "fastigiata", Rank::InfraspecificName, "confervoides")
+        .infra_species(
+            "Caulerpa",
+            "fastigiata",
+            Rank::InfraspecificName,
+            "confervoides",
+        )
         .comb_authors(None, &["Weber-van Bosse"])
         .comb_ex_authors(&["P.L.Crouan", "H.M.Crouan"]);
     assert_name("Rhinanthus glacialis simplex(Sterneck) J.Dostál")
-        .infra_species("Rhinanthus", "glacialis", Rank::InfraspecificName, "simplex")
+        .infra_species(
+            "Rhinanthus",
+            "glacialis",
+            Rank::InfraspecificName,
+            "simplex",
+        )
         .comb_authors(None, &["J.Dostál"])
         .bas_authors(None, &["Sterneck"])
         .code(NomCode::Botanical);
@@ -201,31 +247,46 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(None, &["Rouy"])
         .bas_authors(None, &["Lamotte"])
         .code(NomCode::Botanical);
-    assert_name("Camponotus conspicuus st. zonatus")
-        .infra_species("Camponotus", "conspicuus", Rank::InfraspecificName, "zonatus");
+    assert_name("Camponotus conspicuus st. zonatus").infra_species(
+        "Camponotus",
+        "conspicuus",
+        Rank::InfraspecificName,
+        "zonatus",
+    );
     assert_name("Fagus sylvatica subsp. orientalis (Lipsky) Greuter & Burdet")
         .infra_species("Fagus", "sylvatica", Rank::Subspecies, "orientalis")
         .comb_authors(None, &["Greuter", "Burdet"])
         .bas_authors(None, &["Lipsky"])
         .code(NomCode::Botanical);
-    assert_name("Tillandsia utriculata subspec. utriculata")
-        .infra_species("Tillandsia", "utriculata", Rank::Subspecies, "utriculata");
+    assert_name("Tillandsia utriculata subspec. utriculata").infra_species(
+        "Tillandsia",
+        "utriculata",
+        Rank::Subspecies,
+        "utriculata",
+    );
     assert_name("Prunus mexicana S. Watson var. reticulata (Sarg.) Sarg.")
         .infra_species("Prunus", "mexicana", Rank::Variety, "reticulata")
         .comb_authors(None, &["Sarg."])
         .bas_authors(None, &["Sarg."])
         .code(NomCode::Botanical);
-    assert_name("Potamogeton iilinoensis var. ventanicola")
-        .infra_species("Potamogeton", "iilinoensis", Rank::Variety, "ventanicola");
+    assert_name("Potamogeton iilinoensis var. ventanicola").infra_species(
+        "Potamogeton",
+        "iilinoensis",
+        Rank::Variety,
+        "ventanicola",
+    );
     assert_name("Potamogeton iilinoensis var. ventanicola (Hicken) Horn af Rantzien")
         .infra_species("Potamogeton", "iilinoensis", Rank::Variety, "ventanicola")
         .comb_authors(None, &["Horn af Rantzien"])
         .bas_authors(None, &["Hicken"])
         .code(NomCode::Botanical);
-    assert_name("Triticum repens var. vulgäre")
-        .infra_species("Triticum", "repens", Rank::Variety, "vulgäre");
-    assert_name("Aus bus Linn. var. bus")
-        .infra_species("Aus", "bus", Rank::Variety, "bus");
+    assert_name("Triticum repens var. vulgäre").infra_species(
+        "Triticum",
+        "repens",
+        Rank::Variety,
+        "vulgäre",
+    );
+    assert_name("Aus bus Linn. var. bus").infra_species("Aus", "bus", Rank::Variety, "bus");
     assert_name("Agalinis purpurea (L.) Briton var. borealis (Berg.) Peterson 1987")
         .infra_species("Agalinis", "purpurea", Rank::Variety, "borealis")
         .comb_authors(Some("1987"), &["Peterson"])
@@ -234,8 +295,12 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Callideriphus", "flavicollis", Rank::Morph, "reductus")
         .comb_authors(Some("1961"), &["Fuchs"])
         .code(NomCode::Zoological);
-    assert_name("Caulerpa cupressoides forma nuda")
-        .infra_species("Caulerpa", "cupressoides", Rank::Form, "nuda");
+    assert_name("Caulerpa cupressoides forma nuda").infra_species(
+        "Caulerpa",
+        "cupressoides",
+        Rank::Form,
+        "nuda",
+    );
     assert_name("Chlorocyperus glaber form. fasciculariforme (Lojac.) Soó")
         .infra_species("Chlorocyperus", "glaber", Rank::Form, "fasciculariforme")
         .comb_authors(None, &["Soó"])
@@ -253,10 +318,18 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Sphaerotheca", "fuliginea", Rank::Form, "dahliae")
         .comb_authors(Some("1967"), &["Movss."])
         .code(NomCode::Zoological);
-    assert_name("Allophylus amazonicus var amazonicus")
-        .infra_species("Allophylus", "amazonicus", Rank::Variety, "amazonicus");
-    assert_name("Yarrowia lipolytica variety lipolytic")
-        .infra_species("Yarrowia", "lipolytica", Rank::Variety, "lipolytic");
+    assert_name("Allophylus amazonicus var amazonicus").infra_species(
+        "Allophylus",
+        "amazonicus",
+        Rank::Variety,
+        "amazonicus",
+    );
+    assert_name("Yarrowia lipolytica variety lipolytic").infra_species(
+        "Yarrowia",
+        "lipolytica",
+        Rank::Variety,
+        "lipolytic",
+    );
     assert_name("Prunus armeniaca convar. budae (Pénzes) Soó")
         .infra_species("Prunus", "armeniaca", Rank::Convariety, "budae")
         .comb_authors(None, &["Soó"])
@@ -300,8 +373,7 @@ fn infraspecies_with_rank_icn() {
     assert_name("Cotoneaster (Pyracantha) rogersiana var.aurantiaca")
         .infra_species("Cotoneaster", "rogersiana", Rank::Variety, "aurantiaca")
         .infrageneric("Pyracantha");
-    assert_name("Poa annua fo varia")
-        .infra_species("Poa", "annua", Rank::Form, "varia");
+    assert_name("Poa annua fo varia").infra_species("Poa", "annua", Rank::Form, "varia");
     assert_name("Physarum globuliferum forma. flavum Leontyev & Dudka")
         .infra_species("Physarum", "globuliferum", Rank::Form, "flavum")
         .comb_authors(None, &["Leontyev", "Dudka"]);
@@ -312,7 +384,12 @@ fn infraspecies_with_rank_icn() {
         .bas_authors(None, &["Mull.Arg."])
         .code(NomCode::Botanical);
     assert_name("Calicium furfuraceum * furfuraceum (L.) Pers. 1797")
-        .infra_species("Calicium", "furfuraceum", Rank::InfraspecificName, "furfuraceum")
+        .infra_species(
+            "Calicium",
+            "furfuraceum",
+            Rank::InfraspecificName,
+            "furfuraceum",
+        )
         .comb_authors(Some("1797"), &["Pers."])
         .bas_authors(None, &["L."]);
     assert_name("Polyrhachis orsyllus nat musculus Forel 1901")
@@ -335,11 +412,13 @@ fn infraspecies_multiple_icn() {
     // group: Infraspecies multiple (ICN). Quadrinomial-with-rank: the most specific
     // explicit rank marker (the rightmost) wins; the middle epithet is dropped
     // with a QUADRINOMIAL warning.
-    assert_name("Hydnellum scrobiculatum var. zonatum f. parvum (Banker) D. Hall & D.E. Stuntz 1972")
-        .infra_species("Hydnellum", "scrobiculatum", Rank::Form, "parvum")
-        .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
-        .bas_authors(None, &["Banker"])
-        .warning(&["Removed: var. zonatum", warnings::QUADRINOMIAL]);
+    assert_name(
+        "Hydnellum scrobiculatum var. zonatum f. parvum (Banker) D. Hall & D.E. Stuntz 1972",
+    )
+    .infra_species("Hydnellum", "scrobiculatum", Rank::Form, "parvum")
+    .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
+    .bas_authors(None, &["Banker"])
+    .warning(&["Removed: var. zonatum", warnings::QUADRINOMIAL]);
     assert_name("Senecio fuchsii C.C.Gmel. subsp. fuchsii var. expansus (Boiss. & Heldr.) Hayek")
         .infra_species("Senecio", "fuchsii", Rank::Variety, "expansus")
         .comb_authors(None, &["Hayek"])

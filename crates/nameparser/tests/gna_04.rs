@@ -130,10 +130,12 @@ fn names_with_an_unparsed_tail() {
         .species("Eulima", "excellens")
         .comb_authors(None, &["Verkrüzen"])
         .sensu("fide Paetel, 1887");
-    assert_name("Procamallanus (Spirocamallanus) soodi Lakshmi & Kumari, 2001 nec (Gupta & Masood, 1988)")
-        .species_ig("Procamallanus", "Spirocamallanus", "soodi")
-        .comb_authors(Some("2001"), &["Lakshmi", "Kumari"])
-        .sensu("nec (Gupta & Masood, 1988)");
+    assert_name(
+        "Procamallanus (Spirocamallanus) soodi Lakshmi & Kumari, 2001 nec (Gupta & Masood, 1988)",
+    )
+    .species_ig("Procamallanus", "Spirocamallanus", "soodi")
+    .comb_authors(Some("2001"), &["Lakshmi", "Kumari"])
+    .sensu("nec (Gupta & Masood, 1988)");
     assert_name("Membranipora minuscula Canu, 1911 non Hincks, 1882")
         .species("Membranipora", "minuscula")
         .comb_authors(Some("1911"), &["Canu"])
@@ -170,8 +172,12 @@ fn non_ascii_utf8_characters_in_a_name() {
     assert_name("Isoëtes asplundii H. P. Fuchs")
         .species("Isoëtes", "asplundii")
         .comb_authors(None, &["H.P.Fuchs"]);
-    assert_name("Campethera cailliautii fülleborni")
-        .infra_species("Campethera", "cailliautii", Rank::InfraspecificName, "fülleborni");
+    assert_name("Campethera cailliautii fülleborni").infra_species(
+        "Campethera",
+        "cailliautii",
+        Rank::InfraspecificName,
+        "fülleborni",
+    );
     assert_name("Östrupia Heiden ex Hustedt, 1935")
         .monomial("Östrupia")
         .comb_authors(Some("1935"), &["Hustedt"])
@@ -195,8 +201,7 @@ fn epithets_with_an_apostrophe() {
         .species("Trophon", "d'orbignyi")
         .comb_authors(Some("1946"), &["Carcelles"])
         .code(NomCode::Zoological);
-    assert_name("Phrynosoma m’callii")
-        .species("Phrynosoma", "m'callii");
+    assert_name("Phrynosoma m’callii").species("Phrynosoma", "m'callii");
     assert_name("Arca m'coyi Tenison-Woods, 1878")
         .species("Arca", "m'coyi")
         .comb_authors(Some("1878"), &["Tenison-Woods"])
@@ -262,17 +267,23 @@ fn digraph_unicode_characters() {
     assert_name("Ærenea cognata Lacordaire, 1872")
         .species("Ærenea", "cognata")
         .comb_authors(Some("1872"), &["Lacordaire"]);
-    assert_name("Œdicnemus capensis")
-        .species("Œdicnemus", "capensis");
-    assert_name("Œnanthe œnanthe")
-        .species("Œnanthe", "œnanthe");
-    assert_name("Hördeum vulgare cœrulescens")
-        .infra_species("Hördeum", "vulgare", Rank::InfraspecificName, "cœrulescens");
+    assert_name("Œdicnemus capensis").species("Œdicnemus", "capensis");
+    assert_name("Œnanthe œnanthe").species("Œnanthe", "œnanthe");
+    assert_name("Hördeum vulgare cœrulescens").infra_species(
+        "Hördeum",
+        "vulgare",
+        Rank::InfraspecificName,
+        "cœrulescens",
+    );
     assert_name("Hordeum vulgare cœrulescens Metzger")
         .infra_species("Hordeum", "vulgare", Rank::InfraspecificName, "cœrulescens")
         .comb_authors(None, &["Metzger"]);
-    assert_name("Hordeum vulgare f. cœrulescens")
-        .infra_species("Hordeum", "vulgare", Rank::Form, "cœrulescens");
+    assert_name("Hordeum vulgare f. cœrulescens").infra_species(
+        "Hordeum",
+        "vulgare",
+        Rank::Form,
+        "cœrulescens",
+    );
 }
 
 #[test]
@@ -285,23 +296,17 @@ fn old_style_s() {
     assert_name("Amphisbæna fuliginoſa Linnaeus 1758")
         .species("Amphisbæna", "fuliginosa")
         .comb_authors(Some("1758"), &["Linnaeus"]);
-    assert_name("Dreyfusia nüßlini")
-        .species("Dreyfusia", "nüßlini");
+    assert_name("Dreyfusia nüßlini").species("Dreyfusia", "nüßlini");
 }
 
 #[test]
 fn miscellaneous_diacritics() {
     // group: Miscellaneous diacritics — kept verbatim, not decomposed.
-    assert_name("Pärdosa")
-        .monomial("Pärdosa");
-    assert_name("Pårdosa")
-        .monomial("Pårdosa");
-    assert_name("Pardøsa")
-        .monomial("Pardøsa");
-    assert_name("Pardösa")
-        .monomial("Pardösa");
-    assert_name("Rühlella")
-        .monomial("Rühlella");
+    assert_name("Pärdosa").monomial("Pärdosa");
+    assert_name("Pårdosa").monomial("Pårdosa");
+    assert_name("Pardøsa").monomial("Pardøsa");
+    assert_name("Pardösa").monomial("Pardösa");
+    assert_name("Rühlella").monomial("Rühlella");
 }
 
 #[test]
@@ -418,15 +423,13 @@ fn name_strings_with_rna() {
 #[test]
 fn epithet_prioni_is_not_a_prion() {
     // group: Epithet prioni is not a prion
-    assert_name("Fakus prioni")
-        .species("Fakus", "prioni");
+    assert_name("Fakus prioni").species("Fakus", "prioni");
 }
 
 #[test]
 fn names_with_satellite_as_a_substring() {
     // group: Names with "satellite" as a substring
-    assert_name("Crassatellites fulvida")
-        .species("Crassatellites", "fulvida");
+    assert_name("Crassatellites fulvida").species("Crassatellites", "fulvida");
 }
 
 #[test]
@@ -441,8 +444,7 @@ fn bacterial_genus() {
 #[test]
 fn bacteria_genus_homonym() {
     // group: Bacteria genus homonym
-    assert_name("Actinomyces cardiffensis")
-        .species("Actinomyces", "cardiffensis");
+    assert_name("Actinomyces cardiffensis").species("Actinomyces", "cardiffensis");
 }
 
 #[test]
@@ -451,10 +453,18 @@ fn bacteria_with_pathovar_rank() {
     // marker and is kept in the canonical. "pathovar." is normalised to "pv.". A
     // bare trailing marker yields an indeterminate PATHOVAR with an INDETERMINED
     // warning, mirroring the openTaxonomyWithRanksUnfinished convention.
-    assert_name("Xanthomonas axonopodis pv. phaseoli")
-        .infra_species("Xanthomonas", "axonopodis", Rank::Pathovar, "phaseoli");
-    assert_name("Xanthomonas axonopodis pathovar. phaseoli")
-        .infra_species("Xanthomonas", "axonopodis", Rank::Pathovar, "phaseoli");
+    assert_name("Xanthomonas axonopodis pv. phaseoli").infra_species(
+        "Xanthomonas",
+        "axonopodis",
+        Rank::Pathovar,
+        "phaseoli",
+    );
+    assert_name("Xanthomonas axonopodis pathovar. phaseoli").infra_species(
+        "Xanthomonas",
+        "axonopodis",
+        Rank::Pathovar,
+        "phaseoli",
+    );
 
     // .infraSpecies(genus, epithet, PATHOVAR, null) — a null infraspecific epithet; direct-parse
     // fallback since the DSL's infra_species requires a non-null epithet, replicating the same
@@ -522,10 +532,8 @@ fn double_parenthesis() {
 #[test]
 fn year_without_authorship() {
     // group: Year without authorship
-    assert_name("Acarospora cratericola 1929")
-        .species("Acarospora", "cratericola");
-    assert_name("Goggia gemmula 1996")
-        .species("Goggia", "gemmula");
+    assert_name("Acarospora cratericola 1929").species("Acarospora", "cratericola");
+    assert_name("Goggia gemmula 1996").species("Goggia", "gemmula");
 }
 
 #[test]

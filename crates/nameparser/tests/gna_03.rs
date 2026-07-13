@@ -9,8 +9,7 @@ use nameparser::model::{NamePart, NameType, NomCode, Rank};
 fn names_with_the_dagger_char() {
     // group: Names with the dagger char '†'. The dagger marks the taxon as
     // extinct; it is stripped from anywhere in the input and sets extinct=true.
-    assert_name("Henriksenopterix†")
-        .monomial("Henriksenopterix");
+    assert_name("Henriksenopterix†").monomial("Henriksenopterix");
     assert_name("Henriksenopterix† paucistriata (Henriksen, 1922)")
         .species("Henriksenopterix", "paucistriata")
         .bas_authors(Some("1922"), &["Henriksen"]);
@@ -152,19 +151,63 @@ fn named_hybrids() {
 #[test]
 fn hybrid_formulae() {
     // group: Hybrid formulae
-    assert_unparsable_rank("Stanhopea tigrina Bateman ex Lindl. x S. ecornuta Lem.", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Arthopyrenia hyalospora X Hydnellum scrobiculatum", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Arthopyrenia hyalospora (Banker) D. Hall X Hydnellum scrobiculatum D.E. Stuntz", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Arthopyrenia hyalospora × ?", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Agrostis L. × Polypogon Desf.", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Agrostis stolonifera L. × Polypogon monspeliensis (L.) Desf.", Rank::Unranked, NameType::Formula);
+    assert_unparsable_rank(
+        "Stanhopea tigrina Bateman ex Lindl. x S. ecornuta Lem.",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Arthopyrenia hyalospora X Hydnellum scrobiculatum",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Arthopyrenia hyalospora (Banker) D. Hall X Hydnellum scrobiculatum D.E. Stuntz",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Arthopyrenia hyalospora × ?",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Agrostis L. × Polypogon Desf.",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Agrostis stolonifera L. × Polypogon monspeliensis (L.) Desf.",
+        Rank::Unranked,
+        NameType::Formula,
+    );
     assert_unparsable_rank("Coeloglossum viride (L.) Hartman x Dactylorhiza majalis (Rchb. f.) P.F. Hunt & Summerhayes ssp. praetermissa (Druce) D.M. Moore & Soó", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Salix aurita L. × S. caprea L.", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Asplenium rhizophyllum X A. ruta-muraria E.L. Braun 1939", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Asplenium rhizophyllum DC. x ruta-muraria E.L. Braun 1939", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Tilletia caries (Bjerk.) Tul. × T. foetida (Wallr.) Liro.", Rank::Unranked, NameType::Formula);
+    assert_unparsable_rank(
+        "Salix aurita L. × S. caprea L.",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Asplenium rhizophyllum X A. ruta-muraria E.L. Braun 1939",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Asplenium rhizophyllum DC. x ruta-muraria E.L. Braun 1939",
+        Rank::Unranked,
+        NameType::Formula,
+    );
+    assert_unparsable_rank(
+        "Tilletia caries (Bjerk.) Tul. × T. foetida (Wallr.) Liro.",
+        Rank::Unranked,
+        NameType::Formula,
+    );
     assert_unparsable_rank("Brassica oleracea L. subsp. capitata (L.) DC. convar. fruticosa (Metzg.) Alef. × B. oleracea L. subsp. capitata (L.) var. costata DC.", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Ambystoma laterale × A. texanum × A. tigrinum", Rank::Unranked, NameType::Formula);
+    assert_unparsable_rank(
+        "Ambystoma laterale × A. texanum × A. tigrinum",
+        Rank::Unranked,
+        NameType::Formula,
+    );
     assert_name("Pseudocercospora broussonetiae (Chupp & Linder) X.J. Liu & Y.L. Guo 1989")
         .species("Pseudocercospora", "broussonetiae")
         .comb_authors(Some("1989"), &["X.J.Liu", "Y.L.Guo"])
@@ -176,7 +219,11 @@ fn graft_chimeras() {
     // group: Graft-chimeras should parse as hybrid formulas
     //assert_unparsable_rank("+ Crataegomespilus", Rank::Unranked, NameType::Formula);
     //assert_unparsable_rank("+Crataegomespilus", Rank::Unranked, NameType::Formula);
-    assert_unparsable_rank("Cytisus purpureus + Laburnum anagyroides", Rank::Unranked, NameType::Formula);
+    assert_unparsable_rank(
+        "Cytisus purpureus + Laburnum anagyroides",
+        Rank::Unranked,
+        NameType::Formula,
+    );
     assert_unparsable_rank("Crataegus + Mespilus", Rank::Unranked, NameType::Formula);
 }
 
@@ -207,11 +254,9 @@ fn genus_with_hyphen_allowed_by_icn() {
         .species("Arctostaphylos", "uva-ursi")
         .nothing_else();
 
-    assert_name("Prunus-lauro-cerasus")
-        .monomial("Prunus-lauro-cerasus");
+    assert_name("Prunus-lauro-cerasus").monomial("Prunus-lauro-cerasus");
 
-    assert_name("Prunus-Lauro-Cerasus")
-        .monomial("Prunus-lauro-cerasus");
+    assert_name("Prunus-Lauro-Cerasus").monomial("Prunus-lauro-cerasus");
 
     assert_name("Tsugo-piceo-picea × crassifolia (Flous) Campo-Duplan & Gaussen")
         .species("Tsugo-piceo-picea", "crassifolia")
@@ -230,8 +275,7 @@ fn genus_with_hyphen_allowed_by_icn() {
         .species("Eu-hookeria", "olfersiana")
         .comb_authors(None, &["Hampe"])
         .bas_authors(None, &["Hornsch."]);
-    assert_name("Le-monniera")
-        .monomial("Le-monniera");
+    assert_name("Le-monniera").monomial("Le-monniera");
     assert_name("Le-Monniera clitandrifolia (A. Chev.) Lecomte")
         .species("Le-monniera", "clitandrifolia")
         .comb_authors(None, &["Lecomte"])
@@ -241,10 +285,8 @@ fn genus_with_hyphen_allowed_by_icn() {
         .comb_authors(None, &["Fawc.", "Rendle"])
         .bas_authors(None, &["Rchb.f."]);
     // skipped: Ph-echinodermata
-    assert_name("Prunus-lauro-cerasus")
-        .monomial("Prunus-lauro-cerasus");
-    assert_name("Prunus-Lauro-Cerasus")
-        .monomial("Prunus-lauro-cerasus");
+    assert_name("Prunus-lauro-cerasus").monomial("Prunus-lauro-cerasus");
+    assert_name("Prunus-Lauro-Cerasus").monomial("Prunus-lauro-cerasus");
     assert_name("Tsugo-piceo-picea × crassifolia (Flous) Campo-Duplan & Gaussen")
         .species("Tsugo-piceo-picea", "crassifolia")
         .notho(&[NamePart::Specific])
@@ -275,7 +317,12 @@ fn infrageneric_epithets_iczn() {
         .species_ig("Hegeter", "Hegeter", "intercedens")
         .comb_authors(Some("1950"), &["H.Lindberg"]);
     assert_name("Cyprideis (Cyprideis) thessalonike amasyaensis")
-        .infra_species("Cyprideis", "thessalonike", Rank::InfraspecificName, "amasyaensis")
+        .infra_species(
+            "Cyprideis",
+            "thessalonike",
+            Rank::InfraspecificName,
+            "amasyaensis",
+        )
         .infrageneric("Cyprideis");
     assert_name("Acanthoderes (Abramov) satanas Aurivillius")
         .species_ig("Acanthoderes", "Abramov", "satanas")
@@ -331,15 +378,27 @@ fn epithets_starting_with_non() {
 #[test]
 fn epithets_starting_with_authors_prefixes_de_di_la_von_etc() {
     // group: Epithets starting with authors' prefixes (de, di, la, von etc.)
-    assert_name("Aspicilia desertorum desertorum")
-        .infra_species("Aspicilia", "desertorum", Rank::InfraspecificName, "desertorum");
-    assert_name("Theope thestias discus")
-        .infra_species("Theope", "thestias", Rank::InfraspecificName, "discus");
+    assert_name("Aspicilia desertorum desertorum").infra_species(
+        "Aspicilia",
+        "desertorum",
+        Rank::InfraspecificName,
+        "desertorum",
+    );
+    assert_name("Theope thestias discus").infra_species(
+        "Theope",
+        "thestias",
+        Rank::InfraspecificName,
+        "discus",
+    );
     assert_name("Ocydromus dalmatinus dalmatinus (Dejean, 1831)")
         .infra_species("Ocydromus", "dalmatinus", Rank::Subspecies, "dalmatinus")
         .bas_authors(Some("1831"), &["Dejean"]);
-    assert_name("Rhipidia gracilirama lassula")
-        .infra_species("Rhipidia", "gracilirama", Rank::InfraspecificName, "lassula");
+    assert_name("Rhipidia gracilirama lassula").infra_species(
+        "Rhipidia",
+        "gracilirama",
+        Rank::InfraspecificName,
+        "lassula",
+    );
 }
 
 #[test]
