@@ -54,6 +54,19 @@ fn multi_token_specimen_tag_is_captured_as_the_phrase() {
 }
 
 #[test]
+fn species_n_with_a_trailing_note_keeps_the_whole_tail_as_the_phrase() {
+    // "once a phrase starts, it runs to the end": everything after "(sp|spec|species) N" is part of
+    // the phrase, verbatim — so a trailing "(=synonym)" note is NOT split off as a subgenus/epithet.
+    // Surfaced by the CoL backend's dwca/17 fixture.
+    assert_informal("Dichanthelium species 12 (=chrysopsidifolium)")
+        .taxon("Dichanthelium")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("species 12 (=chrysopsidifolium)")
+        .nothing_else();
+}
+
+#[test]
 fn australian_herbarium_locality_convention() {
     // "Genus sp. <Locality>" — the type-specimen-based convention; the locality becomes the phrase
     // instead of the 4.2.0 parser's misread "author Rocky Creek".

@@ -362,6 +362,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         || marker_idx_in_epithets >= 0
                         || number_follows_marker)
                 {
+                    let marker_start = ts[i].start;
                     indet = true;
                     ctx.name.type_ = NameType::Informal;
                     i += 1;
@@ -375,12 +376,24 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     // synthetic "sp." marker; the formatter then renders the phrase
                     // as-is. Abbreviated "sp."/"spec." keep the number-only phrase.
                     if i < ts.len() && ts[i].kind == TokenKind::Number {
-                        if w.eq_ignore_ascii_case("species") {
-                            ctx.name.phrase = Some(format!("species {}", ts[i].text));
-                        } else {
-                            ctx.name.phrase = Some(ts[i].text.clone());
-                        }
+                        let number = ts[i].text.clone();
                         i += 1;
+                        // Rule: anything after "(sp|spec|species) N" belongs to the phrase — once a
+                        // phrase starts it runs to the end of the input. So when tokens follow the
+                        // number, capture the whole VERBATIM tail from the marker ("Dichanthelium
+                        // species 12 (=chrysopsidifolium)" -> phrase "species 12 (=chrysopsidifolium)")
+                        // rather than leaving "(=chrysopsidifolium)" to be misread as a subgenus /
+                        // epithet. `ctx.working` is the source string (token offsets index into it), so
+                        // the slice keeps the original spacing.
+                        if i < ts.len() {
+                            ctx.name.phrase =
+                                Some(ctx.working[marker_start..ts[ts.len() - 1].end].to_string());
+                            i = ts.len();
+                        } else if w.eq_ignore_ascii_case("species") {
+                            ctx.name.phrase = Some(format!("species {number}"));
+                        } else {
+                            ctx.name.phrase = Some(number);
+                        }
                     } else if i < ts.len()
                         && ts[i].kind == TokenKind::Word
                         && ts[i].text.chars().count() == 1
