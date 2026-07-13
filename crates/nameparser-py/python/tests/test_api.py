@@ -195,3 +195,60 @@ def test_name_formatter_renderings():
         nameparser.parse("Abies alba Mill.").canonical_name_complete_html()
         == "<i>Abies</i> <i>alba</i> Mill."
     )
+
+
+# ---- 5.0.0 informal / semistructured band (parse() returns ParsedName | Informal) ----
+
+
+def test_informal_molecular_provisional_species():
+    # Genus sp. <specimen tag> — parse() returns an Informal, not a ParsedName. Values are
+    # Rust-authoritative (the same core is_informal/to_informal the Java + R bindings mirror).
+    r = nameparser.parse("Serratia sp. RE1-2a")
+    assert isinstance(r, nameparser.Informal)
+    assert not isinstance(r, nameparser.ParsedName)
+    assert r.taxon == "Serratia"
+    assert r.taxon_rank == "GENUS"
+    assert r.rank == "SPECIES"
+    assert r.phrase == "RE1-2a"
+    assert r.code is None
+    assert r.to_dict() == {
+        "taxon": "Serratia",
+        "taxonRank": "GENUS",
+        "rank": "SPECIES",
+        "phrase": "RE1-2a",
+    }
+    assert "Serratia" in repr(r)
+
+
+def test_informal_multi_token_specimen_tag_is_captured_as_phrase():
+    # The 5.0.0 tag-capture enhancement (rescues the ~382k "tag not captured" corpus rows).
+    r = nameparser.parse("Rhizobium sp. RMCC TR1811")
+    assert isinstance(r, nameparser.Informal)
+    assert r.taxon == "Rhizobium"
+    assert r.taxon_rank == "GENUS"
+    assert r.phrase == "RMCC TR1811"
+
+
+def test_informal_bare_genus_sp_has_no_phrase():
+    r = nameparser.parse("Rhizobium sp.")
+    assert isinstance(r, nameparser.Informal)
+    assert r.taxon == "Rhizobium"
+    assert r.rank == "SPECIES"
+    assert r.phrase is None
+
+
+def test_cf_binomial_stays_parsed_not_informal():
+    # A species epithet is present (a binomial core), so it stays a ParsedName — the qualifier is
+    # an annotation, and specificAuthorship (unrepresentable by a flat anchor) is preserved.
+    r = nameparser.parse("Salicornia cf. patula")
+    assert isinstance(r, nameparser.ParsedName)
+    assert not isinstance(r, nameparser.Informal)
+    assert r.specific_epithet == "patula"
+    assert r.type == "INFORMAL"  # the ParsedName's own type nuance is kept inside a Parsed result
+
+
+def test_parse_all_mixes_parsed_and_informal_and_none():
+    results = nameparser.parse_all(["Abies alba", "Serratia sp. RE1-2a", "Tobacco mosaic virus"])
+    assert isinstance(results[0], nameparser.ParsedName)
+    assert isinstance(results[1], nameparser.Informal)
+    assert results[2] is None  # unparsable → None (never raises mid-batch)

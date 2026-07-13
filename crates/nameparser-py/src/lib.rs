@@ -390,6 +390,69 @@ impl PyParsedName {
     }
 }
 
+/// Python `Informal` — the informal / semistructured name variant of the 5.0.0 three-way parse
+/// result (mirrors the core [`::nameparser::model::Informal`] / Java `ParseResult.Informal`). A real
+/// supraspecific taxon [`Self::taxon`] carrying a provisional, non-code designation with no species
+/// epithet: a molecular provisional species (`Rhizobium sp. RMCC TR1811`), a numbered placeholder
+/// (`Allium sp. 1`), or an informal group. [`parse`] returns EITHER a [`PyParsedName`] or one of
+/// these, so callers use `isinstance(result, Informal)` to tell the two apart (an unparsable name
+/// still raises [`UnparsableNameError`]). Deliberately flat — the anchor is in one place, never a
+/// mislabelled "genus" — see this crate's core `Informal` doc and `docs/superpowers/findings/`.
+#[pyclass(name = "Informal", module = "nameparser")]
+pub struct PyInformal {
+    inner: ::nameparser::model::Informal,
+}
+
+#[pymethods]
+impl PyInformal {
+    /// The supraspecific taxon it hangs off (`"Rhizobium"`, `"Ichneumonidae"`) — the parser's best
+    /// guess, NOT validated against a taxonomic backbone.
+    #[getter]
+    fn taxon(&self) -> String {
+        self.inner.taxon.clone()
+    }
+
+    /// That taxon's rank as `SCREAMING_SNAKE_CASE` (usually `"GENUS"`) — the anchor sits in the
+    /// genus slot for the overwhelming `Genus sp.` majority.
+    #[getter]
+    fn taxon_rank(&self, py: Python<'_>) -> PyResult<PyObject> {
+        Ok(pythonize::pythonize(py, &self.inner.taxon_rank)?.into())
+    }
+
+    /// The rank the informal name purports to be — `"SPECIES"` for `"sp."`, `"UNRANKED"` for a group.
+    #[getter]
+    fn rank(&self, py: Python<'_>) -> PyResult<PyObject> {
+        Ok(pythonize::pythonize(py, &self.inner.rank)?.into())
+    }
+
+    /// `Optional[str]` — the distinguishing designator (`"RMCC TR1811"`, `"1"`); `None` for a bare
+    /// `"Genus sp."`.
+    #[getter]
+    fn phrase(&self) -> Option<String> {
+        self.inner.phrase.clone()
+    }
+
+    /// `Optional[str]` — the nomenclatural code when known, else `None`.
+    #[getter]
+    fn code(&self, py: Python<'_>) -> PyResult<PyObject> {
+        Ok(pythonize::pythonize(py, &self.inner.code)?.into())
+    }
+
+    /// The complete `Informal` structure straight from the core's `serde::Serialize` impl, keyed by
+    /// its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`) — the parity oracle + escape
+    /// hatch, matching [`PyParsedName::to_dict`].
+    fn to_dict(&self, py: Python<'_>) -> PyResult<PyObject> {
+        Ok(pythonize::pythonize(py, &self.inner)?.into())
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "Informal(taxon={:?}, rank={:?}, phrase={:?})",
+            self.inner.taxon, self.inner.rank, self.inner.phrase
+        )
+    }
+}
+
 /// Builds the [`UnparsableNameError`] `PyErr` for a core [`::nameparser::model::ParseError`],
 /// attaching three Python attributes onto the raised instance in addition to the exception's
 /// own message (unchanged — `str(err)` is still exactly `e.message`, as it always was):
@@ -424,13 +487,16 @@ fn try_attach_error_attrs(py: Python<'_>, e: ::nameparser::model::ParseError) ->
     Ok(err)
 }
 
-/// Parses a scientific name — the Python-facing entry point wrapping
-/// [`::nameparser::parse`]. `rank`/`code`, when given, are the same `SCREAMING_SNAKE_CASE`
-/// names the core's own JSON/Java wire format uses (e.g. `"SPECIES"`, `"ZOOLOGICAL"`),
-/// resolved via [`Rank::from_name`]/[`NomCode::from_name`] — the same hint-parsing the
-/// CLI and the Java FFM binding (`nameparser-ffi`) already use. Raises
-/// [`UnparsableNameError`] when `name` cannot be parsed — see [`unparsable_name_error`] for
-/// the `.name_type`/`.code`/`.name` attributes it carries.
+/// Parses a scientific name — the Python-facing entry point wrapping the 5.0.0 three-way
+/// [`::nameparser::parse_result`]. `rank`/`code`, when given, are the same `SCREAMING_SNAKE_CASE`
+/// names the core's own JSON/Java wire format uses (e.g. `"SPECIES"`, `"ZOOLOGICAL"`), resolved via
+/// [`Rank::from_name`]/[`NomCode::from_name`] — the same hint-parsing the CLI and the Java FFM
+/// binding (`nameparser-ffi`) already use.
+///
+/// Returns EITHER a [`PyParsedName`] (a structurally parsed name) or a [`PyInformal`] (an informal /
+/// semistructured name) — use `isinstance(result, Informal)` to tell them apart. Raises
+/// [`UnparsableNameError`] when `name` is not a parsable name at all — see [`unparsable_name_error`]
+/// for the `.name_type`/`.code`/`.name` attributes it carries.
 #[pyfunction]
 #[pyo3(signature = (name, authorship=None, rank=None, code=None))]
 fn parse(
@@ -439,39 +505,44 @@ fn parse(
     authorship: Option<&str>,
     rank: Option<&str>,
     code: Option<&str>,
-) -> PyResult<PyParsedName> {
+) -> PyResult<PyObject> {
     let rank = rank.and_then(Rank::from_name);
     let code = code.and_then(NomCode::from_name);
-    match ::nameparser::parse(name, authorship, rank, code) {
-        Ok(pn) => Ok(PyParsedName { inner: pn }),
-        Err(e) => Err(unparsable_name_error(py, e)),
+    match ::nameparser::parse_result(name, authorship, rank, code) {
+        ::nameparser::ParseResult::Parsed(pn) => Ok(PyParsedName { inner: pn }.into_py(py)),
+        ::nameparser::ParseResult::Informal(inf) => Ok(PyInformal { inner: inf }.into_py(py)),
+        ::nameparser::ParseResult::Unparsable(e) => Err(unparsable_name_error(py, e)),
     }
 }
 
 /// Parses a batch of scientific names in one call. `authorship`/`rank`/`code` are the
 /// same optional hints [`parse`] takes, applied uniformly to every name in `names`.
 ///
-/// **Contract: never raises mid-batch.** Each output element is the parsed
-/// [`PyParsedName`] on success, or `None` — NOT a raised [`UnparsableNameError`] — for
-/// any name the core cannot parse, so one bad name in a large batch can't abort the
-/// whole call. Callers that need the specific [`::nameparser::model::ParseError`] for a
-/// failing name should call [`parse`] on that name individually instead.
+/// **Contract: never raises mid-batch.** Each output element is a [`PyParsedName`] or a
+/// [`PyInformal`] on success, or `None` — NOT a raised [`UnparsableNameError`] — for any name the
+/// core cannot parse, so one bad name in a large batch can't abort the whole call. Callers that need
+/// the specific [`::nameparser::model::ParseError`] for a failing name should call [`parse`] on that
+/// name individually instead.
 #[pyfunction]
 #[pyo3(signature = (names, authorship=None, rank=None, code=None))]
 fn parse_all(
+    py: Python<'_>,
     names: Vec<String>,
     authorship: Option<&str>,
     rank: Option<&str>,
     code: Option<&str>,
-) -> Vec<Option<PyParsedName>> {
+) -> Vec<Option<PyObject>> {
     let rank = rank.and_then(Rank::from_name);
     let code = code.and_then(NomCode::from_name);
     names
         .iter()
         .map(
-            |name| match ::nameparser::parse(name, authorship, rank, code) {
-                Ok(pn) => Some(PyParsedName { inner: pn }),
-                Err(_) => None,
+            |name| match ::nameparser::parse_result(name, authorship, rank, code) {
+                ::nameparser::ParseResult::Parsed(pn) => Some(PyParsedName { inner: pn }.into_py(py)),
+                ::nameparser::ParseResult::Informal(inf) => {
+                    Some(PyInformal { inner: inf }.into_py(py))
+                }
+                ::nameparser::ParseResult::Unparsable(_) => None,
             },
         )
         .collect()
@@ -482,6 +553,7 @@ fn nameparser(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(parse, m)?)?;
     m.add_function(wrap_pyfunction!(parse_all, m)?)?;
     m.add_class::<PyParsedName>()?;
+    m.add_class::<PyInformal>()?;
     m.add_class::<PyAuthorship>()?;
     m.add(
         "UnparsableNameError",
