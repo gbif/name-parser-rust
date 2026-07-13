@@ -149,6 +149,8 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     || w.eq_ignore_ascii_case("indet")
                 {
                     let is_sp = w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spec");
+                    let is_cf_or_aff =
+                        w.eq_ignore_ascii_case("cf") || w.eq_ignore_ascii_case("aff");
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
@@ -173,6 +175,23 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         if i < n && tokens[i].kind == TokenKind::Number {
                             i += 1;
                         }
+                    }
+                    // 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): a TRUE indet marker
+                    // (sp./spec./species/indet — NOT cf./aff., which precede a real species
+                    // epithet) with NO species epithet yet is a supraspecific-provisional name;
+                    // ANY remaining tokens are its specimen/culture/collection tag — the informal
+                    // phrase — never authorship. Consume the whole tail into the name section so
+                    // NameTokens.classify captures it as the phrase, rather than the next
+                    // capitalised token tripping the "upper-case word → authorship" boundary below
+                    // (misreading "Rhizobium sp. RMCC TR1811" as the author "Rmcc Tr1811"). The
+                    // single number/strain/letter cases above already advanced i; this catches
+                    // multi-token tails. Rescues the ~382k "tag not captured" rows the corpus study
+                    // found.
+                    // …but a year-bearing tail IS an authorship citation, not a specimen tag
+                    // ("Lampona spec Platnick, 2000", "Gobiosoma spec (Ginsburg, 1939)") — leave
+                    // it to the normal boundary logic below so the author + year still parse.
+                    if !is_cf_or_aff && !have_epithet && i < n && !has_year_token(tokens, i, n) {
+                        return n;
                     }
                     continue;
                 }

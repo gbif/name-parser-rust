@@ -37,6 +37,17 @@ const CORPUS: &str = concat!(
     "/../../testdata/benchmark-data.txt"
 );
 
+/// Inputs the 5.0.0 parser deliberately parses differently from the frozen 4.2.0 Java CLI oracle —
+/// the informal "tag capture" enhancement (Phase 5): a yearless `Genus sp. <tag>` now captures the
+/// tag as the informal `phrase` instead of misreading it as an author, so the emitted JSONL row
+/// differs. Kept 1:1 with `parse_golden::INFORMAL_5_0_0_DIVERGENCES` (separate binaries). Their rows
+/// are skipped so the intended change doesn't trip this 4.2.0 regression gate; P5 locks the new shape.
+const INFORMAL_5_0_0_DIVERGENCES: &[&str] = &[
+    "Lacanobia sp. nr. subjuncta Bold:Aab, 0925",
+    "Burkholderia sp. (Gigaspora margarita endosymbiont)",
+    "Elaeocarpus sp. Rocky Creek",
+];
+
 fn run_cli(cli_args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_nameparser-cli"))
         .args(cli_args)
@@ -102,6 +113,17 @@ fn parse_over_the_benchmark_corpus_matches_the_java_cli_oracle() {
 
     let mut mismatches = 0usize;
     for (i, (a, e)) in actual_lines.iter().zip(expected_lines.iter()).enumerate() {
+        // Skip the deliberate 5.0.0 informal tag-capture divergences (see the const's doc): the
+        // captured phrase makes the row legitimately differ from the frozen 4.2.0 oracle.
+        let input = serde_json::from_str::<serde_json::Value>(e)
+            .ok()
+            .and_then(|v| v.get("input").and_then(|s| s.as_str()).map(str::to_owned));
+        if input
+            .as_deref()
+            .is_some_and(|inp| INFORMAL_5_0_0_DIVERGENCES.contains(&inp))
+        {
+            continue;
+        }
         if !rows_match(a, e) {
             mismatches += 1;
             if mismatches <= 10 {

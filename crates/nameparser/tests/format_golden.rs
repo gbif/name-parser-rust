@@ -41,6 +41,18 @@ const COLUMNS: [&str; 5] = [
 /// Cap on how many example mismatches are printed per column.
 const EXAMPLE_CAP: usize = 8;
 
+/// Inputs the 5.0.0 parser deliberately parses differently from the frozen 4.2.0 Java oracle — the
+/// informal "tag capture" enhancement (Phase 5) — so their formatted forms differ too: the newly
+/// captured `phrase` now renders (`"Elaeocarpus sp. Rocky Creek"`) where Java dropped it
+/// (`"Elaeocarpus sp."`). Kept 1:1 with `parse_golden::INFORMAL_5_0_0_DIVERGENCES` (the two golden
+/// binaries share no module). Skipped here so the intended change doesn't trip the 4.2.0 formatter
+/// regression gate; the curated NEW-shape golden is P5's job.
+const INFORMAL_5_0_0_DIVERGENCES: &[&str] = &[
+    "Lacanobia sp. nr. subjuncta Bold:Aab, 0925",
+    "Burkholderia sp. (Gigaspora margarita endosymbiont)",
+    "Elaeocarpus sp. Rocky Creek",
+];
+
 /// Reverse the `FormatOracle.esc` escaping (`\\`, `\t`, `\r`, `\n`).
 fn unescape(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
@@ -121,6 +133,11 @@ fn matches_java_name_formatter_over_corpus() {
         match (java_ok, rust) {
             (true, Ok(pn)) => {
                 both_parsed += 1;
+                // Deliberate 5.0.0 informal tag-capture divergences (see the const's doc): the
+                // captured phrase now renders where Java dropped it. Skip the formatter diff.
+                if INFORMAL_5_0_0_DIVERGENCES.contains(&input.as_str()) {
+                    continue;
+                }
                 let rust_vals = [
                     nz(pn.canonical_name()),
                     nz(pn.canonical_name_without_authorship()),

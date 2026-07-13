@@ -78,6 +78,14 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     // `tokens.len()` as Java's separately-threaded `boundary` parameter.
     let ts: &[Token] = &ctx.tokens[..boundary];
 
+    // True when AuthorshipSplit left NO authorship tail — the name section spans the whole
+    // input. Gates the trailing-tag phrase capture below: only flatten a supraspecific indet
+    // tail into a phrase when find_boundary already decided the whole string is the name (it
+    // returns `n` for a yearless "Genus sp. <tag>"); when it kept an author+year tail out of
+    // the name section (`boundary < len`, e.g. "Bacterium sp. (serotype) aboney Dräger 1951"),
+    // the in-name tokens are structural (subgenus, epithet) and must parse normally, not flatten.
+    let name_section_covers_all = boundary == ctx.tokens.len();
+
     let mut genus: Option<String> = None;
     let mut subgenus: Option<String> = None;
     let mut infrageneric: Option<Rank> = None;
@@ -393,6 +401,28 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         if is_strain_code(&code) {
                             ctx.name.phrase = Some(code);
                         }
+                    }
+                    // 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): a supraspecific indet
+                    // marker followed by a trailing tag the narrow branches above did not capture —
+                    // a multi-token specimen/culture/BOLD code like "Rhizobium sp. RMCC TR1811" or
+                    // "Ichneumonidae sp. UAM Ento 145060" — captures the whole VERBATIM tail as the
+                    // informal phrase instead of silently dropping it token-by-token at the
+                    // "upper word … skip" fallthrough below. Fires only for the pure
+                    // supraspecific-provisional band (no species epithet, so it stays out of the
+                    // binomial-core names that remain Parsed) and only when nothing was captured
+                    // above. Rescues the ~382k "tag not captured" rows the 67.5M verbatim-corpus
+                    // study found (`docs/superpowers/findings/`). Token offsets index into
+                    // `ctx.working` (`ctx.tokens = tokenize(&ctx.working)`, unmodified until here),
+                    // so the slice is the exact source substring with its original spacing.
+                    if name_section_covers_all
+                        && ctx.name.phrase.is_none()
+                        && lower_epithets.is_empty()
+                        && i < ts.len()
+                    {
+                        let start = ts[i].start;
+                        let end = ts[ts.len() - 1].end;
+                        ctx.name.phrase = Some(ctx.working[start..end].to_string());
+                        i = ts.len();
                     }
                     continue;
                 }

@@ -158,6 +158,24 @@ fn allowed_mismatches(key: &str) -> usize {
         .unwrap_or(0)
 }
 
+/// Inputs the 5.0.0 parser DELIBERATELY parses differently from the frozen 4.2.0 Java oracle —
+/// the informal / semistructured "tag capture" enhancement (Phase 5, `docs/superpowers/findings/`).
+/// For a supraspecific indeterminate name (`Genus sp. <tag>`) with a yearless trailing tag, the
+/// 5.0.0 parser now captures the whole tag as the informal `phrase` instead of misreading it as an
+/// author — the Australian-herbarium locality convention (`Elaeocarpus sp. Rocky Creek`), a
+/// descriptive note (`Burkholderia sp. (Gigaspora margarita endosymbiont)`), or a near-determination
+/// + specimen code (`Lacanobia sp. nr. subjuncta Bold:Aab, 0925`). All three stay on the SAME side
+/// of the error/parsed partition and keep the same `type`/`code` (asserted 0-mismatch above); only
+/// the within-`ParsedName` field shape (`phrase`/`warnings`/authorship) differs, by design. Their
+/// per-field diff is skipped here rather than count-capped in [`ALLOWLIST`] so the exact inputs are
+/// pinned, not a fuzzy tally. The curated informal golden that locks the NEW expected shape is P5's
+/// job; this set only prevents the intended change from failing the 4.2.0 regression gate.
+const INFORMAL_5_0_0_DIVERGENCES: &[&str] = &[
+    "Lacanobia sp. nr. subjuncta Bold:Aab, 0925",
+    "Burkholderia sp. (Gigaspora margarita endosymbiont)",
+    "Elaeocarpus sp. Rocky Creek",
+];
+
 /// Order-insensitive equality for a JSON value Java serialises from a `Set`/`Map`-like
 /// collection: `warnings`'s `HashSet<String>`, `notho`'s `EnumSet<NamePart>` (both -> a JSON
 /// array) and `epithetQualifier`'s `EnumMap<NamePart, String>` (-> a JSON object). Java's
@@ -302,6 +320,12 @@ fn matches_java_error_classification_over_corpus() {
                 // Both parsed. Diff every field of the full `ParsedName` wire shape —
                 // asserted 0 below (modulo ALLOWLIST), see the module doc.
                 both_parsed += 1;
+                // Deliberate 5.0.0 informal tag-capture divergences — see
+                // INFORMAL_5_0_0_DIVERGENCES. Same partition + type/code as Java (checked above);
+                // only the within-ParsedName shape differs, by design, so skip the field diff.
+                if INFORMAL_5_0_0_DIVERGENCES.contains(&input) {
+                    continue;
+                }
                 let java_obj = java_parsed
                     .expect("java_error is None so java_parsed is Some (asserted above)");
                 let rust_value =
