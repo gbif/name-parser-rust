@@ -1,0 +1,149 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Continuous integration: builds and TESTS the Rust engine and every binding on each push to
+# `main` and every pull request. This is the test/quality gate — it publishes nothing.
+#
+# Division of labour (see DISTRIBUTION.md):
+#   * This workflow      -> build + test everything, on push/PR (no deploy).
+#   * *-release.yml       -> tag-triggered publishing (crate->crates.io, cli->Releases, py->PyPI).
+#   * Jenkinsfile         -> the ONE thing GitHub Actions can't do here: deploy the Java FFM
+#                            binding to GBIF's Nexus (repository.gbif.org), whose credentials live
+#                            in Jenkins. Jenkins stays scoped to that; all *testing* lives here,
+#                            where the multi-OS runner matrix is free.
+#
+# The Python crate (crates/nameparser-py) is a PyO3 `extension-module` (abi3) — plain
+# `cargo test`/`cargo clippy` on it drags in libpython linking, so the pure-Rust jobs below
+# `--exclude nameparser-py` and the dedicated `python` job exercises it via maturin + pytest.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same branch/PR — the newest push is the only one worth checking.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---- Rust: format + lint. Cheap, single-platform, fails fast on style/clippy. ----
+  rust-lint:
+    name: rust fmt + clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: lint
+      # fmt covers the whole workspace (it never compiles, so the py crate is safe to include).
+      - name: cargo fmt --check
+        run: cargo fmt --all --check
+      # clippy/test skip nameparser-py (libpython linking) — the `python` job covers that crate.
+      - name: cargo clippy
+        run: cargo clippy --workspace --exclude nameparser-py --all-targets -- -D warnings
+
+  # ---- Rust: the test suite across the three tier-1 OSes. ----
+  # This includes crates/nameparser/tests/parse_golden.rs — the 8,017-name golden corpus that IS
+  # the self-contained Java-parity gate (no sibling Java checkout needed; testdata is committed),
+  # plus the ported NameParserImplTest / NameParserGnaTest suites and the FFI struct-ABI tests.
+  rust-test:
+    name: rust test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: test-${{ matrix.os }}
+      - name: cargo test
+        run: cargo test --workspace --exclude nameparser-py --all-targets
+
+  # ---- Python binding: build the wheel with maturin, install it, run pytest. ----
+  python:
+    name: python binding
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: python
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      # test_parity.py prefers the Java shaded jar as an oracle but falls back to this repo's own
+      # release CLI (target/release/nameparser-cli) when the jar is absent — as it is in CI — so
+      # build the CLI first to give the parity test its oracle.
+      - name: Build the CLI (parity-test oracle)
+        run: cargo build --release -p nameparser-cli
+      - name: Install maturin + pytest
+        run: pip install maturin pytest
+      - name: Build + install the wheel
+        run: |
+          maturin build --release -m crates/nameparser-py/Cargo.toml --out dist
+          pip install --no-index --find-links dist gbif-name-parser
+      - name: pytest
+        run: pytest crates/nameparser-py/python/tests -v
+
+  # ---- R binding (extendr): compile in place and run the testthat suite. ----
+  # The newest binding — if the extendr build needs tuning, this is the job to adjust. It compiles
+  # the Rust via the package's configure/Makevars against the workspace core crate (path dep), so
+  # it needs both R and a Rust toolchain. test-parity.R skips cleanly without the git-ignored
+  # oracle; test-parse-names.R runs real assertions.
+  r:
+    name: r binding
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: r
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          working-directory: bindings/r
+          extra-packages: |
+            any::testthat
+            any::pkgload
+      # load_all compiles the extendr crate in the working tree (so the ../.. path dep to the core
+      # crate resolves) and attaches the package namespace; test_dir then runs the suite.
+      - name: testthat
+        run: Rscript -e 'pkgload::load_all("bindings/r"); testthat::test_dir("bindings/r/tests/testthat", stop_on_failure = TRUE)'
+
+  # ---- Java FFM binding: build the host cdylib, then run the Maven tests (ParityTest + smoke). ----
+  # Mirrors what the Jenkins snapshot build does, minus the Nexus deploy: build-cdylib.sh stages the
+  # host cdylib into target/release, and the pom's Linux profile points -Dnameparser.ffi.lib at the
+  # .so. GitHub's ubuntu image ships Maven; build-cdylib.sh bootstraps rustup if needed.
+  java:
+    name: java binding
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Build the host cdylib
+        run: bash ci/build-cdylib.sh
+      - name: mvn test
+        run: mvn -B -f bindings/java/pom.xml test
