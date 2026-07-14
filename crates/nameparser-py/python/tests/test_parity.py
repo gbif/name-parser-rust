@@ -91,9 +91,9 @@ import pytest
 import nameparser
 from _corpus import CORPORA, REPO_ROOT, read_corpus
 
-JAVA_SHADED_JAR = Path(
-    "/Users/markus/code/gbif/name-parser/name-parser-cli/target/"
-    "name-parser-cli-4.2.0-SNAPSHOT-shaded.jar"
+JAVA_SHADED_JAR = (
+    Path.home()
+    / "code/gbif/name-parser/name-parser-cli/target/name-parser-cli-4.2.0-SNAPSHOT-shaded.jar"
 )
 RUST_CLI = REPO_ROOT / "target" / "release" / "nameparser-cli"
 

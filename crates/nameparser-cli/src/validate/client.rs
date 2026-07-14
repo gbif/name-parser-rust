@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! LLM judge backends — mirrors the Java CLI's `llm.{Judge,AnthropicClient,OpenAiClient}`
-//! (`/Users/markus/code/gbif/name-parser/name-parser-cli/src/main/java/org/gbif/nameparser/cli/llm/`).
-//! See the recon doc's §6 for the full verified per-provider request/response/auth/retry
-//! contract this reproduces.
+//! (`name-parser-cli/src/main/java/org/gbif/nameparser/cli/llm/` in the Java `name-parser` repo).
+//! Reproduces that module's verified per-provider request/response/auth/retry contract.
 //!
 //! Both clients are built on `ureq` (a synchronous HTTP client with no async-runtime
 //! dependency, matching this whole CLI's synchronous design and Java's own single-threaded,

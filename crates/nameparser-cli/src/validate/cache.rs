@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! `VerdictCache` — on-disk cache of LLM verdicts, mirroring the Java CLI's `llm.VerdictCache`
-//! (`/Users/markus/code/gbif/name-parser/name-parser-cli/src/main/java/org/gbif/nameparser/cli/llm/VerdictCache.java`).
+//! (`name-parser-cli/src/main/java/org/gbif/nameparser/cli/llm/VerdictCache.java` in the Java `name-parser` repo).
 //! Keyed by a SHA-256 hash of the exact thing that was judged (prompt version + model + input +
 //! serialized parser output), so re-running the validator over an unchanged corpus costs nothing
 //! for names already judged — only new or changed parses hit the API. See the recon doc's §7 for

@@ -9,7 +9,7 @@ Java `name-parser-cli`'s, field-for-field, using the new `nameparser-cli compare
 For each corpus `testdata/<name>.txt`:
 
 ```sh
-JAR=$(ls /Users/markus/code/gbif/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar | head -1)
+JAR=$(ls ~/code/gbif/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar | head -1)
 java -jar "$JAR" parse --input=testdata/<name>.txt --output=- --format=jsonl > testdata/<name>.java.jsonl 2>/dev/null
 ./target/release/nameparser-cli parse --input=testdata/<name>.txt --output=- --quiet > testdata/<name>.rust.jsonl
 ./target/release/nameparser-cli compare testdata/<name>.java.jsonl testdata/<name>.rust.jsonl

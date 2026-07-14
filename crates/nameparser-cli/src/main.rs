@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //! `nameparser-cli` — native command-line tools wrapping the [`nameparser`] crate, mirroring
-//! the Java `org.gbif.nameparser.cli` module (`/Users/markus/code/gbif/name-parser/name-parser-cli/`).
+//! the Java `org.gbif.nameparser.cli` module (`name-parser-cli/` in the Java `name-parser` repo).
 //! This is the ONLY crate in the workspace that depends on `clap` — the core `nameparser`
-//! crate stays dependency-lean, per the Phase 2 plan's Global Constraints.
+//! crate stays dependency-lean by design.
 //!
 //! ## `parse` (Phase 2 Task 1 — implemented)
 //!

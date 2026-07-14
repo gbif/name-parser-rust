@@ -21,7 +21,7 @@
 #
 # Environment:
 #   JAR        path to the Java name-parser-cli shaded jar (default: discovered under
-#              /Users/markus/code/gbif/name-parser/name-parser-cli/target/)
+#              ~/code/gbif/name-parser/name-parser-cli/target/)
 #   MAX_DIFFS  passed to `nameparser-cli compare --max-diffs` (default 1000 — generous, so a
 #              triage run sees every differing row up front rather than needing a re-run)
 #
@@ -31,7 +31,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-JAR="${JAR:-$(ls /Users/markus/code/gbif/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar 2>/dev/null | head -1)}"
+JAR="${JAR:-$(ls ~/code/gbif/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar 2>/dev/null | head -1)}"
 if [ -z "$JAR" ] || [ ! -f "$JAR" ]; then
   echo "Java name-parser-cli shaded jar not found — set \$JAR to its path, or build it first" \
        "(cd .../name-parser/name-parser-cli && mvn -q package)." >&2
