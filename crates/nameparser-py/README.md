@@ -14,8 +14,19 @@ cross-checked against the independent Java `name-parser` oracle: **0 diffs** (se
 
 ## Install
 
-Not yet published to PyPI. Until then, build from source with
-[maturin](https://www.maturin.rs) inside this repo's project-local venv:
+```sh
+pip install gbif-name-parser   # → import nameparser
+```
+
+Prebuilt `abi3` wheels are on PyPI for Linux (x86_64 / aarch64), macOS (Apple Silicon), and
+Windows (x64), covering CPython 3.9+. On other platforms (e.g. Intel macOS) `pip` builds from the
+sdist, which needs a Rust toolchain (`cargo`/`rustc`) on the machine.
+
+(The PyPI **distribution** name is `gbif-name-parser` — matching the Rust core crate on
+crates.io, so it's one name across both registries — but the **importable module** stays
+`nameparser` either way; see `pyproject.toml`.)
+
+### From source (development)
 
 ```sh
 python3 -m venv .venv && . .venv/bin/activate
@@ -26,15 +37,7 @@ maturin develop --release -m crates/nameparser-py/Cargo.toml
 `maturin develop` compiles the Rust cdylib and installs it into the active virtualenv as an
 editable `nameparser` package (including the `nameparser.pyi` type stub and a `py.typed`
 marker — this package is fully typed; see [Editors / type checkers](#editors--type-checkers)
-below). Once published, the same package will install with:
-
-```sh
-pip install gbif-name-parser   # → import nameparser
-```
-
-(The PyPI **distribution** name is `gbif-name-parser` — matching the Rust core crate on
-crates.io, so it's one name across both registries — but the **importable module** stays
-`nameparser` either way; see `pyproject.toml`.)
+below).
 
 ## Usage
 
