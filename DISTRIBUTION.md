@@ -97,7 +97,8 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 ### 2.3 Python binding
 
 - **CI: `.github/workflows/python-release.yml`** (uses **[PyO3/maturin-action](https://github.com/PyO3/maturin-action)**)
-  builds `manylinux` (x86_64 + aarch64), macOS (x86_64 + arm64), and Windows wheels plus an sdist,
+  builds `manylinux` (x86_64 + aarch64), macOS (arm64; Intel macOS dropped — macos-13 runners
+  retiring, sdist is the Intel fallback), and Windows wheels plus an sdist,
   each embedding the compiled Rust extension. Because the crate builds an **abi3** (`abi3-py39`)
   wheel, one wheel per platform covers CPython 3.9+ — no per-version matrix.
 - Publishes to **PyPI** under distribution name **`gbif-name-parser`** (import stays `nameparser`;

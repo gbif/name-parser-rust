@@ -65,8 +65,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64
-            runner: macos-13    # native Intel
+          # Intel macOS (x86_64) is intentionally NOT built — GitHub is retiring the macos-13 Intel
+          # runners (matching the CLI). Intel-Mac users fall back to the sdist (needs a Rust
+          # toolchain at install time). If wanted back, cross-compile on macos-14 (arm64) with
+          # maturin's `--target x86_64-apple-darwin` rather than depending on a macos-13 runner.
           - target: aarch64
             runner: macos-14    # native Apple Silicon
     runs-on: ${{ matrix.runner }}
