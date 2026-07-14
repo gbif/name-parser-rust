@@ -52,8 +52,8 @@ docs/superpowers/   # design spec, implementation notes, and findings
 
 | Binding | Path | Status |
 |---|---|---|
-| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; self-contained JAR (bundles the `nameparser-ffi` cdylib) — `0.1.0-SNAPSHOT` auto-deployed to GBIF Nexus via Jenkins on every push (see [`DISTRIBUTION.md`](DISTRIBUTION.md)) |
-| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); wheel built locally, not yet published to PyPI |
+| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; self-contained JAR (bundles the `nameparser-ffi` cdylib) — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.1.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
+| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to PyPI** — `pip install gbif-name-parser` |
 | R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub, not yet on CRAN — see [`bindings/r/README.md`](bindings/r/README.md) |
 
 ## Native CLI
@@ -77,7 +77,7 @@ cargo test --workspace           # core tests incl. corpus golden-diff parity ga
 
 # Java binding (needs JDK 22+, where java.lang.foreign is stable):
 cargo build -p nameparser-ffi --release
-mvn -f bindings/java/pom.xml test # smoke + the 11,302-name parity test vs NameParserImpl
+mvn -f bindings/java/pom.xml test # smoke + the ~8,017-name golden-snapshot parity test
 ```
 
 ## Relationship to `gbif/name-parser`

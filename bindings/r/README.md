@@ -19,7 +19,7 @@ devtools::install("bindings/r")
 # or, without devtools:
 # R CMD INSTALL bindings/r
 
-# from GitHub, once published:
+# from GitHub:
 # remotes::install_github("gbif/name-parser-rust", subdir = "bindings/r")
 ```
 
@@ -54,13 +54,18 @@ out[, c("scientificName", "parsed", "rank", "genus", "specificEpithet",
 `authorship`, `rank`, `code` (the parser's `SCREAMING_SNAKE_CASE` enum names, e.g.
 `"SPECIES"`, `"ZOOLOGICAL"`).
 
-All 35 columns, in order: `scientificName`, `parsed`, `error`, `type`, `rank`, `code`,
-`uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`, `infraspecificEpithet`,
-`cultivarEpithet`, `phrase`, `candidatus`, `notho`, `originalSpelling`, `epithetQualifier`,
-`extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`, `publishedInYear`,
-`publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`, `combinationAuthors`,
-`combinationExAuthors`, `combinationYear`, `basionymAuthors`, `basionymExAuthors`,
-`basionymYear`, `sanctioningAuthor`, `warnings`.
+All 43 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
+`taxonRank`, `rank`, `code`, `uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`,
+`infraspecificEpithet`, `cultivarEpithet`, `phrase`, `candidatus`, `notho`, `originalSpelling`,
+`epithetQualifier`, `extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`,
+`publishedInYear`, `publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`,
+`combinationAuthors`, `combinationExAuthors`, `combinationYear`, `basionymAuthors`,
+`basionymExAuthors`, `basionymYear`, `sanctioningAuthor`, `warnings`, `canonical`,
+`canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`, `authorshipComplete`.
+
+`result` is the 5.0.0 three-way outcome (`"parsed"` / `"informal"` / `"unparsable"`); `taxon`
+and `taxonRank` carry an informal name's supraspecific anchor; the last five are `NameFormatter`
+renderings (`canonical` is populated for informal rows too, the other four are `NA` there).
 
 ### `parse_name_json()` — lossless escape hatch
 
@@ -109,10 +114,6 @@ a separate `parsedPartially` flag; enum columns (`type`, `rank`, `code`, `state`
 - **`genericAuthorship`/`specificAuthorship` are JSON-only.** These niche botanical
   `CombinedAuthorship` bundles (infrageneric-rank names with two independent author strings)
   are not flattened into `parse_names()` columns; get them via `parse_name_json()`.
-- **No assembled canonical `authorship` string column.** Unlike some name-parsing APIs that
-  return one ready-to-display authorship string, this binding only exposes the parsed
-  *parts* (`combinationAuthors`, `combinationYear`, ...) — assembling a single canonical
-  string is deferred pending a core `NameFormatter` (not yet ported from the Java library).
 - **Not on CRAN.** CRAN packages that build native code from a non-vendored, network-fetched
   dependency tree (this crate's core-parser path dependency plus its own crates.io
   dependencies) need the whole dependency graph vendored into the source tarball per CRAN's
@@ -126,9 +127,9 @@ Rscript -e 'devtools::load_all("bindings/r", quiet=TRUE); testthat::test_dir("bi
 ```
 
 Includes a corpus **parity gate** (`tests/testthat/test-parity.R`) that diffs
-`parse_name_json()` against the Java CLI oracle (`testdata/expected-parse.jsonl`) over the
-~8,000-name benchmark corpus — the same oracle the native CLI and Python binding validate
-against. It skips cleanly (does not fail) if that git-ignored oracle file isn't present
+`parse_name_json()` against the frozen golden snapshot `testdata/golden/expected-parse.jsonl`
+over the ~8,000-name benchmark corpus — the same snapshot the native CLI and Python binding
+validate against. It skips cleanly (does not fail) if that git-ignored file isn't present
 locally; see `crates/nameparser/tests/parse_golden.rs`'s module doc to regenerate it.
 
 ## License
