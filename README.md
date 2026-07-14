@@ -39,7 +39,7 @@ correctness parity is in [`cross-validation.md`](cross-validation.md).
 ```
 crates/
   nameparser/       # the core parser — pure Rust, zero FFI. All parsing logic lives here.
-  nameparser-cli/   # native CLI (clap): parse / benchmark / compare
+  nameparser-cli/   # native CLI (clap): parse / benchmark / compare / validate — see its README
   nameparser-ffi/   # C-ABI cdylib (JSON + flat-struct wire formats) for the Java binding
   nameparser-py/    # native Python binding (PyO3), depends on the core crate directly
 bindings/
@@ -55,6 +55,19 @@ docs/superpowers/   # design spec, implementation plans, and per-phase findings
 | Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; dev-only until the native `nameparser-ffi` cdylib is packaged for a real Maven dependency (see [`DISTRIBUTION.md`](DISTRIBUTION.md)) |
 | Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); wheel built locally, not yet published to PyPI |
 | R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub, not yet on CRAN — see [`bindings/r/README.md`](bindings/r/README.md) |
+
+## Native CLI
+
+`nameparser-cli` runs the parser from the command line — parse names to JSON, **standardize** them
+(`--canonical`), benchmark throughput, diff two parse runs, or run an LLM-judged validation sweep.
+A quick taste:
+
+```sh
+echo 'Betula pendula ROTH' | nameparser-cli parse --canonical
+# {"line":1,"input":"Betula pendula ROTH","canonical":"Betula pendula Roth","parsed":{…}}
+```
+
+Full command + flag reference: [`crates/nameparser-cli/README.md`](crates/nameparser-cli/README.md).
 
 ## Build & test
 
