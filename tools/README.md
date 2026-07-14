@@ -16,7 +16,7 @@ Regenerate (Java 25 + the name-parser-cli shaded jar on the classpath):
 
 ```sh
 [ -s "$HOME/.sdkman/bin/sdkman-init.sh" ] && source "$HOME/.sdkman/bin/sdkman-init.sh"
-JAR=$(ls /Users/markus/code/gbif/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar | head -1)
+JAR=$(ls /path/to/name-parser/name-parser-cli/target/name-parser-cli-*-shaded.jar | head -1)
 javac -cp "$JAR" -d /tmp/oracle tools/FormatOracle.java
 java -cp "$JAR:/tmp/oracle" FormatOracle < testdata/benchmark-data.txt > testdata/expected-format.tsv
 ```

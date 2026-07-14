@@ -9,8 +9,7 @@ no JSON round-trip, no separately-installed native library to locate at runtime.
 
 Field parity with the core is validated over this repo's full ~11,302-name test corpus,
 cross-checked against the independent Java `name-parser` oracle: **0 diffs** (see
-`crates/nameparser-py/python/tests/test_parity.py` and
-`docs/superpowers/findings/2026-07-11-phase4a-python-status.md`).
+`crates/nameparser-py/python/tests/test_parity.py`).
 
 ## Install
 

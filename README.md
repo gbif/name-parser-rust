@@ -4,8 +4,8 @@ A Rust port of the [GBIF name parser](https://github.com/gbif/name-parser) — a
 ReDoS-free reimplementation that parses scientific names into a structured `ParsedName`, with
 byte-for-byte behavioural parity to the Java `org.gbif:name-parser`.
 
-> **Status: work in progress.** The core parser, the native CLI, and the Java, Python, and R
-> bindings are all complete and validated (Phases 1–4). The backend cutover is not yet done
+> **Status: released.** The core parser, the native CLI, and the Java, Python, and R bindings
+> are complete, cross-validated, and published at 0.1.0. The backend cutover is not yet done
 > — see the [roadmap](#roadmap).
 
 ## Why
@@ -45,7 +45,7 @@ crates/
 bindings/
   java/             # NameParserRust implements org.gbif.nameparser.api.NameParser, via Panama/FFM
   r/                # R package `nameparser` (extendr): parse_names() tibble + parse_name_json()
-docs/superpowers/   # design spec, implementation plans, and per-phase findings
+docs/superpowers/   # design spec, implementation notes, and findings
 ```
 
 ## Bindings
@@ -89,11 +89,10 @@ library remains authoritative; this port is validated against it, not the revers
 
 ## Roadmap
 
-- [x] **Phase 1** — faithful core: the whole pipeline, full field parity
-- [x] **Phase 2** — native CLI + large-corpus cross-validation
-- [x] **Phase 3** — in-process Java FFM/Panama binding
-- [x] **Phase 4** — Python (PyO3) + R (extendr) bindings
-- [ ] **Phase 5** — backend cutover; retire the Java `pipeline` package
+- [x] Rust core — the full parsing pipeline, byte-for-byte field parity with the Java parser
+- [x] Native CLI + large-corpus cross-validation
+- [x] Java (FFM/Panama), Python (PyO3), and R (extendr) bindings — published at 0.1.0
+- [ ] Backend cutover — swap `NameParserImpl` → `NameParserRust`, retire the Java `pipeline` package
 
 ## License
 

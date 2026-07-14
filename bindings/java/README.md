@@ -6,22 +6,21 @@ in-process via `java.lang.foreign` (FFM/Panama, stable since JDK 22 — no
 `--enable-preview` needed). Each `parse` marshals its inputs across the FFI boundary, receives
 the result as a **flat fixed-layout binary struct**, and rebuilds a `ParsedName` from it via
 `StructCodec` and the real setters. This is the single wire format: it was ~13% faster than a
-JSON/Gson path in the Phase-3 JMH A/B, so that JSON path was dropped at cdylib **ABI version 2**,
+JSON/Gson path in a JMH A/B benchmark, so that JSON path was dropped at cdylib **ABI version 2**,
 which also removed the `gson` runtime dependency (`gson` is now test-scope only, used by
 `ParityTest` as its structural-comparison tool).
 
 This module is deliberately **standalone**: it has no `<parent>` (the GBIF `name-parser`
-reactor's motherpom pins `--release 17`, which rejects `java.lang.foreign`), and it does not
-modify `/Users/markus/code/gbif/name-parser/` or any other repo. It depends on the
+reactor's motherpom pins `--release 17`, which rejects `java.lang.foreign`). It depends on the
 released `org.gbif:name-parser-api:5.0.0` artifact, resolved from repository.gbif.org (cached
 in `~/.m2` after the first build).
 
 ## Requirements
 
-- **JDK 22 or newer** to compile and run (`java.lang.foreign` is finalized in 22; this repo's
-  dev/CI JDK is `25.0.3-librca`). Set `JAVA_HOME` accordingly before running Maven:
+- **JDK 22 or newer** to compile and run (`java.lang.foreign` is finalized in 22). Point
+  `JAVA_HOME` at a 22+ JDK before running Maven:
   ```sh
-  export JAVA_HOME="$HOME/.sdkman/candidates/java/25.0.3-librca"
+  export JAVA_HOME=/path/to/jdk-22-or-newer
   export PATH="$JAVA_HOME/bin:$PATH"
   ```
 - `org.gbif:name-parser-api:5.0.0` — resolved automatically from repository.gbif.org (the
@@ -73,7 +72,7 @@ FFM downcalls require:
 java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release/libnameparser_ffi.dylib ...
 ```
 
-## What's here (Tasks 2-6 of the Phase 3 plan)
+## What's here
 
 - `pom.xml` — standalone Maven module, `--release 22`.
 - `src/main/java/org/gbif/nameparser/rust/Ffi.java` — the FFM plumbing only (symbol lookup,
@@ -93,7 +92,7 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
   collection-typed fields (`notho`, `epithetQualifier`, `warnings`, multi-author lists).
 - `src/test/java/org/gbif/nameparser/rust/ParityTest.java` — `NameParserRust` vs
   `NameParserImpl` (the Java 4.2.0 oracle) over all 7 corpora in `../../testdata/`
-  (11,302 names): **0 diffs**, re-proving Phase 2's out-of-process CLI parity result in-process
+  (11,302 names): **0 diffs**, re-proving the out-of-process CLI parity result in-process
   — `StructCodec`'s correctness proof. Prints a per-corpus + total tally to stdout, and up to 20
   example diffs to stderr on failure. (Uses a test-scope Gson to structurally compare the two
   `ParsedName`s; the shipped binding no longer depends on Gson.)
