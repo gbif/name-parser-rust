@@ -61,6 +61,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_strain_code(ctx, s);
+    s = stash_trailing_culture_accession(ctx, s);
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
@@ -647,6 +648,32 @@ fn stash_trailing_strain_code(ctx: &mut ParseContext, s: String) -> String {
             ctx.name.type_ = NameType::Informal;
             return caps.get(1).unwrap().as_str().to_string();
         }
+    }
+    s
+}
+
+/// 5.0.0 (no Java counterpart): a curated culture-collection accession TRAILING a binomial
+/// ("Aquimarina muelleri DSM 19832", "Bacillus subtilis DSM 10", "Escherichia coli ATCC 11775") is
+/// a strain annotation, NOT authorship. Unlike [`TRAILING_STRAIN_CODE`] (whose code group forbids a
+/// space, so "DSM 19832" slips through and "DSM" is later swallowed as an author), this matches an
+/// `<acronym> <accession>` with the space intact. Group 1 is the binomial, group 2 the whole
+/// verbatim accession (acronym included) — stashed on `ctx.name.phrase` (type INFORMAL, binomial
+/// core kept so the result stays Parsed), consistent with the other trailing-strain paths and with
+/// the standalone `NameType::Identifier` path in `preflight` (shared `culture_collections` list).
+static TRAILING_CULTURE_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^([\p{{Lu}}][\p{{Ll}}]+[ ]+[\p{{Ll}}]+)[ ]+({}[ :=_\-]*(?:[A-Z]{{1,4}}\-)?[0-9][0-9A-Za-z.:\-]*)$",
+        super::culture_collections::acronym_alternation()
+    ))
+    .unwrap()
+});
+
+/// See [`TRAILING_CULTURE_ACCESSION`].
+fn stash_trailing_culture_accession(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = TRAILING_CULTURE_ACCESSION.captures(&s) {
+        ctx.name.phrase = Some(caps.get(2).unwrap().as_str().to_string());
+        ctx.name.type_ = NameType::Informal;
+        return caps.get(1).unwrap().as_str().to_string();
     }
     s
 }

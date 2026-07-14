@@ -110,6 +110,33 @@ def test_unparsable_name_error_code_is_none_when_no_code_applies():
     assert exc.name == "X"
 
 
+def test_bold_bin_is_classified_identifier():
+    # 5.0.0: an anchorless machine identifier (BOLD BIN) is NameType.IDENTIFIER (was OTHER).
+    with pytest.raises(nameparser.UnparsableNameError) as excinfo:
+        nameparser.parse("BOLD:AAA0001")
+    exc = excinfo.value
+    assert exc.name_type == "IDENTIFIER"
+    assert exc.name == "BOLD:AAA0001"
+
+
+def test_standalone_culture_accession_is_an_identifier():
+    with pytest.raises(nameparser.UnparsableNameError) as excinfo:
+        nameparser.parse("DSM 10")
+    assert excinfo.value.name_type == "IDENTIFIER"
+
+
+def test_trailing_culture_accession_becomes_the_phrase():
+    # "DSM 19832" is a strain annotation, not an author — captured verbatim as the phrase; the
+    # binomial core stays a ParsedName with type INFORMAL.
+    pn = nameparser.parse("Aquimarina muelleri DSM 19832")
+    assert isinstance(pn, nameparser.ParsedName)
+    assert pn.genus == "Aquimarina"
+    assert pn.specific_epithet == "muelleri"
+    assert pn.phrase == "DSM 19832"
+    assert pn.type == "INFORMAL"
+    assert pn.combination_authorship.authors == []
+
+
 def test_parse_all_returns_none_for_unparsable_without_raising():
     results = nameparser.parse_all(["Abies alba", "Tobacco mosaic virus"])
     assert len(results) == 2

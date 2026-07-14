@@ -170,3 +170,21 @@ test_that("parse_name_json's error envelope matches the FFI/CLI shape exactly", 
   obj <- jsonlite::fromJSON(js_virus, simplifyVector = FALSE)
   expect_false("name" %in% names(obj$error))
 })
+
+test_that("5.0.0 IDENTIFIER band (Part A) and trailing culture accession (Part B)", {
+  out <- parse_names(c("BOLD:AAA0001",                   # anchorless machine identifier
+                       "DSM 10",                          # standalone culture-collection accession
+                       "Aquimarina muelleri DSM 19832"))  # accession trailing a binomial -> phrase
+
+  # Part A: anchorless machine identifiers are NameType IDENTIFIER (were OTHER in 4.2.0)
+  expect_equal(out$result[1], "unparsable")
+  expect_equal(out$type[1], "IDENTIFIER")
+  expect_equal(out$result[2], "unparsable")
+  expect_equal(out$type[2], "IDENTIFIER")
+
+  # Part B: a trailing culture accession is captured as the phrase; the binomial core stays parsed
+  expect_equal(out$result[3], "parsed")
+  expect_equal(out$genus[3], "Aquimarina")
+  expect_equal(out$phrase[3], "DSM 19832")
+  expect_equal(out$type[3], "INFORMAL")
+})

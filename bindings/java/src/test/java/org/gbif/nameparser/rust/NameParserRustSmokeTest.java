@@ -88,13 +88,13 @@ class NameParserRustSmokeTest {
 
   @Test
   void unparsableOtuNameIsReturnedInItsCanonicalUppercaseForm() {
-    // ABI 3: the Rust core canonicalizes a UNITE species-hypothesis id to uppercase, and that
-    // canonicalized ParseError.name now survives the FFI — so the binding returns "SH..." for a
-    // lowercase "sh..." input, matching the core/CLI/Python/R and the CoL backend's expectation.
+    // The Rust core canonicalizes a UNITE species-hypothesis id to uppercase, and that canonicalized
+    // ParseError.name survives the FFI — so the binding returns "SH..." for a lowercase "sh..."
+    // input. 5.0.0 also reclassifies it OTHER -> IDENTIFIER (an anchorless machine identifier).
     ParseResult result = parser.parse("sh19186714.17fu", null, null, null);
 
     ParseResult.Unparsable u = assertInstanceOf(ParseResult.Unparsable.class, result);
-    assertEquals(NameType.OTHER, u.type());
+    assertEquals(NameType.IDENTIFIER, u.type());
     assertEquals("SH19186714.17FU", u.name());
   }
 
@@ -186,5 +186,41 @@ class NameParserRustSmokeTest {
     assertEquals("patula", parsed.name().getSpecificEpithet());
     assertEquals("cf.", parsed.name().getEpithetQualifier(NamePart.SPECIFIC));
     assertTrue(result.isParsable());
+  }
+
+  // ---- 5.0.0 NameType.IDENTIFIER band (Part A) + trailing culture accession (Part B) ----------
+
+  @Test
+  void boldBinIsAnUnparsableIdentifierResult() {
+    // 5.0.0: an anchorless machine identifier (BOLD BIN) is NameType.IDENTIFIER, carried by the
+    // Unparsable variant across the ABI-4 struct wire (was OTHER pre-5.0). Exercises the new
+    // ordinal (IDENTIFIER=4, OTHER shifted to 5) round-tripping through StructCodec.
+    ParseResult result = parser.parse("BOLD:AAA0001", null, null, null);
+
+    ParseResult.Unparsable u = assertInstanceOf(ParseResult.Unparsable.class, result);
+    assertEquals(NameType.IDENTIFIER, u.type());
+    assertEquals("BOLD:AAA0001", u.name());
+    assertFalse(result.isParsable());
+  }
+
+  @Test
+  void standaloneCultureCollectionAccessionIsAnIdentifier() {
+    ParseResult.Unparsable u =
+        assertInstanceOf(ParseResult.Unparsable.class, parser.parse("DSM 10", null, null, null));
+    assertEquals(NameType.IDENTIFIER, u.type());
+  }
+
+  @Test
+  void trailingCultureCollectionAccessionBecomesThePhrase() throws UnparsableNameException {
+    // "DSM 19832" is a strain annotation, not an author — captured verbatim (acronym included) as
+    // the phrase; the binomial core stays Parsed with type INFORMAL, and "DSM" is NOT an author.
+    ParsedName pn = parser.parse("Aquimarina muelleri DSM 19832", null, null, null).orElseThrow();
+
+    assertEquals("Aquimarina", pn.getGenus());
+    assertEquals("muelleri", pn.getSpecificEpithet());
+    assertEquals("DSM 19832", pn.getPhrase());
+    assertEquals(NameType.INFORMAL, pn.getType());
+    assertTrue(pn.getCombinationAuthorship().getAuthors().isEmpty(),
+        "the accession must not be parsed as an author, got " + pn.getCombinationAuthorship().getAuthors());
   }
 }

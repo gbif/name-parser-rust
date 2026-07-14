@@ -119,6 +119,24 @@ static OTU_SH: LazyLock<Regex> =
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\d` (in a class) → scoped.
 static OTU_GTDB_UBA: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:UBA|GTDB|GCA|GCF)(?-u:[\d_-]+)$").unwrap());
+/// 5.0.0 (no Java counterpart — these were plain OTHER in 4.2.0): further anchorless molecular
+/// operational-unit schemes — OTU/ASV/ESV/zOTU (amplicon/exact sequence variants) and MAG
+/// (metagenome-assembled genome). Whole string with a required trailing number, so it cannot sweep
+/// up a genus that merely starts with the letters (e.g. "Uba fallai" — a real beetle genus).
+static OTU_MOTU: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:z?OTU|ASV|ESV|MAG)(?-u:[ _-]?\d+)$").unwrap());
+/// 5.0.0 (no Java counterpart): a STANDALONE culture-collection accession — one of the curated
+/// [`super::culture_collections`] ALL-CAPS acronyms then an accession body ("DSM 10",
+/// "ATCC BAA-123", "CBS 123.89", "ATCC-11775", "LMG 6923T"). Case-sensitive on the acronym
+/// (conservative). The ANCHORED case (an accession trailing a determined name) is captured as a
+/// phrase in `stripandstash` instead, not classified here.
+static CULTURE_ACCESSION_STANDALONE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^{}(?-u:[ :=_-]*(?:[A-Z]{{1,4}}-)?\d[\dA-Za-z.:-]*)$",
+        super::culture_collections::acronym_alternation()
+    ))
+    .unwrap()
+});
 // Anything starting with a digit, or containing only mixed letters+digits (no Latin epithet
 // shape). Java: `Pattern.UNICODE_CHARACTER_CLASS`, `^(?=.*\d)[\p{L}\d_.\-]+$` — a lookahead
 // requiring a digit somewhere. RESTRUCTURED: the lookahead is dropped here (the `regex` crate
@@ -367,18 +385,31 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         return Err(ParseError::new(NameType::Other, None, original));
     }
 
-    // Pure code-like NO_NAME — use the normalised (trimmed) form as the exception name.
+    // Anchorless, scheme-prefixed machine IDENTIFIERS — BOLD BINs, GTDB/assembly accessions,
+    // OTU/ASV/ESV/zOTU/MAG operational units, and standalone culture-collection accessions
+    // (DSM 10, ATCC 11775). Not names, but a more specific 5.0.0 classification than the catch-all
+    // Other (in 4.2.0 these were all OTHER). Use the normalised (trimmed) form as the name.
     if OTU_BOLD.is_match(&s)
         || OTU_GTDB_UBA.is_match(&s)
-        || GEN_NOV.is_match(&s)
+        || OTU_MOTU.is_match(&s)
+        || CULTURE_ACCESSION_STANDALONE.is_match(&s)
+    {
+        return Err(ParseError::new(NameType::Identifier, None, s));
+    }
+    // SH identifiers are canonical in uppercase.
+    if OTU_SH.is_match(&s) {
+        return Err(ParseError::new(
+            NameType::Identifier,
+            None,
+            s.to_uppercase(),
+        ));
+    }
+    // Non-identifier NO_NAME junk (gen. nov. placeholder, `@…`) stays OTHER.
+    if GEN_NOV.is_match(&s)
         // Dead-but-faithful (same shape as the PR2_LIKE note above): the `@`-check in the delete-marker gate above (Preflight.java:212) already returns for any `s.starts_with('@')`, so this second one (Preflight.java:278) can never fire — ported verbatim anyway to stay faithful.
         || s.starts_with('@')
     {
         return Err(ParseError::new(NameType::Other, None, s));
-    }
-    // SH identifiers are canonical in uppercase.
-    if OTU_SH.is_match(&s) {
-        return Err(ParseError::new(NameType::Other, None, s.to_uppercase()));
     }
     // Pure alphanumeric mash with digit (no spaces) and no obvious Latin epithet.
     if !s.contains(' ')
@@ -685,17 +716,59 @@ mod tests {
     // ---------- category: OTU / specimen code ----------
 
     #[test]
-    fn bold_code_is_rejected_other() {
+    fn bold_code_is_classified_identifier() {
+        // 5.0.0: a BOLD BIN is an anchorless machine identifier -> NameType::Identifier (was OTHER).
         let err = check("BOLD:ACW2100").unwrap_err();
-        assert_eq!(err.type_, NameType::Other);
+        assert_eq!(err.type_, NameType::Identifier);
         assert_eq!(err.code, None);
     }
 
     #[test]
-    fn sh_code_is_rejected_other_with_uppercased_name() {
+    fn sh_code_is_classified_identifier_with_uppercased_name() {
+        // 5.0.0: a UNITE species hypothesis -> Identifier (was OTHER); still uppercased canonical.
         let err = check("sh460441.07fu").unwrap_err();
-        assert_eq!(err.type_, NameType::Other);
+        assert_eq!(err.type_, NameType::Identifier);
         assert_eq!(err.name, "SH460441.07FU");
+    }
+
+    #[test]
+    fn otu_asv_mag_operational_units_are_classified_identifier() {
+        // 5.0.0: further anchorless MOTU schemes -> Identifier (plain OTHER/unclassified in 4.2.0).
+        for s in ["OTU-17", "OTU 34", "ASV_103", "zOTU44", "MAG-24"] {
+            let err = check(s).unwrap_err();
+            assert_eq!(
+                err.type_,
+                NameType::Identifier,
+                "{s} should be an IDENTIFIER"
+            );
+        }
+    }
+
+    #[test]
+    fn standalone_culture_collection_accession_is_classified_identifier() {
+        // 5.0.0: a bare culture-collection accession (curated acronym + body) -> Identifier.
+        for s in [
+            "DSM 10",
+            "ATCC 11775",
+            "ATCC BAA-123",
+            "CBS 123.89",
+            "LMG 6923T",
+            "ATCC-11775",
+        ] {
+            let err = check(s).unwrap_err();
+            assert_eq!(
+                err.type_,
+                NameType::Identifier,
+                "{s} should be an IDENTIFIER"
+            );
+        }
+    }
+
+    #[test]
+    fn a_genus_starting_with_an_identifier_prefix_is_not_an_identifier() {
+        // "Uba fallai" is a real beetle genus, NOT the UBA scheme — the whole-string + trailing-digit
+        // guard (and the space) let it through to the parser instead of matching OTU_GTDB_UBA.
+        assert!(check("Uba fallai Fletcher, 1938").is_ok());
     }
 
     #[test]
@@ -896,11 +969,11 @@ mod tests {
     }
 
     #[test]
-    fn gca_code_is_rejected_other() {
+    fn gca_code_is_classified_identifier() {
         // Java test data only exercises the "UBA" alternative of OTU_GTDB_UBA directly;
-        // this covers the untested "GCA" alternative in the same alternation.
+        // this covers the untested "GCA" alternative in the same alternation. 5.0.0: Identifier.
         let err = check("GCA_000123").unwrap_err();
-        assert_eq!(err.type_, NameType::Other);
+        assert_eq!(err.type_, NameType::Identifier);
     }
 
     #[test]

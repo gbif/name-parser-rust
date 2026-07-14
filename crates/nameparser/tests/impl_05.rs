@@ -261,8 +261,9 @@ fn o_tu() {
         .phrase("B")
         .nothing_else();
 
-    // unparsable identifiers
-    assert_unparsable("UBA3054", NameType::Other);
+    // 5.0.0: a UBA/GTDB-style accession is a scheme-prefixed machine identifier -> Identifier.
+    assert_unparsable("UBA3054", NameType::Identifier);
+    // ...but a generic alphanumeric mash with no recognised scheme prefix stays OTHER:
     assert_unparsable("F0040", NameType::Other);
     assert_unparsable("AABM5-125-24", NameType::Other);
     assert_unparsable("B130-G9", NameType::Other);
@@ -280,18 +281,21 @@ fn o_tu() {
     assert_unparsable("0-14-0-10-38-17 sp002774085", NameType::Other);
     assert_unparsable("01-FULL-45-15b sp001822655", NameType::Other);
     assert_unparsable("18JY21-1 sp004344915", NameType::Other);
-    assert_unparsable("SH1508347.08FU", NameType::Other);
-    assert_unparsable("SH19186714.17FU", NameType::Other);
-    assert_unparsable("SH191814.08FU", NameType::Other);
-    assert_unparsable("SH191814.04FU", NameType::Other);
-    assert_unparsable("BOLD:ACW2100", NameType::Other);
-    assert_unparsable("BOLD:ACW2100", NameType::Other);
+    // 5.0.0: standalone UNITE SH ids and BOLD BINs are anchorless machine identifiers -> Identifier.
+    assert_unparsable("SH1508347.08FU", NameType::Identifier);
+    assert_unparsable("SH19186714.17FU", NameType::Identifier);
+    assert_unparsable("SH191814.08FU", NameType::Identifier);
+    assert_unparsable("SH191814.04FU", NameType::Identifier);
+    assert_unparsable("BOLD:ACW2100", NameType::Identifier);
+    assert_unparsable("BOLD:ACW2100", NameType::Identifier);
     assert_unparsable_name(
         " BOLD:ACW2100 ",
         Rank::Unranked,
-        NameType::Other,
+        NameType::Identifier,
         "BOLD:ACW2100",
     );
+    // ...but a BOLD code TRAILING a taxonomic anchor is still stripped to the inner surrogate and
+    // reported as OTHER (the anchored-trailing-code path is unchanged in 5.0.0).
     assert_unparsable_name(
         "Festuca sp. BOLD:ACW2100",
         Rank::Unranked,
@@ -301,7 +305,7 @@ fn o_tu() {
     assert_unparsable_name(
         "sh460441.07fu",
         Rank::Unranked,
-        NameType::Other,
+        NameType::Identifier,
         "SH460441.07FU",
     );
 

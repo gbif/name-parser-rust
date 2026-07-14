@@ -1,0 +1,35 @@
+# Major culture-collection acronyms — a conservative ~90%-coverage seed list.
+# One ALL-CAPS acronym per line; blank lines and '#' comment lines are skipped.
+# Source: WDCM / CCINFO major collections. Grow as needed (see
+# docs/superpowers/specs/2026-07-14-nametype-identifier-design.md). Used to recognise a
+# culture-collection accession both standalone (-> NameType.IDENTIFIER) and trailing a name
+# (-> stashed as the ParsedName.phrase).
+ATCC
+DSM
+DSMZ
+JCM
+NBRC
+CCUG
+LMG
+CBS
+NRRL
+CECT
+CIP
+NCTC
+NCIMB
+IAM
+VKM
+VKPM
+KCTC
+KACC
+CGMCC
+CICC
+MCCC
+BCRC
+MTCC
+MCC
+ICMP
+PCC
+SAG
+UTEX
+CCAP
