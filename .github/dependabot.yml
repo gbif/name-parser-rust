@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 #
-# Keeps dependencies current across this repo's three build ecosystems. Grouped, weekly PRs so
-# the bump traffic stays low-noise (one PR per ecosystem rather than one per dependency).
+# Keeps dependencies current across this repo's three build ecosystems.
 #
 #   * cargo          -> the Rust workspace (root Cargo.toml: core + CLI + ffi + py crates).
 #   * github-actions -> the pinned actions in .github/workflows/*.yml.
@@ -9,17 +8,39 @@
 #
 # The R package's inner Rust crate (bindings/r/src/rust) is vendored for CRAN, not tracked as a
 # live dependency here, so it is intentionally not listed.
+#
+# GROUPING PHILOSOPHY (cargo): this crate's whole value is byte-for-byte Java parity + linear,
+# ReDoS-free parsing, both proven against a *specific* dependency set. So production dependencies
+# that ship in a release artifact are deliberately NOT batched — each arrives as its own PR that
+# can be parity/cross-validated in isolation before merging. In particular `fancy-regex` (the
+# backtracking engine carrying the load-bearing possessive/atomic quantifiers = the ReDoS
+# guarantee) and `regex` (the linear engine) must be reviewed alone. Only two things are grouped:
+# dev-only tooling (never ships) and the pyo3 <-> pythonize pair (their minor versions MUST match,
+# see crates/nameparser-py/Cargo.toml, so they have to move in one PR). github-actions and maven
+# are build/CI-only (they don't change the shipped runtime), so batching them is fine.
 version: 2
 updates:
   - package-ecosystem: cargo
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    # Higher than the default 5 because ungrouping production deps means more concurrent PRs.
+    open-pull-requests-limit: 10
     groups:
-      cargo:
+      # Dev-only tooling (benchmarks etc.) — never ships in a release artifact, safe to batch.
+      cargo-dev:
+        dependency-type: development
         patterns:
           - "*"
+      # pyo3 and pythonize must move in lockstep (matching minor versions), so keep them in ONE
+      # PR even though each is a migration-grade major bump.
+      pyo3:
+        patterns:
+          - "pyo3"
+          - "pythonize"
+    # Every other production dependency — regex, fancy-regex, serde, serde_json,
+    # unicode-normalization, clap, ureq, sha2 — is intentionally left UNGROUPED, so each lands as
+    # its own individually reviewable PR (see the grouping philosophy note above).
 
   - package-ecosystem: github-actions
     directory: /
