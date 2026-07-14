@@ -37,7 +37,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * — {@link ParseResult.Parsed}, {@link ParseResult.Informal} or {@link ParseResult.Unparsable} —
  * and never throws for an unparsable name. The informal cases below also lock the Java-side 3-way
  * split ({@link StructCodec#toParseResult}) against the Rust-authoritative values from the corpus
- * study (see {@code docs/superpowers/findings/}).
+ * study.
  */
 class NameParserRustSmokeTest {
 

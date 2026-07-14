@@ -60,7 +60,7 @@ impl ParseError {
 /// A real supraspecific taxon ([`Self::taxon`], a genus or higher uninomial) carrying a provisional,
 /// non-code designation instead of a determined species epithet: a molecular provisional species
 /// (`Rhizobium sp. RMCC TR1811`), a numbered placeholder (`Allium sp. 1`), or an informal group.
-/// The 67.5M verbatim-corpus study (`docs/superpowers/findings/`) found these are 5.5% of all real
+/// The 67.5M verbatim-corpus study found these are 5.5% of all real
 /// names — 1 in 18 — hence a first-class representation.
 ///
 /// Deliberately a FLAT type, not a reused [`ParsedName`]: the anchor lives in one place

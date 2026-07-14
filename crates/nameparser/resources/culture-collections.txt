@@ -1,7 +1,7 @@
 # Major culture-collection acronyms — a conservative ~90%-coverage seed list.
 # One ALL-CAPS acronym per line; blank lines and '#' comment lines are skipped.
 # Source: WDCM / CCINFO major collections. Grow as needed (see
-# docs/superpowers/specs/2026-07-14-nametype-identifier-design.md). Used to recognise a
+# docs/nametype-identifier-design.md). Used to recognise a
 # culture-collection accession both standalone (-> NameType.IDENTIFIER) and trailing a name
 # (-> stashed as the ParsedName.phrase).
 ATCC

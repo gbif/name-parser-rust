@@ -6,7 +6,7 @@ catalogues the common shapes, records how the parser treats each one today, and 
 open.
 
 Related, already shipped:
-- **`NameType.IDENTIFIER`** — [design spec](superpowers/specs/2026-07-14-nametype-identifier-design.md).
+- **`NameType.IDENTIFIER`** — [design spec](nametype-identifier-design.md).
 - The curated culture-collection acronym list — `crates/nameparser/resources/culture-collections.txt`.
 - The 5.0.0 `Informal` result + its verbatim-phrase contract (the tail after `sp.`/`spec.`/… is kept
   as the `phrase`).

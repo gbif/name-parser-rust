@@ -236,7 +236,7 @@ final class StructCodec {
   // functions of the ParsedName fields the wire already carries (type, specificEpithet, genus,
   // uninomial, infragenericEpithet, rank, phrase, code), so no dedicated wire payload is needed for
   // `Informal`. KEEP IN SYNC with lib.rs; NameParserRustSmokeTest locks the outputs against the
-  // Rust-authoritative values. See docs/superpowers/findings/ for the corpus study that drove it.
+  // Rust-authoritative values, from the corpus study that drove them.
   // ================================================================================================
 
   /**

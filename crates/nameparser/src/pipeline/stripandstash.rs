@@ -18,8 +18,7 @@
 //! suffix, batch 2c), 45-52 (published-in page/in-press/in-author-in-parens/
 //! in-author-citation/IPNI/period-separated-reference/comma-prefixed-reference/
 //! manuscript-marker, batch 2d), and 53-55 (suprarank prefix, leading infrageneric marker,
-//! phrase name, batch 2e) all now carry their faithful port (see
-//! `docs/superpowers/plans/2026-07-10-phase1-stripandstash.md` for the batch breakdown).
+//! phrase name, batch 2e) all now carry their faithful port.
 //! Landing batch 2e flips the golden harness (`tests/parse_golden.rs`) from a deferred
 //! baseline print to an asserted-0 gate over the 10 downstream-independent fields — see
 //! that file's own module doc.

@@ -2,10 +2,8 @@
 
 //! `validate` — LLM-audited correctness sampling for the parser, mirroring the Java CLI's
 //! `org.gbif.nameparser.cli.ValidateCli` / `BarcodeOtuFilter`
-//! (`/Users/markus/code/gbif/name-parser/name-parser-cli/src/main/java/org/gbif/nameparser/cli/`).
-//! See `docs/superpowers/findings/2026-07-11-validate-java-recon.md` for the full verified map
-//! of the Java subsystem this ports, and `docs/superpowers/plans/2026-07-11-phase4c-validate.md`
-//! for the task breakdown and Global Constraints binding every task in this port.
+//! (`name-parser-cli/src/main/java/org/gbif/nameparser/cli/` in the Java `name-parser` repo).
+//! A faithful port of that Java subsystem, following its verified command map and task breakdown.
 //!
 //! ## Status: behaviorally complete (Phase 4c Task 5)
 //!

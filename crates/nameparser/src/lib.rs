@@ -40,8 +40,7 @@ pub fn parse_name(
 /// [`Informal`](ParseResult::Informal) semistructured name (a taxon anchor carrying a provisional
 /// designation, e.g. `Rhizobium sp. RMCC TR1811`), or an [`Unparsable`](ParseResult::Unparsable)
 /// classification (virus, hybrid formula, placeholder, BOLD BIN, ...). The 5.5%-of-corpus informal
-/// band is split off from `Parsed` at the [`parse`] boundary — see the verbatim-corpus study
-/// in `docs/superpowers/findings/`.
+/// band is split off from `Parsed` at the [`parse`] boundary — see the verbatim-corpus study.
 ///
 /// `Parsed` is far larger than the other two variants (it wraps the ~1 KB [`ParsedName`] vs ~56 B
 /// for [`Informal`]/[`ParseError`]), so `clippy::large_enum_variant` fires — but `Parsed` is the

@@ -489,7 +489,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     // supraspecific-provisional band (no species epithet, so it stays out of the
                     // binomial-core names that remain Parsed) and only when nothing was captured
                     // above. Rescues the ~382k "tag not captured" rows the 67.5M verbatim-corpus
-                    // study found (`docs/superpowers/findings/`). Token offsets index into
+                    // study found. Token offsets index into
                     // `ctx.working` (`ctx.tokens = tokenize(&ctx.working)`, unmodified until here),
                     // so the slice is the exact source substring with its original spacing.
                     if name_section_covers_all

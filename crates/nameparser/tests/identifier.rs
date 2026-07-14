@@ -3,7 +3,7 @@
 //! BOLD BINs, OTU/ASV/… operational units, standalone culture-collection accessions), reclassified
 //! out of the catch-all `Other`; plus Part B — a culture-collection accession *trailing a
 //! determined name* is captured as the `phrase` instead of being misread as an author. See
-//! `docs/superpowers/specs/2026-07-14-nametype-identifier-design.md`.
+//! `docs/nametype-identifier-design.md`.
 
 mod common;
 use common::*;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! The 5.0.0 informal / semistructured band, tested through the three-way `parse` via the
 //! fluent `assert_informal` / `assert_name` DSL helpers. Cases are lifted from the reservoir
-//! samples of the 67.5M verbatim-corpus study (`docs/superpowers/findings/`): overwhelmingly
+//! samples of the 67.5M verbatim-corpus study: overwhelmingly
 //! molecular / DNA-barcoding provisional species `Genus sp. <specimen/culture/BOLD code>`.
 //!
 //! The design contract this file pins:

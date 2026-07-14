@@ -348,7 +348,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a single
     // Title-case uninomial + an aggregate marker. The stem is always a clean genus-shaped anchor, so
     // 5.0.0 RESCUES this into an `Informal` (anchor = the monomial, phrase = the marker) rather than
-    // erroring. (Was `Err(INFORMAL)` in 4.2.0 — see docs/superpowers/findings/.)
+    // erroring. (Was `Err(INFORMAL)` in 4.2.0.)
     if let Some(caps) = MONOMIAL_AGGREGATE.captures(&s) {
         rescue_informal_group(ctx, &caps[1], &caps[2]);
         return Ok(());

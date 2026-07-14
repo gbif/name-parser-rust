@@ -397,7 +397,7 @@ impl PyParsedName {
 /// (`Allium sp. 1`), or an informal group. [`parse_name`] returns EITHER a [`PyParsedName`] or one of
 /// these, so callers use `isinstance(result, Informal)` to tell the two apart (an unparsable name
 /// still raises [`UnparsableNameError`]). Deliberately flat — the anchor is in one place, never a
-/// mislabelled "genus" — see this crate's core `Informal` doc and `docs/superpowers/findings/`.
+/// mislabelled "genus" — see this crate's core `Informal` doc.
 #[pyclass(name = "Informal", module = "nameparser")]
 pub struct PyInformal {
     inner: ::nameparser::model::Informal,

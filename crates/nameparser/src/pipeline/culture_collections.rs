@@ -11,7 +11,7 @@
 //! Membership is **case-sensitive** (the acronyms are stored uppercase, as culture codes are
 //! conventionally written): matching case-insensitively would sweep up lowercase words. This is a
 //! deliberately conservative seed list — see
-//! `docs/superpowers/specs/2026-07-14-nametype-identifier-design.md` for the growth policy.
+//! `docs/nametype-identifier-design.md` for the growth policy.
 
 use std::collections::HashSet;
 use std::sync::LazyLock;
