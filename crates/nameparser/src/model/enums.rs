@@ -11,6 +11,14 @@ pub enum NameType {
     Formula,
     Informal,
     Placeholder,
+    /// An anchorless, scheme-prefixed *machine identifier* — a UNITE species hypothesis
+    /// (`SH1957732.10FU`), a BOLD BIN (`BOLD:AAA0001`), an OTU/ASV/… operational unit, or a
+    /// standalone culture-collection accession (`DSM 10`). Not a name the parser can express as a
+    /// [`crate::model::ParsedName`], so — like `Other` — it is **not parsable** and only ever
+    /// appears in a `ParseResult::Unparsable`; it just carries a more specific classification than
+    /// the catch-all `Other`. Placed before `Other` so the catch-all stays last; this makes it
+    /// FFI-wire ordinal 4 and shifts `Other` to 5 (a lockstep change gated by the ABI-version bump).
+    Identifier,
     Other,
 }
 

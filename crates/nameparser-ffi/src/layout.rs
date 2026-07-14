@@ -365,7 +365,10 @@ pub fn name_type_ordinal(t: NameType) -> i32 {
         NameType::Formula => 1,
         NameType::Informal => 2,
         NameType::Placeholder => 3,
-        NameType::Other => 4,
+        // `Identifier` sits before the `Other` catch-all (see NameType docs) — ordinal 4, with
+        // `Other` shifted to 5. Must mirror the Java `NameType` declaration order exactly.
+        NameType::Identifier => 4,
+        NameType::Other => 5,
     }
 }
 
@@ -901,7 +904,10 @@ mod tests {
         assert_eq!(name_type_ordinal(NameType::Formula), 1);
         assert_eq!(name_type_ordinal(NameType::Informal), 2);
         assert_eq!(name_type_ordinal(NameType::Placeholder), 3);
-        assert_eq!(name_type_ordinal(NameType::Other), 4);
+        // IDENTIFIER is declared before the OTHER catch-all (mirrors Java NameType), so it takes
+        // ordinal 4 and OTHER shifts to 5.
+        assert_eq!(name_type_ordinal(NameType::Identifier), 4);
+        assert_eq!(name_type_ordinal(NameType::Other), 5);
     }
 
     #[test]

@@ -114,7 +114,7 @@ const WARMUP_NAMES: usize = 100;
 const SLOW_PARSE_THRESHOLD_NANOS: u64 = 50_000_000;
 
 /// Number of [`NameType`] variants — sizes [`NAME_TYPES`] and `BenchmarkReport::by_type`.
-const NAME_TYPE_COUNT: usize = 5;
+const NAME_TYPE_COUNT: usize = 6;
 
 /// Fixed ordinal order matching the Java CLI's `NameType` declaration order (and this crate's
 /// own `NameType`, whose declaration order in `model/enums.rs` already matches it) — keys the
@@ -125,6 +125,7 @@ const NAME_TYPES: [NameType; NAME_TYPE_COUNT] = [
     NameType::Formula,
     NameType::Informal,
     NameType::Placeholder,
+    NameType::Identifier,
     NameType::Other,
 ];
 
@@ -138,7 +139,8 @@ fn name_type_ordinal(t: NameType) -> usize {
         NameType::Formula => 1,
         NameType::Informal => 2,
         NameType::Placeholder => 3,
-        NameType::Other => 4,
+        NameType::Identifier => 4,
+        NameType::Other => 5,
     }
 }
 

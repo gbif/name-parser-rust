@@ -124,14 +124,14 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 3) {
+    if (abi != 4) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 3 -- rebuild the cdylib "
+              + ", StructCodec was written against 4 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
-    requireEnumShape("NameType", NameType.values().length, 5);
+    requireEnumShape("NameType", NameType.values().length, 6);
     requireEnumShape("NomCode", NomCode.values().length, 7);
     requireEnumShape("NamePart", NamePart.values().length, 4);
     requireEnumShape("ParsedName.State", ParsedName.State.values().length, 3);
@@ -146,7 +146,8 @@ final class StructCodec {
     requireOrdinal("Rank.CULTIVAR", Rank.CULTIVAR.ordinal(), 112);
     requireOrdinal("Rank.OTHER", Rank.OTHER.ordinal(), 115);
     requireOrdinal("Rank.UNRANKED", Rank.UNRANKED.ordinal(), 116);
-    requireOrdinal("NameType.OTHER", NameType.OTHER.ordinal(), 4);
+    requireOrdinal("NameType.IDENTIFIER", NameType.IDENTIFIER.ordinal(), 4);
+    requireOrdinal("NameType.OTHER", NameType.OTHER.ordinal(), 5);
     requireOrdinal("NamePart.GENERIC", NamePart.GENERIC.ordinal(), 0);
     requireOrdinal("NamePart.INFRAGENERIC", NamePart.INFRAGENERIC.ordinal(), 1);
     requireOrdinal("NamePart.SPECIFIC", NamePart.SPECIFIC.ordinal(), 2);

@@ -48,7 +48,7 @@ final class Ffi {
    * {@code nameparser-ffi}'s own {@code np_abi_version()} on any change to the extern "C"
    * surface itself.
    */
-  private static final int EXPECTED_ABI_VERSION = 3;
+  private static final int EXPECTED_ABI_VERSION = 4;
 
   private static final Linker LINKER = Linker.nativeLinker();
   private static final MethodHandle ABI_VERSION;

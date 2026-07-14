@@ -31,10 +31,14 @@ use nameparser::model::{NameType, NomCode, ParseError, Rank};
 /// former JSON wire path (`np_parse_json`/`np_free`), leaving [`np_parse_struct`] the only parse
 /// function. **Version 3** appends the error name to the unparsable wire
 /// ([`layout::OFF_UNPARSABLE_NAME_LEN`]), so the binding returns the core's (possibly
-/// canonicalized) `ParseError.name` rather than echoing the caller's input string.
+/// canonicalized) `ParseError.name` rather than echoing the caller's input string. **Version 4**
+/// adds the `NameType.IDENTIFIER` variant (ordinal 4, placed before the `OTHER` catch-all, which
+/// shifts to 5): the wire layout is unchanged, but a new cdylib emits the reordered ordinals in the
+/// `name_type` slot, which an older decoder (expecting 5 `NameType` values, `OTHER` at 4) would
+/// misdecode — so the bump forces lockstep.
 #[no_mangle]
 pub extern "C" fn np_abi_version() -> u32 {
-    std::panic::catch_unwind(|| 3u32).unwrap_or(0)
+    std::panic::catch_unwind(|| 4u32).unwrap_or(0)
 }
 
 /// SAFETY: `p` must be either null or a valid, NUL-terminated C string for the duration of
@@ -179,8 +183,8 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn np_abi_version_is_3() {
-        assert_eq!(np_abi_version(), 3);
+    fn np_abi_version_is_4() {
+        assert_eq!(np_abi_version(), 4);
     }
 
     #[test]
