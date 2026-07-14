@@ -69,16 +69,17 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
 **Release-readiness — done, and the versioning model:**
 
-- ✅ `name-parser-api` (and test-scoped `name-parser`) pinned to the released **`4.2.0`**; a GBIF
-  Nexus `<repositories>` block resolves them (this standalone POM has no motherpom to supply it).
-  These are an independently versioned **dependency** — the stable contract — **not** this
+- ✅ `name-parser-api` pinned to the released **`5.0.0-rc.1`**; a GBIF Nexus `<repositories>` block
+  resolves it (this standalone POM has no motherpom to supply it). The Java `name-parser`
+  reference-impl / oracle was removed at 5.0.0 (api-only), so it is no longer a test dependency.
+  The api is an independently versioned **dependency** — the stable contract — **not** this
   module's own version.
 - ✅ **Version = `0.1.0-SNAPSHOT`** — the Java FFM binding **shares the Rust engine's version**
   (the Cargo `[workspace.package]` version at the repo root), released in lockstep with the
   CLI/Python/R bindings: **one version across every binding ⇒ the same engine**. It is *not* tied
   to the `name-parser-api` version it implements (an implementation versioning independently from
   its api is normal — cf. logback-classic vs slf4j-api). The bindings sit at **`0.x`** while new
-  and gathering real-use feedback, and will **graduate to the product's `4.x` line once stable**
+  and gathering real-use feedback, and will **graduate to the product's `5.x` line once stable**
   (a deliberate one-time re-baseline, in lockstep). The JAR manifest also stamps
   `Rust-Engine-Version` + the git SHA, so the exact engine is always readable from the artifact.
 - ✅ `<distributionManagement>` for `repository.gbif.org` (interim, until the reactor move). The

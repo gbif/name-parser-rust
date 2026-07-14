@@ -7,11 +7,11 @@ version number means the **same underlying Rust engine** everywhere.
 
 - The Cargo **`[workspace.package]` version** (root `Cargo.toml`) is the *engine version*. The
   core crate, CLI, Python wheel, R package, and the Java FFM binding all carry this same number.
-- `org.gbif:name-parser-api` (currently **4.x**) is the stable Java **contract** — an independently
-  versioned **dependency**, *not* part of this version. The Java binding implements it but versions
-  with the engine (an impl versioning independently from its api is normal).
+- `org.gbif:name-parser-api` (currently **`5.0.0-rc.1`**) is the stable Java **contract** — an
+  independently versioned **dependency**, *not* part of this version. The Java binding implements it
+  but versions with the engine (an impl versioning independently from its api is normal).
 - The bindings sit at **`0.x`** while new and gathering real-use feedback. Once stable they
-  **graduate to the product's `4.x` line** — a deliberate one-time re-baseline, in lockstep.
+  **graduate to the product's `5.x` line** — a deliberate one-time re-baseline, in lockstep.
 
 | Channel | Artifact | Registry | Trigger | Status |
 |---|---|---|---|---|
