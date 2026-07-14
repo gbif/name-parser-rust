@@ -194,6 +194,29 @@ struct ParseArgs {
     /// default output is the bindings' parity oracle and is left untouched by this flag.
     #[arg(long)]
     three_way: bool,
+
+    /// Add a top-level `canonical` field to every row: the standardized name WITH authorship, so a
+    /// messy `abies alba mill.` comes back as `Abies alba Mill.` (the common "clean up my names"
+    /// workflow). Opt-in — like `--three-way`, it leaves the default parity-oracle output untouched
+    /// when absent. For an unparsable row `canonical` is the canonicalised input.
+    #[arg(long)]
+    canonical: bool,
+
+    /// Drop the authorship from the `canonical` field (`Abies alba` instead of `Abies alba Mill.`).
+    /// Implies `--canonical`.
+    #[arg(long)]
+    no_authorship: bool,
+}
+
+/// What (if anything) the opt-in top-level `canonical` field of a `parse` row carries.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Canonical {
+    /// No `canonical` field (the default; keeps the parity-oracle output byte-identical).
+    Off,
+    /// The standardized name with authorship — `ParsedName::canonical_name`.
+    WithAuthorship,
+    /// The standardized name without authorship — `ParsedName::canonical_name_without_authorship`.
+    WithoutAuthorship,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ValueEnum)]
@@ -252,6 +275,15 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
     let reader = open_input(args.input.as_deref())?;
     let mut writer = open_output(args.output.as_deref())?;
 
+    // `--no-authorship` implies (and refines) `--canonical`; neither flag -> no field at all.
+    let canonical = if args.no_authorship {
+        Canonical::WithoutAuthorship
+    } else if args.canonical {
+        Canonical::WithAuthorship
+    } else {
+        Canonical::Off
+    };
+
     let mut line_no: u64 = 0;
     let mut total: u64 = 0;
     let mut ok: u64 = 0;
@@ -275,7 +307,11 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
                 ParseResult::Informal(_) => informal += 1,
                 ParseResult::Unparsable(_) => unparsable += 1,
             }
-            writeln!(writer, "{}", render_result_row(line_no, name, &result))?;
+            writeln!(
+                writer,
+                "{}",
+                render_result_row(line_no, name, &result, canonical)
+            )?;
         } else {
             // Default: the raw two-way `parse_name` shape that is the bindings' parity oracle —
             // verified byte-for-byte against the shaded jar on a padded input.
@@ -285,7 +321,7 @@ fn run_parse(args: ParseArgs) -> io::Result<()> {
             } else {
                 unparsable += 1;
             }
-            writeln!(writer, "{}", render_row(line_no, name, &result))?;
+            writeln!(writer, "{}", render_row(line_no, name, &result, canonical))?;
         }
 
         total += 1;
@@ -345,9 +381,17 @@ pub(crate) fn render_row(
     line_no: u64,
     name: &str,
     result: &Result<ParsedName, ParseError>,
+    canonical: Canonical,
 ) -> String {
     let mut out = String::with_capacity(128);
     append_envelope_head(&mut out, line_no, name);
+    if canonical != Canonical::Off {
+        let value = match result {
+            Ok(pn) => canonical_of_parsed(pn, canonical).unwrap_or_else(|| name.to_string()),
+            Err(e) => e.name.clone(),
+        };
+        append_canonical(&mut out, &value);
+    }
     match result {
         Ok(pn) => append_parsed(&mut out, pn),
         Err(e) => append_error(&mut out, e),
@@ -356,14 +400,47 @@ pub(crate) fn render_row(
     out
 }
 
+/// The `ParsedName` canonical rendering selected by `canonical` (never `Off` here). `None` only if
+/// the name has no renderable canonical at all — the caller falls back to the verbatim input.
+fn canonical_of_parsed(pn: &ParsedName, canonical: Canonical) -> Option<String> {
+    match canonical {
+        Canonical::WithoutAuthorship => pn.canonical_name_without_authorship(),
+        _ => pn.canonical_name(),
+    }
+}
+
+/// Appends `,"canonical":"<value>"` — the opt-in standardized-name field, right after `input`.
+fn append_canonical(out: &mut String, value: &str) {
+    out.push_str(",\"canonical\":");
+    out.push_str(
+        &serde_json::to_string(value).expect("a String always serializes to a JSON string"),
+    );
+}
+
 /// The `--three-way` sibling of [`render_row`]: renders a [`ParseResult`] (the 5.0.0 three-way
 /// outcome from [`nameparser::parse`]) — a `parsed` object or an `error` object exactly as
 /// [`render_row`] emits them, plus a third `informal` object for a semistructured name, carrying
 /// the flat anchor (`taxon`, `taxonRank`, `rank`, and `phrase`/`code` when present) and its
 /// `canonical` rendering (e.g. `"Rhizobium sp. RMCC TR1811"`). Same order-safe hand-assembly.
-pub(crate) fn render_result_row(line_no: u64, name: &str, result: &ParseResult) -> String {
+pub(crate) fn render_result_row(
+    line_no: u64,
+    name: &str,
+    result: &ParseResult,
+    canonical: Canonical,
+) -> String {
     let mut out = String::with_capacity(160);
     append_envelope_head(&mut out, line_no, name);
+    if canonical != Canonical::Off {
+        let value = match result {
+            ParseResult::Parsed(pn) => {
+                canonical_of_parsed(pn, canonical).unwrap_or_else(|| name.to_string())
+            }
+            // An informal name carries no authorship, so with/without are the same rendering.
+            ParseResult::Informal(inf) => inf.canonical_name(),
+            ParseResult::Unparsable(e) => e.name.clone(),
+        };
+        append_canonical(&mut out, &value);
+    }
     match result {
         ParseResult::Parsed(pn) => append_parsed(&mut out, pn),
         ParseResult::Informal(inf) => append_informal(&mut out, inf),
@@ -1222,7 +1299,7 @@ mod tests {
     #[test]
     fn render_row_matches_the_documented_success_shape() {
         let pn = nameparser::parse_name("Abies alba Mill.", None, None, None).unwrap();
-        let row = render_row(2, "Abies alba Mill.", &Ok(pn));
+        let row = render_row(2, "Abies alba Mill.", &Ok(pn), Canonical::Off);
         assert_eq!(
             row,
             r#"{"line":2,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}}"#
@@ -1232,7 +1309,7 @@ mod tests {
     #[test]
     fn render_row_matches_the_documented_error_shape_and_omits_code_when_absent() {
         let err = ParseError::new(NameType::Other, None, "???");
-        let row = render_row(9, "???", &Err(err));
+        let row = render_row(9, "???", &Err(err), Canonical::Off);
         assert_eq!(
             row,
             r#"{"line":9,"input":"???","error":{"type":"OTHER","message":"Unparsable OTHER name: ???"}}"#
@@ -1246,7 +1323,7 @@ mod tests {
             Some(NomCode::Virus),
             "Tobacco mosaic virus",
         );
-        let row = render_row(1, "Tobacco mosaic virus", &Err(err));
+        let row = render_row(1, "Tobacco mosaic virus", &Err(err), Canonical::Off);
         assert_eq!(
             row,
             r#"{"line":1,"input":"Tobacco mosaic virus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Tobacco mosaic virus"}}"#
@@ -1256,8 +1333,66 @@ mod tests {
     #[test]
     fn render_row_escapes_the_input_name_as_a_json_string() {
         let err = ParseError::new(NameType::Other, None, "a \"quoted\" name");
-        let row = render_row(1, "a \"quoted\" name", &Err(err));
+        let row = render_row(1, "a \"quoted\" name", &Err(err), Canonical::Off);
         assert!(row.starts_with(r#"{"line":1,"input":"a \"quoted\" name","error":"#));
+    }
+
+    // ---- opt-in `--canonical` standardized-name field ----
+
+    #[test]
+    fn canonical_flag_adds_a_standardized_name_right_after_input() {
+        let name = "Abies alba Mill.";
+        let with = render_row(
+            1,
+            name,
+            &nameparser::parse_name(name, None, None, None),
+            Canonical::WithAuthorship,
+        );
+        assert_eq!(
+            with,
+            r#"{"line":1,"input":"Abies alba Mill.","canonical":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}}"#
+        );
+    }
+
+    #[test]
+    fn canonical_without_authorship_drops_the_author() {
+        let name = "Abies alba Mill.";
+        let without = render_row(
+            1,
+            name,
+            &nameparser::parse_name(name, None, None, None),
+            Canonical::WithoutAuthorship,
+        );
+        assert!(
+            without.contains(r#""canonical":"Abies alba","#),
+            "{without}"
+        );
+    }
+
+    #[test]
+    fn canonical_off_emits_no_field_so_the_parity_oracle_is_untouched() {
+        let name = "Abies alba Mill.";
+        let off = render_row(
+            1,
+            name,
+            &nameparser::parse_name(name, None, None, None),
+            Canonical::Off,
+        );
+        assert!(!off.contains("canonical"), "{off}");
+    }
+
+    #[test]
+    fn canonical_on_an_unparsable_row_is_the_canonicalised_input() {
+        // For a row with no ParsedName the field is the ParseError's (canonicalised) name — e.g. a
+        // lowercase UNITE SH is uppercased. Gives every row a usable standardized value.
+        let name = "sh19186714.17fu";
+        let row = render_row(
+            1,
+            name,
+            &nameparser::parse_name(name, None, None, None),
+            Canonical::WithAuthorship,
+        );
+        assert!(row.contains(r#""canonical":"SH19186714.17FU","#), "{row}");
     }
 
     // ---- three-way (`--three-way`) rows ----
@@ -1266,8 +1401,18 @@ mod tests {
     fn render_result_row_parsed_is_byte_identical_to_the_two_way_parsed_shape() {
         // A structurally parsed name renders as the exact same `parsed` object the oracle emits.
         let name = "Abies alba Mill.";
-        let two_way = render_row(2, name, &nameparser::parse_name(name, None, None, None));
-        let three_way = render_result_row(2, name, &nameparser::parse(name, None, None, None));
+        let two_way = render_row(
+            2,
+            name,
+            &nameparser::parse_name(name, None, None, None),
+            Canonical::Off,
+        );
+        let three_way = render_result_row(
+            2,
+            name,
+            &nameparser::parse(name, None, None, None),
+            Canonical::Off,
+        );
         assert_eq!(three_way, two_way);
     }
 
@@ -1275,15 +1420,30 @@ mod tests {
     fn render_result_row_unparsable_is_byte_identical_to_the_two_way_error_shape() {
         // An unparsable name renders as the exact same `error` object the oracle emits.
         let name = "Tobacco mosaic virus";
-        let two_way = render_row(1, name, &nameparser::parse_name(name, None, None, None));
-        let three_way = render_result_row(1, name, &nameparser::parse(name, None, None, None));
+        let two_way = render_row(
+            1,
+            name,
+            &nameparser::parse_name(name, None, None, None),
+            Canonical::Off,
+        );
+        let three_way = render_result_row(
+            1,
+            name,
+            &nameparser::parse(name, None, None, None),
+            Canonical::Off,
+        );
         assert_eq!(three_way, two_way);
     }
 
     #[test]
     fn render_result_row_informal_carries_the_flat_anchor_and_canonical() {
         let name = "Rhizobium sp. RMCC TR1811";
-        let row = render_result_row(3, name, &nameparser::parse(name, None, None, None));
+        let row = render_result_row(
+            3,
+            name,
+            &nameparser::parse(name, None, None, None),
+            Canonical::Off,
+        );
         assert_eq!(
             row,
             r#"{"line":3,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp. RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
@@ -1295,7 +1455,12 @@ mod tests {
         // A bare "Genus sp." now carries the verbatim marker as its phrase ("sp."), so the row
         // includes the phrase field like every other informal row (uniform taxon+phrase).
         let name = "Rhizobium sp.";
-        let row = render_result_row(1, name, &nameparser::parse(name, None, None, None));
+        let row = render_result_row(
+            1,
+            name,
+            &nameparser::parse(name, None, None, None),
+            Canonical::Off,
+        );
         assert_eq!(
             row,
             r#"{"line":1,"input":"Rhizobium sp.","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp.","canonical":"Rhizobium sp."}}"#

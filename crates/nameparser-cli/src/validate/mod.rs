@@ -401,7 +401,7 @@ fn render_row_with_verdict(
     outcome: &ParseOutcome,
     verdict: Option<&Verdict>,
 ) -> String {
-    let mut row = crate::render_row(line_no, input, outcome);
+    let mut row = crate::render_row(line_no, input, outcome, crate::Canonical::Off);
     if let Some(v) = verdict {
         debug_assert!(
             row.ends_with('}'),
@@ -1982,7 +1982,7 @@ mod tests {
         let no_verdict = render_row_with_verdict(1, &item.input, &item.outcome, None);
         assert_eq!(
             no_verdict,
-            crate::render_row(1, &item.input, &item.outcome),
+            crate::render_row(1, &item.input, &item.outcome, crate::Canonical::Off),
             "no verdict at all must reduce to plain render_row"
         );
 
@@ -2035,9 +2035,13 @@ mod tests {
         // field (both are the ParsedName's JSON).
         let parsed_shape: serde_json::Value =
             serde_json::from_str(&shape_json(&a.outcome)).expect("must be valid JSON");
-        let row: serde_json::Value =
-            serde_json::from_str(&crate::render_row(1, &a.input, &a.outcome))
-                .expect("must be valid JSON");
+        let row: serde_json::Value = serde_json::from_str(&crate::render_row(
+            1,
+            &a.input,
+            &a.outcome,
+            crate::Canonical::Off,
+        ))
+        .expect("must be valid JSON");
         assert_eq!(parsed_shape, row["parsed"]);
 
         // On failure, shape_json matches the report row's own "error" field (type/code?/
@@ -2048,7 +2052,8 @@ mod tests {
         let error_shape: serde_json::Value =
             serde_json::from_str(&shape_json(&err)).expect("must be valid JSON");
         let row: serde_json::Value =
-            serde_json::from_str(&crate::render_row(1, "x", &err)).expect("must be valid JSON");
+            serde_json::from_str(&crate::render_row(1, "x", &err, crate::Canonical::Off))
+                .expect("must be valid JSON");
         assert_eq!(error_shape, row["error"]);
     }
 
