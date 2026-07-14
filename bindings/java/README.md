@@ -90,12 +90,14 @@ java --enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=$PWD/target/release
   over the real FFM boundary (no mocking): a subspecies parse, an explicit-authorship parse,
   the virus → `UnparsableNameException` case, and struct-decode fidelity for the trickier
   collection-typed fields (`notho`, `epithetQualifier`, `warnings`, multi-author lists).
-- `src/test/java/org/gbif/nameparser/rust/ParityTest.java` — `NameParserRust` vs
-  `NameParserImpl` (the Java 4.2.0 oracle) over all 7 corpora in `../../testdata/`
-  (11,302 names): **0 diffs**, re-proving the out-of-process CLI parity result in-process
-  — `StructCodec`'s correctness proof. Prints a per-corpus + total tally to stdout, and up to 20
-  example diffs to stderr on failure. (Uses a test-scope Gson to structurally compare the two
-  `ParsedName`s; the shipped binding no longer depends on Gson.)
+- `src/test/java/org/gbif/nameparser/rust/ParityTest.java` — the binding's full-corpus regression
+  gate: runs `NameParserRust` over the real FFM boundary against the frozen Rust golden snapshot
+  `../../testdata/golden/expected-parse.jsonl` — the same snapshot `parse_golden.rs` and the R
+  binding check, regenerated from the Rust CLI (`NameParserImpl` was removed at 5.0.0, so this is
+  the current Rust output, not a Java oracle) — mapping each row through the 5.0.0 three-way
+  `ParseResult` split: **~8,017 compared, 0 diffs** — `StructCodec`'s end-to-end correctness proof.
+  Prints a compared/diffs tally to stdout and up to 20 example diffs to stderr on failure. (Uses a
+  test-scope Gson to structurally compare the decoded `ParsedName`s; the shipped binding doesn't use Gson.)
 - `jmh/` — a separate, standalone JMH module (own `pom.xml`, not part of a reactor with this
   one): `org.gbif.nameparser.rust.jmh.ParseBench` benchmarks `NameParserImpl` (`javaImpl`)
   against `NameParserRust` (`rust`), single-name, in-process, over the first ~2,000 names of
