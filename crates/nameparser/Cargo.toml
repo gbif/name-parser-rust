@@ -20,7 +20,7 @@ name = "nameparser"
 
 [dependencies]
 regex = "1.11"
-fancy-regex = "0.14"
+fancy-regex = "0.18"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # Unicode NFD for NameFormatter's foldToAscii (canonicalMinimal); Java uses
@@ -28,7 +28,7 @@ serde_json = "1"
 unicode-normalization = "0.1"
 
 [dev-dependencies]
-criterion = "0.5"
+criterion = "0.8"
 
 [[bench]]
 name = "parse"
