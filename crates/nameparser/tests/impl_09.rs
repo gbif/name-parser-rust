@@ -324,20 +324,22 @@ fn test_phrase_names() {
         "Pultenaea sp. 'Olinda' (Coveny 6616)",
         "Pultenaea sp. 'Olinda' (Coveny 6616)",
         Some(Rank::Species),
-        "'Olinda' (Coveny 6616)",
+        "sp. 'Olinda' (Coveny 6616)",
     );
     assert_phrase_name(
         "Marsilea sp. Neutral Junction (D.E.Albrecht 9192)",
         "Marsilea sp. Neutral Junction (D.E.Albrecht 9192)",
         Some(Rank::Species),
-        "Neutral Junction (D.E.Albrecht 9192)",
+        "sp. Neutral Junction (D.E.Albrecht 9192)",
     );
     assert_phrase_name(
         "Dampiera sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)",
         "Dampiera sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)",
         Some(Rank::Species),
-        "Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)",
+        "sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)",
     );
+    // ssp./var. (non-species) markers keep the bare phrase — the formatter re-synthesises the
+    // rank marker, and prefixing a non-species marker onto the phrase would double it.
     assert_phrase_name(
         "Baeckea ssp. 2 (LJM 2019)",
         "Baeckea subsp. 2 (LJM 2019)",
@@ -354,50 +356,51 @@ fn test_phrase_names() {
         "Baeckea sp. Bunney Road (S.Patrick 4059)",
         "Baeckea sp. Bunney Road (S.Patrick 4059)",
         Some(Rank::Species),
-        "Bunney Road (S.Patrick 4059)",
+        "sp. Bunney Road (S.Patrick 4059)",
     );
     assert_phrase_name(
         "Prostanthera sp. Bundjalung Nat. Pk. (B.J.Conn 3471)",
         "Prostanthera sp. Bundjalung Nat. Pk. (B.J.Conn 3471)",
         Some(Rank::Species),
-        "Bundjalung Nat. Pk. (B.J.Conn 3471)",
+        "sp. Bundjalung Nat. Pk. (B.J.Conn 3471)",
     );
     assert_phrase_name(
         "Toechima sp. East Alligator (J.Russell-Smith 8418) NT Herbarium",
         "Toechima sp. East Alligator (J.Russell-Smith 8418) NT Herbarium",
         Some(Rank::Species),
-        "East Alligator (J.Russell-Smith 8418) NT Herbarium",
+        "sp. East Alligator (J.Russell-Smith 8418) NT Herbarium",
     );
     assert_phrase_name(
         "Goodenia sp. Bachsten Creek (M.D. Barrett 685) WA Herbarium",
         "Goodenia sp. Bachsten Creek (M.D. Barrett 685) WA Herbarium",
         Some(Rank::Species),
-        "Bachsten Creek (M.D. Barrett 685) WA Herbarium",
+        "sp. Bachsten Creek (M.D. Barrett 685) WA Herbarium",
     );
     assert_phrase_name(
         "Baeckea sp. Beringbooding (AR Main 11/9/1957)",
         "Baeckea sp. Beringbooding (AR Main 11/9/1957)",
         Some(Rank::Species),
-        "Beringbooding (AR Main 11/9/1957)",
+        "sp. Beringbooding (AR Main 11/9/1957)",
     );
     assert_phrase_name(
         "Sida sp. Walhallow Station (C.Edgood 28/Oct/94)",
         "Sida sp. Walhallow Station (C.Edgood 28/Oct/94)",
         Some(Rank::Species),
-        "Walhallow Station (C.Edgood 28/Oct/94)",
+        "sp. Walhallow Station (C.Edgood 28/Oct/94)",
     );
     assert_phrase_name(
         "Elaeocarpus sp. Rocky Creek (Hunter s.n., 16 Sep 1993)",
         "Elaeocarpus sp. Rocky Creek (Hunter s.n., 16 Sep 1993)",
         Some(Rank::Species),
-        "Rocky Creek (Hunter s.n., 16 Sep 1993)",
+        "sp. Rocky Creek (Hunter s.n., 16 Sep 1993)",
     );
     assert_phrase_name(
         "Sida sp. B (C.Dunlop 1739)",
         "Sida sp. B (C.Dunlop 1739)",
         Some(Rank::Species),
-        "B (C.Dunlop 1739)",
+        "sp. B (C.Dunlop 1739)",
     );
+    // Binomial (has a species epithet) + subsp. -> Parsed, out of scope: keeps the bare phrase.
     assert_phrase_name(
         "Grevillea brachystylis subsp. Busselton (G.J.Keighery s.n. 28/8/1985)",
         "Grevillea brachystylis ssp. Busselton (G.J.Keighery s.n. 28/8/1985)",
@@ -408,26 +411,28 @@ fn test_phrase_names() {
         "Baeckea sp. Calingiri (F.Hort 1710)",
         "Baeckea sp. Calingiri (F.Hort 1710)",
         Some(Rank::Species),
-        "Calingiri (F.Hort 1710)",
+        "sp. Calingiri (F.Hort 1710)",
     );
     assert_phrase_name(
         "Baeckea sp. East Yuna (R Spjut & C Edson 7077)",
         "Baeckea sp. East Yuna (R Spjut & C Edson 7077)",
         Some(Rank::Species),
-        "East Yuna (R Spjut & C Edson 7077)",
+        "sp. East Yuna (R Spjut & C Edson 7077)",
     );
     assert_phrase_name(
         "Acacia sp. Goodlands (BR Maslin 7761) [aff. resinosa]",
         "Acacia sp. Goodlands (BR Maslin 7761) [aff. resinosa]",
         Some(Rank::Species),
-        "Goodlands (BR Maslin 7761) [aff. resinosa]",
+        "sp. Goodlands (BR Maslin 7761) [aff. resinosa]",
     );
     assert_phrase_name(
         "Acacia sp. Manmanning (BR Maslin 7711) [aff. multispicata]",
         "Acacia sp. Manmanning (BR Maslin 7711) [aff. multispicata]",
         Some(Rank::Species),
-        "Manmanning (BR Maslin 7711) [aff. multispicata]",
+        "sp. Manmanning (BR Maslin 7711) [aff. multispicata]",
     );
+    // Genus (Subgenus) sp. -> the subgenus makes the prefix non-genus-only, so it keeps the
+    // bare phrase and the formatter re-synthesises "sp.".
     let na = assert_phrase_name(
         "Atrichornis (Rahcinta) sp Glory (BR Maslin 7711)",
         "Atrichornis sp. Glory (BR Maslin 7711)",
@@ -452,7 +457,7 @@ fn test_phrase_names() {
         "Acacia sp. \"Morning Glory\"",
         "Acacia sp. \"Morning Glory\"",
         Some(Rank::Species),
-        "\"Morning Glory\"",
+        "sp. \"Morning Glory\"",
     );
 }
 

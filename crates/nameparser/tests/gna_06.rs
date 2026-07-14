@@ -361,7 +361,7 @@ fn names_with_spec_nov_spec() {
     assert!(n.specific_epithet.is_none());
     assert!(n.infraspecific_epithet.is_none());
     assert_eq!(n.rank, Rank::Species);
-    assert_eq!(n.phrase.as_deref(), Some("2"));
+    assert_eq!(n.phrase.as_deref(), Some("spec. 2"));
     assert_eq!(n.type_, NameType::Informal);
 
     assert_name("Naviculadicta witkowskii LB & Metzeltin nov spec")

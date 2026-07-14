@@ -25,13 +25,13 @@ fn molecular_provisional_species_with_a_captured_tag() {
         .taxon("Serratia")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .phrase("RE1-2a")
+        .phrase("sp. RE1-2a")
         .nothing_else();
     assert_informal("Plasmodium sp. SYBOR9")
         .taxon("Plasmodium")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .phrase("SYBOR9")
+        .phrase("sp. SYBOR9")
         .nothing_else();
 }
 
@@ -43,13 +43,13 @@ fn multi_token_specimen_tag_is_captured_as_the_phrase() {
         .taxon("Rhizobium")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .phrase("RMCC TR1811")
+        .phrase("sp. RMCC TR1811")
         .nothing_else();
     assert_informal("Ichneumonidae sp. UAM Ento 145060")
         .taxon("Ichneumonidae") // a family, but the parser's best guess is the genus slot (not backbone-validated)
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .phrase("UAM Ento 145060")
+        .phrase("sp. UAM Ento 145060")
         .nothing_else();
 }
 
@@ -74,7 +74,7 @@ fn australian_herbarium_locality_convention() {
         .taxon("Elaeocarpus")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .phrase("Rocky Creek")
+        .phrase("sp. Rocky Creek")
         .nothing_else();
 }
 
@@ -85,18 +85,20 @@ fn numbered_placeholder() {
         .taxon("Allium")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .phrase("1")
+        .phrase("sp. 1")
         .nothing_else();
 }
 
 #[test]
-fn bare_genus_sp_has_no_phrase() {
-    // A bare "Genus sp." — indeterminate, no distinguishing tag.
+fn bare_genus_sp_captures_the_marker_as_phrase() {
+    // A bare "Genus sp." — indeterminate, no distinguishing tag, but the verbatim marker is still
+    // the phrase (uniform taxon+phrase round-trip). It stays INDETERMINED-flagged (asserted in the
+    // name_tokens unit test); here we lock the phrase == the bare marker.
     assert_informal("Rhizobium sp.")
         .taxon("Rhizobium")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .no_phrase()
+        .phrase("sp.")
         .nothing_else();
 }
 
@@ -107,7 +109,56 @@ fn single_uppercase_letter_designator() {
         .taxon("Bryozoan")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
-        .phrase("E")
+        .phrase("sp. E")
+        .nothing_else();
+}
+
+#[test]
+fn molecular_provisional_species_keep_the_whole_biological_annotation_tail() {
+    // NCBI / genetic-database style: everything after "sp." is a strain / pathovar / biovar /
+    // serotype / host-association annotation, NOT nomenclature — so the whole verbatim tail
+    // (marker included) becomes the phrase and the anchor stays the bare genus.
+    assert_informal("Solanum sp. phytoplasma")
+        .taxon("Solanum")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. phytoplasma")
+        .nothing_else();
+    assert_informal("Citrus sp. phytoplasma")
+        .taxon("Citrus")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. phytoplasma")
+        .nothing_else();
+    // "Alstroemeria sp. phytoplasma" is really a phytoplasma named by its host plant (host =
+    // Alstroemeria sp., organism = the phytoplasma), not a species of Alstroemeria — semantically
+    // distinct, but for now it parses as an Informal like the rest.
+    assert_informal("Alstroemeria sp. phytoplasma")
+        .taxon("Alstroemeria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. phytoplasma")
+        .nothing_else();
+    // pathovar
+    assert_informal("Xanthomonas sp. pv. citri")
+        .taxon("Xanthomonas")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. pv. citri")
+        .nothing_else();
+    // biovar
+    assert_informal("Pseudomonas sp. biovar 2")
+        .taxon("Pseudomonas")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. biovar 2")
+        .nothing_else();
+    // strain designation
+    assert_informal("Bacillus sp. strain ATCC 12345")
+        .taxon("Bacillus")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. strain ATCC 12345")
         .nothing_else();
 }
 
@@ -142,6 +193,24 @@ fn infraspecific_indeterminate_stays_parsed() {
     assert_name("Salix alba subsp. B")
         .infra_species("Salix", "alba", Rank::Subspecies, "B")
         .type_(NameType::Informal);
+}
+
+#[test]
+fn binomial_with_a_trailing_annotation_currently_stays_parsed() {
+    // "Persea americana phytoplasma" is a complete binomial (the host plant) + a trailing organism
+    // annotation ("phytoplasma"). Ideally the annotation would be captured as a phrase like the
+    // "Genus sp. phytoplasma" cases above — but with no "sp." marker the complete binomial absorbs
+    // "phytoplasma" as an infraspecific epithet, so it stays SCIENTIFIC. DEFERRED: capturing a
+    // trailing annotation on a bare binomial needs annotation-term recognition; this locks the
+    // CURRENT behavior so the eventual change is visible in the diff.
+    assert_name("Persea americana phytoplasma")
+        .infra_species(
+            "Persea",
+            "americana",
+            Rank::InfraspecificName,
+            "phytoplasma",
+        )
+        .type_(NameType::Scientific);
 }
 
 #[test]

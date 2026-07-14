@@ -109,7 +109,7 @@ test_that("warnings column carries a real (non-empty) warning, not just NA", {
 test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)", {
   out <- parse_names(c("Serratia sp. RE1-2a",        # informal, tag already captured
                        "Rhizobium sp. RMCC TR1811",   # multi-token tag-capture rescue
-                       "Rhizobium sp.",               # bare "Genus sp." -> no phrase
+                       "Rhizobium sp.",               # bare "Genus sp." -> phrase is the bare marker
                        "Abies alba Mill.",            # parsed
                        "Tobacco mosaic virus"))       # unparsable
   # the new 5.0.0 three-way discriminator + informal-anchor columns
@@ -121,7 +121,7 @@ test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)"
   expect_equal(out$taxon[1], "Serratia")
   expect_equal(out$taxonRank[1], "GENUS")
   expect_equal(out$rank[1], "SPECIES")
-  expect_equal(out$phrase[1], "RE1-2a")
+  expect_equal(out$phrase[1], "sp. RE1-2a")
   expect_equal(out$type[1], "INFORMAL")
   expect_equal(out$canonical[1], "Serratia sp. RE1-2a")  # informal rows round-trip to a canonical name
   expect_true(is.na(out$genus[1]))    # the anchor lives in `taxon`, never a mislabelled genus
@@ -129,12 +129,12 @@ test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)"
 
   # informal row 2: the ~382k tag-capture rescue — whole verbatim tail becomes the phrase
   expect_equal(out$taxon[2], "Rhizobium")
-  expect_equal(out$phrase[2], "RMCC TR1811")
+  expect_equal(out$phrase[2], "sp. RMCC TR1811")
 
-  # informal row 3: bare "Genus sp." -> no phrase
+  # informal row 3: bare "Genus sp." -> phrase is the bare verbatim marker
   expect_equal(out$taxon[3], "Rhizobium")
-  expect_true(is.na(out$phrase[3]))
-  expect_equal(out$canonical[3], "Rhizobium sp.")  # bare "Genus sp." canonical (synthesised marker)
+  expect_equal(out$phrase[3], "sp.")
+  expect_equal(out$canonical[3], "Rhizobium sp.")  # round-trips to the same canonical
 
   # parsed + unparsable rows carry NA in the informal-only columns
   expect_true(is.na(out$taxon[4]))

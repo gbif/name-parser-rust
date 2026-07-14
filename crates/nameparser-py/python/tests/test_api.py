@@ -218,13 +218,13 @@ def test_informal_molecular_provisional_species():
     assert r.taxon == "Serratia"
     assert r.taxon_rank == "GENUS"
     assert r.rank == "SPECIES"
-    assert r.phrase == "RE1-2a"
+    assert r.phrase == "sp. RE1-2a"
     assert r.code is None
     assert r.to_dict() == {
         "taxon": "Serratia",
         "taxonRank": "GENUS",
         "rank": "SPECIES",
-        "phrase": "RE1-2a",
+        "phrase": "sp. RE1-2a",
     }
     assert "Serratia" in repr(r)
     assert r.canonical_name() == "Serratia sp. RE1-2a"  # round-trips to the canonical string
@@ -237,16 +237,16 @@ def test_informal_multi_token_specimen_tag_is_captured_as_phrase():
     assert isinstance(r, nameparser.Informal)
     assert r.taxon == "Rhizobium"
     assert r.taxon_rank == "GENUS"
-    assert r.phrase == "RMCC TR1811"
+    assert r.phrase == "sp. RMCC TR1811"
 
 
-def test_informal_bare_genus_sp_has_no_phrase():
+def test_informal_bare_genus_sp_carries_the_bare_marker_phrase():
     r = nameparser.parse("Rhizobium sp.")
     assert isinstance(r, nameparser.Informal)
     assert r.taxon == "Rhizobium"
     assert r.rank == "SPECIES"
-    assert r.phrase is None
-    assert r.canonical_name() == "Rhizobium sp."  # bare "Genus sp." — synthesised marker, no phrase
+    assert r.phrase == "sp."  # bare "Genus sp." carries the verbatim marker as its phrase
+    assert r.canonical_name() == "Rhizobium sp."  # round-trips to the same canonical string
 
 
 def test_cf_binomial_stays_parsed_not_informal():

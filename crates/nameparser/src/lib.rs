@@ -184,17 +184,17 @@ mod tests {
                 assert_eq!(i.taxon, "Serratia");
                 assert_eq!(i.taxon_rank, Rank::Genus);
                 assert_eq!(i.rank, Rank::Species);
-                assert_eq!(i.phrase.as_deref(), Some("RE1-2a"));
+                assert_eq!(i.phrase.as_deref(), Some("sp. RE1-2a"));
             }
             other => panic!("expected Informal, got {other:?}"),
         }
-        // bare "Genus sp." — no tag to capture
+        // bare "Genus sp." — no distinguishing tag, but the verbatim marker is still the phrase
         match parse("Rhizobium sp.", None, None, None) {
             ParseResult::Informal(i) => {
                 assert_eq!(i.taxon, "Rhizobium");
                 assert_eq!(i.taxon_rank, Rank::Genus);
                 assert_eq!(i.rank, Rank::Species);
-                assert_eq!(i.phrase, None);
+                assert_eq!(i.phrase.as_deref(), Some("sp."));
             }
             other => panic!("expected Informal, got {other:?}"),
         }
@@ -202,7 +202,7 @@ mod tests {
         match parse("Allium sp. 1", None, None, None) {
             ParseResult::Informal(i) => {
                 assert_eq!(i.taxon, "Allium");
-                assert_eq!(i.phrase.as_deref(), Some("1"));
+                assert_eq!(i.phrase.as_deref(), Some("sp. 1"));
             }
             other => panic!("expected Informal, got {other:?}"),
         }

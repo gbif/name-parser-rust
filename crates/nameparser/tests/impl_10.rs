@@ -172,9 +172,9 @@ fn manuscript_names() {
     // — the same DSL-gap workaround as impl_04's "Lepidoptera sp. JGP0404" case.
     assert_phrase_name(
         "Verticordia sp.1",
-        "Verticordia sp. 1",
+        "Verticordia sp.1",
         Some(Rank::Species),
-        "1",
+        "sp.1",
     );
     let n = nameparser::parse_name("Verticordia sp.1", None, None, None)
         .expect("`Verticordia sp.1` should parse");
@@ -200,7 +200,12 @@ fn manuscript_names() {
     assert!(n.specific_epithet.is_none());
     assert!(n.infraspecific_epithet.is_none());
 
-    assert_phrase_name("Bryozoan sp. E", "Bryozoan sp. E", Some(Rank::Species), "E");
+    assert_phrase_name(
+        "Bryozoan sp. E",
+        "Bryozoan sp. E",
+        Some(Rank::Species),
+        "sp. E",
+    );
     let n = nameparser::parse_name("Bryozoan sp. E", None, None, None)
         .expect("`Bryozoan sp. E` should parse");
     assert!(n.uninomial.is_none());
@@ -235,7 +240,7 @@ fn phrase_names() {
     assert!(n.specific_epithet.is_none());
     assert!(n.infraspecific_epithet.is_none());
     assert_eq!(n.rank, Rank::Species);
-    assert_eq!(n.phrase.as_deref(), Some("Somersbey (B.J.Conn 4024)"));
+    assert_eq!(n.phrase.as_deref(), Some("sp. Somersbey (B.J.Conn 4024)"));
     assert_eq!(n.type_, NameType::Informal);
 
     let n2 = nameparser::parse_name("Pultenaea sp. 'Olinda' (Coveny 6616)", None, None, None)
@@ -246,7 +251,7 @@ fn phrase_names() {
     assert!(n2.specific_epithet.is_none());
     assert!(n2.infraspecific_epithet.is_none());
     assert_eq!(n2.rank, Rank::Species);
-    assert_eq!(n2.phrase.as_deref(), Some("'Olinda' (Coveny 6616)"));
+    assert_eq!(n2.phrase.as_deref(), Some("sp. 'Olinda' (Coveny 6616)"));
     assert_eq!(n2.type_, NameType::Informal);
 
     let n3 = nameparser::parse_name(
@@ -264,7 +269,7 @@ fn phrase_names() {
     assert_eq!(n3.rank, Rank::Species);
     assert_eq!(
         n3.phrase.as_deref(),
-        Some("Sandheath (D.Murfet 3190) R.J.Bates")
+        Some("sp. Sandheath (D.Murfet 3190) R.J.Bates")
     );
     assert_eq!(n3.type_, NameType::Informal);
 
@@ -312,7 +317,7 @@ fn phrase_names() {
     assert_eq!(n5.rank, Rank::Species);
     assert_eq!(
         n5.phrase.as_deref(),
-        Some("Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)")
+        Some("sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)")
     );
     assert_eq!(n5.type_, NameType::Informal);
 
@@ -333,7 +338,7 @@ fn phrase_names() {
     assert_eq!(n6.rank, Rank::Species);
     assert_eq!(
         n6.phrase.as_deref(),
-        Some("Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)")
+        Some("sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)")
     );
     assert_eq!(n6.type_, NameType::Informal);
 
@@ -352,7 +357,7 @@ fn phrase_names() {
     assert_eq!(n7.rank, Rank::Species);
     assert_eq!(
         n7.phrase.as_deref(),
-        Some("East Alligator (J.Russell-Smith 8418) NT Herbarium")
+        Some("sp. East Alligator (J.Russell-Smith 8418) NT Herbarium")
     );
     assert_eq!(n7.type_, NameType::Informal);
 
@@ -371,7 +376,7 @@ fn phrase_names() {
     assert_eq!(n8.rank, Rank::Species);
     assert_eq!(
         n8.phrase.as_deref(),
-        Some("Mount Hilditch (M.E. Trudgen 19134)")
+        Some("sp. Mount Hilditch (M.E. Trudgen 19134)")
     );
     assert_eq!(n8.type_, NameType::Informal);
 }

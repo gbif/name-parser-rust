@@ -146,7 +146,7 @@ class NameParserRustSmokeTest {
     assertEquals("Serratia", inf.taxon());
     assertEquals(Rank.GENUS, inf.taxonRank());
     assertEquals(Rank.SPECIES, inf.rank());
-    assertEquals("RE1-2a", inf.phrase());
+    assertEquals("sp. RE1-2a", inf.phrase());
     assertEquals(NameType.INFORMAL, inf.type());
     // Informal carries no ParsedName.
     assertFalse(result.isParsable());
@@ -162,16 +162,18 @@ class NameParserRustSmokeTest {
         assertInstanceOf(ParseResult.Informal.class, parser.parse("Rhizobium sp. RMCC TR1811", null, null, null));
     assertEquals("Rhizobium", inf.taxon());
     assertEquals(Rank.GENUS, inf.taxonRank());
-    assertEquals("RMCC TR1811", inf.phrase());
+    assertEquals("sp. RMCC TR1811", inf.phrase());
   }
 
   @Test
-  void bareGenusSpHasNoPhrase() {
+  void bareGenusSpCarriesTheBareMarkerAsPhrase() {
+    // A bare "Genus sp." carries the verbatim marker as its phrase ("sp.") — uniform taxon+phrase,
+    // matching the core/CLI/Python/R (it is still flagged INDETERMINED internally).
     ParseResult.Informal inf =
         assertInstanceOf(ParseResult.Informal.class, parser.parse("Rhizobium sp.", null, null, null));
     assertEquals("Rhizobium", inf.taxon());
     assertEquals(Rank.SPECIES, inf.rank());
-    assertEquals(null, inf.phrase());
+    assertEquals("sp.", inf.phrase());
   }
 
   @Test

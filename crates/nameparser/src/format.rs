@@ -977,7 +977,13 @@ mod tests {
         };
         // genus-anchored provisional species with a captured phrase tag
         assert_eq!(
-            inf("Rhizobium", Rank::Genus, Rank::Species, Some("RMCC TR1811")).canonical_name(),
+            inf(
+                "Rhizobium",
+                Rank::Genus,
+                Rank::Species,
+                Some("sp. RMCC TR1811")
+            )
+            .canonical_name(),
             "Rhizobium sp. RMCC TR1811"
         );
         // numbered placeholder

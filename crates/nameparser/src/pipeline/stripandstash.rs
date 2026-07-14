@@ -2972,9 +2972,13 @@ static PHRASE_NAME: LazyLock<Regex> = LazyLock::new(|| {
 /// Java `StripAndStash.stashPhraseName` (StripAndStash.java:1595-1644). BOLD/specimen-style
 /// "phrase names" name an unidentified/undescribed taxon by a genus (optionally a species)
 /// plus a rank marker plus a free-text "phrase" distinguishing the specimen/population,
-/// e.g. "Prostanthera sp. Somersbey (B.J.Conn 4024)" — the phrase (here "Somersbey
-/// (B.J.Conn 4024)") is stashed on `ctx.name.phrase` UNCONDITIONALLY once a recognised
-/// rank marker is found, and the working string is rewritten into one of four shapes
+/// e.g. "Prostanthera sp. Somersbey (B.J.Conn 4024)" — the phrase is stashed on
+/// `ctx.name.phrase` once a recognised rank marker is found. For a bare-genus SPECIES-level
+/// shape (the `Informal`-bound case) the verbatim rank marker is kept ON the phrase ("sp.
+/// Somersbey (B.J.Conn 4024)", per the 5.0.0 Informal-phrase contract, so the formatter
+/// round-trips it without re-synthesising "sp."); every other shape (a "Genus species"
+/// binomial, a non-species marker, a subgenus/author prefix) keeps the bare marker-stripped
+/// phrase as the Java oracle did. The working string is rewritten into one of four shapes
 /// depending on the Latin prefix, so NameTokens sees a clean indet
 /// name. All four shapes spot-checked against the Java CLI oracle:
 ///   - a trailing author span after the epithet(s) ("Baeckea Benth. sp. Bygalorie (ABC
@@ -3004,7 +3008,6 @@ fn stash_phrase_name(ctx: &mut ParseContext, s: String) -> String {
     let Some(rank) = phrase_rank_marker(&marker.to_lowercase()) else {
         return s;
     };
-    ctx.name.phrase = Some(phrase);
 
     // Java re-trims `prefix` via `.trim()` at each of the three call sites below
     // (`.contains(" ")`, `GENUS_SUBGENUS_TEST`, `PHRASE_GENUS_SUBGENUS`) even though
@@ -3012,6 +3015,20 @@ fn stash_phrase_name(ctx: &mut ParseContext, s: String) -> String {
     // defensive no-op given that, so it is not repeated at each site here.
     let author_start = find_author_start(&prefix);
     let prefix_is_genus_only = !prefix.contains(' ');
+
+    // 5.0.0 Informal-phrase contract: a bare-genus species-level provisional
+    // ("Prostanthera sp. Somersbey (B.J.Conn 4024)") is an `Informal` result, and its phrase
+    // must carry the verbatim rank marker just like NameTokens' indet capture — so the
+    // formatter renders it back ("Genus sp. <phrase>") without re-synthesising a marker.
+    // Gated to the genus-only SPECIES shape: a "Genus species" prefix is a Parsed binomial
+    // (out of scope — keeps the bare voucher phrase), and a non-species marker (subsp./var./
+    // f.) is NOT recognised by the formatter's species-only phrase guard, so keeping it in the
+    // phrase would double it; those keep the marker-stripped phrase and the synthesised rank.
+    ctx.name.phrase = Some(if prefix_is_genus_only && rank == Rank::Species {
+        format!("{marker}. {phrase}")
+    } else {
+        phrase
+    });
     let prefix_is_genus_plus_subgenus = GENUS_SUBGENUS_TEST.is_match(&prefix);
 
     if let Some(author_start) = author_start {
@@ -5963,17 +5980,23 @@ mod tests {
 
     #[test]
     fn phrase_name_bare_genus_with_species_marker_sets_phrase_but_leaves_rank_untouched() {
-        // Oracle-verified: "Prostanthera sp. Somersbey (B.J.Conn 4024)" -> phrase=
-        // "Somersbey (B.J.Conn 4024)". The eventual full-pipeline `rank=SPECIES` comes from
-        // NameTokens re-reading the reinserted "sp." marker, NOT from this
-        // step directly — Java's own stashPhraseName has no setRank call on this branch.
+        // "Prostanthera sp. Somersbey (B.J.Conn 4024)" -> phrase="sp. Somersbey (B.J.Conn
+        // 4024)". 5.0.0 Informal-phrase contract: a bare-genus SPECIES-level provisional keeps
+        // the verbatim rank marker in the phrase (the Java oracle stashed the bare
+        // "Somersbey (B.J.Conn 4024)"; here it is prefixed so the formatter round-trips it
+        // without re-synthesising "sp."). The working rewrite is unchanged — the eventual
+        // full-pipeline `rank=SPECIES` still comes from NameTokens re-reading the reinserted
+        // "sp." marker, NOT from this step directly.
         let mut c = ctx("x");
         let out = stash_phrase_name(
             &mut c,
             "Prostanthera sp. Somersbey (B.J.Conn 4024)".to_string(),
         );
         assert_eq!(out, "Prostanthera sp.");
-        assert_eq!(c.name.phrase, Some("Somersbey (B.J.Conn 4024)".to_string()));
+        assert_eq!(
+            c.name.phrase,
+            Some("sp. Somersbey (B.J.Conn 4024)".to_string())
+        );
         assert_eq!(
             c.name.rank,
             Rank::Unranked,
@@ -6043,12 +6066,14 @@ mod tests {
 
     #[test]
     fn phrase_name_double_quoted_phrase_without_parens_is_also_recognised() {
-        // Oracle-verified: "Prostanthera sp. \"Big Leaf\"" -> phrase="\"Big Leaf\""
-        // (quotes kept verbatim, matching group 3's second, no-parens alternative).
+        // "Prostanthera sp. \"Big Leaf\"" -> phrase="sp. \"Big Leaf\"" (quotes kept verbatim,
+        // matching group 3's second, no-parens alternative; the 5.0.0 Informal-phrase contract
+        // prefixes the "sp." marker onto this bare-genus SPECIES phrase — Java stashed just
+        // "\"Big Leaf\"").
         let mut c = ctx("x");
         let out = stash_phrase_name(&mut c, "Prostanthera sp. \"Big Leaf\"".to_string());
         assert_eq!(out, "Prostanthera sp.");
-        assert_eq!(c.name.phrase, Some("\"Big Leaf\"".to_string()));
+        assert_eq!(c.name.phrase, Some("sp. \"Big Leaf\"".to_string()));
     }
 
     #[test]
@@ -6089,14 +6114,18 @@ mod tests {
 
     #[test]
     fn full_run_stashes_a_phrase_name() {
-        // Oracle-verified end-to-end (StripAndStash's own contribution): "Prostanthera sp.
-        // Somersbey (B.J.Conn 4024)" -> phrase="Somersbey (B.J.Conn 4024)", working
-        // rewritten to "Prostanthera sp." — none of steps 1-52 interfere on this clean,
-        // capital-letter-led input before step 55 gets to it.
+        // End-to-end (StripAndStash's own contribution): "Prostanthera sp. Somersbey
+        // (B.J.Conn 4024)" -> phrase="sp. Somersbey (B.J.Conn 4024)" (5.0.0 Informal-phrase
+        // contract: verbatim marker kept in the phrase), working rewritten to "Prostanthera
+        // sp." — none of steps 1-52 interfere on this clean, capital-letter-led input before
+        // step 55 gets to it.
         let mut c = ctx("Prostanthera sp. Somersbey (B.J.Conn 4024)");
         run(&mut c);
         assert_eq!(c.working, "Prostanthera sp.");
-        assert_eq!(c.name.phrase, Some("Somersbey (B.J.Conn 4024)".to_string()));
+        assert_eq!(
+            c.name.phrase,
+            Some("sp. Somersbey (B.J.Conn 4024)".to_string())
+        );
     }
 
     // ===================================================================================

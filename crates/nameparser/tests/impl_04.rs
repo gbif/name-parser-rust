@@ -541,7 +541,7 @@ fn strains() {
     assert!(n.specific_epithet.is_none());
     assert!(n.infraspecific_epithet.is_none());
     assert_eq!(n.rank, Rank::Species);
-    assert_eq!(n.phrase.as_deref(), Some("JYr4"));
+    assert_eq!(n.phrase.as_deref(), Some("sp. JYr4"));
     assert_eq!(n.type_, NameType::Informal);
 
     // Java: `assertPhraseName(...).species("Lepidoptera", null)` — again a null specific
@@ -560,7 +560,7 @@ fn strains() {
     assert!(n2.infrageneric_epithet.is_none());
     assert!(n2.specific_epithet.is_none());
     assert!(n2.infraspecific_epithet.is_none());
-    assert_eq!(n2.phrase.as_deref(), Some("JGP0404"));
+    assert_eq!(n2.phrase.as_deref(), Some("sp. JGP0404"));
 
     // avoid author & year to be accepted as strain
     assert_name("Anniella nigra FISCHER 1885")

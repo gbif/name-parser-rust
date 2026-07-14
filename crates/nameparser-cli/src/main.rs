@@ -1284,17 +1284,19 @@ mod tests {
         let row = render_result_row(3, name, &nameparser::parse(name, None, None, None));
         assert_eq!(
             row,
-            r#"{"line":3,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
+            r#"{"line":3,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp. RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
         );
     }
 
     #[test]
-    fn render_result_row_bare_informal_omits_the_absent_phrase() {
+    fn render_result_row_bare_informal_carries_the_bare_marker_phrase() {
+        // A bare "Genus sp." now carries the verbatim marker as its phrase ("sp."), so the row
+        // includes the phrase field like every other informal row (uniform taxon+phrase).
         let name = "Rhizobium sp.";
         let row = render_result_row(1, name, &nameparser::parse(name, None, None, None));
         assert_eq!(
             row,
-            r#"{"line":1,"input":"Rhizobium sp.","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","canonical":"Rhizobium sp."}}"#
+            r#"{"line":1,"input":"Rhizobium sp.","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp.","canonical":"Rhizobium sp."}}"#
         );
     }
 

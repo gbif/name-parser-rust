@@ -218,7 +218,7 @@ fn parse_three_way_emits_a_distinct_informal_row_with_canonical() {
     // semistructured -> a distinct `informal` object with its flat anchor + canonical
     assert_eq!(
         lines[1],
-        r#"{"line":2,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
+        r#"{"line":2,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp. RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
     );
     // non-name -> the same `error` object the default mode emits
     assert_eq!(

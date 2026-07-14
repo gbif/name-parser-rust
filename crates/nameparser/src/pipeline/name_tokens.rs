@@ -95,6 +95,10 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     let mut inline_rank: Option<Rank> = None;
     let mut inline_rank_notho = false;
     let mut indet = false;
+    // A bare supraspecific indet ("Genus sp." with no distinguishing tail) — stays flagged
+    // INDETERMINED even though its phrase now carries the verbatim marker (see the top-check
+    // in the indet branch and the warning block near the end of this fn).
+    let mut indet_bare = false;
     let mut cf_aff_qualifier: Option<String> = None;
     // Tracks the most recently skipped mid-name author span so that, when a second
     // infraspecific marker overrides the first, we can describe the dropped middle
@@ -368,6 +372,46 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     i += 1;
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
                         i += 1;
+                    }
+                    // 5.0.0 Informal-phrase contract: a supraspecific indet (no species epithet yet)
+                    // keeps the WHOLE verbatim tail FROM the marker as its phrase — marker included,
+                    // original spelling preserved — so it round-trips exactly and the formatter's
+                    // `phrase_leads_with_species_marker` guard emits it as-is instead of re-synthesising
+                    // "sp." from the rank. With a trailing designation that is "sp. RMCC TR1811" /
+                    // "species 1" / "spec. 3"; a bare "Genus sp." captures just the marker itself
+                    // ("sp."), so every Informal name's phrase is uniformly the printable text after
+                    // the anchor taxon (no None special-case, no synth-from-rank). `ts[ts.len() - 1]`
+                    // is the last consumed token — the trailing tag when present, else the marker/dot.
+                    // The marker-stripping sub-branches below now serve only the binomial indet case (a
+                    // species epithet is already present, so it stays Parsed, not Informal).
+                    // Only the species-level markers (sp/spec/species) are round-tripped by the
+                    // formatter's `phrase_leads_with_species_marker` guard; a fully-generic "indet"
+                    // is NOT, so keeping it in the phrase would double under the synthesised "sp."
+                    // ("Aster indet." -> "Aster sp. indet."). Restrict the marker capture to
+                    // sp/spec/species; "indet" falls through and renders via the synthesised rank.
+                    let is_species_marker = w.eq_ignore_ascii_case("sp")
+                        || w.eq_ignore_ascii_case("spec")
+                        || w.eq_ignore_ascii_case("species");
+                    // A cultivar epithet (extracted upstream from "Genus sp. cv. 'Name'") is the
+                    // operative designation, not the "sp." — so it is NOT an informal indet and the
+                    // marker must not be captured as a phrase (assemble step 17 clears INFORMAL for
+                    // it); fall through and leave the phrase to the cultivar rendering. Likewise, an
+                    // already-set phrase means an upstream step (the voucher `stash_phrase_name`,
+                    // which rewrites working to a bare "Genus sp." while stashing the full "sp. <voucher>"
+                    // on the phrase) owns it — don't clobber it with the bare marker here.
+                    if lower_epithets.is_empty()
+                        && ctx.name.cultivar_epithet.is_none()
+                        && ctx.name.phrase.is_none()
+                        && is_species_marker
+                    {
+                        // A distinguishing tail after the marker (a specimen tag, number, voucher)
+                        // makes the name determinable; a bare "Genus sp." does not, so it stays
+                        // flagged INDETERMINED below even though its phrase carries the marker.
+                        indet_bare = i >= ts.len();
+                        ctx.name.phrase =
+                            Some(ctx.working[marker_start..ts[ts.len() - 1].end].to_string());
+                        i = ts.len();
+                        continue;
                     }
                     // A number immediately following the indet marker becomes the
                     // informal phrase. When the source spelled out the marker as the
@@ -752,7 +796,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             if lower_epithets.is_empty() && ctx.name.rank == Rank::Unranked {
                 ctx.name.rank = Rank::Species;
             }
-            if ctx.name.phrase.is_none() {
+            if ctx.name.phrase.is_none() || indet_bare {
                 ctx.name.add_warning(warnings::INDETERMINED);
             }
         }
@@ -1257,7 +1301,7 @@ mod tests {
             "indet routes through genus, not uninomial"
         );
         assert_eq!(ctx.name.specific_epithet, None);
-        assert_eq!(ctx.name.phrase, Some("E".to_string()));
+        assert_eq!(ctx.name.phrase, Some("sp. E".to_string()));
         assert_eq!(ctx.name.type_, NameType::Informal);
         assert_eq!(ctx.name.rank, Rank::Species);
         assert!(
@@ -1267,10 +1311,14 @@ mod tests {
     }
 
     #[test]
-    fn bare_indet_species_marker_with_no_phrase_adds_the_indetermined_warning() {
+    fn bare_indet_species_marker_captures_the_marker_and_keeps_the_indetermined_warning() {
+        // 5.0.0 Informal-phrase contract: a bare "Genus sp." captures the verbatim marker as its
+        // phrase ("sp.") for a uniform taxon+phrase round-trip, but — unlike a name with a
+        // distinguishing tail — it is still genuinely indeterminate, so the INDETERMINED warning
+        // stays.
         let ctx = run("Bryozoan sp.", None);
         assert_eq!(ctx.name.genus, Some("Bryozoan".to_string()));
-        assert_eq!(ctx.name.phrase, None);
+        assert_eq!(ctx.name.phrase, Some("sp.".to_string()));
         assert_eq!(ctx.name.type_, NameType::Informal);
         assert_eq!(ctx.name.rank, Rank::Species);
         assert!(ctx
