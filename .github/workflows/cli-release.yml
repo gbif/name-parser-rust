@@ -31,8 +31,31 @@ permissions:
   contents: write   # create the release and upload the binary archives
 
 jobs:
+  # taiki-e/upload-rust-binary-action (below) uploads to an EXISTING release — it does NOT create
+  # one. So create (or reuse) the GitHub Release for the tag FIRST, in a single job, then let the
+  # per-target matrix attach its archive to it. Without this, every matrix job loops
+  # "release not found" and fails. `gh release create` is idempotent and unfussy about the `cli-`
+  # tag prefix (a version-pattern-strict release action would reject `cli-v0.1.0`).
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create the GitHub Release for the tag (if it does not exist yet)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          tag="${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists — reusing it."
+          else
+            gh release create "$tag" \
+              --title "nameparser-cli $tag" \
+              --notes "Native \`nameparser-cli\` binaries for $tag — one archive per platform, each with a SHA-256 checksum. See DISTRIBUTION.md."
+          fi
+
   publish:
     name: ${{ matrix.target }}
+    needs: create-release
     strategy:
       fail-fast: false
       matrix:
