@@ -1,8 +1,8 @@
-# Parity gate: parse_name_json() must reproduce the core's `parsed` object exactly, so it
-# is byte-comparable (after normalizing the warnings set + key order) to the Java CLI oracle
-# testdata/expected-parse.jsonl -- the same oracle crates/nameparser-cli and nameparser-py
-# validate against. Skips cleanly if the (git-ignored, regenerated) oracle isn't present.
-testthat::test_that("parse_name_json matches the Java CLI oracle over the benchmark corpus", {
+# Parity gate: parse_name_json() must reproduce the core's `parsed` object exactly, so it is
+# byte-comparable (after normalizing the warnings set) to the frozen golden snapshot
+# testdata/golden/expected-parse.jsonl -- the same snapshot crates/nameparser-cli and nameparser-py
+# validate against (regenerated from the Rust CLI). Skips cleanly if it isn't present.
+testthat::test_that("parse_name_json matches the golden snapshot over the benchmark corpus", {
   root <- normalizePath(file.path(testthat::test_path(), "..", "..", "..", ".."))
   corpus <- file.path(root, "testdata", "benchmark-data.txt")
   oracle <- file.path(root, "testdata", "golden", "expected-parse.jsonl")
@@ -19,10 +19,10 @@ testthat::test_that("parse_name_json matches the Java CLI oracle over the benchm
   testthat::expect_equal(length(names_vec), length(expected))
 
   norm <- function(o) {
-    # Normalize ONLY the warnings set (Java HashSet order vs our Vec order) before comparing.
+    # Normalize ONLY the warnings set (a set, so order-independent) before comparing.
     # Object key order is NOT normalized here — jsonlite::toJSON preserves the list's order —
     # so the compare relies on ParsedName's field-declaration order being pinned to match the
-    # Java oracle's key order by design (a core-crate wire-format guarantee). Net effect: a
+    # golden snapshot's key order by design (a core-crate wire-format guarantee). Net effect: a
     # genuine field/value difference fails; only warnings-set ordering is ignored.
     if (!is.null(o$warnings)) o$warnings <- sort(unlist(o$warnings))
     jsonlite::toJSON(o, auto_unbox = TRUE, null = "null")

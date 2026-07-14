@@ -10,8 +10,7 @@ byte-for-byte behavioural parity to the Java `org.gbif:name-parser`.
 
 ## Why
 
-The Rust core is the single authoritative implementation
-([approach B](docs/superpowers/specs/2026-07-09-name-parser-rust-design.md)); the Java library
+The Rust core is the single authoritative implementation; the Java library
 becomes a thin binding over it. Three motivations:
 
 - **Polyglot reach** — usable outside the JVM (Java, a native CLI, Python, and R).
@@ -45,7 +44,6 @@ crates/
 bindings/
   java/             # NameParserRust implements org.gbif.nameparser.api.NameParser, via Panama/FFM
   r/                # R package `nameparser` (extendr): parse_names() tibble + parse_name_json()
-docs/superpowers/   # design spec, implementation notes, and findings
 ```
 
 ## Bindings
