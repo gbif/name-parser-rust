@@ -187,6 +187,19 @@ fn aff_binomial_with_authorship_stays_parsed() {
 }
 
 #[test]
+fn near_binomial_stays_parsed_with_its_qualifier() {
+    // "near" is an open-nomenclature qualifier synonymous with aff. ("Poa near pratensis" = a Poa
+    // near/affinis pratensis). Like cf./aff. it annotates a complete binomial, so the name stays
+    // Parsed (type INFORMAL) with the qualifier in epithetQualifier — but as a full English word it
+    // is stored verbatim, with NO synthesised trailing dot (unlike the abbreviations cf./aff.).
+    assert_name("Poa near pratensis")
+        .species("Poa", "pratensis")
+        .type_(NameType::Informal)
+        .qualifiers(&[(NamePart::Specific, "near")])
+        .nothing_else();
+}
+
+#[test]
 fn infraspecific_indeterminate_stays_parsed() {
     // "Salix alba subsp. B" has a species epithet ("alba"), so it stays Parsed — a flat Informal
     // could not hold an infraspecific-level designation hanging off a determined species.

@@ -131,9 +131,11 @@ Fungus sp.      Alga sp.          Diatom sp.
 `Genus sp. <tail>` → `Informal`, tail kept as the `phrase`; a bare `Genus sp.` keeps the verbatim
 marker (`sp.`) as its phrase and stays flagged indeterminate.
 
-### 11. "cf." / "aff." / "near" — 🔶
-Open-nomenclature uncertainty. `cf.`/`aff.` are captured in `epithetQualifier` and the name stays
-`Parsed` ✅. `near` is ⬜ (not captured yet).
+### 11. "cf." / "aff." / "near" — ✅
+Open-nomenclature uncertainty, captured in `epithetQualifier` with the name staying `Parsed` (type
+`INFORMAL`). `cf.`/`aff.` are stored with their abbreviation dot; `near` (a full English word,
+synonymous with aff.) is stored verbatim. All three are recognised lowercase; an uppercased marker
+is still read as an author (a shared pre-existing limitation).
 
 ```
 Quercus cf. robur   Agaricus aff. bisporus   Poa near pratensis
@@ -262,7 +264,6 @@ ATCC11775                                                                       
   `voucher`/`phytoplasma`/… after a determined name.
 - ⬜ **Pathovar/biovar/serovar as infraspecific ranks** (category 7); capitalised serovars
   (`Salmonella Typhi`).
-- ⬜ **`near`** as an open-nomenclature qualifier (category 11).
 - ⬜ **Molecular clades / lineages** mis-parsing as scientific names (`Lineage B.1.1.7`, category 13).
 - ⬜ **`OtherType` sub-classification** of the residual `OTHER` bucket.
 - ⬜ **Prefix-less assembly accessions** (`JAFGQ01`, category 9).

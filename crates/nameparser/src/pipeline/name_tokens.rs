@@ -334,11 +334,19 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         }
                     }
                 }
-                // 1. cf./aff. qualifier
-                if (w.eq_ignore_ascii_case("cf") || w.eq_ignore_ascii_case("aff"))
+                // 1. cf./aff./near open-nomenclature qualifier
+                if (w.eq_ignore_ascii_case("cf")
+                    || w.eq_ignore_ascii_case("aff")
+                    || w.eq_ignore_ascii_case("near"))
                     && lower_epithets.len() < 2
                 {
-                    cf_aff_qualifier = Some(format!("{w}."));
+                    // cf./aff. are abbreviations, rendered with a trailing dot ("cf."/"aff."); "near"
+                    // is a full English word synonymous with aff., so it is stored verbatim, no dot.
+                    cf_aff_qualifier = Some(if w.eq_ignore_ascii_case("near") {
+                        w.to_string()
+                    } else {
+                        format!("{w}.")
+                    });
                     ctx.name.type_ = NameType::Informal;
                     i += 1;
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
