@@ -18,7 +18,7 @@ version number means the **same underlying Rust engine** everywhere.
 | Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ ready |
 | CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ ready |
 | Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ ready (one-time PyPI setup) |
-| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ ready (one-time crates.io setup) |
+| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.1.0` published (setup done); `0.1.1+` via tag |
 | R | `nameparser` | CRAN | manual submission | ⚠️ not yet wired |
 
 ---
@@ -34,12 +34,16 @@ Do these once (per registry / per person with release rights).
   `python-release.yml`, **environment `pypi`**.
   - *Dry-run channel (recommended before the first real publish):* the same on
     <https://test.pypi.org> with **environment `testpypi`**.
-- **crates.io (Trusted Publishing — no token stored).** The GitHub `crates-io` environment
-  **already exists** (gated behind a required reviewer). The remaining step is on crates.io: open
-  the `gbif-name-parser` crate → *Settings → Trusted Publishing → Add* — owner `gbif`, repo
-  `name-parser-rust`, workflow `crate-release.yml`, **environment `crates-io`**. (First publish
-  only: the crate must exist — use crates.io's pending-publisher flow, or one manual `cargo
-  publish` to create it, then rely on the workflow thereafter.)
+- **crates.io (Trusted Publishing — no token stored). ✅ DONE.** The GitHub `crates-io` environment
+  exists (gated behind a required reviewer), `gbif-name-parser` `0.1.0` is published, and its Trusted
+  Publisher is registered (owner `gbif`, repo `name-parser-rust`, workflow `crate-release.yml`,
+  environment `crates-io`) — so `0.1.1+` publish token-free from the workflow.
+  - *How the first publish was bootstrapped* (for the record — unlike PyPI, **crates.io has no
+    pending-publisher flow**, so the crate must exist before a Trusted Publisher can be attached):
+    create a short-lived scoped API token (crates.io → *Account Settings → API Tokens*, scope
+    `publish-new`), run `CARGO_REGISTRY_TOKEN=<token> cargo publish -p gbif-name-parser` once to
+    create the crate, add the Trusted Publisher on the now-existing crate's *Settings*, then revoke
+    the token.
 - **Jenkins (Java).** The Multibranch job already deploys snapshots. Release credentials
   (`gbif-release` / `gbif-snapshot`) live only in the Jenkins-managed `settings.xml` — never in
   the repo.
@@ -112,29 +116,30 @@ sdist and publishes to PyPI via Trusted Publishing. A guard fails the run if the
 
 ### Rust engine → crates.io
 
-The core crate `gbif-name-parser` is crates.io-ready (`cargo publish --dry-run -p gbif-name-parser`
-passes) and wired to publish via Trusted Publishing (OIDC — no stored token). **This must precede a
-CRAN release** — the R package vendors the core *from* crates.io.
+`gbif-name-parser` **`0.1.0` is published** (that first version was bootstrapped manually — see §0);
+subsequent versions publish via Trusted Publishing (OIDC — no stored token). **crates.io must precede
+a CRAN release** — the R package vendors the core *from* crates.io.
 
-**Dry-run first** (recommended): *Actions → "Publish crate" → Run workflow* → runs `cargo publish
---dry-run` (packages + verifies, never publishes). Then the real release:
+For the **next** release (`0.1.1+`), after the §1 version bump — **dry-run first** (recommended):
+*Actions → "Publish crate" → Run workflow* → runs `cargo publish --dry-run` (packages + verifies,
+never publishes). Then the real release:
 
 ```sh
-git tag crate-v0.1.0 && git push origin crate-v0.1.0
+git tag crate-v0.2.0 && git push origin crate-v0.2.0   # NOT crate-v0.1.0 — 0.1.0 is already published
 ```
 
 `.github/workflows/crate-release.yml` guards the tag against the engine version (root `Cargo.toml`
 `[workspace.package]`), authenticates via OIDC (`rust-lang/crates-io-auth-action`), and runs
 `cargo publish -p gbif-name-parser`. The `crates-io` GitHub environment is gated behind a required
 reviewer, so the run pauses for approval before the (irreversible) upload.
-(`nameparser-cli`/`-ffi`/`-py` stay `publish = false` — they are not library crates.) Needs the
-one-time crates.io Trusted-Publisher registration (§0).
+(`nameparser-cli`/`-ffi`/`-py` stay `publish = false` — they are not library crates.) The one-time
+crates.io Trusted-Publisher registration is already done (§0).
 
 ### R → CRAN — *needs crates.io first*
 
 CRAN is source-based and human-reviewed (no auto-publish). **Prerequisite: the core on crates.io**
-(above) — the R package isn't self-contained until it depends on `gbif-name-parser` *by version*
-and can vendor it (`cargo vendor` skips local path deps). Then:
+(above — now satisfied, `0.1.0` is published) — the R package isn't self-contained until it depends
+on `gbif-name-parser` *by version* and can vendor it (`cargo vendor` skips local path deps). Then:
 
 1. Point `bindings/r/src/rust/Cargo.toml`'s `nameparser_core` dependency at the crates.io version.
 2. `Rscript -e 'rextendr::vendor_pkgs("bindings/r")'` → bundles the core + all deps into
