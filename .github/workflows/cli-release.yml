@@ -64,8 +64,11 @@ jobs:
             os: ubuntu-latest
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-24.04-arm      # native arm64 runner (free for public repos) — no cross-compile
-          - target: x86_64-apple-darwin
-            os: macos-13              # Intel macOS
+          # Intel macOS (x86_64-apple-darwin) is intentionally NOT built: GitHub is retiring the
+          # macos-13 Intel hosted runners (jobs sit queued forever), and Apple Silicon is the Mac
+          # platform now. Intel-Mac users build from source (`cargo build --release -p
+          # nameparser-cli`). If it's ever wanted back, cross-compile it on macos-latest (arm64)
+          # via `rustup target add x86_64-apple-darwin` — the CLI is pure Rust, no macos-13 needed.
           - target: aarch64-apple-darwin
             os: macos-latest          # Apple Silicon macOS
           - target: x86_64-pc-windows-msvc

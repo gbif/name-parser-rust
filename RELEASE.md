@@ -91,9 +91,10 @@ the bumped version.
 git tag cli-v0.2.0 && git push origin cli-v0.2.0
 ```
 
-`.github/workflows/cli-release.yml` builds `nameparser-cli` natively on 5 targets (linux
-x86_64/aarch64, macOS x86_64/aarch64, windows x64) and attaches per-platform archives + SHA-256 to
-the `cli-v0.2.0` release.
+`.github/workflows/cli-release.yml` builds `nameparser-cli` natively on 4 targets (linux
+x86_64/aarch64, macOS arm64, windows x64) and attaches per-platform archives + SHA-256 to
+the `cli-v0.2.0` release. (Intel macOS is not built — GitHub is retiring the `macos-13` Intel
+runners; Intel-Mac users build from source.)
 
 ### Python → PyPI
 

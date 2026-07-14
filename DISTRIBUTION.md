@@ -303,7 +303,8 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
       the Jenkinsfile points at the outer workspace's staged cdylibs — pending a first dry-run.
       Optionally add the Central sources/javadoc/GPG plugins for Maven Central sync.
 - [x] Rust CLI — GitHub Releases workflow (`.github/workflows/cli-release.yml`): a `cli-v*` tag
-      builds + attaches per-platform archives (5 targets) + sha256. Pending the first tag.
+      builds + attaches per-platform archives (4 targets — Intel macOS dropped, macos-13 runners
+      retiring) + sha256. `cli-v0.1.0` released.
 - [x] Python — PyPI workflow (`.github/workflows/python-release.yml`): a `py-v*` tag builds all
       wheels + sdist and publishes via Trusted Publishing. Pending the one-time PyPI trusted-publisher
       + `pypi` environment setup, then the first tag.
