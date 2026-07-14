@@ -1,3 +1,4 @@
+^LICENSE\.md$
 ^src/\.cargo$
 ^src/rust/vendor$
 ^src/rust/target$

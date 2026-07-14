@@ -1,7 +1,7 @@
 # `bindings/java` — `NameParserRust` over FFM (Panama)
 
 `org.gbif.nameparser.rust.NameParserRust` implements `org.gbif.nameparser.api.NameParser`
-(the released `5.0.0-rc.1` interface) by downcalling the `nameparser-ffi` Rust cdylib
+(the released `5.0.0` interface) by downcalling the `nameparser-ffi` Rust cdylib
 in-process via `java.lang.foreign` (FFM/Panama, stable since JDK 22 — no
 `--enable-preview` needed). Each `parse` marshals its inputs across the FFI boundary, receives
 the result as a **flat fixed-layout binary struct**, and rebuilds a `ParsedName` from it via
@@ -13,7 +13,7 @@ which also removed the `gson` runtime dependency (`gson` is now test-scope only,
 This module is deliberately **standalone**: it has no `<parent>` (the GBIF `name-parser`
 reactor's motherpom pins `--release 17`, which rejects `java.lang.foreign`), and it does not
 modify `/Users/markus/code/gbif/name-parser/` or any other repo. It depends on the
-released `org.gbif:name-parser-api:5.0.0-rc.1` artifact, resolved from repository.gbif.org (cached
+released `org.gbif:name-parser-api:5.0.0` artifact, resolved from repository.gbif.org (cached
 in `~/.m2` after the first build).
 
 ## Requirements
@@ -24,7 +24,7 @@ in `~/.m2` after the first build).
   export JAVA_HOME="$HOME/.sdkman/candidates/java/25.0.3-librca"
   export PATH="$JAVA_HOME/bin:$PATH"
   ```
-- `org.gbif:name-parser-api:5.0.0-rc.1` — resolved automatically from repository.gbif.org (the
+- `org.gbif:name-parser-api:5.0.0` — resolved automatically from repository.gbif.org (the
   `<repositories>` block in the POM) and cached in `~/.m2`. No local build of the `name-parser`
   repo is needed: the Java `NameParserImpl` reference impl / oracle was removed at 5.0.0, so this
   Rust binding is the sole implementation.

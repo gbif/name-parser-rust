@@ -1,0 +1,40 @@
+# SPDX-License-Identifier: Apache-2.0
+#
+# Keeps dependencies current across this repo's three build ecosystems. Grouped, weekly PRs so
+# the bump traffic stays low-noise (one PR per ecosystem rather than one per dependency).
+#
+#   * cargo          -> the Rust workspace (root Cargo.toml: core + CLI + ffi + py crates).
+#   * github-actions -> the pinned actions in .github/workflows/*.yml.
+#   * maven          -> the standalone Java FFM binding (bindings/java) and its JMH module.
+#
+# The R package's inner Rust crate (bindings/r/src/rust) is vendored for CRAN, not tracked as a
+# live dependency here, so it is intentionally not listed.
+version: 2
+updates:
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      cargo:
+        patterns:
+          - "*"
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+
+  - package-ecosystem: maven
+    directory: /bindings/java
+    schedule:
+      interval: weekly
+    groups:
+      maven:
+        patterns:
+          - "*"

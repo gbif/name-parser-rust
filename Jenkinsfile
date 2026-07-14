@@ -49,9 +49,13 @@ pipeline {
     }
 
     stage('Maven build') {
+      // Snapshot deploy is main-only: every push to main auto-deploys X-SNAPSHOT to Nexus. PRs and
+      // feature branches are tested by GitHub Actions (.github/workflows/ci.yml), not deployed here,
+      // so they never overwrite the shared -SNAPSHOT.
       when {
         allOf {
           not { expression { params.RELEASE } };
+          branch 'main';
         }
       }
       steps {
@@ -77,7 +81,7 @@ pipeline {
       when {
         allOf {
           expression { params.RELEASE };
-          branch 'master';
+          branch 'main';
         }
       }
       steps {

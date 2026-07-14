@@ -6,7 +6,7 @@ Authors@R:
 Description: R binding (via extendr) to the Rust port of the GBIF scientific name
     parser. Parses scientific names into their structured atoms (genus, epithets,
     authorship, rank, etc).
-License: Apache License 2.0
+License: Apache License (>= 2)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 8.0.0

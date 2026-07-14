@@ -13,7 +13,7 @@
     VERSIONING: this binding shares the Rust ENGINE's version — the Cargo [workspace.package]
     version at this repo's root (gbif-name-parser, 0.1.x today) — released in lockstep with the
     CLI/Python/R bindings, so one version across all bindings means one engine. It is NOT the
-    version of the api it implements: `org.gbif:name-parser-api` (5.0.0-rc.1, a dependency
+    version of the api it implements: `org.gbif:name-parser-api` (5.0.0, a dependency
     below) is independently versioned and pinned. The bindings sit at 0.x while new / gathering
     real-use feedback, and graduate to the product's 5.x line once stable. Keep <version> below in sync
     with the Cargo workspace version — scripts/bump-version.sh does this; see RELEASE.md.
@@ -32,6 +32,14 @@
   </description>
 
   <url>https://github.com/gbif/name-parser-rust</url>
+
+  <licenses>
+    <license>
+      <name>The Apache License, Version 2.0</name>
+      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+      <distribution>repo</distribution>
+    </license>
+  </licenses>
 
   <!-- Required by maven-release-plugin (the Jenkinsfile's release stage) to tag the release. -->
   <scm>
@@ -75,13 +83,13 @@
     <!-- The 5.0.0 exceptionless API this binding implements: NameParser (now returning
          ParseResult), the three-way ParseResult (Parsed | Informal | Unparsable), ParsedName,
          UnparsableNameException, the enums (incl. NameType.IDENTIFIER). Pinned to the released
-         5.0.0-rc.1 (a stable RC, not a moving SNAPSHOT); resolves from repository.gbif.org via the
+         5.0.0 (the final release, not a moving SNAPSHOT); resolves from repository.gbif.org via the
          <repositories> block below — see bindings/java/README.md. NOTE: 5.0.0 is api-ONLY — the Java
          NameParserImpl reference impl was removed, so this Rust binding is the sole implementation. -->
     <dependency>
       <groupId>org.gbif</groupId>
       <artifactId>name-parser-api</artifactId>
-      <version>5.0.0-rc.1</version>
+      <version>5.0.0</version>
     </dependency>
 
     <!-- TEST-ONLY. The binding itself no longer uses Gson (the struct wire path rebuilds
@@ -121,8 +129,8 @@
   <!-- INTERIM `mvn deploy` targets (GBIF Nexus) — used only while this module is standalone;
        once it joins the name-parser reactor, motherpom supplies these. The <id>s MUST match
        <server> credential entries in the deployer's ~/.m2/settings.xml — adjust
-       `gbif-release`/`gbif-snapshot` to your actual server ids. This 4.2.0-SNAPSHOT deploys to
-       the snapshot repo (re-deployable); a 4.2.0 release goes to the release repo. -->
+       `gbif-release`/`gbif-snapshot` to your actual server ids. This 0.1.0-SNAPSHOT deploys to
+       the snapshot repo (re-deployable); a 0.1.0 release goes to the release repo. -->
   <distributionManagement>
     <repository>
       <id>gbif-release</id>

@@ -52,7 +52,7 @@ docs/superpowers/   # design spec, implementation plans, and per-phase findings
 
 | Binding | Path | Status |
 |---|---|---|
-| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; dev-only until the native `nameparser-ffi` cdylib is packaged for a real Maven dependency (see [`DISTRIBUTION.md`](DISTRIBUTION.md)) |
+| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; self-contained JAR (bundles the `nameparser-ffi` cdylib) — `0.1.0-SNAPSHOT` auto-deployed to GBIF Nexus via Jenkins on every push (see [`DISTRIBUTION.md`](DISTRIBUTION.md)) |
 | Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); wheel built locally, not yet published to PyPI |
 | R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub, not yet on CRAN — see [`bindings/r/README.md`](bindings/r/README.md) |
 

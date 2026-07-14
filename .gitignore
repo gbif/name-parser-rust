@@ -15,6 +15,9 @@ bindings/**/target/
 # Per-platform cdylibs staged by ci/build-cdylib.sh for the Java classifier JARs (built, not tracked)
 bindings/java/native-staging/
 
+# macOS Finder metadata
+.DS_Store
+
 # IDE
 /.idea/
 # Eclipse / jdtls (Java LSP) generated project files
