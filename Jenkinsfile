@@ -90,7 +90,11 @@ pipeline {
           configFileProvider(
             [configFile(fileId: 'org.jenkinsci.plugins.configfiles.maven.GlobalMavenSettingsConfig1387378707709',
               variable: 'MAVEN_SETTINGS_XML')]) {
-            git 'https://github.com/gbif/name-parser-rust.git'
+            // Re-checkout ON the branch (not the detached HEAD from `checkout scm`) so
+            // maven-release-plugin can commit + push the version bumps. The `git` step defaults to
+            // branch `master`; this repo's default branch is `main`, so name it explicitly (else:
+            // "Couldn't find any revision to build" on origin/master).
+            git branch: 'main', url: 'https://github.com/gbif/name-parser-rust.git'
             sh 'bash ci/build-cdylib.sh'
             sh "mvn -s \$MAVEN_SETTINGS_XML -f bindings/java/pom.xml -B -Denforcer.skip=true -Darguments=\"-DskipTests -DskipITs -Dnative.staging.dir=\$WORKSPACE/bindings/java/native-staging\" release:prepare release:perform -Dtag=v${params.RELEASE_VERSION} ${releaseArgs}"
           }
