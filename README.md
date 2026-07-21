@@ -85,13 +85,6 @@ This repo targets behavioural parity with the Java parser's `4.2.x` line and pre
 `new NameParserImpl()` → `new NameParserRust()` with no other change. Until then the Java
 library remains authoritative; this port is validated against it, not the reverse.
 
-## Roadmap
-
-- [x] Rust core — the full parsing pipeline, byte-for-byte field parity with the Java parser
-- [x] Native CLI + large-corpus cross-validation
-- [x] Java (FFM/Panama), Python (PyO3), and R (extendr) bindings — published at 0.1.0
-- [ ] Backend cutover — swap `NameParserImpl` → `NameParserRust`, retire the Java `pipeline` package
-
 ## License
 
 Apache-2.0, matching `org.gbif:name-parser`.
