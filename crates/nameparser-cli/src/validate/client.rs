@@ -10,13 +10,16 @@
 //! it on top of the JDK's `HttpClient` rather than pulling in a retry library) — no
 //! Anthropic/OpenAI SDK dependency, exactly like the Java side.
 //!
-//! The HTTP-transport code itself ([`Judge::judge`]'s request/retry loop) has no automated test
-//! in this task (no live API calls, per this port's testing policy) — but every part of it that
-//! *can* be tested without a network call is extracted into its own free function and unit
-//! tested below: response extraction ([`extract_anthropic_verdicts`], [`extract_openai_content`],
-//! [`openai_finish_reason`], [`parse_openai_reply`]), the retry decision itself
-//! ([`retry_decision`], [`parse_retry_after_secs`]), the request-body shape ([`verdict_schema`],
-//! both clients' `request_body`), and provider/model resolution ([`build_judge`]).
+//! Every part of [`Judge::judge`]'s request/retry loop that can be tested without a network call
+//! is extracted into its own free function and unit tested below: response extraction
+//! ([`extract_anthropic_verdicts`], [`extract_openai_content`], [`openai_finish_reason`],
+//! [`parse_openai_reply`]), the retry decision itself ([`retry_decision`],
+//! [`parse_retry_after_secs`]), the request-body shape ([`verdict_schema`], both clients'
+//! `request_body`), and provider/model resolution ([`build_judge`]).
+//!
+//! The transport itself is covered against a loopback socket rather than a live API (no real API
+//! calls, per this port's testing policy): see the `HTTP transport` tests at the end of this
+//! file, which pin the request line, headers, body and status dispatch.
 
 use std::time::Duration;
 
@@ -162,10 +165,13 @@ impl AnthropicClient {
             ));
         }
         Ok(AnthropicClient {
-            agent: ureq::AgentBuilder::new()
-                .timeout_connect(Duration::from_secs(30))
-                .timeout(Duration::from_secs(5 * 60))
-                .build(),
+            agent: ureq::Agent::new_with_config(
+                ureq::Agent::config_builder()
+                    .timeout_connect(Some(Duration::from_secs(30)))
+                    .timeout_global(Some(Duration::from_secs(5 * 60)))
+                    .http_status_as_error(false)
+                    .build(),
+            ),
             endpoint: format!("{}/v1/messages", trim_trailing_slash(&base)),
             model: model.to_string(),
             api_key: key,
@@ -201,44 +207,45 @@ impl Judge for AnthropicClient {
             let mut req = self
                 .agent
                 .post(&self.endpoint)
-                .set("content-type", "application/json")
-                .set("anthropic-version", ANTHROPIC_VERSION);
+                .header("content-type", "application/json")
+                .header("anthropic-version", ANTHROPIC_VERSION);
             req = match &self.api_key {
-                Some(key) => req.set("x-api-key", key),
+                Some(key) => req.header("x-api-key", key),
                 None => req
-                    .set(
+                    .header(
                         "authorization",
                         &format!(
                             "Bearer {}",
                             self.bearer_token.as_deref().unwrap_or_default()
                         ),
                     )
-                    .set("anthropic-beta", "oauth-2025-04-20"),
+                    .header("anthropic-beta", "oauth-2025-04-20"),
             };
 
-            match req.send_string(&body) {
+            match req.send(body.as_str()) {
                 Ok(resp) if resp.status() == 200 => {
                     let text = resp
-                        .into_string()
+                        .into_body()
+                        .read_to_string()
                         .map_err(|e| JudgeError(format!("reading Anthropic response body: {e}")))?;
                     return extract_anthropic_verdicts(&text)
                         .map_err(|e| JudgeError(e.to_string()));
                 }
-                // ureq only ever returns `Ok` for status < 400; a 200-399 non-200 (e.g. a
-                // redirect ureq didn't resolve to a final response) is not itself an
-                // Anthropic-API-shaped success — treat it like Java's `sc == 200` check does:
-                // anything other than exactly 200 falls straight to the non-retryable-error path.
+                // The agent sets `http_status_as_error(false)`, so every HTTP status — including
+                // the 4xx/5xx that ureq 2 surfaced as `Error::Status(code, resp)` — arrives here
+                // as `Ok`. Opting out is deliberate: ureq 3's `Error::StatusCode` carries only the
+                // code, which would cost us both the error body and the `retry-after` header.
+                // `retry_decision` returns `None` for anything that isn't 429/5xx, so a 200-399
+                // non-200 (e.g. a redirect ureq didn't resolve) still falls straight through to
+                // the non-retryable arm exactly as it did before.
                 Ok(resp) => {
-                    let code = resp.status();
-                    let body_text = resp.into_string().unwrap_or_default();
-                    return Err(JudgeError(format!(
-                        "Anthropic API error {code}: {}",
-                        super::brief(&body_text)
-                    )));
-                }
-                Err(ureq::Error::Status(code, resp)) => {
-                    let retry_after = resp.header("retry-after").and_then(parse_retry_after_secs);
-                    let body_text = resp.into_string().unwrap_or_default();
+                    let code = resp.status().as_u16();
+                    let retry_after = resp
+                        .headers()
+                        .get("retry-after")
+                        .and_then(|v| v.to_str().ok())
+                        .and_then(parse_retry_after_secs);
+                    let body_text = resp.into_body().read_to_string().unwrap_or_default();
                     match retry_decision(code, attempt, retry_after) {
                         Some(wait) => {
                             std::thread::sleep(wait);
@@ -252,8 +259,8 @@ impl Judge for AnthropicClient {
                         }
                     }
                 }
-                Err(ureq::Error::Transport(t)) => {
-                    return Err(JudgeError(format!("Anthropic API transport error: {t}")));
+                Err(e) => {
+                    return Err(JudgeError(format!("Anthropic API transport error: {e}")));
                 }
             }
         }
@@ -381,10 +388,14 @@ impl OpenAiClient {
             .map(str::to_string)
             .unwrap_or_else(|| env_or("OPENAI_BASE_URL", "http://localhost:11434"));
         OpenAiClient {
-            agent: ureq::AgentBuilder::new()
-                .timeout_connect(Duration::from_secs(30))
-                .timeout(Duration::from_secs(10 * 60)) // local generation can be slow
-                .build(),
+            agent: ureq::Agent::new_with_config(
+                ureq::Agent::config_builder()
+                    .timeout_connect(Some(Duration::from_secs(30)))
+                    // local generation can be slow
+                    .timeout_global(Some(Duration::from_secs(10 * 60)))
+                    .http_status_as_error(false)
+                    .build(),
+            ),
             endpoint: format!("{}/v1/chat/completions", trim_trailing_slash(&base)),
             model: model.to_string(),
             api_key: env_non_blank("OPENAI_API_KEY"),
@@ -424,30 +435,24 @@ impl Judge for OpenAiClient {
             let mut req = self
                 .agent
                 .post(&self.endpoint)
-                .set("content-type", "application/json");
+                .header("content-type", "application/json");
             if let Some(key) = &self.api_key {
-                req = req.set("authorization", &format!("Bearer {key}"));
+                req = req.header("authorization", &format!("Bearer {key}"));
             }
 
-            match req.send_string(&body) {
+            match req.send(body.as_str()) {
                 Ok(resp) if resp.status() == 200 => {
-                    let text = resp.into_string().map_err(|e| {
+                    let text = resp.into_body().read_to_string().map_err(|e| {
                         JudgeError(format!("reading OpenAI-compatible response body: {e}"))
                     })?;
                     return Ok(parse_openai_reply(&text, batch_size, &self.model));
                 }
+                // As on the Anthropic path, `http_status_as_error(false)` routes every status
+                // through `Ok`; see the comment there for why. `retry_decision` still gates which
+                // ones are retryable, so non-200-below-400 keeps its old non-retryable behaviour.
                 Ok(resp) => {
-                    let code = resp.status();
-                    let body_text = resp.into_string().unwrap_or_default();
-                    return Err(JudgeError(format!(
-                        "OpenAI-compatible API error {code}: {}\nEndpoint: {} (is the local \
-                         server running and the model pulled?)",
-                        super::brief(&body_text),
-                        self.endpoint
-                    )));
-                }
-                Err(ureq::Error::Status(code, resp)) => {
-                    let body_text = resp.into_string().unwrap_or_default();
+                    let code = resp.status().as_u16();
+                    let body_text = resp.into_body().read_to_string().unwrap_or_default();
                     // OpenAI-compatible path has no `retry-after` support in Java either —
                     // always the exponential-backoff formula.
                     match retry_decision(code, attempt, None) {
@@ -465,9 +470,9 @@ impl Judge for OpenAiClient {
                         }
                     }
                 }
-                Err(ureq::Error::Transport(t)) => {
+                Err(e) => {
                     return Err(JudgeError(format!(
-                        "OpenAI-compatible API transport error: {t}\nEndpoint: {} (is the local \
+                        "OpenAI-compatible API transport error: {e}\nEndpoint: {} (is the local \
                          server running and the model pulled?)",
                         self.endpoint
                     )));
@@ -1045,5 +1050,115 @@ mod tests {
         assert_eq!(trim_trailing_slash("http://x/"), "http://x");
         assert_eq!(trim_trailing_slash("http://x"), "http://x");
         assert_eq!(trim_trailing_slash("http://x//"), "http://x/");
+    }
+
+    // ---- HTTP transport ----
+    //
+    // The rest of this module tests pure functions, which left the actual `ureq` call — headers,
+    // request body, status dispatch, body read-back — with no coverage at all. That gap went
+    // unnoticed until the ureq 2 -> 3 migration, where the whole request/response surface was
+    // rewritten and `Error::StatusCode` stopped carrying a body (hence the agent's
+    // `http_status_as_error(false)`). These two tests pin the transport contract against a real
+    // socket so a future bump can't quietly regress it.
+
+    use std::io::{BufRead, BufReader, Read, Write};
+    use std::net::TcpListener;
+
+    /// Serves exactly one HTTP response on an ephemeral loopback port, returning that port plus a
+    /// handle yielding the raw request the client sent (so the test can assert on headers/body).
+    fn serve_once(
+        status_line: &str,
+        headers: &str,
+        body: &str,
+    ) -> (u16, std::thread::JoinHandle<String>) {
+        let listener = TcpListener::bind("127.0.0.1:0").expect("bind loopback");
+        let port = listener.local_addr().unwrap().port();
+        let response = format!(
+            "{status_line}\r\ncontent-type: application/json\r\n{headers}content-length: {}\r\nconnection: close\r\n\r\n{body}",
+            body.len()
+        );
+        let handle = std::thread::spawn(move || {
+            let (mut sock, _) = listener.accept().expect("accept");
+            // Read the request head, then exactly content-length bytes of the request body, so
+            // the assertions below can see what was actually put on the wire.
+            let mut reader = BufReader::new(sock.try_clone().unwrap());
+            let mut head = String::new();
+            let mut len = 0usize;
+            loop {
+                let mut line = String::new();
+                if reader.read_line(&mut line).unwrap_or(0) == 0 || line == "\r\n" {
+                    break;
+                }
+                if let Some(v) = line.to_ascii_lowercase().strip_prefix("content-length:") {
+                    len = v.trim().parse().unwrap_or(0);
+                }
+                head.push_str(&line);
+            }
+            let mut req_body = vec![0u8; len];
+            reader.read_exact(&mut req_body).ok();
+            sock.write_all(response.as_bytes()).ok();
+            sock.flush().ok();
+            format!("{head}\r\n{}", String::from_utf8_lossy(&req_body))
+        });
+        (port, handle)
+    }
+
+    #[test]
+    fn openai_judge_sends_the_expected_request_and_parses_a_200() {
+        let inner =
+            "{\"verdicts\":[{\"index\":0,\"verdict\":\"ok\",\"confidence\":\"high\",\"fields\":[]}]}";
+        let reply = serde_json::json!({
+            "choices": [{"finish_reason": "stop",
+                         "message": {"role": "assistant", "content": inner}}]
+        })
+        .to_string();
+        let (port, server) = serve_once("HTTP/1.1 200 OK", "", &reply);
+
+        let client =
+            OpenAiClient::from_env("test-model", Some(&format!("http://127.0.0.1:{port}")));
+        let verdicts = client.judge("judge these", 10).expect("200 must succeed");
+        assert_eq!(verdicts.len(), 1, "the canned reply carries one verdict");
+
+        let request = server.join().expect("server thread");
+        let head = request.to_ascii_lowercase();
+        assert!(
+            head.starts_with("post /v1/chat/completions "),
+            "unexpected request line in:\n{request}"
+        );
+        // `.header(...)` replaced ureq 2's `.set(...)`: prove it still reaches the wire.
+        assert!(
+            head.contains("content-type: application/json"),
+            "content-type header missing from:\n{request}"
+        );
+        // `.send(body.as_str())` replaced `.send_string(&body)`: prove the JSON body survived.
+        assert!(
+            request.contains("\"model\":\"test-model\""),
+            "request body missing/!serialized in:\n{request}"
+        );
+    }
+
+    #[test]
+    fn openai_judge_reports_a_non_retryable_status_with_its_body() {
+        // A 404 is the case ureq 3 changed most: it now arrives as `Ok` rather than
+        // `Err(Error::Status(..))`, and only `http_status_as_error(false)` keeps the body
+        // readable. `retry_decision` rejects 404, so this must fail fast with no backoff sleep.
+        let (port, server) = serve_once(
+            "HTTP/1.1 404 Not Found",
+            "",
+            "{\"error\":\"model \\\"test-model\\\" not found\"}",
+        );
+
+        let client =
+            OpenAiClient::from_env("test-model", Some(&format!("http://127.0.0.1:{port}")));
+        let err = client
+            .judge("judge these", 10)
+            .expect_err("404 must not be treated as success");
+        assert!(err.0.contains("404"), "status code missing from: {}", err.0);
+        assert!(
+            err.0.contains("not found"),
+            "response body missing from: {} — http_status_as_error(false) is what preserves it",
+            err.0
+        );
+        server.join().expect("server thread");
     }
 }
