@@ -44,31 +44,13 @@ use pyo3::prelude::*;
 
 use ::nameparser::model::{NomCode, Rank};
 
-// NOTE: this expands to a `unexpected `cfg` condition value: `gil-refs`` build warning
-// under pyo3 0.22.x — the `create_exception!`/`impl_exception_boilerplate!` expansion
-// checks `cfg(feature = "gil-refs")`, a pyo3-internal feature name this crate never
-// declares (we don't opt into pyo3's deprecated GIL-Ref API). Harmless (fixed upstream
-// in later pyo3 releases); an `#[allow(unexpected_cfgs)]` on this line does NOT
-// suppress it (outer attributes on a `macro_rules!` invocation aren't forwarded into
-// its expansion), and a crate-wide `#![allow(unexpected_cfgs)]` was deliberately not
-// added so a real unexpected-cfg elsewhere still surfaces. Left as a known, cosmetic,
-// non-blocking warning — see the Phase 4a Task 1 report for the exact text.
+// NOTE: under pyo3 0.22.x this crate carried two known-cosmetic warnings — an `unexpected
+// `cfg` condition value: `gil-refs`` from the `create_exception!` expansion, and a
+// clippy-only "useless conversion to the same type: `pyo3::PyErr`" on the `PyResult`-returning
+// items below. Both came from pyo3's own macro-generated code and both are gone as of the
+// 0.29 bump (`cargo clippy --package nameparser-py --all-targets` is clean), so the
+// suppression notes that used to live here have been dropped rather than left to rot.
 create_exception!(nameparser, UnparsableNameError, PyException);
-
-// NOTE: a second, similarly cosmetic clippy-only false positive lives in the same
-// family as the `gil-refs` one above — `cargo clippy -W clippy::all` reports "useless
-// conversion to the same type: `pyo3::PyErr`" at three `PyResult`-returning
-// `#[pymethods]`/`#[pyfunction]` items below (`PyAuthorship::to_dict`,
-// `PyParsedName::to_dict`, `parse`), pointing at each item's signature line rather than
-// any line this crate actually wrote. Getters (`#[getter]`, e.g. `rank`/`code` below)
-// use the exact same `pythonize(..)?.into()` body shape and are NOT flagged — the lint
-// fires inside pyo3's own macro-generated wrapper for plain methods/functions, a
-// distinct code path from the getter one, not in anything visible in this file. An
-// `#[allow(clippy::useless_conversion)]` on the affected `fn` item does NOT suppress it
-// (confirmed directly against this build), for the same "attribute doesn't reach the
-// macro's own generated code" reason `#[allow(unexpected_cfgs)]` fails to suppress the
-// `gil-refs` warning above — left equally as a known, cosmetic, `cargo test`/`cargo
-// build`-silent, `cargo clippy`-only warning.
 
 /// Wraps the core [`::nameparser::model::Authorship`] for Python — the type of
 /// [`PyParsedName::combination_authorship`] / [`PyParsedName::basionym_authorship`]:
@@ -110,8 +92,8 @@ impl PyAuthorship {
     /// The complete structure straight from the core's own `serde::Serialize` impl —
     /// `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ...}` — the
     /// same escape hatch [`PyParsedName::to_dict`] provides at the top level.
-    fn to_dict(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner)?.into())
+    fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner)?.unbind())
     }
 
     fn __repr__(&self) -> String {
@@ -144,14 +126,14 @@ impl PyParsedName {
 
     // enum -> str via pythonize (no .name()/Display exists on the core enums)
     #[getter]
-    fn rank(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.rank)?.into())
+    fn rank(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.rank)?.unbind())
     }
 
     /// `Optional[str]` — `None` when no nomenclatural code applies/was inferred.
     #[getter]
-    fn code(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.code)?.into())
+    fn code(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.code)?.unbind())
     }
 
     #[getter]
@@ -171,8 +153,8 @@ impl PyParsedName {
     /// [`::nameparser::model::Authorship`] and so get the richer pyclass wrapper. See
     /// this crate's module doc / [`PyAuthorship`]'s doc comment for the same split.
     #[getter]
-    fn generic_authorship(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.generic_authorship)?.into())
+    fn generic_authorship(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.generic_authorship)?.unbind())
     }
 
     #[getter]
@@ -188,8 +170,8 @@ impl PyParsedName {
     /// See [`Self::generic_authorship`]'s doc comment — the same `Optional[dict]`
     /// treatment, for the same reason.
     #[getter]
-    fn specific_authorship(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.specific_authorship)?.into())
+    fn specific_authorship(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.specific_authorship)?.unbind())
     }
 
     #[getter]
@@ -215,8 +197,8 @@ impl PyParsedName {
     /// `Optional[list[str]]` — each [`::nameparser::model::NamePart`] rendered as its
     /// SCREAMING_SNAKE_CASE name (e.g. `["INFRASPECIFIC"]`), via `pythonize`.
     #[getter]
-    fn notho(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.notho)?.into())
+    fn notho(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.notho)?.unbind())
     }
 
     #[getter]
@@ -227,8 +209,8 @@ impl PyParsedName {
     /// `Optional[dict[str, str]]` — `NamePart` name -> qualifier (e.g.
     /// `{"SPECIFIC": "cf."}`), via `pythonize`.
     #[getter]
-    fn epithet_qualifier(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.epithet_qualifier)?.into())
+    fn epithet_qualifier(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.epithet_qualifier)?.unbind())
     }
 
     /// Python-facing attribute name is `type` (via `#[pyo3(name = "type")]`) — the Rust
@@ -236,8 +218,8 @@ impl PyParsedName {
     /// the same `type_` trailing-underscore convention the core field uses.
     #[getter]
     #[pyo3(name = "type")]
-    fn type_(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.type_)?.into())
+    fn type_(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.type_)?.unbind())
     }
 
     // ---- ParsedAuthorship's own 11 fields ----
@@ -288,8 +270,8 @@ impl PyParsedName {
     }
 
     #[getter]
-    fn state(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.state)?.into())
+    fn state(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.state)?.unbind())
     }
 
     #[getter]
@@ -374,8 +356,8 @@ impl PyParsedName {
     /// for the full field-order/omission contract). This is the parity oracle used by
     /// golden cross-validation and the escape hatch for anything a typed getter above
     /// doesn't surface.
-    fn to_dict(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner)?.into())
+    fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner)?.unbind())
     }
 
     /// Rank plus the full canonical name (`canonical_name`, with rank markers, hybrid
@@ -415,14 +397,14 @@ impl PyInformal {
     /// That taxon's rank as `SCREAMING_SNAKE_CASE` (usually `"GENUS"`) — the anchor sits in the
     /// genus slot for the overwhelming `Genus sp.` majority.
     #[getter]
-    fn taxon_rank(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.taxon_rank)?.into())
+    fn taxon_rank(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.taxon_rank)?.unbind())
     }
 
     /// The rank the informal name purports to be — `"SPECIES"` for `"sp."`, `"UNRANKED"` for a group.
     #[getter]
-    fn rank(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.rank)?.into())
+    fn rank(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.rank)?.unbind())
     }
 
     /// `Optional[str]` — the distinguishing designator (`"RMCC TR1811"`, `"1"`); `None` for a bare
@@ -434,8 +416,8 @@ impl PyInformal {
 
     /// `Optional[str]` — the nomenclatural code when known, else `None`.
     #[getter]
-    fn code(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner.code)?.into())
+    fn code(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner.code)?.unbind())
     }
 
     /// The canonical string form of this informal name — e.g. `"Rhizobium sp. RMCC TR1811"`,
@@ -449,8 +431,8 @@ impl PyInformal {
     /// The complete `Informal` structure straight from the core's `serde::Serialize` impl, keyed by
     /// its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`) — the parity oracle + escape
     /// hatch, matching [`PyParsedName::to_dict`].
-    fn to_dict(&self, py: Python<'_>) -> PyResult<PyObject> {
-        Ok(pythonize::pythonize(py, &self.inner)?.into())
+    fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        Ok(pythonize::pythonize(py, &self.inner)?.unbind())
     }
 
     fn __repr__(&self) -> String {
@@ -493,7 +475,7 @@ fn unparsable_name_error(py: Python<'_>, e: ::nameparser::model::ParseError) -> 
 
 fn try_attach_error_attrs(py: Python<'_>, e: ::nameparser::model::ParseError) -> PyResult<PyErr> {
     let err = UnparsableNameError::new_err(e.message);
-    let value = err.value_bound(py).as_any();
+    let value = err.value(py).as_any();
     value.setattr("name_type", pythonize::pythonize(py, &e.type_)?)?;
     value.setattr("code", pythonize::pythonize(py, &e.code)?)?;
     value.setattr("name", e.name)?;
@@ -518,12 +500,16 @@ fn parse(
     authorship: Option<&str>,
     rank: Option<&str>,
     code: Option<&str>,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     let rank = rank.and_then(Rank::from_name);
     let code = code.and_then(NomCode::from_name);
     match ::nameparser::parse(name, authorship, rank, code) {
-        ::nameparser::ParseResult::Parsed(pn) => Ok(PyParsedName { inner: pn }.into_py(py)),
-        ::nameparser::ParseResult::Informal(inf) => Ok(PyInformal { inner: inf }.into_py(py)),
+        ::nameparser::ParseResult::Parsed(pn) => {
+            Ok(Py::new(py, PyParsedName { inner: pn })?.into_any())
+        }
+        ::nameparser::ParseResult::Informal(inf) => {
+            Ok(Py::new(py, PyInformal { inner: inf })?.into_any())
+        }
         ::nameparser::ParseResult::Unparsable(e) => Err(unparsable_name_error(py, e)),
     }
 }
@@ -536,6 +522,11 @@ fn parse(
 /// core cannot parse, so one bad name in a large batch can't abort the whole call. Callers that need
 /// the specific [`::nameparser::model::ParseError`] for a failing name should call [`parse_name`] on that
 /// name individually instead.
+///
+/// The `PyResult` wrapper does not weaken that contract: it exists only because pyo3 0.29 replaced
+/// the infallible `into_py` with fallible object construction ([`Py::new`]). An unparsable name is
+/// still `None`, never an error; the only way this raises is a genuine interpreter failure (e.g.
+/// the allocation itself failing), which would previously have surfaced as a panic instead.
 #[pyfunction]
 #[pyo3(signature = (names, authorship=None, rank=None, code=None))]
 fn parse_all(
@@ -544,7 +535,7 @@ fn parse_all(
     authorship: Option<&str>,
     rank: Option<&str>,
     code: Option<&str>,
-) -> Vec<Option<PyObject>> {
+) -> PyResult<Vec<Option<Py<PyAny>>>> {
     let rank = rank.and_then(Rank::from_name);
     let code = code.and_then(NomCode::from_name);
     names
@@ -552,12 +543,12 @@ fn parse_all(
         .map(
             |name| match ::nameparser::parse(name, authorship, rank, code) {
                 ::nameparser::ParseResult::Parsed(pn) => {
-                    Some(PyParsedName { inner: pn }.into_py(py))
+                    Ok(Some(Py::new(py, PyParsedName { inner: pn })?.into_any()))
                 }
                 ::nameparser::ParseResult::Informal(inf) => {
-                    Some(PyInformal { inner: inf }.into_py(py))
+                    Ok(Some(Py::new(py, PyInformal { inner: inf })?.into_any()))
                 }
-                ::nameparser::ParseResult::Unparsable(_) => None,
+                ::nameparser::ParseResult::Unparsable(_) => Ok(None),
             },
         )
         .collect()
@@ -572,7 +563,7 @@ fn nameparser(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyAuthorship>()?;
     m.add(
         "UnparsableNameError",
-        m.py().get_type_bound::<UnparsableNameError>(),
+        m.py().get_type::<UnparsableNameError>(),
     )?;
     Ok(())
 }
