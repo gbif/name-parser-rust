@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use nameparser::regexes;
 use nameparser::token::tokenize;
+// criterion 0.8 deprecates its own re-export in favour of the std one.
+use std::hint::black_box;
 
 fn load_corpus() -> Vec<String> {
     let path = concat!(
