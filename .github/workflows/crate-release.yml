@@ -45,7 +45,7 @@ jobs:
       id-token: write   # Trusted Publishing (OIDC) — no crates.io token/secret needed
       contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: Guard — tag must match the engine version (crates.io uploads are irreversible)
         run: |
@@ -68,7 +68,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - name: Package + verify without publishing
         run: cargo publish --dry-run -p gbif-name-parser
