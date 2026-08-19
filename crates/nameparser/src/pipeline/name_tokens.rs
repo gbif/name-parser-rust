@@ -366,10 +366,26 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     }
                     j < ts.len() && ts[j].kind == TokenKind::Number
                 };
+                // …but `spec` is also a genuine published epithet ("Hemicloeina spec Platnick,
+                // 2002", "Lampona spec Platnick, 2000", "Gobiosoma spec (Ginsburg, 1939)"; COL
+                // carries nine). Two signals together separate those from a provisional
+                // `Genus spec.`: the word carries NO abbreviation dot, and an authorship follows
+                // it. `i + 1 == ts.len()` covers both — a dot would sit in the name section as its
+                // own `Dot` token right after the marker (the tokenizer never folds it into the
+                // word), and the marker can only be the section's last token when
+                // AuthorshipSplit kept a tail out of it, which `!name_section_covers_all`
+                // re-asserts. Only `spec` is rescued: a bare `sp` is overwhelmingly a dot-less
+                // `sp.`, not an epithet. Mirrors AuthorshipSplit's own guard of the same name.
+                let is_published_spec_epithet = w.eq_ignore_ascii_case("spec")
+                    && genus.is_some()
+                    && lower_epithets.is_empty()
+                    && !name_section_covers_all
+                    && i + 1 == ts.len();
                 if (w.eq_ignore_ascii_case("sp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet"))
+                    && !is_published_spec_epithet
                     && (lower_epithets.is_empty()
                         || marker_idx_in_epithets >= 0
                         || number_follows_marker)

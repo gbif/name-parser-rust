@@ -13,7 +13,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NamePart, NameType, Rank};
+use nameparser::model::{NamePart, NameType, NomCode, Rank};
 use nameparser::ParseResult;
 
 // ---- Informal: supraspecific anchor + provisional designation, no species epithet -------------
@@ -292,4 +292,49 @@ fn anchorless_clade_and_code_labels_are_unparsable_other() {
             other => panic!("expected `{input}` Unparsable(OTHER), got {other:?}"),
         }
     }
+}
+
+// ---- Not informal: "spec" as a genuine species epithet ---------------------------------------
+
+#[test]
+fn bare_spec_with_an_authorship_is_a_real_epithet() {
+    // A handful of zoologists have actually published `spec` as a specific epithet. COL carries
+    // nine of them; they are written WITHOUT the abbreviation dot and — unlike a provisional
+    // `Genus spec.` — always carry an authorship. Both signals together (bare marker + a real
+    // authorship) mark the word as the epithet rather than an indet marker.
+    assert_name("Hemicloeina spec Platnick, 2002")
+        .species("Hemicloeina", "spec")
+        .comb_authors(Some("2002"), &["Platnick"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn bare_spec_is_a_real_epithet_with_a_yearless_authorship_too() {
+    // No zoological year needed — a botanical-style authorship is just as good a signal.
+    assert_name("Zygonyx spec Dijkstra & Kipping")
+        .species("Zygonyx", "spec")
+        .comb_authors(None, &["Dijkstra", "Kipping"])
+        .nothing_else();
+}
+
+#[test]
+fn the_spec_epithet_rescue_needs_both_a_missing_dot_and_an_authorship() {
+    // Regression guards on the two signals the rescue above hinges on — each of these fails if
+    // the rule is widened. The dot makes it an abbreviation, so it stays a provisional marker…
+    assert_informal("Hemicloeina spec. Platnick, 2002")
+        .taxon("Hemicloeina")
+        .rank(Rank::Species)
+        .phrase("spec.");
+    // …and with no authorship there is nothing to say the word is an epithet.
+    assert_informal("Globigerina spec")
+        .taxon("Globigerina")
+        .rank(Rank::Species)
+        .phrase("spec");
+    // `sp` is deliberately NOT rescued: a dot-less `sp` is overwhelmingly a sloppy `sp.`, so
+    // even a real `Genus sp Author, Year` (they exist) stays indeterminate.
+    assert_informal("Megakhosara sp Sharov, 1961")
+        .taxon("Megakhosara")
+        .rank(Rank::Species)
+        .phrase("sp");
 }

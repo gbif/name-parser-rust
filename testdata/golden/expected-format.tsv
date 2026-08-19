@@ -4728,8 +4728,8 @@ Burkholderia sp. (Gigaspora margarita endosymbiont)	true	Burkholderia sp. (Gigas
 Dictyochloropsis symbiontica Tschermak-Woess	true	Dictyochloropsis symbiontica Tschermak-Woess	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica Tschermak-Woess	Tschermak-Woess
 Dylakosoma symbionticum var. valens Skuja	true	Dylakosoma symbionticum var. valens Skuja	Dylakosoma symbionticum var. valens	Dylakosoma symbionticum valens	Dylakosoma symbionticum var. valens Skuja	Skuja
 Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont	Wolbachia endosymbiont	Wolbachia endosymbiont of Leptogenys gracilis	of Leptogenys gracilis
-Lampona spec Platnick, 2000	true	Lampona spec	Lampona spec	Lampona	Lampona spec	Platnick, 2000
-Gobiosoma spec (Ginsburg, 1939)	true	Gobiosoma spec	Gobiosoma spec	Gobiosoma	Gobiosoma spec	(Ginsburg, 1939)
+Lampona spec Platnick, 2000	true	Lampona spec Platnick, 2000	Lampona spec	Lampona spec	Lampona spec Platnick, 2000	Platnick, 2000
+Gobiosoma spec (Ginsburg, 1939)	true	Gobiosoma spec (Ginsburg, 1939)	Gobiosoma spec	Gobiosoma spec	Gobiosoma spec (Ginsburg, 1939)	(Ginsburg, 1939)
 Globigerina spec	true	Globigerina spec	Globigerina spec	Globigerina	Globigerina spec	
 Eunotia genuflexa Norpel-Schempp nov spec	true	Eunotia genuflexa Norpel-Schempp	Eunotia genuflexa	Eunotia genuflexa	Eunotia genuflexa Norpel-Schempp, nov spec.	Norpel-Schempp
 Ctenotus spec.	true	Ctenotus spec.	Ctenotus spec.	Ctenotus	Ctenotus spec.	
@@ -6001,8 +6001,8 @@ Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus 
 Notassigned	true	Notassigned	Notassigned	Notassigned	Notassigned	
 Dictyochloropsis symbiontica Tschermak-Woess	true	Dictyochloropsis symbiontica Tschermak-Woess	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica Tschermak-Woess	Tschermak-Woess
 Dylakosoma symbionticum var. valens Skuja	true	Dylakosoma symbionticum var. valens Skuja	Dylakosoma symbionticum var. valens	Dylakosoma symbionticum valens	Dylakosoma symbionticum var. valens Skuja	Skuja
-Lampona spec Platnick, 2000	true	Lampona spec	Lampona spec	Lampona	Lampona spec	Platnick, 2000
-Gobiosoma spec (Ginsburg, 1939)	true	Gobiosoma spec	Gobiosoma spec	Gobiosoma	Gobiosoma spec	(Ginsburg, 1939)
+Lampona spec Platnick, 2000	true	Lampona spec Platnick, 2000	Lampona spec	Lampona spec	Lampona spec Platnick, 2000	Platnick, 2000
+Gobiosoma spec (Ginsburg, 1939)	true	Gobiosoma spec (Ginsburg, 1939)	Gobiosoma spec	Gobiosoma spec	Gobiosoma spec (Ginsburg, 1939)	(Ginsburg, 1939)
 Globigerina spec	true	Globigerina spec	Globigerina spec	Globigerina	Globigerina spec	
 Eunotia genuflexa Norpel-Schempp nov spec	true	Eunotia genuflexa Norpel-Schempp	Eunotia genuflexa	Eunotia genuflexa	Eunotia genuflexa Norpel-Schempp, nov spec.	Norpel-Schempp
 Ctenotus spec.	true	Ctenotus spec.	Ctenotus spec.	Ctenotus	Ctenotus spec.	

@@ -287,41 +287,27 @@ fn no_parsing_symbiont() {
 fn names_with_spec_nov_spec() {
     // group: Names with spec., nov spec
 
+    // 5.0.0 divergence from Java 4.2.0, which read both of these as indet `Genus spec.` and
+    // dropped the epithet. They are real published species — `spec` is a genuine epithet — and
+    // a dot-less `spec` carrying an authorship is exactly the signal that says so; see
+    // informal.rs's `bare_spec_*` tests for the rule.
+    assert_name("Lampona spec Platnick, 2000")
+        .species("Lampona", "spec")
+        .comb_authors(Some("2000"), &["Platnick"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+
+    assert_name("Gobiosoma spec (Ginsburg, 1939)")
+        .species("Gobiosoma", "spec")
+        .bas_authors(Some("1939"), &["Ginsburg"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+
     // Java `.species(genus, null)` (→ `.binomial(genus, null, null, SPECIES)`) has no DSL
     // equivalent for a null/absent specific epithet — same DSL-gap workaround as impl_04's
     // "Lepidoptera sp. JGP0404" / impl_10's `phraseIndetName` cases: direct parse + explicit
     // field checks for the fields the Java chain touches (`.nothingElse()` itself isn't
     // replicated field-by-field, matching that same established precedent).
-    let n = nameparser::parse_name("Lampona spec Platnick, 2000", None, None, None)
-        .expect("`Lampona spec Platnick, 2000` should parse");
-    assert!(n.uninomial.is_none());
-    assert_eq!(n.genus.as_deref(), Some("Lampona"));
-    assert!(n.infrageneric_epithet.is_none());
-    assert!(n.specific_epithet.is_none());
-    assert!(n.infraspecific_epithet.is_none());
-    assert_eq!(n.rank, Rank::Species);
-    assert_eq!(n.combination_authorship.year.as_deref(), Some("2000"));
-    assert_eq!(
-        n.combination_authorship.authors,
-        vec!["Platnick".to_string()]
-    );
-    assert_eq!(n.type_, NameType::Informal);
-    assert_eq!(n.code, Some(NomCode::Zoological));
-    assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);
-
-    let n = nameparser::parse_name("Gobiosoma spec (Ginsburg, 1939)", None, None, None)
-        .expect("`Gobiosoma spec (Ginsburg, 1939)` should parse");
-    assert!(n.uninomial.is_none());
-    assert_eq!(n.genus.as_deref(), Some("Gobiosoma"));
-    assert!(n.infrageneric_epithet.is_none());
-    assert!(n.specific_epithet.is_none());
-    assert!(n.infraspecific_epithet.is_none());
-    assert_eq!(n.rank, Rank::Species);
-    assert_eq!(n.basionym_authorship.year.as_deref(), Some("1939"));
-    assert_eq!(n.basionym_authorship.authors, vec!["Ginsburg".to_string()]);
-    assert_eq!(n.type_, NameType::Informal);
-    assert_eq!(n.code, Some(NomCode::Zoological));
-    assert_eq!(n.warnings, vec![warnings::INDETERMINED.to_string()]);
 
     let n = nameparser::parse_name("Globigerina spec", None, None, None)
         .expect("`Globigerina spec` should parse");

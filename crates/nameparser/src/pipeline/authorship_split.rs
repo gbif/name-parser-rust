@@ -151,6 +151,24 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     let is_sp = w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spec");
                     let is_cf_or_aff =
                         w.eq_ignore_ascii_case("cf") || w.eq_ignore_ascii_case("aff");
+                    // `spec` is also a genuine published epithet ("Hemicloeina spec Platnick,
+                    // 2002", "Zygonyx spec Dijkstra & Kipping"; COL carries nine). Two signals
+                    // mark those: the word carries NO abbreviation dot, and what follows is
+                    // shaped like an authorship — a capitalised word or an opening basionym
+                    // bracket, NO year required (a botanical "Genus spec Mill." qualifies just as
+                    // well as a zoological one). The single next-token test covers both signals:
+                    // an abbreviation dot would BE that token (the tokenizer always emits `.`
+                    // separately), and it is neither a capitalised word nor an open paren. Leave
+                    // the tail to the normal boundary logic below — skipping both the specimen-tag
+                    // branch and the swallow-the-tail return — so the authorship parses and
+                    // NameTokens's matching `is_published_spec_epithet` guard keeps `spec` as the
+                    // epithet. Only `spec`: a bare `sp` is overwhelmingly a dot-less `sp.`.
+                    let is_published_spec_epithet = w.eq_ignore_ascii_case("spec")
+                        && !have_epithet
+                        && i + 1 < n
+                        && (tokens[i + 1].kind == TokenKind::OpenParen
+                            || (tokens[i + 1].kind == TokenKind::Word
+                                && starts_upper(&tokens[i + 1])));
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
@@ -160,6 +178,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     if i < n && tokens[i].kind == TokenKind::Number {
                         i += 1;
                     } else if is_sp
+                        && !is_published_spec_epithet
                         && i < n
                         && tokens[i].kind == TokenKind::Word
                         && (tokens[i].text.chars().count() >= 2
@@ -188,9 +207,16 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     // multi-token tails. Rescues the ~382k "tag not captured" rows the corpus study
                     // found.
                     // …but a year-bearing tail IS an authorship citation, not a specimen tag
-                    // ("Lampona spec Platnick, 2000", "Gobiosoma spec (Ginsburg, 1939)") — leave
-                    // it to the normal boundary logic below so the author + year still parse.
-                    if !is_cf_or_aff && !have_epithet && i < n && !has_year_token(tokens, i, n) {
+                    // ("Aster sp. Linnaeus, 1753", "Aster species Linnaeus, 1753") — leave it to
+                    // the normal boundary logic below so the author + year still parse. The
+                    // dot-less-`spec` rescue above takes the same exit, one signal cheaper (it
+                    // needs no year).
+                    if !is_cf_or_aff
+                        && !have_epithet
+                        && !is_published_spec_epithet
+                        && i < n
+                        && !has_year_token(tokens, i, n)
+                    {
                         return n;
                     }
                     continue;
