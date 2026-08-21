@@ -143,6 +143,18 @@ genuinely authored minority the citation belongs to the anchor taxon, not to the
 species, so a caller who wants it resolves `taxon`. The `cf.`/`aff.` and dot-less-`spec` carve-outs
 are unaffected: `Hemicloeina spec Platnick, 2002` still parses as a determined binomial.
 
+Two StripAndStash steps run *before* tokenising and used to amputate part of that tail, so Assemble
+puts it back when — and only when — the finished parse is an indet informal. `stashTrailingOtuCode`
+took an underscored code into `unparsed` (`Streptomyces sp. NBC_00448` → phrase `sp.`, PARTIAL),
+and `stripPublishedPage` read a catalogue number's `:<digits>` as a page (`Trachipterus sp.
+HUMZ:220860` → phrase `sp. HUMZ`, `publishedInPage=220860`). Neither field exists on a flat
+`Informal`, so both were lost outright at the three-way boundary. Both decisions key on the parse
+OUTCOME rather than the input's shape, because the shapes are genuinely ambiguous — the real page
+citation `Raphitydeus Thor 1933:54` is written exactly as tightly as `Prevotella sp. CAG:1031`, and
+`Braconidae gen. n. sp. JS10_00530` ends in `sp.` yet never parses as an indet at all. A DETERMINED
+name keeps both strips: it stays `Parsed`, where `unparsed` and `publishedInPage` remain reachable
+on the `ParsedName`, so nothing is lost there either.
+
 ### 11. "cf." / "aff." / "near" — ✅
 Open-nomenclature uncertainty, captured in `epithetQualifier` with the name staying `Parsed` (type
 `INFORMAL`). `cf.`/`aff.` are stored with their abbreviation dot; `near` (a full English word,

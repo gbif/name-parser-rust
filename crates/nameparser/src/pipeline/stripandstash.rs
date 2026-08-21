@@ -2339,6 +2339,13 @@ fn strip_published_page(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = PUBLISHED_PAGE.captures(&s) {
         let whole = caps.get(0).unwrap();
         ctx.name.published_in_page = Some(caps[1].to_string());
+        // Keep the removed text verbatim (separator and spacing included). A museum or culture
+        // catalogue number wears the same shape as a page citation — `Trachipterus sp.
+        // HUMZ:220860` vs `Anolis marmoratus girafus LAZELL 1964: 377` — and the two cannot be
+        // told apart here: the genuine `Raphitydeus Thor 1933:54` is just as tight as
+        // `Prevotella sp. CAG:1031`. Assemble decides on the FINAL parse instead, restoring this
+        // onto the phrase when the name turns out to be an indet informal.
+        ctx.page_strip_verbatim = Some(whole.as_str().to_string());
         return java_trim(&s[..whole.start()]).to_string();
     }
     s

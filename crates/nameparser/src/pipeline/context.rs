@@ -42,6 +42,10 @@ pub(crate) struct ParseContext {
     /// an indet informal name, where it is the distinguishing designator rather than an unparsable
     /// remainder; only that one writer may set this.
     pub pending_unparsed_trailing_tag: bool,
+    /// The VERBATIM text `strip_published_page` removed (`":220860"`, `": 377"`) — separator and
+    /// spacing included, so it can be restored exactly. Assemble puts it back on the phrase of an
+    /// indet informal name, where a `:<digits>` tail is a catalogue number rather than a page.
+    pub page_strip_verbatim: Option<String>,
     /// Set by StripAndStash when an aggregate marker was stripped from the input.
     pub aggregate: bool,
     /// Set by Preflight when the input is a clean uni/binomial whose genus (or
@@ -119,6 +123,7 @@ impl ParseContext {
             name,
             pending_unparsed: None,
             pending_unparsed_trailing_tag: false,
+            page_strip_verbatim: None,
             aggregate: false,
             viral_shape: false,
             pending_year: None,

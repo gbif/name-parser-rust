@@ -167,6 +167,55 @@ fn a_determined_name_still_stashes_its_otu_code_as_unparsed() {
     assert_eq!(pn.phrase, None);
 }
 
+/// A catalogue number's `:<digits>` tail belongs to the phrase, not to `publishedInPage`.
+///
+/// `stripPublishedPage` (StripAndStash step 45, `\s*:\s*(\d+(?:[-–]\d+)?)\s*$`) exists for a
+/// trailing page citation — `Anolis marmoratus girafus LAZELL 1964: 377`. Museum and culture
+/// catalogue numbers wear the same shape, so `Trachipterus sp. HUMZ:220860` had `220860` filed as
+/// a publication page and the phrase truncated to `"sp. HUMZ"`. The number was not lost on the
+/// `ParsedName`, but a flat `Informal` has no `publishedInPage` field either, so the informal band
+/// lost it at the three-way boundary — the third field to hit that projection after the authorship
+/// and the OTU code.
+///
+/// The verbatim separator is restored, so `MIB:SASS:0006` comes back whole.
+#[test]
+fn a_catalogue_numbers_colon_tail_stays_in_the_phrase() {
+    for (input, phrase) in [
+        ("Trachipterus sp. HUMZ:220860", "sp. HUMZ:220860"),
+        ("Prevotella sp. CAG:1031", "sp. CAG:1031"),
+        ("Devario sp. CBM:ZF:11302", "sp. CBM:ZF:11302"),
+        ("Ageratum sp. MIB:SASS:0006", "sp. MIB:SASS:0006"),
+        ("Opistognathus sp. BSKU:121417", "sp. BSKU:121417"),
+    ] {
+        assert_informal(input).phrase(phrase).nothing_else();
+    }
+}
+
+/// A DETERMINED name keeps the page strip: it stays `Parsed`, so `publishedInPage` survives on the
+/// `ParsedName` and nothing is lost. Crucially this leaves GENUINE page citations alone — including
+/// the tight `1933:54` form that carries no space after the colon, which is why the fix is keyed on
+/// the parse outcome rather than on tightening the regex.
+#[test]
+fn a_determined_name_keeps_its_published_page() {
+    for (input, page) in [
+        ("Anolis marmoratus girafus LAZELL 1964: 377", "377"),
+        ("Anguis maculata Linnaeus, 1758: 228", "228"),
+        ("Raphitydeus Thor 1933:54", "54"),
+    ] {
+        match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => {
+                assert_eq!(
+                    pn.published_in_page.as_deref(),
+                    Some(page),
+                    "publishedInPage for {input:?}"
+                );
+                assert_eq!(pn.phrase, None, "phrase for {input:?}");
+            }
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        }
+    }
+}
+
 /// The point of the change: `taxon` + `" "` + `phrase` reproduces the input exactly.
 #[test]
 fn taxon_plus_phrase_round_trips_the_input() {
@@ -179,6 +228,8 @@ fn taxon_plus_phrase_round_trips_the_input() {
         "Allium sp. 1",
         "Streptomyces sp. NBC_00448",
         "Salmonella sp. 2021_1741",
+        "Trachipterus sp. HUMZ:220860",
+        "Ageratum sp. MIB:SASS:0006",
     ] {
         match nameparser::parse(input, None, None, None) {
             ParseResult::Informal(inf) => {

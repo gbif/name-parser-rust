@@ -212,6 +212,29 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         ctx.name.unparsed = ctx.pending_unparsed.clone();
     }
 
+    // Step 8b: the same reasoning for a stripped ":<digits>" tail. `strip_published_page` (step 45)
+    // exists for a trailing page citation ("… LAZELL 1964: 377"), but museum and culture catalogue
+    // numbers wear the identical shape, so "Trachipterus sp. HUMZ:220860" filed 220860 as a
+    // publication page and left the phrase truncated to "sp. HUMZ". Spacing does not separate the
+    // two — the genuine "Raphitydeus Thor 1933:54" is as tight as "Prevotella sp. CAG:1031" — so
+    // again decide on the outcome: on an indet informal a page reference is meaningless, and a flat
+    // `Informal` carries no `publishedInPage` anyway, so the tail is restored verbatim to the
+    // phrase. A determined name keeps the page, which stays reachable on its `ParsedName`.
+    let restore_page_to_phrase = ctx.page_strip_verbatim.is_some()
+        && ctx.name.published_in_page.is_some()
+        && ctx.name.type_ == NameType::Informal
+        && ctx.name.specific_epithet.is_none()
+        && ctx.name.phrase.is_some();
+    if restore_page_to_phrase {
+        let tail = ctx
+            .page_strip_verbatim
+            .take()
+            .expect("checked is_some above");
+        ctx.name.published_in_page = None;
+        let phrase = ctx.name.phrase.as_mut().expect("checked is_some above");
+        phrase.push_str(&tail);
+    }
+
     // Step 9: a year range in the authorship ("1845-1847") was interpreted down to just its
     // first year — flag it so callers know the year was reduced from a range.
     if auth_state.is_some_and(|s| s.year_range) {
