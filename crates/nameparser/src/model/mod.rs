@@ -79,7 +79,16 @@ pub struct Informal {
     pub taxon_rank: Rank,
     /// The rank the informal name purports to be — `SPECIES` for `"sp."`, `UNRANKED` for a group.
     pub rank: Rank,
-    /// The distinguishing designator (`"RMCC TR1811"`, `"1"`); `None` for a bare `"Genus sp."`.
+    /// The VERBATIM tail, from the rank marker to the end of the input (`"sp. RMCC TR1811"`,
+    /// `"sp. 1"`); `None` only when there is no tail at all. An informal name is not fully
+    /// parsable by definition, so the tail is captured whole and nothing in it is interpreted —
+    /// it may therefore contain what looks like an **author citation**
+    /// (`"sp. Forster, 1968"`), which is NOT separately parsed. That is deliberate: the parser
+    /// cannot reliably tell a citation from a specimen or culture code (43% of the tails the
+    /// pre-5.0.0 rule read as authorship were spurious — impossible years, collection acronyms
+    /// like `ZRC`/`MNHN`), and on the genuinely authored minority the citation belongs to the
+    /// [`Self::taxon`] anchor rather than to the undetermined species. `taxon` + `" "` + `phrase`
+    /// reproduces the input exactly.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phrase: Option<String>,
     /// The nomenclatural code when known, else `None`.

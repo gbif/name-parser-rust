@@ -194,7 +194,9 @@ class Informal:
         ...
     @property
     def phrase(self) -> str | None:
-        """The distinguishing designator (`"RMCC TR1811"`, `"1"`); `None` for a bare `"Genus sp."`."""
+        """The verbatim tail, from the rank marker to the end of the input (`"sp. RMCC TR1811"`,
+        `"sp. 1"`). Captured whole and never interpreted, so it may contain what looks like an
+        author citation (`"sp. Forster, 1968"`). `taxon + " " + phrase` reproduces the input."""
         ...
     @property
     def code(self) -> str | None:

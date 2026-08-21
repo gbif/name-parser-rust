@@ -131,6 +131,18 @@ Fungus sp.      Alga sp.          Diatom sp.
 `Genus sp. <tail>` → `Informal`, tail kept as the `phrase`; a bare `Genus sp.` keeps the verbatim
 marker (`sp.`) as its phrase and stays flagged indeterminate.
 
+The tail runs to the **end of the input, authorship included** — `Cantuaria sp. Forster, 1968` →
+phrase `sp. Forster, 1968`, with no `combinationAuthorship` and no inferred `code`. An informal
+name is not fully parsable by definition, so nothing in the tail is interpreted and `taxon` + `" "`
++ `phrase` round-trips the input exactly. Until 5.0.0 a year-bearing tail was exempted and routed
+to the authorship instead; over this corpus that produced a spurious authorship 43% of the time
+(impossible years like `1002`/`2483`/`2951`, "authors" carrying digits or slashes, and collection
+acronyms such as `ZRC`/`MNHN` that parse as clean surnames) and truncated the tag it declined to
+capture — `Rhodococcus sp. 14-2483-1-2` kept only `sp. 14` and invented the year 2483. On the
+genuinely authored minority the citation belongs to the anchor taxon, not to the undetermined
+species, so a caller who wants it resolves `taxon`. The `cf.`/`aff.` and dot-less-`spec` carve-outs
+are unaffected: `Hemicloeina spec Platnick, 2002` still parses as a determined binomial.
+
 ### 11. "cf." / "aff." / "near" — ✅
 Open-nomenclature uncertainty, captured in `epithetQualifier` with the name staying `Parsed` (type
 `INFORMAL`). `cf.`/`aff.` are stored with their abbreviation dot; `near` (a full English word,

@@ -407,8 +407,10 @@ impl PyInformal {
         Ok(pythonize::pythonize(py, &self.inner.rank)?.unbind())
     }
 
-    /// `Optional[str]` — the distinguishing designator (`"RMCC TR1811"`, `"1"`); `None` for a bare
-    /// `"Genus sp."`.
+    /// `Optional[str]` — the VERBATIM tail, from the rank marker to the end of the input
+    /// (`"sp. RMCC TR1811"`, `"sp. 1"`). Captured whole and never interpreted, so it may contain
+    /// what looks like an author citation (`"sp. Forster, 1968"`) — that is deliberate; see the
+    /// core `Informal::phrase` docs. `taxon + " " + phrase` reproduces the input exactly.
     #[getter]
     fn phrase(&self) -> Option<String> {
         self.inner.phrase.clone()

@@ -66,6 +66,93 @@ fn species_n_with_a_trailing_note_keeps_the_whole_tail_as_the_phrase() {
         .nothing_else();
 }
 
+// ---- The tail runs to the end, authorship included -------------------------------------------
+
+/// An informal name is not fully parsable by definition, so the phrase takes the WHOLE verbatim
+/// tail — a trailing author citation included. Until 5.0.0 a year-bearing tail was exempted and
+/// routed to `combinationAuthorship` instead, on the theory that it "IS an authorship citation,
+/// not a specimen tag". In the 67.5M verbatim corpus that theory holds for barely half the band:
+/// of 681 informal names carrying a parsed authorship, 43% were demonstrably spurious on a
+/// conservative test — impossible years (`1002`, `2483`, `2951`) or "authors" carrying digits,
+/// underscores or slashes — and that undercounts, because collection acronyms like `ZRC` and
+/// `MNHN` pass both tests. Worse, the exemption truncated the tag as well:
+/// `Rhodococcus sp. 14-2483-1-2` kept only `sp. 14` and invented the year 2483.
+///
+/// So the tail is now captured whole and nothing is invented. Round-tripping beats structure
+/// here: on `Amphicynodon sp. 1 Filhol, 1881` the authorship is the GENUS author anyway — an
+/// undetermined species has none — and a caller who wants it can resolve `taxon`.
+#[test]
+fn a_trailing_author_citation_is_part_of_the_phrase() {
+    // No `code` either: the zoological inference keyed off the "Author, year" authorship that no
+    // longer exists. Dropping it removes wrong answers rather than a right one — it used to label
+    // the plant `Aster sp. Linnaeus, 1753` ZOOLOGICAL, and the alga `Ectocarpus sp. CCAP 1310/114`
+    // ZOOLOGICAL off the bogus year 1310 it read out of a culture-collection accession.
+    assert_informal("Cantuaria sp. Forster, 1968")
+        .taxon("Cantuaria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. Forster, 1968")
+        .nothing_else();
+    assert_informal("Amphicynodon sp. 1 Filhol, 1881")
+        .taxon("Amphicynodon")
+        .rank(Rank::Species)
+        .phrase("sp. 1 Filhol, 1881");
+    assert_informal("Aster sp. Linnaeus, 1753")
+        .taxon("Aster")
+        .rank(Rank::Species)
+        .phrase("sp. Linnaeus, 1753");
+    assert_informal("Anuropus species N. Bruce, 2008")
+        .taxon("Anuropus")
+        .rank(Rank::Species)
+        .phrase("species N. Bruce, 2008");
+}
+
+/// The misparses the old exemption produced: a digit-bearing specimen or collection code was
+/// split into a bogus author + year AND had its tag truncated. Both are now kept verbatim.
+#[test]
+fn digit_bearing_specimen_codes_are_no_longer_split_into_a_bogus_author() {
+    // was: phrase "sp. 14", combinationAuthorship year=2483
+    assert_informal("Rhodococcus sp. 14-2483-1-2")
+        .taxon("Rhodococcus")
+        .rank(Rank::Species)
+        .phrase("sp. 14-2483-1-2");
+    // was: authors=["ZRC"], year=1999 — ZRC is the Zoological Reference Collection
+    assert_informal("Atergatopsis sp. ZRC 1999.0472")
+        .taxon("Atergatopsis")
+        .rank(Rank::Species)
+        .phrase("sp. ZRC 1999.0472");
+    // was: authors=["Ccap"], year=1310
+    assert_informal("Ectocarpus sp. CCAP 1310/114")
+        .taxon("Ectocarpus")
+        .rank(Rank::Species)
+        .phrase("sp. CCAP 1310/114");
+}
+
+/// The point of the change: `taxon` + `" "` + `phrase` reproduces the input exactly.
+#[test]
+fn taxon_plus_phrase_round_trips_the_input() {
+    for input in [
+        "Cantuaria sp. Forster, 1968",
+        "Rhodococcus sp. 14-2483-1-2",
+        "Atergatopsis sp. ZRC 1999.0472",
+        "Amphicynodon sp. 1 Filhol, 1881",
+        "Rhizobium sp. RMCC TR1811",
+        "Allium sp. 1",
+    ] {
+        match nameparser::parse(input, None, None, None) {
+            ParseResult::Informal(inf) => {
+                let round_tripped = format!(
+                    "{} {}",
+                    inf.taxon,
+                    inf.phrase.as_deref().unwrap_or_default()
+                );
+                assert_eq!(round_tripped, input, "round-trip mismatch for {input:?}");
+            }
+            other => panic!("expected `{input}` to be Informal, got {other:?}"),
+        }
+    }
+}
+
 #[test]
 fn australian_herbarium_locality_convention() {
     // "Genus sp. <Locality>" — the type-specimen-based convention; the locality becomes the phrase
@@ -321,11 +408,12 @@ fn bare_spec_is_a_real_epithet_with_a_yearless_authorship_too() {
 #[test]
 fn the_spec_epithet_rescue_needs_both_a_missing_dot_and_an_authorship() {
     // Regression guards on the two signals the rescue above hinges on — each of these fails if
-    // the rule is widened. The dot makes it an abbreviation, so it stays a provisional marker…
+    // the rule is widened. The dot makes it an abbreviation, so it stays a provisional marker —
+    // and the authorship, no longer needed to mark an epithet, rides along in the phrase…
     assert_informal("Hemicloeina spec. Platnick, 2002")
         .taxon("Hemicloeina")
         .rank(Rank::Species)
-        .phrase("spec.");
+        .phrase("spec. Platnick, 2002");
     // …and with no authorship there is nothing to say the word is an epithet.
     assert_informal("Globigerina spec")
         .taxon("Globigerina")
@@ -336,5 +424,5 @@ fn the_spec_epithet_rescue_needs_both_a_missing_dot_and_an_authorship() {
     assert_informal("Megakhosara sp Sharov, 1961")
         .taxon("Megakhosara")
         .rank(Rank::Species)
-        .phrase("sp");
+        .phrase("sp Sharov, 1961");
 }

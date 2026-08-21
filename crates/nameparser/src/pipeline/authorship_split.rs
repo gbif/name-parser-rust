@@ -206,17 +206,24 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     // single number/strain/letter cases above already advanced i; this catches
                     // multi-token tails. Rescues the ~382k "tag not captured" rows the corpus study
                     // found.
-                    // …but a year-bearing tail IS an authorship citation, not a specimen tag
-                    // ("Aster sp. Linnaeus, 1753", "Aster species Linnaeus, 1753") — leave it to
-                    // the normal boundary logic below so the author + year still parse. The
-                    // dot-less-`spec` rescue above takes the same exit, one signal cheaper (it
-                    // needs no year).
-                    if !is_cf_or_aff
-                        && !have_epithet
-                        && !is_published_spec_epithet
-                        && i < n
-                        && !has_year_token(tokens, i, n)
-                    {
+                    //
+                    // The tail runs to the end even when it looks like an AUTHORSHIP. Until 5.0.0 a
+                    // year-bearing tail was exempted here, on the theory that it "IS an authorship
+                    // citation, not a specimen tag" ("Aster sp. Linnaeus, 1753"). The 67.5M verbatim
+                    // corpus does not bear that out: of 681 informal names that took the exemption,
+                    // 43% produced a demonstrably spurious authorship — impossible years (1002,
+                    // 2483, 2951) or "authors" carrying digits, underscores or slashes — and that
+                    // undercounts, since collection acronyms like ZRC and MNHN parse as clean
+                    // surnames. The exemption also TRUNCATED the tag it declined to capture:
+                    // "Rhodococcus sp. 14-2483-1-2" kept only "sp. 14" and invented the year 2483.
+                    // An informal name is not fully parsable by definition, so round-tripping beats
+                    // structure: capture the tail verbatim and invent nothing. On the genuinely
+                    // authored minority the citation is the ANCHOR's authorship anyway — an
+                    // undetermined species has none — so a caller who wants it resolves `taxon`.
+                    //
+                    // The two carve-outs above still stand: cf./aff. precede a real epithet, and the
+                    // dot-less-`spec` rescue keeps a published `spec` epithet parsing normally.
+                    if !is_cf_or_aff && !have_epithet && !is_published_spec_epithet && i < n {
                         return n;
                     }
                     continue;
