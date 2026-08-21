@@ -173,6 +173,21 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
                     }
+                    // 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): after cf./aff. the genus
+                    // is often written out again — "Sorex cf. S. shinto", "Microtus cf. Microtus
+                    // arvalis" — which is just the longhand of "Sorex cf. shinto". That repetition
+                    // used to trip the "capitalised word starts the authorship" boundary below, so
+                    // the binomial collapsed to a uninomial with the invented author "S.shinto" and
+                    // the epithet was lost. Skip it so the real epithet is reached. Only a genuine
+                    // repetition of THIS name's genus qualifies, and only with an epithet behind it
+                    // — a different taxon after the qualifier ("Onthophagus cf. Aphodius",
+                    // "Veneridae cf. Phacosoma sp") is left exactly as it was.
+                    if is_cf_or_aff && !have_epithet {
+                        if let Some(after_repeat) = skip_repeated_genus(tokens, i, genus_text) {
+                            i = after_repeat;
+                            continue;
+                        }
+                    }
                     // A number immediately after an indet marker is the informal
                     // phrase, not authorship.
                     if i < n && tokens[i].kind == TokenKind::Number {
@@ -487,6 +502,39 @@ fn strip_dot(s: &str) -> &str {
 /// site tests for (`afterAuthor > i`) before using the value.
 pub fn mid_name_author_end(tokens: &[Token], from: usize) -> Option<usize> {
     consume_mid_name_author(tokens, from)
+}
+
+/// After a `cf.`/`aff.` qualifier, does `tokens[i]` repeat the name's own genus — spelled out
+/// (`"Microtus cf. Microtus arvalis"`) or abbreviated (`"Sorex cf. S. shinto"`) — with a real
+/// species epithet behind it? Returns the index just past the repetition (and its abbreviation
+/// dot), else `None`.
+///
+/// The abbreviation test is a case-insensitive PREFIX of the genus, which is what the convention
+/// means: `S.` for *Sorex*, `D.` for *Diurodrilus*. Requiring a following lower-case word is what
+/// keeps this off `"Onthophagus cf. Aphodius"` (a different genus, nothing behind it) and
+/// `"Veneridae cf. Phacosoma sp"` (a family anchor naming a different genus) — neither is a
+/// repetition, and neither gains an epithet from being skipped.
+fn skip_repeated_genus(tokens: &[Token], i: usize, genus_text: Option<&str>) -> Option<usize> {
+    let genus = genus_text?;
+    let t = tokens.get(i)?;
+    if t.kind != TokenKind::Word || !starts_upper(t) {
+        return None;
+    }
+    // The word must be the genus itself or an abbreviated prefix of it.
+    if !genus.to_lowercase().starts_with(&t.text.to_lowercase()) {
+        return None;
+    }
+    let mut j = i + 1;
+    if j < tokens.len() && tokens[j].kind == TokenKind::Dot {
+        j += 1;
+    }
+    // A real species epithet must follow, else there is nothing to rescue.
+    let next = tokens.get(j)?;
+    if next.kind == TokenKind::Word && starts_lower(next) && !token::is_particle(&next.text) {
+        Some(j)
+    } else {
+        None
+    }
 }
 
 /// 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): should the author particle at

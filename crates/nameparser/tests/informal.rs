@@ -407,6 +407,56 @@ fn cf_binomial_stays_parsed_with_its_qualifier() {
         .nothing_else();
 }
 
+/// A genus repeated after the qualifier is the same name written longhand: `Sorex cf. S. shinto`
+/// is `Sorex cf. shinto`. The repetition — abbreviated (`S.`, `D.`) or spelled out — used to trip
+/// the "capitalised word starts the authorship" boundary, so the whole binomial collapsed into a
+/// uninomial with the invented author `S.shinto`, losing the epithet entirely. 83 of the 132
+/// `Genus cf. Capitalised …` names in a 2.55M verbatim sample are this shape.
+#[test]
+fn a_genus_repeated_after_cf_is_skipped_not_read_as_an_author() {
+    for (input, genus, epithet) in [
+        ("Sorex cf. S. shinto", "Sorex", "shinto"),
+        ("Sorex cf. Sorex shinto", "Sorex", "shinto"),
+        ("Melanerpes cf. M. carolinus", "Melanerpes", "carolinus"),
+        ("Diurodrilus cf. D. dohrni", "Diurodrilus", "dohrni"),
+        ("Microtus cf. Microtus arvalis", "Microtus", "arvalis"),
+        (
+            "Archaeolagus cf. A. macrocephalus",
+            "Archaeolagus",
+            "macrocephalus",
+        ),
+        (
+            "Eucytherura cf. Eucytherura complexa",
+            "Eucytherura",
+            "complexa",
+        ),
+    ] {
+        assert_name(input)
+            .species(genus, epithet)
+            .type_(NameType::Informal)
+            .qualifiers(&[(NamePart::Specific, "cf.")])
+            .nothing_else();
+    }
+    // aff. behaves identically, keeping its own qualifier text
+    assert_name("Soergelia aff. S. mayfieldi")
+        .species("Soergelia", "mayfieldi")
+        .type_(NameType::Informal)
+        .qualifiers(&[(NamePart::Specific, "aff.")])
+        .nothing_else();
+}
+
+/// Boundary: only a REPETITION of the anchor genus is skipped. A different capitalised word after
+/// the qualifier is a genuinely different taxon — `Veneridae cf. Phacosoma sp` anchors on a family
+/// and compares to another genus, `Onthophagus cf. Aphodius` compares two genera with no epithet at
+/// all — so those keep their current reading rather than having an epithet invented for them.
+#[test]
+fn a_different_genus_after_cf_is_not_skipped() {
+    // No species epithet is reachable, so these land in the informal band on the anchor alone —
+    // unchanged by this fix, and pinned here so the skip cannot widen onto them.
+    assert_informal("Onthophagus cf. Aphodius").taxon("Onthophagus");
+    assert_informal("Eudoxia cf. Chelophyes contorta").taxon("Eudoxia");
+}
+
 #[test]
 fn aff_binomial_with_authorship_stays_parsed() {
     // aff. on a complete binomial WITH authorship — the clearest reason it must stay Parsed: a flat
