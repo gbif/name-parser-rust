@@ -287,6 +287,17 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         i = after_author;
                         continue;
                     }
+                    // A caller-supplied species-or-below rank outranks the particle reading:
+                    // the source has asserted this IS a species, so the word sitting in the
+                    // epithet slot is the epithet and the rest is the authorship
+                    // ("Zodarion van Bosmans, 2009" -> van + Bosmans, 2009).
+                    if particle_is_epithet_by_rank(tokens, i, ctx, after_genus, have_epithet) {
+                        name_words += 1;
+                        have_epithet = true;
+                        after_subgenus = false;
+                        i += 1;
+                        continue;
+                    }
                     return i;
                 }
                 // "hort." — horticultural marker, used as an ex-author placeholder
@@ -469,6 +480,57 @@ fn strip_dot(s: &str) -> &str {
 /// site tests for (`afterAuthor > i`) before using the value.
 pub fn mid_name_author_end(tokens: &[Token], from: usize) -> Option<usize> {
     consume_mid_name_author(tokens, from)
+}
+
+/// 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): should the author particle at
+/// `tokens[i]` be read as the SPECIES EPITHET instead of the start of the authorship?
+///
+/// `Genus <particle> Author, year` is genuinely ambiguous — `Allidothrips zur Strassen, 1968`
+/// is the genus *Allidothrips* by *zur Strassen*, while `Zodarion van Bosmans, 2009` is the
+/// species *Zodarion van* by *Bosmans*. Nothing in the string separates them, so with no rank
+/// hint the particle keeps winning (the majority reading: of the 2960 distinct
+/// `Genus <particle> …` names in the CoL corpus, `de`/`van`/`von`/`zur` alone account for 2686,
+/// nearly all real particled authors). A caller-supplied rank of species-or-below is the one
+/// signal that does settle it, and it is authoritative — so here the epithet reading wins.
+///
+/// This strictly improves that path: before, a `SPECIES` hint on such a name found no epithet,
+/// fell into the indetermined branch and dropped the authorship too, losing BOTH `delli` and
+/// `Forster, 1968` from `Cantuaria delli Forster, 1968` (the ChecklistBank "unparsable name" +
+/// "indetermined" report on dataset 56185, the World Spider Catalog). Guards:
+///
+///   * only in the epithet slot — after a genus, before any epithet has been seen;
+///   * only for real table particles, never an apostrophe particle (`d'Urv.` is an
+///     abbreviated surname, never an epithet);
+///   * only when what follows looks like the START of an authorship — a capitalised surname, an
+///     opening basionym paren, a year, or nothing at all. Another LOWER-case word means we are
+///     mid author chain ("van den Boom", "von der Linde", "v. d. Boom"), and an epithet is a
+///     single word, so the chain stays one multi-word author. Note this cannot be a
+///     particle-table test: "den" is deliberately absent from the table.
+fn particle_is_epithet_by_rank(
+    tokens: &[Token],
+    i: usize,
+    ctx: &ParseContext,
+    after_genus: bool,
+    have_epithet: bool,
+) -> bool {
+    if !after_genus || have_epithet {
+        return false;
+    }
+    if !ctx.requested_rank.is_some_and(|r| r.is_species_or_below()) {
+        return false;
+    }
+    if !token::is_particle(&tokens[i].text) {
+        return false;
+    }
+    // Chain guard: look past any abbreviation dots to the next word.
+    let mut j = i + 1;
+    while j < tokens.len() && tokens[j].kind == TokenKind::Dot {
+        j += 1;
+    }
+    match tokens.get(j) {
+        Some(next) if next.kind == TokenKind::Word => !starts_lower(next),
+        _ => true,
+    }
 }
 
 /// Java `AuthorshipSplit.consumeMidNameAuthor(List<Token>, int, int)`
