@@ -128,6 +128,45 @@ fn digit_bearing_specimen_codes_are_no_longer_split_into_a_bogus_author() {
         .phrase("sp. CCAP 1310/114");
 }
 
+/// An underscored OTU code is a specimen tag like any other, so it belongs in the phrase.
+///
+/// `stashTrailingOtuCode` (StripAndStash step 16, `\s+([A-Z0-9]{3,}_\d{3,})$`) amputates such a
+/// code into `unparsed` BEFORE tokenising, so the informal tail-capture never saw it: on
+/// `Streptomyces sp. NBC_00448` the phrase came back as a bare `"sp."` with `NBC_00448` parked in
+/// `unparsed` and the name marked PARTIAL. The underscore was the whole difference —
+/// `Streptomyces sp. NBC00448` already captured `"sp. NBC00448"` and parsed COMPLETE.
+///
+/// That mattered because a flat `Informal` has no `unparsed` field, so for the informal band the
+/// code was dropped outright at the three-way boundary. A determined name keeps its epithet and
+/// stays `Parsed`, where `unparsed` survives on the `ParsedName` — so the stash is left alone
+/// there and only the indet case is diverted to the phrase.
+#[test]
+fn underscored_otu_codes_are_captured_as_the_phrase_not_stashed_as_unparsed() {
+    for (input, phrase) in [
+        ("Streptomyces sp. NBC_00448", "sp. NBC_00448"),
+        ("Hyalinobatrachium sp. ZSFQ_3906", "sp. ZSFQ_3906"),
+        ("Salmonella sp. 2021_1741", "sp. 2021_1741"),
+        ("Decapoda sp. KSA_1761", "sp. KSA_1761"),
+        ("Limosilactobacillus sp. 252371_901", "sp. 252371_901"),
+    ] {
+        assert_informal(input).phrase(phrase).nothing_else();
+    }
+}
+
+/// A DETERMINED name keeps the old `unparsed` stash: it stays `Parsed`, so the code rides along on
+/// the `ParsedName` and nothing is lost. Guard against widening the diversion above.
+#[test]
+fn a_determined_name_still_stashes_its_otu_code_as_unparsed() {
+    let pn = match nameparser::parse("Oxalis barrelieri XXZ_21243", None, None, None) {
+        ParseResult::Parsed(pn) => pn,
+        other => panic!("expected Parsed, got {other:?}"),
+    };
+    assert_eq!(pn.genus.as_deref(), Some("Oxalis"));
+    assert_eq!(pn.specific_epithet.as_deref(), Some("barrelieri"));
+    assert_eq!(pn.unparsed.as_deref(), Some("XXZ_21243"));
+    assert_eq!(pn.phrase, None);
+}
+
 /// The point of the change: `taxon` + `" "` + `phrase` reproduces the input exactly.
 #[test]
 fn taxon_plus_phrase_round_trips_the_input() {
@@ -138,6 +177,8 @@ fn taxon_plus_phrase_round_trips_the_input() {
         "Amphicynodon sp. 1 Filhol, 1881",
         "Rhizobium sp. RMCC TR1811",
         "Allium sp. 1",
+        "Streptomyces sp. NBC_00448",
+        "Salmonella sp. 2021_1741",
     ] {
         match nameparser::parse(input, None, None, None) {
             ParseResult::Informal(inf) => {

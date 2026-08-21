@@ -22,7 +22,8 @@
 //!     doubtful + `RANK_MISMATCH`.
 //!  7. an underscore in a scientific-type uninomial splits into genus+species or
 //!     uninomial+phrase.
-//!  8. a stashed pending-unparsed remainder → `PARTIAL` state.
+//!  8. a stashed pending-unparsed remainder → `PARTIAL` state — unless it is a trailing specimen
+//!     tag on an indet informal name, which is folded back onto the phrase instead.
 //!  9. a detected year range → `YEAR_INTERPRETED` warning.
 //! 10. code inference (only when `code` is still unset).
 //! 11. viral shape with no other code signal → `VIRUS`.
@@ -179,7 +180,34 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
 
     // Step 8: a pending unparsed remainder stashed upstream (and not already consumed)
     // demotes the name to a PARTIAL parse.
-    if ctx.pending_unparsed.is_some() && ctx.name.unparsed.is_none() {
+    //
+    // …unless it is a trailing SPECIMEN TAG on an indet informal name, in which case it is the
+    // phrase's missing tail rather than an unparsable remainder. `stash_trailing_otu_code` runs
+    // before tokenising, so an underscored code was amputated before the informal tail-capture
+    // could see it: `Streptomyces sp. NBC_00448` came back with a bare "sp." phrase, the code in
+    // `unparsed` and state PARTIAL, while the underscore-free `Streptomyces sp. NBC00448` captured
+    // "sp. NBC00448" and parsed COMPLETE. A flat `Informal` carries no `unparsed`, so for that band
+    // the code was dropped outright at the three-way boundary. Fold it back so the phrase is whole
+    // and `taxon + " " + phrase` round-trips.
+    //
+    // Keyed on the FINAL parse, not on the input's shape: a determined name keeps its epithet, so
+    // it stays `Parsed` and `unparsed` survives on the ParsedName — leave those alone. Testing the
+    // outcome also protects a name whose marker never produced an indet parse at all
+    // ("Braconidae gen. n. sp. JS10_00530" reads `gen` as the epithet), which an input-shape guard
+    // would wrongly divert, feeding the code to the authorship parser as a bogus author.
+    let fold_tag_into_phrase = ctx.pending_unparsed_trailing_tag
+        && ctx.name.type_ == NameType::Informal
+        && ctx.name.specific_epithet.is_none()
+        && ctx.name.phrase.is_some();
+    if fold_tag_into_phrase {
+        let tag = ctx
+            .pending_unparsed
+            .take()
+            .expect("flag implies a pending tag");
+        let phrase = ctx.name.phrase.as_mut().expect("checked is_some above");
+        phrase.push(' ');
+        phrase.push_str(&tag);
+    } else if ctx.pending_unparsed.is_some() && ctx.name.unparsed.is_none() {
         ctx.name.state = State::Partial;
         ctx.name.unparsed = ctx.pending_unparsed.clone();
     }

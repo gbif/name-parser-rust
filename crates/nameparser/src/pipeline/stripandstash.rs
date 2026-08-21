@@ -908,6 +908,10 @@ fn stash_trailing_otu_code(ctx: &mut ParseContext, s: String) -> String {
             let whole = caps.get(0).unwrap();
             let prefix = java_trim(&s[..whole.start()]).to_string();
             ctx.set_pending_unparsed(&code);
+            // Mark it a specimen tag, not an unparsable remainder: Assemble folds it back onto
+            // the phrase if the name turns out to be an indet informal. The `is_none()` guard
+            // above means this write always took, so the flag cannot mislabel someone else's.
+            ctx.pending_unparsed_trailing_tag = true;
             return prefix;
         }
     }

@@ -36,6 +36,12 @@ pub(crate) struct ParseContext {
     pub name: ParsedName,
     /// Set by StripAndStash when a parenthesised "[sic, …]" comment was removed.
     pub pending_unparsed: Option<String>,
+    /// True when [`pending_unparsed`](Self::pending_unparsed) holds a trailing SPECIMEN TAG
+    /// (`stash_trailing_otu_code`'s `NBC_00448`) rather than a note, a synonymy bracket or
+    /// truncated junk — the other four writers. Assemble folds such a tag back onto the phrase of
+    /// an indet informal name, where it is the distinguishing designator rather than an unparsable
+    /// remainder; only that one writer may set this.
+    pub pending_unparsed_trailing_tag: bool,
     /// Set by StripAndStash when an aggregate marker was stripped from the input.
     pub aggregate: bool,
     /// Set by Preflight when the input is a clean uni/binomial whose genus (or
@@ -112,6 +118,7 @@ impl ParseContext {
             tokens: Vec::new(),
             name,
             pending_unparsed: None,
+            pending_unparsed_trailing_tag: false,
             aggregate: false,
             viral_shape: false,
             pending_year: None,
