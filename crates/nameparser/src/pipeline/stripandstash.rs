@@ -618,10 +618,19 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 // ---- Step 9: stashTrailingStrainCode ----
 
 /// Java TRAILING_STRAIN_CODE (StripAndStash.java:165-169),
-/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode.
+///
+/// 5.0.0 divergence: `:` joins `_` and `-` in the code's character class, so a colon-separated
+/// identifier is recognised as the strain code it is. `Bacteroides caccae CAG21` already stashed
+/// `CAG21` as the phrase, but the far commoner written form `Bacteroides caccae CAG:21` (a
+/// co-abundance-gene-group MAG bin) fell through to `strip_published_page` 36 steps later, which
+/// split it into the bogus author "CAG" AND the bogus page 21. The pattern is anchored
+/// `^Genus species CODE$` and the code must start uppercase and contain a digit, so widening it
+/// cannot reach a sanctioning author (`Agaricus campestris L. : Fr.` has dots and spaces the class
+/// does not admit).
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^([\p{Lu}][\p{Ll}]+\s+[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d]*\d[\p{L}\d_\-]*)\s*$",
+        r"^([\p{Lu}][\p{Ll}]+\s+[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:]*\d[\p{L}\d_\-:]*)\s*$",
     )
     .unwrap()
 });
@@ -2338,6 +2347,17 @@ static PUBLISHED_PAGE: LazyLock<Regex> = LazyLock::new(|| {
 fn strip_published_page(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = PUBLISHED_PAGE.captures(&s) {
         let whole = caps.get(0).unwrap();
+        // 5.0.0 divergence: a page reference is the tail of a PUBLICATION citation, so it must
+        // follow a year — `Linnaeus, 1758: 228`, `LAZELL 1964: 377`, `Thor 1933:54`,
+        // `(Stephens, 1829) : 151`. Strain and catalogue identifiers wear the same shape but carry
+        // no year, and Java stripped those too: `Bacteroides caccae CAG:21` (a co-abundance-gene-
+        // group MAG bin) was split into the bogus author "CAG" AND the bogus page 21, and
+        // `irmng:1017387` into page 1017387. Requiring the year keeps every genuine citation --
+        // including the tight `1933:54`, which no spacing rule could separate from `CAG:21` -- and
+        // leaves the identifiers intact for the phrase/tag machinery downstream.
+        if !ends_with_year_citation(&s[..whole.start()]) {
+            return s;
+        }
         ctx.name.published_in_page = Some(caps[1].to_string());
         // Keep the removed text verbatim (separator and spacing included). A museum or culture
         // catalogue number wears the same shape as a page citation — `Trachipterus sp.
@@ -2349,6 +2369,19 @@ fn strip_published_page(ctx: &mut ParseContext, s: String) -> String {
         return java_trim(&s[..whole.start()]).to_string();
     }
     s
+}
+
+/// Java PUBLISHED_PAGE has no lookbehind, so [`strip_published_page`]'s "must follow a year" test
+/// is done in code: does `prefix` end with a 4-digit year? A bibliographic letter suffix
+/// (`"… Dash & Viraktamath, 1998a: 29"`) and a closing bracket with trailing space
+/// (`"… (Stephens, 1829) : 151"`) are both allowed after it. Deliberately only 4 digits —
+/// `Podperaea krylovii Accepted name, 55` ends in a number but not a year, and its "page" was
+/// never trustworthy.
+static TRAILING_YEAR_CITATION: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\d{4})(?-u:[a-z])?[)\]]?(?-u:\s*)$").unwrap());
+
+fn ends_with_year_citation(prefix: &str) -> bool {
+    TRAILING_YEAR_CITATION.is_match(prefix)
 }
 
 // ---- Step 46: stripInPress ----

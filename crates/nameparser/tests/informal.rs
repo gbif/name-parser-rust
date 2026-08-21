@@ -191,10 +191,63 @@ fn a_catalogue_numbers_colon_tail_stays_in_the_phrase() {
     }
 }
 
+/// A strain identifier on a DETERMINED binomial is the phrase, not a page and not an author.
+///
+/// `Bacteroides caccae CAG21` already stashed `CAG21` as its phrase via `stashTrailingStrainCode`
+/// (step 9), but the far commoner written form `CAG:21` — a co-abundance-gene-group MAG bin — was
+/// not in that step's character class, so it fell through 36 steps to `stripPublishedPage` and was
+/// split into a bogus author `CAG` AND a bogus page `21`. Both spellings now behave alike.
+#[test]
+fn a_colon_separated_strain_code_on_a_binomial_is_the_phrase() {
+    for (input, phrase) in [
+        ("Bacteroides caccae CAG:21", "CAG:21"),
+        ("Streptococcus salivarius CAG:79", "CAG:79"),
+        ("Ligilactobacillus ruminis CAG:367", "CAG:367"),
+        // the pre-existing glued spelling, unchanged
+        ("Bacteroides caccae CAG21", "CAG21"),
+    ] {
+        let pn = match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => pn,
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        };
+        assert_eq!(pn.phrase.as_deref(), Some(phrase), "phrase for {input:?}");
+        assert_eq!(pn.published_in_page, None, "page for {input:?}");
+        assert!(
+            pn.combination_authorship.authors.is_empty(),
+            "no author should be invented for {input:?}, got {:?}",
+            pn.combination_authorship.authors
+        );
+    }
+}
+
+/// A page reference is the tail of a PUBLICATION citation, so it must follow a year. Without one,
+/// a `:<digits>` tail is an identifier — `irmng:1017387` was filed as page 1017387.
+#[test]
+fn a_colon_digits_tail_with_no_year_is_not_a_published_page() {
+    for input in ["irmng:1017387", "Bacteroides caccae CAG:21"] {
+        match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => {
+                assert_eq!(pn.published_in_page, None, "page for {input:?}")
+            }
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        }
+    }
+}
+
+/// The mycological sanctioning colon is untouched by the widened strain-code class — it carries
+/// dots and spaces the class does not admit.
+#[test]
+fn the_sanctioning_author_colon_still_works() {
+    assert_name("Agaricus campestris L. : Fr.")
+        .species("Agaricus", "campestris")
+        .comb_authors(None, &["L."])
+        .sanct_author("Fr.");
+}
+
 /// A DETERMINED name keeps the page strip: it stays `Parsed`, so `publishedInPage` survives on the
 /// `ParsedName` and nothing is lost. Crucially this leaves GENUINE page citations alone — including
-/// the tight `1933:54` form that carries no space after the colon, which is why the fix is keyed on
-/// the parse outcome rather than on tightening the regex.
+/// the tight `1933:54` form that carries no space after the colon, which no spacing rule could
+/// separate from `CAG:21`; the year is what tells them apart.
 #[test]
 fn a_determined_name_keeps_its_published_page() {
     for (input, page) in [
