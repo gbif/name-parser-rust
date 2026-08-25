@@ -85,6 +85,10 @@ the bumped version.
   `RELEASE_VERSION` / `DEVELOPMENT_VERSION`). It runs `release:prepare release:perform`, tagging
   `vX` and deploying the release + per-arch classifier JARs. **Run the first release as a dry-run**
   (`-DdryRun=true`) to confirm end to end — see the `Jenkinsfile` release stage.
+- **Afterwards:** maven-release-plugin bumps `bindings/java/pom.xml` to the next dev version but
+  does **not** touch `bindings/java/jmh/pom.xml`, which is a standalone module outside its reactor.
+  Point that module's `name-parser-rust` dependency at the new dev version — the snapshot it named
+  before is consumed by the release and 404s on Nexus.
 
 ### CLI → GitHub Releases
 

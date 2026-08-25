@@ -9,7 +9,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 > binding (`ci.yml`) and publishes on tags (`crate-release.yml` → crates.io, `cli-release.yml` →
 > GitHub Releases, `python-release.yml` → PyPI); the `Jenkinsfile` deploys the Java FFM binding to
 > GBIF Nexus. The Java module bundles the native library into a **self-contained JAR** (§3), so it
-> is consumable off-checkout. The Java `0.2.0-SNAPSHOT` already auto-deploys to GBIF Nexus on every
+> is consumable off-checkout. The Java binding is released at `0.2.0` and auto-deploys snapshots to GBIF Nexus on every
 > push to `main`; crates.io, PyPI and GitHub Releases have all published `0.1.0` and re-publish from a
 > `crate-v*` / `py-v*` / `cli-v*` tag, CRAN alone is still unwired (see [`RELEASE.md`](RELEASE.md)).
 > The pre-existing *pure-Java* parser
@@ -23,7 +23,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 |---|---|---|---|---|
 | Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | published — `0.1.0`; `0.2.0` next |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.1.0`, 4 targets |
-| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — auto-deployed `0.2.0-SNAPSHOT` |
+| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — released `0.2.0`; `0.2.1-SNAPSHOT` auto-deploys |
 | Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.1.0` (`pip install gbif-name-parser`) |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | complete; CRAN submission not yet wired |
 
@@ -79,7 +79,7 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
   reference-impl / oracle was removed at 5.0.0 (api-only), so it is no longer a test dependency.
   The api is an independently versioned **dependency** — the stable contract — **not** this
   module's own version.
-- ✅ **Version = `0.2.0-SNAPSHOT`** — the Java FFM binding **shares the Rust engine's version**
+- ✅ **Version = `0.2.0` released** (`0.2.1-SNAPSHOT` on `main`) — the Java FFM binding **shares the Rust engine's version**
   (the Cargo `[workspace.package]` version at the repo root), released in lockstep with the
   CLI/Python/R bindings: **one version across every binding ⇒ the same engine**. It is *not* tied
   to the `name-parser-api` version it implements (an implementation versioning independently from
@@ -231,8 +231,8 @@ If your build does not already resolve from GBIF's Nexus, add:
 ```
 
 **The Rust-backed FFM binding** — a drop-in `NameParser` on **JDK 22+**. Add the thin main JAR
-plus your platform's native classifier JAR (via `os-maven-plugin`, §3). `0.2.0-SNAPSHOT` deploys
-on every push to `main`; `0.2.0` once released (`0.1.0` is the current release):
+plus your platform's native classifier JAR (via `os-maven-plugin`, §3). `0.2.0` is the current
+release; `0.2.1-SNAPSHOT` deploys on every push to `main`:
 
 ```xml
 <build><extensions>
@@ -297,7 +297,7 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 - [x] Java native-lib packaging — DONE. Per-arch **classifier JARs** (thin main + `linux-x86_64` /
       `linux-aarch_64` / `osx-x86_64` / `osx-aarch_64` / `windows-x86_64`), cross-compiled via
       cargo-zigbuild; main-JAR manifest stamped with version + `Rust-Engine-Version`/`-Git-Revision`.
-- [x] Java deploy + Jenkins — **LIVE**. A Multibranch pipeline auto-deploys `0.2.0-SNAPSHOT` to
+- [x] Java deploy + Jenkins — **LIVE**. `0.2.0` released; a Multibranch pipeline auto-deploys `0.2.1-SNAPSHOT` to
       `repository.gbif.org` on every push to `main` (ParityTest 8,017/0 in CI). The `release:perform` stage is
       now complete — `<scm>` is in place and the classifier JARs read `${native.staging.dir}`, which
       the Jenkinsfile points at the outer workspace's staged cdylibs — pending a first dry-run.
