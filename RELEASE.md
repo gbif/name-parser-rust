@@ -7,7 +7,7 @@ version number means the **same underlying Rust engine** everywhere.
 
 - The Cargo **`[workspace.package]` version** (root `Cargo.toml`) is the *engine version*. The
   core crate, CLI, Python wheel, R package, and the Java FFM binding all carry this same number.
-- `org.gbif:name-parser-api` (currently **`5.0.0`**) is the stable Java **contract** — an
+- `org.gbif:name-parser-api` (currently **`5.0.1`**) is the stable Java **contract** — an
   independently versioned **dependency**, *not* part of this version. The Java binding implements it
   but versions with the engine (an impl versioning independently from its api is normal).
 - The bindings sit at **`0.x`** while new and gathering real-use feedback. Once stable they
@@ -17,8 +17,8 @@ version number means the **same underlying Rust engine** everywhere.
 |---|---|---|---|---|
 | Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ ready |
 | CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ ready |
-| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ ready (one-time PyPI setup) |
-| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.1.0` published (setup done); `0.1.1+` via tag |
+| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.1.0` published (setup done); later versions via tag |
+| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.1.0` published (setup done); later versions via tag |
 | R | `nameparser` | CRAN | manual submission | ⚠️ not yet wired |
 
 ---
@@ -27,17 +27,17 @@ version number means the **same underlying Rust engine** everywhere.
 
 Do these once (per registry / per person with release rights).
 
-- **PyPI (Trusted Publishing — no token stored).** The GitHub `pypi` and `testpypi` environments
-  **already exist** (repo *Settings → Environments*; `pypi` is gated behind a required reviewer).
-  The remaining step is on PyPI: at <https://pypi.org> → *Publishing → Add a pending publisher*
-  for project `gbif-name-parser` — owner `gbif`, repo `name-parser-rust`, workflow
-  `python-release.yml`, **environment `pypi`**.
-  - *Dry-run channel (recommended before the first real publish):* the same on
-    <https://test.pypi.org> with **environment `testpypi`**.
+- **PyPI (Trusted Publishing — no token stored). ✅ DONE.** The GitHub `pypi` and `testpypi`
+  environments exist (repo *Settings → Environments*; `pypi` is gated behind a required reviewer),
+  the Trusted Publisher is registered (owner `gbif`, repo `name-parser-rust`, workflow
+  `python-release.yml`, **environment `pypi`**), and `gbif-name-parser` `0.1.0` is on PyPI — so
+  later versions publish token-free from a `py-v*` tag.
+  - *Dry-run channel:* the same registration on <https://test.pypi.org> with **environment
+    `testpypi`**, driven by the workflow's "Dry run … TestPyPI" input.
 - **crates.io (Trusted Publishing — no token stored). ✅ DONE.** The GitHub `crates-io` environment
   exists (gated behind a required reviewer), `gbif-name-parser` `0.1.0` is published, and its Trusted
   Publisher is registered (owner `gbif`, repo `name-parser-rust`, workflow `crate-release.yml`,
-  environment `crates-io`) — so `0.1.1+` publish token-free from the workflow.
+  environment `crates-io`) — so later versions publish token-free from the workflow.
   - *How the first publish was bootstrapped* (for the record — unlike PyPI, **crates.io has no
     pending-publisher flow**, so the crate must exist before a Trusted Publisher can be attached):
     create a short-lived scoped API token (crates.io → *Account Settings → API Tokens*, scope
@@ -54,7 +54,8 @@ Do these once (per registry / per person with release rights).
 ## 1. Bump the version (always first)
 
 ```sh
-scripts/bump-version.sh 0.2.0     # sets Cargo workspace + pyproject + DESCRIPTION + pom (X-SNAPSHOT)
+scripts/bump-version.sh 0.2.0     # Cargo workspace + pyproject + DESCRIPTION + R crate + pom (X-SNAPSHOT)
+                                  # + the pom's <rust.engine.version> (stamped into the JAR manifest)
 git diff                          # sanity-check: only the version fields changed
 ```
 
@@ -63,7 +64,7 @@ Test, then commit and push:
 ```sh
 cargo test --workspace --exclude nameparser-py       # py needs maturin, not plain cargo
 cargo build -p nameparser-ffi --release              # the cdylib the Java tests load
-mvn -f bindings/java/pom.xml test                    # parity 11,302/0 + smoke
+mvn -f bindings/java/pom.xml test                    # ParityTest 8,017/0 + smoke
 git add -A && git commit -m "Release 0.2.0" && git push
 ```
 
@@ -121,7 +122,7 @@ sdist and publishes to PyPI via Trusted Publishing. A guard fails the run if the
 subsequent versions publish via Trusted Publishing (OIDC — no stored token). **crates.io must precede
 a CRAN release** — the R package vendors the core *from* crates.io.
 
-For the **next** release (`0.1.1+`), after the §1 version bump — **dry-run first** (recommended):
+For any subsequent release, after the §1 version bump — **dry-run first** (recommended):
 *Actions → "Publish crate" → Run workflow* → runs `cargo publish --dry-run` (packages + verifies,
 never publishes). Then the real release:
 
@@ -158,6 +159,8 @@ on `gbif-name-parser` *by version* and can vendor it (`cargo vendor` skips local
 [ ] Java:   Jenkins job (RELEASE=true) — or snapshot-only if not cutting a release
 [ ] CLI:    git tag cli-vX && git push origin cli-vX     → verify the GitHub release assets
 [ ] Python: TestPyPI dry-run → git tag py-vX && git push → verify `pip install gbif-name-parser`
-[ ] crates.io / CRAN: when wired (see §2)
+[ ] crates.io: dry-run → git tag crate-vX && git push   (CRAN: still unwired, see §2)
 [ ] Confirm all published artifacts report version X (same engine everywhere)
+[ ] Flip the "published at <version>" claims to X: README.md (status banner + binding table),
+    DISTRIBUTION.md §2 table. Everything else is bumped by scripts/bump-version.sh at §1.
 ```

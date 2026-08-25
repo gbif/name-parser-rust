@@ -9,16 +9,16 @@
     module needs release 22 — java.lang.foreign is finalized/stable as of JDK 22).
 
     VERSIONING: this binding shares the Rust ENGINE's version — the Cargo [workspace.package]
-    version at this repo's root (gbif-name-parser, 0.1.x today) — released in lockstep with the
+    version at this repo's root (package gbif-name-parser) — released in lockstep with the
     CLI/Python/R bindings, so one version across all bindings means one engine. It is NOT the
-    version of the api it implements: `org.gbif:name-parser-api` (5.0.0, a dependency
+    version of the api it implements: `org.gbif:name-parser-api` (5.0.1, a dependency
     below) is independently versioned and pinned. The bindings sit at 0.x while new / gathering
     real-use feedback, and graduate to the product's 5.x line once stable. Keep <version> below in sync
     with the Cargo workspace version — scripts/bump-version.sh does this; see RELEASE.md.
   -->
   <groupId>org.gbif.nameparser</groupId>
   <artifactId>name-parser-rust</artifactId>
-  <version>0.1.1-SNAPSHOT</version>
+  <version>0.2.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>GBIF Name Parser :: Rust FFM binding</name>
@@ -54,7 +54,7 @@
     <!-- rust.engine.version (the gbif-name-parser engine, tracks crates/nameparser/Cargo.toml) is
          stamped into the main JAR manifest; the git SHA is injected by git-commit-id-maven-plugin.
          Do NOT pre-define git.commit.id.abbrev here — a static value shadows the plugin's. -->
-    <rust.engine.version>0.1.0</rust.engine.version>
+    <rust.engine.version>0.2.0</rust.engine.version>
 
     <!-- Base dir the per-platform classifier JARs read the staged cdylibs from (ci/build-cdylib.sh
          populates it). Defaults to this module's own native-staging/; overridable so `mvn
@@ -78,16 +78,18 @@
   </properties>
 
   <dependencies>
-    <!-- The 5.0.0 exceptionless API this binding implements: NameParser (now returning
+    <!-- The 5.0.x exceptionless API this binding implements: NameParser (now returning
          ParseResult), the three-way ParseResult (Parsed | Informal | Unparsable), ParsedName,
          UnparsableNameException, the enums (incl. NameType.IDENTIFIER). Pinned to the released
-         5.0.0 (the final release, not a moving SNAPSHOT); resolves from repository.gbif.org via the
-         <repositories> block below — see bindings/java/README.md. NOTE: 5.0.0 is api-ONLY — the Java
+         5.0.1 (a final release, not a moving SNAPSHOT); resolves from repository.gbif.org via the
+         <repositories> block below — see bindings/java/README.md. 5.0.1 is docs-only over 5.0.0: it
+         documents ParseResult.Informal.phrase as the VERBATIM tail, a trailing author citation
+         included — the contract this engine implements. NOTE: the 5.0.x api is api-ONLY — the Java
          NameParserImpl reference impl was removed, so this Rust binding is the sole implementation. -->
     <dependency>
       <groupId>org.gbif</groupId>
       <artifactId>name-parser-api</artifactId>
-      <version>5.0.0</version>
+      <version>5.0.1</version>
     </dependency>
 
     <!-- TEST-ONLY. The binding itself no longer uses Gson (the struct wire path rebuilds
@@ -127,8 +129,8 @@
   <!-- INTERIM `mvn deploy` targets (GBIF Nexus) — used only while this module is standalone;
        once it joins the name-parser reactor, motherpom supplies these. The <id>s MUST match
        <server> credential entries in the deployer's ~/.m2/settings.xml — adjust
-       `gbif-release`/`gbif-snapshot` to your actual server ids. This 0.1.0-SNAPSHOT deploys to
-       the snapshot repo (re-deployable); a 0.1.0 release goes to the release repo. -->
+       `gbif-release`/`gbif-snapshot` to your actual server ids. An X-SNAPSHOT <version> deploys to
+       the snapshot repo (re-deployable); a released X goes to the release repo. -->
   <distributionManagement>
     <repository>
       <id>gbif-release</id>

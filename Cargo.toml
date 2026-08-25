@@ -9,4 +9,4 @@ members = ["crates/nameparser", "crates/nameparser-cli", "crates/nameparser-ffi"
 # updates pyproject.toml / DESCRIPTION / the Maven pom) -> all crates inherit it via
 # `version.workspace = true`. See RELEASE.md.
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"

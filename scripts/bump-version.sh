@@ -10,8 +10,11 @@
 #   Cargo [workspace.package] version     -> 0.2.0          (core / CLI / ffi / py-crate inherit it)
 #   crates/nameparser-py/pyproject.toml   -> 0.2.0          (PyPI wheel)
 #   bindings/r/DESCRIPTION                -> 0.2.0          (CRAN)
+#   bindings/r/src/rust/Cargo.toml        -> 0.2.0          (the R binding crate, kept == DESCRIPTION)
 #   bindings/java/pom.xml     <version>   -> 0.2.0-SNAPSHOT (Maven dev version; the Jenkins release
 #   bindings/java/jmh/pom.xml dep version -> 0.2.0-SNAPSHOT  job strips -SNAPSHOT to 0.2.0 at release)
+#   bindings/java/pom.xml <rust.engine.version> -> 0.2.0    (stamped into the JAR manifest as
+#                                                            Rust-Engine-Version)
 #
 # It does NOT touch the org.gbif:name-parser-api / name-parser (4.x) dependency versions -- that is
 # the stable contract, versioned independently of the engine (see RELEASE.md / DISTRIBUTION.md).
@@ -39,8 +42,11 @@ perl -i -pe 's/^version = "[^"]*"/version = "'"$VERSION"'"/' Cargo.toml
 # 2. Python wheel -- the [project] `version` (the only top-level `version = "..."`).
 perl -i -pe 's/^version = "[^"]*"/version = "'"$VERSION"'"/' crates/nameparser-py/pyproject.toml
 
-# 3. R package (CRAN).
+# 3. R package (CRAN) -- DESCRIPTION plus the binding crate's own manifest, kept equal to it.
+#    (That crate is detached from the root workspace -- see its [workspace] stanza -- so it cannot
+#    inherit the workspace version; it is the only crate in the repo carrying a literal version.)
 perl -i -pe 's/^Version: .*/Version: '"$VERSION"'/' bindings/r/DESCRIPTION
+perl -i -pe 's/^version = "[^"]*"/version = "'"$VERSION"'"/' bindings/r/src/rust/Cargo.toml
 
 # 4. Java binding + its JMH module's dependency on it -> X-SNAPSHOT (Maven dev-version convention).
 #    Targets ONLY the <version> immediately following the name-parser-rust <artifactId>, so plugin
@@ -49,11 +55,18 @@ perl -0777 -i -pe \
   's{(<artifactId>name-parser-rust</artifactId>\s*<version>)[^<]*(</version>)}{${1}'"$VERSION"'-SNAPSHOT${2}}g' \
   bindings/java/pom.xml bindings/java/jmh/pom.xml
 
+# 5. The engine version stamped into the JAR manifest (Rust-Engine-Version). Not -SNAPSHOT: it names
+#    the Rust engine the cdylib was built from, so it must read exactly like the Cargo version above.
+perl -i -pe 's{<rust\.engine\.version>[^<]*</rust\.engine\.version>}{<rust.engine.version>'"$VERSION"'</rust.engine.version>}' \
+  bindings/java/pom.xml
+
 echo
 echo "Done. Version now set to:"
 printf '  %-16s %s\n' "Cargo workspace" "$(grep -m1 '^version = ' Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')"
 printf '  %-16s %s\n' "Python"          "$(grep -m1 '^version = ' crates/nameparser-py/pyproject.toml | sed -E 's/.*"([^"]+)".*/\1/')"
 printf '  %-16s %s\n' "R"               "$(grep -m1 '^Version: ' bindings/r/DESCRIPTION | awk '{print $2}')"
+printf '  %-16s %s\n' "R (crate)"       "$(grep -m1 '^version = ' bindings/r/src/rust/Cargo.toml | sed -E 's/.*"([^"]+)".*/\1/')"
 printf '  %-16s %s\n' "Java (pom)"      "$(grep -A1 '<artifactId>name-parser-rust</artifactId>' bindings/java/pom.xml | grep -m1 '<version>' | sed -E 's/.*<version>([^<]+)<.*/\1/')"
+printf '  %-16s %s\n' "Java (engine)"   "$(grep -m1 '<rust.engine.version>' bindings/java/pom.xml | sed -E 's/.*>([^<]+)<.*/\1/')"
 echo
 echo "Next: review 'git diff', run the tests, then follow RELEASE.md to tag + deploy each channel."

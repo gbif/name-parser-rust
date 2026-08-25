@@ -9,9 +9,10 @@ single "deploy"**, because each binding targets a different package ecosystem.
 > binding (`ci.yml`) and publishes on tags (`crate-release.yml` → crates.io, `cli-release.yml` →
 > GitHub Releases, `python-release.yml` → PyPI); the `Jenkinsfile` deploys the Java FFM binding to
 > GBIF Nexus. The Java module bundles the native library into a **self-contained JAR** (§3), so it
-> is consumable off-checkout. The Java `0.1.0-SNAPSHOT` already auto-deploys to GBIF Nexus on every
-> push to `main`; the public registries (crates.io / PyPI / CRAN) are wired but awaiting their first
-> release tag (see [`RELEASE.md`](RELEASE.md)). The pre-existing *pure-Java* parser
+> is consumable off-checkout. The Java `0.2.0-SNAPSHOT` already auto-deploys to GBIF Nexus on every
+> push to `main`; crates.io, PyPI and GitHub Releases have all published `0.1.0` and re-publish from a
+> `crate-v*` / `py-v*` / `cli-v*` tag, CRAN alone is still unwired (see [`RELEASE.md`](RELEASE.md)).
+> The pre-existing *pure-Java* parser
 > (`org.gbif:name-parser*`) remains available and is what this project will eventually back or replace.
 
 ---
@@ -20,11 +21,11 @@ single "deploy"**, because each binding targets a different package ecosystem.
 
 | Artifact | Path | Channel | Coordinates / name | Status |
 |---|---|---|---|---|
-| Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | `0.1.0`, unpublished |
-| Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | none built |
-| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — auto-deployed `0.1.0-SNAPSHOT` |
-| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | CI ready (needs PyPI trusted-publisher setup) |
-| R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | in progress |
+| Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | published — `0.1.0`; `0.2.0` next |
+| Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.1.0`, 4 targets |
+| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — auto-deployed `0.2.0-SNAPSHOT` |
+| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.1.0` (`pip install gbif-name-parser`) |
+| R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | complete; CRAN submission not yet wired |
 
 Every binding except the pure-Rust CLI wraps the **`nameparser-ffi` cdylib**
 (`crates/nameparser-ffi`) — so packaging that native library correctly is the cross-cutting
@@ -37,7 +38,7 @@ problem, addressed in §3.
 ### 2.1 Rust core + CLI
 
 - **Library** → `cargo publish` to crates.io. The crate is package **`gbif-name-parser`**
-  `0.1.0` (Apache-2.0) with lib name `nameparser` (so dependents keep `use nameparser::`). The
+  `0.2.0` (Apache-2.0) with lib name `nameparser` (so dependents keep `use nameparser::`). The
   manifest already carries `description`/`repository`/`keywords`/`categories` and is publishable
   (`cargo publish --dry-run -p gbif-name-parser` passes); a `crate-v*` tag publishes it via
   `crate-release.yml` (OIDC Trusted Publishing — no stored token).
@@ -53,7 +54,7 @@ enforces `maven.compiler.release=17`, and `java.lang.foreign` (FFM/Panama) needs
 compiler release at **22**. Current coordinates:
 
 ```
-org.gbif.nameparser:name-parser-rust:0.1.0-SNAPSHOT   (packaging: jar)
+org.gbif.nameparser:name-parser-rust:0.2.0-SNAPSHOT   (packaging: jar)
 ```
 
 It compiles `org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser`,
@@ -73,12 +74,12 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
 **Release-readiness — done, and the versioning model:**
 
-- ✅ `name-parser-api` pinned to the released **`5.0.0`**; a GBIF Nexus `<repositories>` block
+- ✅ `name-parser-api` pinned to the released **`5.0.1`**; a GBIF Nexus `<repositories>` block
   resolves it (this standalone POM has no motherpom to supply it). The Java `name-parser`
   reference-impl / oracle was removed at 5.0.0 (api-only), so it is no longer a test dependency.
   The api is an independently versioned **dependency** — the stable contract — **not** this
   module's own version.
-- ✅ **Version = `0.1.0-SNAPSHOT`** — the Java FFM binding **shares the Rust engine's version**
+- ✅ **Version = `0.2.0-SNAPSHOT`** — the Java FFM binding **shares the Rust engine's version**
   (the Cargo `[workspace.package]` version at the repo root), released in lockstep with the
   CLI/Python/R bindings: **one version across every binding ⇒ the same engine**. It is *not* tied
   to the `name-parser-api` version it implements (an implementation versioning independently from
@@ -202,23 +203,21 @@ a time.
 
 ### Java / Maven
 
-**The released pure-Java parser (available today** on repository.gbif.org and Maven Central**):**
+**The API artifact** (interface + `ParsedName` model + enums only — no implementation), on
+repository.gbif.org and Maven Central:
 
 ```xml
-<!-- interface + ParsedName model + enums only -->
 <dependency>
   <groupId>org.gbif</groupId>
   <artifactId>name-parser-api</artifactId>
-  <version>4.2.0</version>
-</dependency>
-
-<!-- or the NameParserGBIF implementation -->
-<dependency>
-  <groupId>org.gbif</groupId>
-  <artifactId>name-parser</artifactId>
-  <version>4.2.0</version>
+  <version>5.0.1</version>
 </dependency>
 ```
+
+The `5.0.x` api is **api-only**: the pure-Java `org.gbif:name-parser` implementation
+(`NameParserGBIF` / `NameParserImpl`) was removed at 5.0.0, and this Rust binding is now its
+sole implementation. The last implementation release on the old, exception-throwing `4.x`
+interface is `org.gbif:name-parser:4.2.0` — use it only if you cannot move to JDK 22+ yet.
 
 If your build does not already resolve from GBIF's Nexus, add:
 
@@ -232,8 +231,8 @@ If your build does not already resolve from GBIF's Nexus, add:
 ```
 
 **The Rust-backed FFM binding** — a drop-in `NameParser` on **JDK 22+**. Add the thin main JAR
-plus your platform's native classifier JAR (via `os-maven-plugin`, §3). `0.1.0-SNAPSHOT` deploys
-on every push to `main`; `0.1.0` once released:
+plus your platform's native classifier JAR (via `os-maven-plugin`, §3). `0.2.0-SNAPSHOT` deploys
+on every push to `main`; `0.2.0` once released (`0.1.0` is the current release):
 
 ```xml
 <build><extensions>
@@ -247,12 +246,12 @@ on every push to `main`; `0.1.0` once released:
   <dependency>                               <!-- thin main JAR: Java + FFM loader -->
     <groupId>org.gbif.nameparser</groupId>
     <artifactId>name-parser-rust</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
   </dependency>
   <dependency>                               <!-- your platform's native cdylib -->
     <groupId>org.gbif.nameparser</groupId>
     <artifactId>name-parser-rust</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0</version>
     <classifier>${os.detected.classifier}</classifier>
   </dependency>
 </dependencies>
@@ -298,8 +297,8 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 - [x] Java native-lib packaging — DONE. Per-arch **classifier JARs** (thin main + `linux-x86_64` /
       `linux-aarch_64` / `osx-x86_64` / `osx-aarch_64` / `windows-x86_64`), cross-compiled via
       cargo-zigbuild; main-JAR manifest stamped with version + `Rust-Engine-Version`/`-Git-Revision`.
-- [x] Java deploy + Jenkins — **LIVE**. A Multibranch pipeline auto-deploys `0.1.0-SNAPSHOT` to
-      `repository.gbif.org` on every push to `main` (parity 11,302/0 in CI). The `release:perform` stage is
+- [x] Java deploy + Jenkins — **LIVE**. A Multibranch pipeline auto-deploys `0.2.0-SNAPSHOT` to
+      `repository.gbif.org` on every push to `main` (ParityTest 8,017/0 in CI). The `release:perform` stage is
       now complete — `<scm>` is in place and the classifier JARs read `${native.staging.dir}`, which
       the Jenkinsfile points at the outer workspace's staged cdylibs — pending a first dry-run.
       Optionally add the Central sources/javadoc/GPG plugins for Maven Central sync.
@@ -307,8 +306,8 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
       builds + attaches per-platform archives (4 targets — Intel macOS dropped, macos-13 runners
       retiring) + sha256. `cli-v0.1.0` released.
 - [x] Python — PyPI workflow (`.github/workflows/python-release.yml`): a `py-v*` tag builds all
-      wheels + sdist and publishes via Trusted Publishing. Pending the one-time PyPI trusted-publisher
-      + `pypi` environment setup, then the first tag.
+      wheels + sdist and publishes via Trusted Publishing. Setup done and `0.1.0` is on PyPI
+      (`pip install gbif-name-parser`).
 - [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
 - [x] Wire-format decision — RESOLVED: struct-only. The flat-struct wire (~13% faster than the
       JSON/Gson path in the Phase-3 JMH A/B) is the single format; the JSON path was dropped at ABI
