@@ -1,17 +1,14 @@
 # name-parser-rust
 
 A Rust port of the [GBIF name parser](https://github.com/gbif/name-parser) — a linear-time,
-ReDoS-free reimplementation that parses scientific names into a structured `ParsedName`, with
-byte-for-byte behavioural parity to the Java `org.gbif:name-parser`.
+ReDoS-free reimplementation that parses scientific names into a structured `ParsedName`.
 
 > **Status: released.** The core parser, the native CLI, and the Java, Python, and R bindings
 > are complete, cross-validated, and published at 0.2.0 (R excepted — not yet on CRAN).
-> The backend cutover is not yet done
-> — see the [roadmap](#roadmap).
 
 ## Why
 
-The Rust core is the single authoritative implementation; the Java library
+The Rust core is now the single authoritative implementation; the Java library
 becomes a thin binding over it. Three motivations:
 
 - **Polyglot reach** — usable outside the JVM (Java, a native CLI, Python, and R).
@@ -51,9 +48,9 @@ bindings/
 
 | Binding | Path | Status |
 |---|---|---|
-| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; self-contained JAR (bundles the `nameparser-ffi` cdylib) — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.2.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
-| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to PyPI** (`0.2.0`) — `pip install gbif-name-parser` |
-| R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub, not yet on CRAN — see [`bindings/r/README.md`](bindings/r/README.md) |
+| Java (Panama/FFM) | `bindings/java` | self-contained JAR (bundles the `nameparser-ffi` cdylib) — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.2.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
+| Python (PyO3) | `crates/nameparser-py` | [published to PyPI](https://pypi.org/project/gbif-name-parser/) (`0.2.0`) — `pip install gbif-name-parser` |
+| R (extendr) | `bindings/r` | install from a local checkout or GitHub, not yet on CRAN — see [`bindings/r/README.md`](bindings/r/README.md) |
 
 ## Native CLI
 
@@ -82,9 +79,8 @@ mvn -f bindings/java/pom.xml test # smoke + the ~8,017-name golden-snapshot pari
 ## Relationship to `gbif/name-parser`
 
 This repo targets behavioural parity with the Java parser's `4.2.x` line and preserves the
-`org.gbif.nameparser.api.NameParser` interface, so that a future cutover can swap
-`new NameParserImpl()` → `new NameParserRust()` with no other change. Until then the Java
-library remains authoritative; this port is validated against it, not the reverse.
+`org.gbif.nameparser.api.NameParser` interface, so that a cutover can swap
+`new NameParserImpl()` → `new NameParserRust()` with no other change. 
 
 ## License
 
