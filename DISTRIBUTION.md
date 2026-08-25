@@ -312,10 +312,13 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 - [x] Wire-format decision — RESOLVED: struct-only. The flat-struct wire (~13% faster than the
       JSON/Gson path in the Phase-3 JMH A/B) is the single format; the JSON path was dropped at ABI
       version 2, which also removed the `gson` runtime dependency (now test-scope only).
-- [ ] Phase 5: backend cutover (swap `NameParserRust` in behind the `NameParser` interface; Java 22+).
+- [x] Phase 5: backend cutover — DONE. The ChecklistBank backend runs `NameParserRust` behind the
+      `NameParser` interface.
 - [x] Rust engine + CLI — DONE. The crate carries full metadata and is publishable via
       `crate-release.yml` (a `crate-v*` tag → crates.io, OIDC Trusted Publishing); the CLI ships
       per-platform archives via `cli-release.yml` (a `cli-v*` tag → GitHub Releases). Pending only
       the first release tags.
-- [ ] Decide whether the Rust FFM binding ships **alongside** the pure-Java parser or eventually
-      **replaces** it behind the same `org.gbif:name-parser` coordinates (Phase-5 cutover decision).
+- [x] Ships-alongside vs replaces — RESOLVED: **replaces**, under new coordinates rather than the
+      old ones. `org.gbif:name-parser` (the pure-Java parser) ended at `4.2.0`; the contract was
+      split out as `org.gbif:name-parser-api` (5.x, API-only) and this binding ships as
+      `org.gbif.nameparser:name-parser-rust`.

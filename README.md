@@ -1,18 +1,19 @@
 # name-parser-rust
 
-A Rust port of the [GBIF name parser](https://github.com/gbif/name-parser) — a linear-time,
-ReDoS-free reimplementation that parses scientific names into a structured `ParsedName`, with
-byte-for-byte behavioural parity to the Java `org.gbif:name-parser`.
+The GBIF name parser — a linear-time, ReDoS-free parser that turns a scientific name into a
+structured `ParsedName`. This is the authoritative implementation: the Java
+[`gbif/name-parser`](https://github.com/gbif/name-parser) repo now publishes only the
+`org.gbif:name-parser-api` contract, and every binding here — Java, Python, R, and the native
+CLI — runs this one engine.
 
-> **Status: released.** The core parser, the native CLI, and the Java, Python, and R bindings
-> are complete, cross-validated, and published at 0.2.0 (R excepted — not yet on CRAN).
-> The backend cutover is not yet done
-> — see the [roadmap](#roadmap).
+> **Status: released and in production.** The core parser, the native CLI, and the Java, Python,
+> and R bindings are complete, cross-validated, and published at 0.2.0 (R excepted — not yet on
+> CRAN). The ChecklistBank backend has completed its cutover and now parses through this engine.
 
 ## Why
 
-The Rust core is the single authoritative implementation; the Java library
-becomes a thin binding over it. Three motivations:
+The Java parser implementation ended at `4.2.0`; this engine took its place, and the Java library
+is now a thin FFM binding over it. Three motivations:
 
 - **Polyglot reach** — usable outside the JVM (Java, a native CLI, Python, and R).
 - **Throughput** — faster batch parsing of multi-million-name corpora.
@@ -21,7 +22,8 @@ becomes a thin binding over it. Three motivations:
 
 ## Validated parity & performance
 
-Measured against the Java parser (`org.gbif:name-parser` 4.2.0), same machine:
+Measured against `org.gbif:name-parser` 4.2.0 — the last Java implementation release, kept as the
+regression oracle every binding is validated against — on the same machine:
 
 | Check | Result |
 |---|---|
@@ -51,7 +53,7 @@ bindings/
 
 | Binding | Path | Status |
 |---|---|---|
-| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; self-contained JAR (bundles the `nameparser-ffi` cdylib) — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.2.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
+| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; a classes JAR plus one cdylib JAR per platform (`linux-x86_64`, `linux-aarch_64`, `osx-x86_64`, `osx-aarch_64`, `windows-x86_64`), picked by `${os.detected.classifier}` — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.2.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
 | Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to PyPI** (`0.2.0`) — `pip install gbif-name-parser` |
 | R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub, not yet on CRAN — see [`bindings/r/README.md`](bindings/r/README.md) |
 
@@ -81,10 +83,19 @@ mvn -f bindings/java/pom.xml test # smoke + the ~8,017-name golden-snapshot pari
 
 ## Relationship to `gbif/name-parser`
 
-This repo targets behavioural parity with the Java parser's `4.2.x` line and preserves the
-`org.gbif.nameparser.api.NameParser` interface, so that a future cutover can swap
-`new NameParserImpl()` → `new NameParserRust()` with no other change. Until then the Java
-library remains authoritative; this port is validated against it, not the reverse.
+`gbif/name-parser` is API-only as of `5.0.0`: it publishes a single artifact,
+`org.gbif:name-parser-api`, holding the `ParsedName` model, the formatter, and the
+`NameParser`/`ParseResult` contract. The Java parser implementation, `org.gbif:name-parser`,
+stopped at `4.2.0` and is no longer developed.
+
+This repo implements that contract. `org.gbif.nameparser.rust.NameParserRust` implements
+`org.gbif.nameparser.api.NameParser`, so a consumer swaps `new NameParserImpl()` →
+`new NameParserRust()` and changes nothing else.
+
+`4.2.0` stays in the loop as a frozen regression oracle — the cross-validation corpora are diffed
+against it on every release, and the one known residual is documented in
+[`cross-validation.md`](cross-validation.md) — but it is a record of the behaviour being preserved,
+not the source of truth.
 
 ## License
 
