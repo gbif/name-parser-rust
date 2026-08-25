@@ -5,8 +5,8 @@ ReDoS-free reimplementation that parses scientific names into a structured `Pars
 byte-for-byte behavioural parity to the Java `org.gbif:name-parser`.
 
 > **Status: released.** The core parser, the native CLI, and the Java, Python, and R bindings
-> are complete, cross-validated, and published — the Java binding at 0.2.0, the other channels at
-> 0.1.0 pending their 0.2.0 tags. The backend cutover is not yet done
+> are complete, cross-validated, and published at 0.2.0 (R excepted — not yet on CRAN).
+> The backend cutover is not yet done
 > — see the [roadmap](#roadmap).
 
 ## Why
@@ -52,7 +52,7 @@ bindings/
 | Binding | Path | Status |
 |---|---|---|
 | Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; self-contained JAR (bundles the `nameparser-ffi` cdylib) — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.2.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
-| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to PyPI** — `pip install gbif-name-parser` |
+| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to PyPI** (`0.2.0`) — `pip install gbif-name-parser` |
 | R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub, not yet on CRAN — see [`bindings/r/README.md`](bindings/r/README.md) |
 
 ## Native CLI

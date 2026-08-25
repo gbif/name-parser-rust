@@ -10,7 +10,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 > GitHub Releases, `python-release.yml` → PyPI); the `Jenkinsfile` deploys the Java FFM binding to
 > GBIF Nexus. The Java module bundles the native library into a **self-contained JAR** (§3), so it
 > is consumable off-checkout. The Java binding is released at `0.2.0` and auto-deploys snapshots to GBIF Nexus on every
-> push to `main`; crates.io, PyPI and GitHub Releases have all published `0.1.0` and re-publish from a
+> push to `main`; crates.io, PyPI and GitHub Releases have all published `0.2.0` and re-publish from a
 > `crate-v*` / `py-v*` / `cli-v*` tag, CRAN alone is still unwired (see [`RELEASE.md`](RELEASE.md)).
 > The pre-existing *pure-Java* parser
 > (`org.gbif:name-parser*`) remains available and is what this project will eventually back or replace.
@@ -21,10 +21,10 @@ single "deploy"**, because each binding targets a different package ecosystem.
 
 | Artifact | Path | Channel | Coordinates / name | Status |
 |---|---|---|---|---|
-| Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | published — `0.1.0`; `0.2.0` next |
-| Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.1.0`, 4 targets |
+| Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | published — `0.2.0` |
+| Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.2.0`, 4 targets |
 | **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — released `0.2.0`; `0.2.1-SNAPSHOT` auto-deploys |
-| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.1.0` (`pip install gbif-name-parser`) |
+| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.2.0` (`pip install gbif-name-parser`) |
 | R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | complete; CRAN submission not yet wired |
 
 Every binding except the pure-Rust CLI wraps the **`nameparser-ffi` cdylib**
@@ -304,9 +304,9 @@ curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
       Optionally add the Central sources/javadoc/GPG plugins for Maven Central sync.
 - [x] Rust CLI — GitHub Releases workflow (`.github/workflows/cli-release.yml`): a `cli-v*` tag
       builds + attaches per-platform archives (4 targets — Intel macOS dropped, macos-13 runners
-      retiring) + sha256. `cli-v0.1.0` released.
+      retiring) + sha256. `cli-v0.2.0` released.
 - [x] Python — PyPI workflow (`.github/workflows/python-release.yml`): a `py-v*` tag builds all
-      wheels + sdist and publishes via Trusted Publishing. Setup done and `0.1.0` is on PyPI
+      wheels + sdist and publishes via Trusted Publishing. Setup done and `0.2.0` is on PyPI
       (`pip install gbif-name-parser`).
 - [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
 - [x] Wire-format decision — RESOLVED: struct-only. The flat-struct wire (~13% faster than the

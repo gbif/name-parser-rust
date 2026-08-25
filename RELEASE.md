@@ -15,10 +15,10 @@ version number means the **same underlying Rust engine** everywhere.
 
 | Channel | Artifact | Registry | Trigger | Status |
 |---|---|---|---|---|
-| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ ready |
-| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ ready |
-| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.1.0` published (setup done); later versions via tag |
-| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.1.0` published (setup done); later versions via tag |
+| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.2.0` released |
+| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.2.0` released |
+| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.2.0` published (setup done); later versions via tag |
+| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.2.0` published (setup done); later versions via tag |
 | R | `nameparser` | CRAN | manual submission | ⚠️ not yet wired |
 
 ---
