@@ -5,15 +5,16 @@ How each of this project's artifacts is (or will be) built, published, and consu
 how to wire the whole thing into CI. One Rust core, four delivery channels — there is **no
 single "deploy"**, because each binding targets a different package ecosystem.
 
-> **Status (2026-07):** CI is in place. `.github/workflows/` builds + tests the engine and every
+> **Status (2026-08):** CI is in place. `.github/workflows/` builds + tests the engine and every
 > binding (`ci.yml`) and publishes on tags (`crate-release.yml` → crates.io, `cli-release.yml` →
 > GitHub Releases, `python-release.yml` → PyPI); the `Jenkinsfile` deploys the Java FFM binding to
-> GBIF Nexus. The Java module bundles the native library into a **self-contained JAR** (§3), so it
+> GBIF Nexus. The Java module ships a **thin main JAR plus one cdylib JAR per platform** (§3), so it
 > is consumable off-checkout. The Java binding is released at `0.2.0` and auto-deploys snapshots to GBIF Nexus on every
 > push to `main`; crates.io, PyPI and GitHub Releases have all published `0.2.0` and re-publish from a
 > `crate-v*` / `py-v*` / `cli-v*` tag, CRAN alone is still unwired (see [`RELEASE.md`](RELEASE.md)).
-> The pre-existing *pure-Java* parser
-> (`org.gbif:name-parser*`) remains available and is what this project will eventually back or replace.
+> This engine has **replaced** the pure-Java parser: `org.gbif:name-parser` ended at `4.2.0`, the
+> contract lives on as `org.gbif:name-parser-api` (5.x, API-only), and the ChecklistBank backend has
+> completed its cutover.
 
 ---
 
@@ -289,36 +290,3 @@ parse_names("Abies alba Mill.")
 curl -L .../nameparser-cli-<ver>-<target>.tar.gz | tar xz
 ./nameparser-cli parse --input=names.txt
 ```
-
----
-
-## 6. Open items
-
-- [x] Java native-lib packaging — DONE. Per-arch **classifier JARs** (thin main + `linux-x86_64` /
-      `linux-aarch_64` / `osx-x86_64` / `osx-aarch_64` / `windows-x86_64`), cross-compiled via
-      cargo-zigbuild; main-JAR manifest stamped with version + `Rust-Engine-Version`/`-Git-Revision`.
-- [x] Java deploy + Jenkins — **LIVE**. `0.2.0` released; a Multibranch pipeline auto-deploys `0.2.1-SNAPSHOT` to
-      `repository.gbif.org` on every push to `main` (ParityTest 8,017/0 in CI). The `release:perform` stage is
-      now complete — `<scm>` is in place and the classifier JARs read `${native.staging.dir}`, which
-      the Jenkinsfile points at the outer workspace's staged cdylibs — pending a first dry-run.
-      Optionally add the Central sources/javadoc/GPG plugins for Maven Central sync.
-- [x] Rust CLI — GitHub Releases workflow (`.github/workflows/cli-release.yml`): a `cli-v*` tag
-      builds + attaches per-platform archives (4 targets — Intel macOS dropped, macos-13 runners
-      retiring) + sha256. `cli-v0.2.0` released.
-- [x] Python — PyPI workflow (`.github/workflows/python-release.yml`): a `py-v*` tag builds all
-      wheels + sdist and publishes via Trusted Publishing. Setup done and `0.2.0` is on PyPI
-      (`pip install gbif-name-parser`).
-- [ ] R: `cargo vendor` for a CRAN-ready, network-free source build.
-- [x] Wire-format decision — RESOLVED: struct-only. The flat-struct wire (~13% faster than the
-      JSON/Gson path in the Phase-3 JMH A/B) is the single format; the JSON path was dropped at ABI
-      version 2, which also removed the `gson` runtime dependency (now test-scope only).
-- [x] Phase 5: backend cutover — DONE. The ChecklistBank backend runs `NameParserRust` behind the
-      `NameParser` interface.
-- [x] Rust engine + CLI — DONE. The crate carries full metadata and is publishable via
-      `crate-release.yml` (a `crate-v*` tag → crates.io, OIDC Trusted Publishing); the CLI ships
-      per-platform archives via `cli-release.yml` (a `cli-v*` tag → GitHub Releases). Pending only
-      the first release tags.
-- [x] Ships-alongside vs replaces — RESOLVED: **replaces**, under new coordinates rather than the
-      old ones. `org.gbif:name-parser` (the pure-Java parser) ended at `4.2.0`; the contract was
-      split out as `org.gbif:name-parser-api` (5.x, API-only) and this binding ships as
-      `org.gbif.nameparser:name-parser-rust`.
