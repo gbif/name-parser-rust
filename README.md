@@ -7,7 +7,7 @@ structured `ParsedName`. This is the authoritative implementation: the Java
 CLI — runs this one engine.
 
 > **Status: released and in production.** The core parser, the native CLI, and the Java, Python,
-> and R bindings are complete, cross-validated, and published at 0.2.0 (R excepted — not yet on
+> and R bindings are complete, cross-validated, and published at 0.2.1 (R excepted — not yet on
 > CRAN). The ChecklistBank backend has completed its cutover and now parses through this engine.
 
 ## Why
@@ -53,9 +53,9 @@ bindings/
 
 | Binding | Path | Status |
 |---|---|---|
-| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; a classes JAR plus one cdylib JAR per platform (`linux-x86_64`, `linux-aarch_64`, `osx-x86_64`, `osx-aarch_64`, `windows-x86_64`), picked by `${os.detected.classifier}` — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.2.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
-| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to [PyPI](https://pypi.org/project/gbif-name-parser/)** (`0.2.0`) — `pip install gbif-name-parser` |
-| R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub. The CRAN tarball builds and passes `R CMD check --as-cran` (`scripts/build-r-tarball.sh`); first submission pending — see [`bindings/r/README.md`](bindings/r/README.md) |
+| Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; a classes JAR plus one cdylib JAR per platform (`linux-x86_64`, `linux-aarch_64`, `osx-x86_64`, `osx-aarch_64`, `windows-x86_64`), picked by `${os.detected.classifier}` — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.2.1`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
+| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to [PyPI](https://pypi.org/project/gbif-name-parser/)** (`0.2.1`) — `pip install gbif-name-parser` |
+| R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub. Built and tested on Linux, macOS and Windows; the CRAN tarball passes `R CMD check --as-cran` (`scripts/build-r-tarball.sh`), with win-builder results and the first submission pending — see [`bindings/r/README.md`](bindings/r/README.md) |
 
 ## Native CLI
 

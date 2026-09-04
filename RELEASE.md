@@ -15,11 +15,11 @@ version number means the **same underlying Rust engine** everywhere.
 
 | Channel | Artifact | Registry | Trigger | Status |
 |---|---|---|---|---|
-| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.2.0` released |
-| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.2.0` released |
-| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.2.0` published (setup done); later versions via tag |
-| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.2.0` published (setup done); later versions via tag |
-| R | `nameparser` | CRAN | `scripts/build-r-tarball.sh` + manual submission | 🟡 tarball builds & checks clean; awaiting first submission |
+| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.2.1` released |
+| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.2.1` released |
+| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.2.1` published (setup done); later versions via tag |
+| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.2.1` published (setup done); later versions via tag |
+| R | `nameparser` | CRAN | `scripts/build-r-tarball.sh` + manual submission | 🟡 tarball checks clean locally + on Linux/macOS/Windows CI; win-builder pending, then first submission |
 
 ---
 
@@ -54,7 +54,7 @@ Do these once (per registry / per person with release rights).
 ## 1. Bump the version (always first)
 
 ```sh
-scripts/bump-version.sh 0.2.0     # Cargo workspace + pyproject + DESCRIPTION + R crate + pom (X-SNAPSHOT)
+scripts/bump-version.sh 0.2.1     # Cargo workspace + pyproject + DESCRIPTION + R crate + pom (X-SNAPSHOT)
                                   # + the pom's <rust.engine.version> (stamped into the JAR manifest)
 git diff                          # sanity-check: only the version fields changed
 ```
@@ -65,11 +65,11 @@ Test, then commit and push:
 cargo test --workspace --exclude nameparser-py       # py needs maturin, not plain cargo
 cargo build -p nameparser-ffi --release              # the cdylib the Java tests load
 mvn -f bindings/java/pom.xml test                    # ParityTest 8,017/0 + smoke
-git add -A && git commit -m "Release 0.2.0" && git push
+git add -A && git commit -m "Release 0.2.1" && git push
 ```
 
-> The Java pom carries `0.2.0-**SNAPSHOT**` (Maven dev-version convention); the Jenkins release job
-> strips `-SNAPSHOT` to `0.2.0` at release time, so it lands on the same number as the others.
+> The Java pom carries `0.2.1-**SNAPSHOT**` (Maven dev-version convention); the Jenkins release job
+> strips `-SNAPSHOT` to `0.2.1` at release time, so it lands on the same number as the others.
 
 ---
 
@@ -93,12 +93,12 @@ the bumped version.
 ### CLI → GitHub Releases
 
 ```sh
-git tag cli-v0.2.0 && git push origin cli-v0.2.0
+git tag cli-v0.2.1 && git push origin cli-v0.2.1
 ```
 
 `.github/workflows/cli-release.yml` builds `nameparser-cli` natively on 4 targets (linux
 x86_64/aarch64, macOS arm64, windows x64) and attaches per-platform archives + SHA-256 to
-the `cli-v0.2.0` release. (Intel macOS is not built — GitHub is retiring the `macos-13` Intel
+the `cli-v0.2.1` release. (Intel macOS is not built — GitHub is retiring the `macos-13` Intel
 runners; Intel-Mac users build from source.)
 
 ### Python → PyPI
@@ -113,7 +113,7 @@ pip install -i https://test.pypi.org/simple/ gbif-name-parser
 Then the real release:
 
 ```sh
-git tag py-v0.2.0 && git push origin py-v0.2.0
+git tag py-v0.2.1 && git push origin py-v0.2.1
 ```
 
 `.github/workflows/python-release.yml` builds the wheels (abi3 → one per platform, CPython 3.9+) +
@@ -131,7 +131,7 @@ For any subsequent release, after the §1 version bump — **dry-run first** (re
 never publishes). Then the real release:
 
 ```sh
-git tag crate-v0.2.0 && git push origin crate-v0.2.0   # NOT crate-v0.1.0 — 0.1.0 is already published
+git tag crate-v0.2.1 && git push origin crate-v0.2.1   # a NEW version each time — 0.1.0/0.2.0/0.2.1 are published
 ```
 
 `.github/workflows/crate-release.yml` guards the tag against the engine version (root `Cargo.toml`
