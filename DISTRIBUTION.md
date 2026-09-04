@@ -5,7 +5,7 @@ How each of this project's artifacts is (or will be) built, published, and consu
 how to wire the whole thing into CI. One Rust core, four delivery channels — there is **no
 single "deploy"**, because each binding targets a different package ecosystem.
 
-> **Status (2026-08):** CI is in place. `.github/workflows/` builds + tests the engine and every
+> **Status (2026-09):** CI is in place. `.github/workflows/` builds + tests the engine and every
 > binding (`ci.yml`) and publishes on tags (`crate-release.yml` → crates.io, `cli-release.yml` →
 > GitHub Releases, `python-release.yml` → PyPI); the `Jenkinsfile` deploys the Java FFM binding to
 > GBIF Nexus. The Java module ships a **thin main JAR plus one cdylib JAR per platform** (§3), so it
@@ -56,7 +56,7 @@ enforces `maven.compiler.release=17`, and `java.lang.foreign` (FFM/Panama) needs
 compiler release at **22**. Current coordinates:
 
 ```
-org.gbif.nameparser:name-parser-rust:0.2.0-SNAPSHOT   (packaging: jar)
+org.gbif.nameparser:name-parser-rust:0.2.1-SNAPSHOT   (packaging: jar)
 ```
 
 It compiles `org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser`,
@@ -113,15 +113,36 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
 ### 2.4 R binding
 
-- Distribute from **GitHub** first: `remotes::install_github("gbif/name-parser-rust", subdir = "bindings/r")`.
-  This compiles the embedded Rust crate on the user's machine (they need a Rust toolchain;
-  `SystemRequirements: Cargo` in `DESCRIPTION` declares it).
-- **CRAN**: `scripts/build-r-tarball.sh` produces the submission tarball. CRAN builds offline, so
-  the tarball has to carry everything the compile needs — the third-party crates, vendored into
-  `src/rust/vendor.tar.xz`, *and* the core crate itself, bundled into `src/rust/nameparser-core/`
-  (`cargo vendor` skips path dependencies, and the binding's path points outside the package).
-  Bundling the core mirrors what `maturin sdist` already does for the Python binding, and keeps a
-  CRAN release independent of a crates.io release. See [RELEASE.md](RELEASE.md) §2 "R → CRAN".
+**CRAN** is the target channel. `scripts/build-r-tarball.sh --check` builds the submission tarball
+and runs `R CMD check --as-cran` on it; submission itself is a manual, human-reviewed web form, so
+unlike the other four channels there is no tag to push. See [RELEASE.md](RELEASE.md) §2 "R → CRAN".
+
+CRAN compiles the package **offline**, so the tarball must carry everything the build needs. Four
+pieces, each load-bearing:
+
+- **The third-party crates**, vendored into `src/rust/vendor.tar.xz`. Both `Makevars` unpack it,
+  point `CARGO_HOME` at it and build `--offline`.
+- **The core crate itself**, bundled into `src/rust/nameparser-core/`, with the binding's path
+  dependency rewritten at it. `cargo vendor` skips path dependencies, and the checked-in path
+  (`../../../../crates/nameparser`) points *outside* the package, so without this the core would
+  simply be absent. Bundling mirrors what `maturin sdist` already does for the Python binding, and
+  keeps a CRAN release **independent of a crates.io release**.
+- **`LICENSE.note`** — the licence inventory CRAN requires for bundled sources. Generated from
+  `cargo metadata` by `rextendr::write_license_note()`, so it cannot drift from what was actually
+  vendored. It is regenerated on every packaging run and the repo copy refreshed.
+- **`bindings/r/src/rust/Cargo.lock` — the one `Cargo.lock` this repo tracks**, kept alive by an
+  explicit negation in the root `.gitignore` (which otherwise matches `Cargo.lock` at any depth).
+  The packaging script ships it as-is rather than regenerating it, so CRAN compiles the dependency
+  versions the test suite ran against. Untracking it, or letting `scripts/bump-version.sh` leave it
+  stale after a version bump, silently breaks that guarantee — the script therefore re-locks it
+  (`cargo update --workspace`, which touches only the two path members).
+
+`bindings/r/cran-comments.md` holds the submission notes: test environments, the expected NOTEs
+(new submission; installed size), and the offline-build/licensing story CRAN's Rust policy asks for.
+
+Until CRAN accepts, install from GitHub:
+`remotes::install_github("gbif/name-parser-rust", subdir = "bindings/r")` — this compiles the Rust
+crate on the user's machine (`SystemRequirements: Cargo` in `DESCRIPTION` declares the toolchain).
 
 ---
 
@@ -175,8 +196,14 @@ Stage 2 — Java  (needs JDK 22+)
 Stage 3 — Python
     maturin-action (manylinux + macOS + Windows wheels + sdist)  → gh-action-pypi-publish (OIDC)  → PyPI
 
-Stage 4 — R
-    R CMD build bindings/r ; R CMD check       → GitHub release asset
+Stage 4 — R  (source-only; CRAN compiles it offline on their machines)
+    scripts/build-r-tarball.sh --check         → nameparser_<ver>.tar.gz
+      bundles the core + vendors the crates + regenerates LICENSE.note,
+      then R CMD check --as-cran
+                                               → manual submission to CRAN
+    (NOT a bare `R CMD build bindings/r`: that tarball has no vendored
+     crates and no bundled core, so cargo would reach for the network and
+     the CRAN build would fail.)
 
 Stage 5 — CLI
     cargo build --release -p nameparser-cli per target  → GitHub release
