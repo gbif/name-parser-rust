@@ -44,6 +44,13 @@ __pycache__/
 # Large derived name corpora (concatenated full-name .txt, hundreds of MB) — never commit
 testdata/col*.txt
 
+# The R binding's lockfile is the ONE Cargo.lock this repo tracks (the `Cargo.lock` pattern above
+# would otherwise catch it at any depth). It pins the dependency versions the CRAN tarball is built
+# and tested against: scripts/build-r-tarball.sh carries it into the tarball rather than
+# regenerating it, so leaving it untracked would mean CRAN gets whatever happens to resolve on the
+# day of packaging, from a fresh clone.
+!bindings/r/src/rust/Cargo.lock
+
 # Phase 4b: R/extendr package build artifacts (bindings/**/target already covers the cargo dir)
 bindings/r/src/*.o
 bindings/r/src/*.so

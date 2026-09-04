@@ -5,7 +5,7 @@ name = "nameparser"
 # (The lockfile-collision that once forced a distinct version is gone: the core was renamed
 # from `nameparser` 0.0.0 to `gbif-name-parser`, so no (name, version) clash remains.
 # This crate's lib target still keeps the short name `nameparser` for R's useDynLib.)
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 
 [lib]

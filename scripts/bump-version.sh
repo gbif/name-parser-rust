@@ -11,6 +11,7 @@
 #   crates/nameparser-py/pyproject.toml   -> 0.2.0          (PyPI wheel)
 #   bindings/r/DESCRIPTION                -> 0.2.0          (CRAN)
 #   bindings/r/src/rust/Cargo.toml        -> 0.2.0          (the R binding crate, kept == DESCRIPTION)
+#   bindings/r/src/rust/Cargo.lock        -> re-locked   (tracked; shipped to CRAN as-is)
 #   bindings/java/pom.xml     <version>   -> 0.2.0-SNAPSHOT (Maven dev version; the Jenkins release
 #   bindings/java/jmh/pom.xml dep version -> 0.2.0-SNAPSHOT  job strips -SNAPSHOT to 0.2.0 at release)
 #   bindings/java/pom.xml <rust.engine.version> -> 0.2.0    (stamped into the JAR manifest as
@@ -47,6 +48,12 @@ perl -i -pe 's/^version = "[^"]*"/version = "'"$VERSION"'"/' crates/nameparser-p
 #    inherit the workspace version; it is the only crate in the repo carrying a literal version.)
 perl -i -pe 's/^Version: .*/Version: '"$VERSION"'/' bindings/r/DESCRIPTION
 perl -i -pe 's/^version = "[^"]*"/version = "'"$VERSION"'"/' bindings/r/src/rust/Cargo.toml
+#    That crate's Cargo.lock is tracked (the one in this repo -- see .gitignore) because
+#    scripts/build-r-tarball.sh ships it to CRAN rather than regenerating it. Re-record the two
+#    path members' versions in it, or `cargo vendor --locked` -- and so the CRAN build -- fails.
+#    `--workspace` re-locks ONLY those members, leaving every registry dependency pinned where the
+#    test suite found it; a bare `cargo update` would silently pull newer ones.
+cargo update --manifest-path bindings/r/src/rust/Cargo.toml --workspace --quiet
 
 # 4. Java binding + its JMH module's dependency on it -> X-SNAPSHOT (Maven dev-version convention).
 #    Targets ONLY the <version> immediately following the name-parser-rust <artifactId>, so plugin

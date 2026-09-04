@@ -54,7 +54,7 @@ License:     MIT
 
 Name:        gbif-name-parser
 Repository:  https://github.com/gbif/name-parser-rust
-Authors:     Markus Döring, GBIF
+Authors:     Markus Döring
 License:     Apache-2.0
 
 -------------------------------------------------------------
