@@ -13,6 +13,11 @@ One NOTE, expected for a first submission:
 
 * New submission. This is the first release of nameparser.
 
+  The same NOTE reports "Possibly misspelled words in DESCRIPTION:
+  nomenclatural". This is correct usage: a nomenclatural code (ICZN, ICN,
+  ICNP, ICTV) is the body of rules under which a scientific name is
+  governed, and it is one of the fields the parser returns.
+
 Depending on the platform, a second NOTE may appear for the installed size
 ("installed size is ~5.8Mb", "libs ~5.7Mb"). The package compiles and
 statically links a scientific name parser written in Rust. That size is

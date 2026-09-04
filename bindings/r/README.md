@@ -120,7 +120,7 @@ a separate `parsedPartially` flag; enum columns (`type`, `rank`, `code`, `state`
   `src/rust/vendor.tar.xz` for CRAN's offline build, generates `LICENSE.note`, and runs
   `R CMD check --as-cran`. What remains is the submission itself, which is a manual,
   human-reviewed web form (<https://cran.r-project.org/submit.html>) — see
-  [`RELEASE.md`](../../RELEASE.md) §2 "R → CRAN". Until it lands, install from a local checkout or
+  [`RELEASE.md`](https://github.com/gbif/name-parser-rust/blob/main/RELEASE.md) §2 "R → CRAN". Until it lands, install from a local checkout or
   `remotes::install_github()`.
 
 ## Testing

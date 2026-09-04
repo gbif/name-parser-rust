@@ -73,6 +73,31 @@ cfg <- if (is_debug) "debug" else "release"
 # read in the Makevars.in file checking
 is_windows <- .Platform[["OS.type"]] == "windows"
 
+# Wrapper regeneration -- `cargo run --bin document`, which rewrites R/extendr-wrappers.R -- is a
+# DEVELOPMENT step: rextendr::document() / devtools::document() drive it through this Makevars
+# recipe. It must NOT run when a distributed tarball is being installed, for two reasons:
+#
+#   1. The wrappers already ship in R/, so regenerating them is pure work -- and it writes inside
+#      the package directory being installed.
+#   2. It builds and then *executes* a host binary. On CRAN's Windows builder that fails outright:
+#        error: failed to run custom build command for `proc-macro2`
+#        could not execute process ...\target\debug\build\proc-macro2-*\build-script-build
+#        %1 ist keine zulaessige Win32-Anwendung. (os error 193)
+#      -- the build scripts under the cross-compiled target are not host-executable there. It took
+#      `R CMD INSTALL` down with it, so the whole check came back as 1 ERROR.
+#
+# A vendored tarball is the reliable signal for "distributed package, not a checkout":
+# scripts/build-r-tarball.sh always produces src/rust/vendor.tar.xz, and a git checkout never has
+# one. (NOT_CRAN is NOT usable here -- pkgbuild::compile_dll, which rextendr::document() goes
+# through, does not set it, so keying on it would silently stop regenerating wrappers in dev.)
+.document <- if (vendor_exists) {
+  "echo '=== Distributed build: keeping the shipped R/extendr-wrappers.R ==='"
+} else if (is_windows) {
+  "cargo run @CRAN_FLAGS@ --bin document --target $(TARGET) --manifest-path=./rust/Cargo.toml --target-dir $(TARGET_DIR)"
+} else {
+  "cargo run @CRAN_FLAGS@ --bin document --manifest-path=./rust/Cargo.toml --target-dir $(TARGET_DIR) @TARGET@"
+}
+
 # if windows we replace in the Makevars.win.in
 mv_fp <- ifelse(
   is_windows,
@@ -96,8 +121,11 @@ if (file.exists(mv_ofp)) {
 # read as a single string
 mv_txt <- readLines(mv_fp)
 
-# replace placeholder values
-new_txt <- gsub("@CRAN_FLAGS@", .cran_flags, mv_txt) |>
+# replace placeholder values.
+# @DOCUMENT@ goes first: its expansion may itself contain @CRAN_FLAGS@ / @TARGET@, which the
+# substitutions below then resolve.
+new_txt <- gsub("@DOCUMENT@", .document, mv_txt) |>
+  gsub("@CRAN_FLAGS@", .cran_flags, x = _) |>
   gsub("@PROFILE@", .profile, x = _) |>
   gsub("@CLEAN_TARGET@", .clean_targets, x = _) |>
   gsub("@LIBDIR@", .libdir, x = _) |>
