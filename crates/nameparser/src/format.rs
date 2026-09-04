@@ -338,6 +338,29 @@ fn phrase_leads_with_species_marker(n: &ParsedName) -> bool {
         && PHRASE_SPECIES_MARKER.is_match(java_trim(n.phrase.as_deref().unwrap_or("")))
 }
 
+/// gbif/name-parser-rust#16: true when an informal phrase already OPENS with this name's own
+/// rank marker, spelled out verbatim — "sect. 1" on a `SECTION_BOTANY`, "strain T101" on a
+/// `STRAIN`, "var 3" on a `VARIETY`. `StripAndStash::stash_trailing_rank_marker_code` keeps the
+/// source spelling of an indeterminate `Genus <marker> <code>` in the phrase, so synthesising the
+/// marker from the rank as well would double it ("Trachelomonas strain strain T101"). Compared
+/// dot-insensitively, since the marker is stored with its dot ("var.") and the source may write
+/// it without one.
+///
+/// The sibling [`phrase_leads_with_species_marker`] stays separate rather than folding into this:
+/// it matches the SPELLED-OUT species markers ("species 1", "spec 3"), none of which equal
+/// `Rank::Species`'s own marker "sp.", and it is a faithful port of a Java pattern.
+fn phrase_leads_with_rank_marker(n: &ParsedName) -> bool {
+    let Some(marker) = n.rank.marker() else {
+        return false;
+    };
+    let phrase = java_trim(n.phrase.as_deref().unwrap_or(""));
+    let Some(lead) = phrase.split_whitespace().next() else {
+        return false;
+    };
+    lead.trim_end_matches('.')
+        .eq_ignore_ascii_case(marker.trim_end_matches('.'))
+}
+
 /// Java `NameFormatter.appendRankMarker(sb, rank, ifRank, nothoPrefix)` (both the 3- and
 /// 4-arg overloads; the 3-arg one passes `if_rank = None`). Returns true if a marker was
 /// appended.
@@ -732,16 +755,20 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                 if n.rank.is_species_or_below() {
                     // no species epithet given, indetermined!
                     if n.rank.is_infraspecific() {
-                        // maybe we have an infraspecific epithet? force to show the rank marker
-                        append_infraspecific(
-                            &mut sb,
-                            n,
-                            f.hybrid_marker,
-                            f.show_qualifier,
-                            f.rank_marker,
-                            true,
-                            html,
-                        );
+                        // maybe we have an infraspecific epithet? force to show the rank marker —
+                        // unless the phrase already spells that marker out ("strain T101"), in
+                        // which case synthesising it would double it.
+                        if !phrase_leads_with_rank_marker(n) {
+                            append_infraspecific(
+                                &mut sb,
+                                n,
+                                f.hybrid_marker,
+                                f.show_qualifier,
+                                f.rank_marker,
+                                true,
+                                html,
+                            );
+                        }
                     } else if !phrase_leads_with_species_marker(n) {
                         // Skip the synthetic "sp." when an informal phrase already spells out
                         // the species marker verbatim ("Allium species 1") — the phrase

@@ -220,6 +220,235 @@ fn a_colon_separated_strain_code_on_a_binomial_is_the_phrase() {
     }
 }
 
+/// gbif/name-parser-rust#16: the same treatment for a DIGIT-LEADING code. Java's strain-code
+/// alternatives both require a leading letter, so `Genus species <number>` fell through to the
+/// authorship parser, which silently dropped a 1-2 digit number, read a 3-4 digit one as a
+/// publication year, and split `5a` into a dropped `5` plus a fabricated author `a` — in every
+/// case returning `SCIENTIFIC`/`COMPLETE` with an empty `unparsed` and a canonical string
+/// identical to a DIFFERENT real taxon (CatalogueOfLife/checklistbank#1725).
+#[test]
+fn a_digit_leading_strain_code_on_a_binomial_is_the_phrase() {
+    for (input, phrase) in [
+        // the ArchisBotany accession groupings from the issue
+        ("Prunus domestica 6", "6"),
+        ("Prunus domestica 5a", "5a"),
+        ("Prunus domestica 5b", "5b"),
+        ("Prunus domestica 6/12", "6/12"),
+        ("Quercus robur 3/4", "3/4"),
+        ("Abies alba 12", "12"),
+        ("Abies alba 12a", "12a"),
+        // microbial strain designations, the bulk of the band in the verbatim corpus
+        ("Escherichia coli 18-41", "18-41"),
+        ("Acinetobacter baumannii 1237893", "1237893"),
+        ("Actinomycetota bacterium 4327", "4327"),
+        ("Bacteroidetes bacterium 20/6", "20/6"),
+        ("Lachnospiraceae bacterium 47-T17", "47-T17"),
+    ] {
+        let pn = match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => pn,
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        };
+        assert_eq!(pn.phrase.as_deref(), Some(phrase), "phrase for {input:?}");
+        assert_eq!(pn.type_, NameType::Informal, "type for {input:?}");
+        assert!(
+            pn.combination_authorship.authors.is_empty()
+                && pn.combination_authorship.year.is_none(),
+            "no authorship should be invented for {input:?}, got {:?}",
+            pn.combination_authorship
+        );
+    }
+}
+
+/// A single full stop closing the string is sentence punctuation, not part of the code — without
+/// tolerating it, one character was enough to put the name back on the truncation path.
+#[test]
+fn a_full_stop_after_the_code_does_not_defeat_the_capture() {
+    for (input, phrase) in [
+        ("Prunus domestica 6.", "6"),
+        ("Bacteroides caccae CAG21.", "CAG21"),
+    ] {
+        let pn = match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => pn,
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        };
+        assert_eq!(pn.phrase.as_deref(), Some(phrase), "phrase for {input:?}");
+        assert_eq!(pn.type_, NameType::Informal, "type for {input:?}");
+    }
+}
+
+/// A NUMBERED indeterminate infraspecific under a named species — `Abies alba var. 3`. The
+/// designation used to reach the authorship parser and be dropped there (a 3-4 digit one became a
+/// bogus year), so every numbered variety of a species rendered as the same bare
+/// "Abies alba var.". The marker itself stays out of the phrase: `rank` already carries it and the
+/// formatter re-emits it, so the input still round-trips.
+#[test]
+fn a_numbered_indeterminate_infraspecific_keeps_its_designation() {
+    for (input, rank, phrase) in [
+        ("Abies alba var. 3", Rank::Variety, "3"),
+        ("Abies alba var 3", Rank::Variety, "3"),
+        ("Abies alba subsp. 7", Rank::Subspecies, "7"),
+        ("Abies alba f. 2", Rank::Form, "2"),
+        // the tokenizer splits "3a" into NUMBER + WORD; the lowercase tail is designation, not author
+        ("Abies alba var. 3a", Rank::Variety, "3a"),
+        // …and the letters-and-digits spelling
+        ("Abies alba var. B12", Rank::Variety, "B12"),
+        (
+            "Erronea caurica ssp. 1-CPM-2005",
+            Rank::Subspecies,
+            "1-CPM-2005",
+        ),
+    ] {
+        let pn = match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => pn,
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        };
+        assert_eq!(pn.rank, rank, "rank for {input:?}");
+        assert_eq!(pn.phrase.as_deref(), Some(phrase), "phrase for {input:?}");
+        assert_eq!(pn.type_, NameType::Informal, "type for {input:?}");
+        assert!(
+            pn.combination_authorship.authors.is_empty()
+                && pn.combination_authorship.year.is_none(),
+            "no authorship should be invented for {input:?}"
+        );
+    }
+    // A designation AND a real authorship coexist: the phrase takes only what AuthorshipSplit
+    // left in the name section.
+    let pn = match nameparser::parse("Abies alba subsp. 7 Mill.", None, None, None) {
+        ParseResult::Parsed(pn) => pn,
+        other => panic!("expected Parsed, got {other:?}"),
+    };
+    assert_eq!(pn.phrase.as_deref(), Some("7"));
+    assert_eq!(pn.combination_authorship.authors, vec!["Mill.".to_string()]);
+}
+
+/// The designation capture must not steal a real epithet. `var. 4-lineata` is a numeral-prefixed
+/// epithet that `has_infraspecific_epithet_after` does not recognise (it starts with a digit), but
+/// the ordinary epithet path does — found by the 6.4M-name COL corpus diff. A bare trailing marker
+/// with nothing after it, and a marker followed by an author, are both untouched too.
+#[test]
+fn the_designation_capture_leaves_epithets_and_authors_alone() {
+    assert_name("Benthogone rosea var. 4-lineata R. Perrier, 1896")
+        .infra_species("Benthogone", "rosea", Rank::Variety, "4-lineata")
+        .comb_authors(Some("1896"), &["R.Perrier"])
+        .code(NomCode::Zoological)
+        .type_(NameType::Informal)
+        .nothing_else();
+    for (input, author) in [
+        ("Abies alba var.", None),
+        ("Abies alba var. Mill.", Some("Mill.")),
+    ] {
+        let pn = match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => pn,
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        };
+        assert_eq!(pn.phrase, None, "phrase for {input:?}");
+        assert_eq!(
+            pn.combination_authorship.authors,
+            author.map(|a| vec![a.to_string()]).unwrap_or_default(),
+            "authors for {input:?}"
+        );
+    }
+}
+
+/// An indeterminate INFRAGENERIC or INFRASPECIFIC name, numbered: the rank marker in the epithet
+/// slot is not an epithet, so `<marker> <code>` is the phrase and the rank comes from the marker.
+/// `Allium sect 1` used to render "Allium 1" (marker lost); the dotted `Allium sect. 1` and
+/// `Allium subg. 3` lost the whole tail and came back as a plain SCIENTIFIC "Allium".
+#[test]
+fn an_indeterminate_rank_marker_name_keeps_its_marker_and_its_number() {
+    // An infraspecific marker's rank IS applied; an infrageneric one's is not — at an
+    // infrageneric rank Assemble would read the lone remaining word as the infrageneric EPITHET,
+    // leaving "Allium sect 1" with no genus at all. The marker survives in the phrase regardless.
+    for (input, rank, phrase) in [
+        ("Allium var 3", Rank::Variety, "var 3"),
+        ("Trachelomonas strain T101", Rank::Strain, "strain T101"),
+    ] {
+        assert_informal(input)
+            .taxon(input.split(' ').next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(rank)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // The infrageneric spellings, dotted and not: the taxon stays an UNRANKED uninomial (see the
+    // rank note above), with the whole marker+number tail in the phrase, and the input
+    // round-trips.
+    for (input, phrase) in [
+        ("Allium sect 1", "sect 1"),
+        ("Allium sect. 1", "sect. 1"),
+        ("Allium subg. 3", "subg. 3"),
+    ] {
+        assert_informal(input)
+            .taxon("Allium")
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+}
+
+/// The one digit-leading shape that is NOT stashed: a bare `1xxx`/`2xxx` is a publication year,
+/// and keeping it there preserves the pre-#16 reading (Java's `DIGITS_ONLY` guard's stated intent,
+/// narrowed to the only shape that can actually be a year).
+#[test]
+fn a_bare_trailing_year_on_a_binomial_is_still_a_year() {
+    for (input, year) in [
+        ("Prunus domestica 1888", "1888"),
+        ("Xanthomonas eucalypti 1974", "1974"),
+    ] {
+        let pn = match nameparser::parse(input, None, None, None) {
+            ParseResult::Parsed(pn) => pn,
+            other => panic!("expected `{input}` to be Parsed, got {other:?}"),
+        };
+        assert_eq!(pn.phrase, None, "phrase for {input:?}");
+        assert_eq!(
+            pn.combination_authorship.year.as_deref(),
+            Some(year),
+            "year for {input:?}"
+        );
+    }
+}
+
+/// A numeral-prefixed Latin epithet (`7-maculatus`, `11-punctata`) is a real epithet the tokenizer
+/// glues into one word — it must not be mistaken for a strain code.
+#[test]
+fn a_numeral_prefixed_epithet_is_not_a_strain_code() {
+    assert_name("Episyron rufipes 7-maculatus")
+        .infra_species(
+            "Episyron",
+            "rufipes",
+            Rank::InfraspecificName,
+            "7-maculatus",
+        )
+        .nothing_else();
+    assert_name("Coccinella 2-pustulata")
+        .species("Coccinella", "2-pustulata")
+        .nothing_else();
+}
+
+/// An indeterminate `Genus species <n>` keeps its marker in the phrase — the strain-code path must
+/// not reach in and strip the number on its own, which would render "Allium 1".
+#[test]
+fn an_indeterminate_species_marker_keeps_its_marker_in_the_phrase() {
+    for (input, taxon, phrase) in [
+        ("Allium species 1", "Allium", "species 1"),
+        ("Allium spec 1", "Allium", "spec 1"),
+        // the uppercase code path gains the marker back too: this was "NIWAV423C" alone.
+        (
+            "Abyssoninoe species NIWAV423C",
+            "Abyssoninoe",
+            "species NIWAV423C",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+    }
+}
+
 /// A page reference is the tail of a PUBLICATION citation, so it must follow a year. Without one,
 /// a `:<digits>` tail is an identifier — `irmng:1017387` was filed as page 1017387.
 #[test]

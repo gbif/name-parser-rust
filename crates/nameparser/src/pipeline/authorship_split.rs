@@ -281,6 +281,46 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     {
                         i += 1;
                         have_epithet = true;
+                    } else if have_epithet && i < n && tokens[i].kind == TokenKind::Number {
+                        // gbif/name-parser-rust#16: a NUMBERED indeterminate infraspecific —
+                        // "Abies alba var. 3", "Abies alba subsp. 7". The number is the
+                        // designation, not authorship; keep it in the name section so
+                        // NameTokens can make it the phrase. Exactly the rule the species-level
+                        // indet markers above already apply ("A number immediately after an
+                        // indet marker is the informal phrase, not authorship") — it was simply
+                        // never extended to the infraspecific markers, so the designation
+                        // reached the authorship parser and was dropped (a 3-4 digit one became
+                        // a bogus year), leaving "Abies alba var." to collide with every other
+                        // numbered variety of the species.
+                        //
+                        // `have_epithet` confines this to a marker that really is trailing a
+                        // BINOMIAL. Without a species epithet ("Aquificales str. OlB-6",
+                        // "planctomycete str. 394") NameTokens takes its "rank marker before any
+                        // lower epithet" branch and makes the marker itself the epithet, so
+                        // nothing downstream would consume the designation and it would be
+                        // dropped outright — worse than the bogus author it gets today. Those
+                        // monomials are left exactly as they were; the 3-token spelling of the
+                        // same thing is already handled earlier by
+                        // `StripAndStash::stash_trailing_rank_marker_code`.
+                        i += 1;
+                        // The tokenizer splits a digit+letter designation ("3a" -> NUMBER + WORD);
+                        // a lowercase tail at the very end belongs to the designation, not to an
+                        // author (an author would be capitalised).
+                        if i + 1 == n
+                            && tokens[i].kind == TokenKind::Word
+                            && starts_lower(&tokens[i])
+                        {
+                            i += 1;
+                        }
+                    } else if have_epithet
+                        && i + 1 == n
+                        && tokens[i].kind == TokenKind::Word
+                        && is_strain_code(&tokens[i].text)
+                    {
+                        // …and the letters-and-digits spelling of the same thing, "var. B12".
+                        // `is_strain_code` requires a digit, so a real trailing author
+                        // ("Abies alba var. Mill") can never match.
+                        i += 1;
                     }
                     continue;
                 }
@@ -475,6 +515,16 @@ fn starts_digit_epithet(t: &Token) -> bool {
     t.kind == TokenKind::Word
         && t.text.chars().next().is_some_and(|c| c.is_ascii_digit())
         && t.text.chars().any(|c| c.is_alphabetic())
+}
+
+/// Twin of `NameTokens::is_strain_code` (`name_tokens.rs`), kept as this module's own copy for
+/// the same reason its `starts_upper`/`skip_paren_author_block` twins are — see the module doc
+/// comment. A designation carrying BOTH a letter and a digit ("B12", "JGP0404"); the digit is what
+/// separates it from a trailing author surname.
+fn is_strain_code(s: &str) -> bool {
+    s.chars().count() >= 3
+        && s.chars().any(|c| c.is_alphabetic())
+        && s.chars().any(|c| c.is_ascii_digit())
 }
 
 /// Java `String.equalsIgnoreCase(String)` used on two runtime-derived strings (the genus

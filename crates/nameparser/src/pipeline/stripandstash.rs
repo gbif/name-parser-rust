@@ -59,6 +59,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_letter_subdivision_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
+    s = stash_trailing_rank_marker_code(ctx, s);
     s = stash_trailing_strain_code(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
     s = strip_imprint_years(ctx, s);
@@ -628,36 +629,159 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 /// `^Genus species CODE$` and the code must start uppercase and contain a digit, so widening it
 /// cannot reach a sanctioning author (`Agaricus campestris L. : Fr.` has dots and spaces the class
 /// does not admit).
+///
+/// Divergence (gbif/name-parser-rust#16): a THIRD alternative admits a code that leads
+/// with a digit — `Prunus domestica 6`, `Escherichia coli 18-41`, `Bacteroidetes bacterium 20/6`.
+/// Java's two alternatives both require a leading letter, so a digit-leading code fell through
+/// this step into the authorship parser, which disposed of it in three silent ways: a 1-2 digit
+/// number hit `AuthorshipParser.parseAuthors`' final "unknown token" skip, a 3-4 digit one became
+/// a bogus authorship YEAR, and `5a` split into a dropped `5` plus a fabricated author `a`. In
+/// every case `state` stayed COMPLETE and `type` SCIENTIFIC with an empty `unparsed`, so the
+/// truncated result was byte-identical to a DIFFERENT real taxon and collapsed onto it in any
+/// names index — which is how ChecklistBank's ArchisBotany import ended up with a usage parented
+/// under its own grandchild (CatalogueOfLife/checklistbank#1725). Routing these through the same
+/// phrase/INFORMAL path the uppercase codes already take keeps the code visible in the canonical
+/// rendering, so the collision cannot form. The code itself may not end on punctuation, but a
+/// single full stop closing the whole string is tolerated (`Prunus domestica 6.`) and left OUT of
+/// the captured phrase — it is sentence punctuation, not part of the code, and without the `\.?`
+/// that one character was enough to put the name back on the silent-truncation path. The guards
+/// below exempt a bare year and a numeral-prefixed epithet.
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^([\p{Lu}][\p{Ll}]+\s+[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:]*\d[\p{L}\d_\-:]*)\s*$",
+        r"^([\p{Lu}][\p{Ll}]+\s+[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:]*\d[\p{L}\d_\-:]*|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$",
     )
     .unwrap()
 });
 
-/// Java DIGITS_ONLY (StripAndStash.java:357): `\d+`, no flags — UNLIKE its sibling
-/// `TRAILING_STRAIN_CODE` above, no `Pattern.UNICODE_CHARACTER_CLASS` here -> `\d`
-/// ASCII-scoped. Called via `.matches()` -> `^…$` added.
-static DIGITS_ONLY: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?-u:\d+)$").unwrap());
+/// Replaces Java DIGITS_ONLY (StripAndStash.java:357) as the guard on
+/// [`stash_trailing_strain_code`]. Java's `\d+` was provably unreachable there (both of its code
+/// alternatives start with a letter, so `code` could never be digits-only) and was ported verbatim
+/// anyway as a dead guard; the digit-leading alternative added for #16 makes it reachable, and
+/// digits-only is now exactly the shape we DO want to stash (`Acinetobacter baumannii 1237893`).
+/// What survives is that guard's stated intent — "never consume a single trailing year" — narrowed
+/// to the only shape that can actually BE one: a bare 4-digit `1xxx`/`2xxx`, matching the
+/// year test `AuthorshipSplit.hasYearToken` already uses. So `Prunus domestica 1888` keeps
+/// `combinationAuthorship.year=1888` exactly as before, while `Actinomycetota bacterium 4327`
+/// (not year-shaped) becomes the strain phrase it is.
+static TRAILING_YEAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?-u:[12]\d{3})$").unwrap());
 
 /// Java `StripAndStash.stashTrailingStrainCode` (StripAndStash.java:750-768). A trailing
 /// strain-code suffix on a binomial ("Candida albicans RNA_CTR0-3", "Armillaria ostoyae
-/// RNA1") becomes `ctx.name.phrase` (type=INFORMAL), reducing the working string to "Genus
-/// species" — spot-checked against the Java CLI oracle. The `DIGITS_ONLY` guard (never
-/// consume a single trailing year) is, on inspection, unreachable via this regex: the
-/// second alternative always starts with a captured `\p{Lu}` letter, so `code` can never be
-/// digits-only — ported verbatim anyway (a faithful port preserves apparently-dead Java
-/// guards, as already noted for `Preflight`'s `PR2_LIKE`).
+/// RNA1", and since #16 "Prunus domestica 6" / "Escherichia coli 18-41") becomes
+/// `ctx.name.phrase` (type=INFORMAL), reducing the working string to "Genus species" —
+/// spot-checked against the Java CLI oracle. See [`TRAILING_YEAR`] for what became of
+/// Java's `DIGITS_ONLY` guard.
 fn stash_trailing_strain_code(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = TRAILING_STRAIN_CODE.captures(&s) {
+        let head = caps.get(1).unwrap().as_str();
         let code = caps.get(2).unwrap().as_str();
-        if !DIGITS_ONLY.is_match(code) {
+        if !TRAILING_YEAR.is_match(code)
+            && !token::is_numeral_epithet(code)
+            && !is_indet_species_marker(second_word(head))
+        {
             ctx.name.phrase = Some(code.to_string());
             ctx.name.type_ = NameType::Informal;
-            return caps.get(1).unwrap().as_str().to_string();
+            return head.to_string();
         }
     }
     s
+}
+
+/// The second whitespace-separated word of a `TRAILING_STRAIN_CODE` head — i.e. the token
+/// sitting in the species-epithet slot of the matched "Genus species CODE".
+fn second_word(head: &str) -> &str {
+    head.split_whitespace().nth(1).unwrap_or("")
+}
+
+/// True when the species-epithet slot is really the INDETERMINATE SPECIES MARKER — the bare
+/// undotted `sp`/`spec`/`species` that `NameTokens` recognises (`name_tokens.rs:384-386`).
+/// "Allium species 1" is an indeterminate Allium numbered 1, not a strain "1" of a species
+/// called "species", and NameTokens already builds exactly the right thing for it —
+/// `rank=SPECIES`, `phrase="species 1"`, marker kept verbatim (`name_tokens.rs:442`).
+/// Without this guard the widened code alternative reaches it first and strips the "1" on
+/// its own, dropping the marker and rendering "Allium 1" — caught by the `manuscript_names`
+/// golden test. The guard covers all three code alternatives, which also repairs the same
+/// latent truncation on the uppercase path ("Allium species AB1" likewise lost its marker,
+/// and 55 CLB names of that shape gain theirs back).
+///
+/// Deliberately NOT extended to the other rank markers (`RankMarkers`' infraspecific /
+/// infrageneric maps). `strain`/`str`/`st` sit in the infraspecific map, but nothing
+/// downstream handles the bare undotted "Genus strain CODE" — guarding it merely put the
+/// code back on the silent-truncation path this change exists to close ("Trachelomonas
+/// strain T101" regressed to `SCIENTIFIC specificEpithet="strain"` with T101 gone, found in
+/// the CLB corpus diff). Only the markers NameTokens can actually finish belong here.
+fn is_indet_species_marker(w: &str) -> bool {
+    w.eq_ignore_ascii_case("sp")
+        || w.eq_ignore_ascii_case("spec")
+        || w.eq_ignore_ascii_case("species")
+}
+
+/// gbif/name-parser-rust#16 (no Java counterpart): an INDETERMINATE INFRAGENERIC OR
+/// INFRASPECIFIC name, numbered — `Allium sect 1`, `Allium sect. 1`, `Trachelomonas strain T101`.
+/// A rank marker sitting in the epithet slot of "Genus <word> CODE" is not an epithet, so the whole
+/// `<marker> CODE` tail is the designation: it becomes the verbatim `phrase` (type INFORMAL) and
+/// the working string reduces to the bare genus, so `taxon + " " + phrase` round-trips the input.
+///
+/// Every one of these was losing something. `Allium sect 1` dropped the marker and rendered
+/// "Allium 1"; the commoner DOTTED spellings `Allium sect. 1` and `Allium subg. 3` dropped the
+/// whole tail and came back as a plain SCIENTIFIC "Allium" — the same silent truncation as #16's
+/// headline case, just one token longer. `Trachelomonas strain T101` did keep its code, but only
+/// by reading "strain" as the species epithet.
+///
+/// The genus-only reduction is what distinguishes this from [`stash_trailing_strain_code`], which
+/// keeps a two-word `Genus species` head; the marker must leave the working string, or NameTokens
+/// reads it as an epithet. `sp`/`spec`/`species`/`indet` are excluded — NameTokens owns those
+/// (see [`is_indet_species_marker`]) and produces a better-ranked result for them.
+///
+/// Neither the [`TRAILING_YEAR`] nor the [`TRAILING_NUMERAL_EPITHET`] guard applies here: both
+/// exist to protect readings that need an authorship or an epithet slot, and a rank marker in that
+/// slot rules out both — there is no author for `Allium sect 1888` to have a publication year, and
+/// no epithet position left for a numeral-prefixed word to occupy.
+static TRAILING_RANK_MARKER_CODE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^([\p{Lu}][\p{Ll}]+)\s+([\p{Ll}]+)\.?\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:]*\d[\p{L}\d_\-:]*|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$",
+    )
+    .unwrap()
+});
+
+/// See [`TRAILING_RANK_MARKER_CODE`].
+fn stash_trailing_rank_marker_code(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = TRAILING_RANK_MARKER_CODE.captures(&s) else {
+        return s;
+    };
+    let marker = caps.get(2).unwrap();
+    if is_indet_species_marker(marker.as_str()) || !is_rank_marker_word(marker.as_str()) {
+        return s;
+    }
+    // The phrase is the verbatim source text from the marker to the end of the code, so the
+    // original spelling and spacing survive ("sect. 1", "strain T101") and the input round-trips.
+    let code_end = caps.get(3).unwrap().end();
+    ctx.name.phrase = Some(s[marker.start()..code_end].to_string());
+    ctx.name.type_ = NameType::Informal;
+    // Only an INFRASPECIFIC marker's rank is applied. An infrageneric one must NOT be: at an
+    // infrageneric rank Assemble reads the single remaining name word as the infrageneric
+    // EPITHET, so "Allium sect 1" came back as `infragenericEpithet="Allium"` with no genus at
+    // all, and rendered "sect. Allium sect 1". Allium is the GENUS here — the section is the
+    // unnamed thing, and no field can hold an unnamed one. The marker stays verbatim in the
+    // phrase either way, so leaving the rank alone costs nothing and keeps the name parts honest.
+    if let Some(rank) = super::rank_markers::match_infraspecific(marker.as_str()) {
+        ctx.name.rank = rank;
+    }
+    caps.get(1).unwrap().as_str().to_string()
+}
+
+/// A bare undotted infrageneric / infraspecific rank marker (`sect`, `subg`, `var`, `strain`, …).
+/// The head's marker slot is matched as `[\p{Ll}]+`, so only these undotted forms reach here.
+fn is_rank_marker_word(w: &str) -> bool {
+    rank_of_marker(w).is_some()
+}
+
+/// Does this word name a rank at all — infrageneric or infraspecific? Only membership matters
+/// here; see [`stash_trailing_rank_marker_code`] for why only the infraspecific half of the answer
+/// is turned into an actual `rank`.
+fn rank_of_marker(w: &str) -> Option<Rank> {
+    super::rank_markers::match_infrageneric(w)
+        .or_else(|| super::rank_markers::match_infraspecific(w))
 }
 
 /// 5.0.0 (no Java counterpart): a curated culture-collection accession TRAILING a binomial
@@ -3670,6 +3794,161 @@ mod tests {
         let out = stash_trailing_strain_code(&mut c, "Abies alba".to_string());
         assert_eq!(out, "Abies alba");
         assert_eq!(c.name.phrase, None);
+    }
+
+    // gbif/name-parser-rust#16 — the digit-leading code alternative and its three guards.
+
+    #[test]
+    fn trailing_digit_leading_code_becomes_a_phrase() {
+        for (input, head, code) in [
+            ("Prunus domestica 6", "Prunus domestica", "6"),
+            ("Prunus domestica 5a", "Prunus domestica", "5a"),
+            ("Prunus domestica 6/12", "Prunus domestica", "6/12"),
+            ("Abies alba 12", "Abies alba", "12"),
+            ("Escherichia coli 18-41", "Escherichia coli", "18-41"),
+            (
+                "Acinetobacter baumannii 1237893",
+                "Acinetobacter baumannii",
+                "1237893",
+            ),
+            (
+                "Actinomycetota bacterium 4327",
+                "Actinomycetota bacterium",
+                "4327",
+            ),
+            (
+                "Lachnospiraceae bacterium 47-T17",
+                "Lachnospiraceae bacterium",
+                "47-T17",
+            ),
+            ("Trachelomonas strain T101", "Trachelomonas strain", "T101"),
+        ] {
+            let mut c = ctx("x");
+            let out = stash_trailing_strain_code(&mut c, input.to_string());
+            assert_eq!(out, head, "head for {input:?}");
+            assert_eq!(
+                c.name.phrase,
+                Some(code.to_string()),
+                "phrase for {input:?}"
+            );
+            assert_eq!(c.name.type_, NameType::Informal, "type for {input:?}");
+        }
+    }
+
+    #[test]
+    fn trailing_bare_year_is_left_for_the_authorship_parser() {
+        // TRAILING_YEAR: a bare 1xxx/2xxx keeps its pre-#16 reading as a publication year.
+        for input in ["Prunus domestica 1888", "Xanthomonas eucalypti 1974"] {
+            let mut c = ctx("x");
+            let out = stash_trailing_strain_code(&mut c, input.to_string());
+            assert_eq!(out, input);
+            assert_eq!(c.name.phrase, None);
+        }
+    }
+
+    #[test]
+    fn trailing_numeral_epithet_is_not_a_strain_code() {
+        // TRAILING_NUMERAL_EPITHET: "7-maculatus" is an epithet the tokenizer glues into a
+        // single WORD and NameTokens accepts; stashing it would lose the infraspecific name.
+        let mut c = ctx("x");
+        let out = stash_trailing_strain_code(&mut c, "Episyron rufipes 7-maculatus".to_string());
+        assert_eq!(out, "Episyron rufipes 7-maculatus");
+        assert_eq!(c.name.phrase, None);
+    }
+
+    #[test]
+    fn indet_species_marker_head_is_left_to_name_tokens() {
+        // is_indet_species_marker: "Allium species 1" is an indeterminate Allium, and
+        // NameTokens keeps the marker in the phrase ("species 1"). Stripping the "1" here
+        // would drop the marker and render "Allium 1".
+        for input in ["Allium species 1", "Anopheles sp TIP1", "Allium spec 1"] {
+            let mut c = ctx("x");
+            let out = stash_trailing_strain_code(&mut c, input.to_string());
+            assert_eq!(out, input, "for {input:?}");
+            assert_eq!(c.name.phrase, None, "for {input:?}");
+        }
+    }
+
+    #[test]
+    fn a_full_stop_closing_the_string_is_not_part_of_the_code() {
+        // The `\.?` tail: one trailing full stop is sentence punctuation, consumed but kept out
+        // of the phrase. Without it `Prunus domestica 6.` stayed on the truncation path.
+        for (input, head, code) in [
+            ("Prunus domestica 6.", "Prunus domestica", "6"),
+            ("Bacteroides caccae CAG21.", "Bacteroides caccae", "CAG21"),
+        ] {
+            let mut c = ctx("x");
+            let out = stash_trailing_strain_code(&mut c, input.to_string());
+            assert_eq!(out, head, "head for {input:?}");
+            assert_eq!(
+                c.name.phrase,
+                Some(code.to_string()),
+                "phrase for {input:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn a_dotted_bare_year_is_still_left_for_the_authorship_parser() {
+        let mut c = ctx("x");
+        let out = stash_trailing_strain_code(&mut c, "Prunus domestica 1888.".to_string());
+        assert_eq!(out, "Prunus domestica 1888.");
+        assert_eq!(c.name.phrase, None);
+    }
+
+    // ---- gbif/name-parser-rust#16: indeterminate "Genus <rank marker> CODE" ----
+
+    #[test]
+    fn a_rank_marker_in_the_epithet_slot_takes_the_whole_tail_as_the_phrase() {
+        for (input, genus, phrase) in [
+            ("Allium sect 1", "Allium", "sect 1"),
+            ("Allium sect. 1", "Allium", "sect. 1"),
+            ("Allium subg. 3", "Allium", "subg. 3"),
+            ("Allium var 3", "Allium", "var 3"),
+            ("Trachelomonas strain T101", "Trachelomonas", "strain T101"),
+        ] {
+            let mut c = ctx("x");
+            let out = stash_trailing_rank_marker_code(&mut c, input.to_string());
+            assert_eq!(out, genus, "head for {input:?}");
+            assert_eq!(
+                c.name.phrase,
+                Some(phrase.to_string()),
+                "phrase for {input:?}"
+            );
+            assert_eq!(c.name.type_, NameType::Informal, "type for {input:?}");
+        }
+    }
+
+    #[test]
+    fn the_rank_marker_step_sets_only_an_infraspecific_rank() {
+        // An infraspecific marker's rank is applied…
+        let mut c = ctx("x");
+        stash_trailing_rank_marker_code(&mut c, "Allium var. 3".to_string());
+        assert_eq!(c.name.rank, Rank::Variety);
+        // …an infrageneric one's is not: at an infrageneric rank Assemble reads the lone
+        // remaining word as the infrageneric EPITHET, leaving "Allium sect 1" with no genus.
+        let mut c = ctx("x");
+        let out = stash_trailing_rank_marker_code(&mut c, "Allium sect. 1".to_string());
+        assert_eq!(out, "Allium");
+        assert_eq!(c.name.phrase, Some("sect. 1".to_string()));
+        assert_eq!(c.name.rank, Rank::Unranked);
+    }
+
+    #[test]
+    fn the_rank_marker_step_leaves_real_epithets_and_indet_markers_alone() {
+        for input in [
+            // a real binomial + strain code — stash_trailing_strain_code's job, not this one
+            "Bacteroides caccae CAG21",
+            "Prunus domestica 6",
+            // sp/spec/species belong to NameTokens
+            "Allium species 1",
+            "Allium sp. 1",
+        ] {
+            let mut c = ctx("x");
+            let out = stash_trailing_rank_marker_code(&mut c, input.to_string());
+            assert_eq!(out, input, "for {input:?}");
+            assert_eq!(c.name.phrase, None, "for {input:?}");
+        }
     }
 
     // ---- Step 10: stripImprintYears ----

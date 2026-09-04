@@ -166,6 +166,39 @@ fn digit_epithets_leading_numeral() {
         .nothing_else();
 }
 
+/// gbif/name-parser-rust#16: the UNHYPHENATED spelling of the same Fabricius-era numeral epithet.
+/// Java only glued the hyphenated form, so the digit was dropped and the epithet promoted to an
+/// author — `Coccinella 6maculata Fabricius, 1781` came back as the uninomial `Coccinella` by
+/// "maculata Fabricius", a canonical string identical to a DIFFERENT real taxon. 32 names in the
+/// 6.4M-name COL corpus are of this shape.
+#[test]
+fn digit_epithets_leading_numeral_unhyphenated() {
+    assert_name("Coccinella 6maculata Fabricius, 1781")
+        .species("Coccinella", "6maculata")
+        .comb_authors(Some("1781"), &["Fabricius"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Camponotus sericeus 4maculatus")
+        .infra_species(
+            "Camponotus",
+            "sericeus",
+            Rank::InfraspecificName,
+            "4maculatus",
+        )
+        .nothing_else();
+    assert_name("Latrodectus 13decimguttatus Walckenaer, 1805")
+        .species("Latrodectus", "13decimguttatus")
+        .comb_authors(Some("1805"), &["Walckenaer"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // A parenthesised author now lands in the basionym slot, as it should.
+    assert_name("Chalcis 2spinosa (Fabricius, 1804)")
+        .species("Chalcis", "2spinosa")
+        .bas_authors(Some("1804"), &["Fabricius"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
 #[test]
 fn square_genera() {
     assert_name("[Acontia] chia Holland, 1894")

@@ -3459,7 +3459,7 @@ Staphylococcus phage 69	WORD:StaphylococcusWORD:phageNUMBER:69
 Staphylococcus phage 71	WORD:StaphylococcusWORD:phageNUMBER:71
 Staphylococcus phage 77	WORD:StaphylococcusWORD:phageNUMBER:77
 Staphylococcus phage 80	WORD:StaphylococcusWORD:phageNUMBER:80
-Staphylococcus phage 80alpha	WORD:StaphylococcusWORD:phageNUMBER:80WORD:alpha
+Staphylococcus phage 80alpha	WORD:StaphylococcusWORD:phageWORD:80alpha
 Staphylococcus phage 85	WORD:StaphylococcusWORD:phageNUMBER:85
 Staphylococcus phage 88	WORD:StaphylococcusWORD:phageNUMBER:88
 Staphylococcus phage 92	WORD:StaphylococcusWORD:phageNUMBER:92
@@ -4390,7 +4390,7 @@ Acanthoderes 4-gibbus RILEY Charles Valentine, 1880	WORD:AcanthoderesWORD:4-gib
 Acrosoma 12-spinosa Keyserling, 1892	WORD:AcrosomaWORD:12-spinosaWORD:KeyserlingCOMMA:,NUMBER:1892
 Canuleius 24-spinosus Redtenbacher, 1906	WORD:CanuleiusWORD:24-spinosusWORD:RedtenbacherCOMMA:,NUMBER:1906
 Canuleius 777-spinosus Redtenbacher, 1906	WORD:CanuleiusWORD:777-spinosusWORD:RedtenbacherCOMMA:,NUMBER:1906
-Rhynchophorus 13punctatus Herbst, J.F.W., 1795	WORD:RhynchophorusNUMBER:13WORD:punctatusWORD:HerbstCOMMA:,WORD:JDOT:.WORD:FDOT:.WORD:WDOT:.COMMA:,NUMBER:1795
+Rhynchophorus 13punctatus Herbst, J.F.W., 1795	WORD:RhynchophorusWORD:13punctatusWORD:HerbstCOMMA:,WORD:JDOT:.WORD:FDOT:.WORD:WDOT:.COMMA:,NUMBER:1795
 Rhynchophorus 13.punctatus Herbst, J.F.W., 1795	WORD:RhynchophorusNUMBER:13DOT:.WORD:punctatusWORD:HerbstCOMMA:,WORD:JDOT:.WORD:FDOT:.WORD:WDOT:.COMMA:,NUMBER:1795
 Seleuca chûjôi Voss, 1957	WORD:SeleucaWORD:chûjôiWORD:VossCOMMA:,NUMBER:1957
 Pleurotus ëous (Berk.) Sacc. 1887	WORD:PleurotusWORD:ëousOPEN_PAREN:(WORD:BerkDOT:.CLOSE_PAREN:)WORD:SaccDOT:.NUMBER:1887
@@ -4435,7 +4435,7 @@ Pardösa	WORD:Pardösa
 Rühlella	WORD:Rühlella
 Solygia ? distanti	WORD:SolygiaOTHER:?WORD:distanti
 Buteo borealis ? ventralis	WORD:ButeoWORD:borealisOTHER:?WORD:ventralis
-Euxoa nr. idahoensis sp. 1clay	WORD:EuxoaWORD:nrDOT:.WORD:idahoensisWORD:spDOT:.NUMBER:1WORD:clay
+Euxoa nr. idahoensis sp. 1clay	WORD:EuxoaWORD:nrDOT:.WORD:idahoensisWORD:spDOT:.WORD:1clay
 Acarinina aff. pentacamerata	WORD:AcarininaWORD:affDOT:.WORD:pentacamerata
 Acarinina aff pentacamerata	WORD:AcarininaWORD:affWORD:pentacamerata
 Sphingomonas sp. 37	WORD:SphingomonasWORD:spDOT:.NUMBER:37
@@ -5794,7 +5794,7 @@ Acanthoderes 4-gibbus RILEY Charles Valentine, 1880	WORD:AcanthoderesWORD:4-gib
 Acrosoma 12-spinosa Keyserling, 1892	WORD:AcrosomaWORD:12-spinosaWORD:KeyserlingCOMMA:,NUMBER:1892
 Canuleius 24-spinosus Redtenbacher, 1906	WORD:CanuleiusWORD:24-spinosusWORD:RedtenbacherCOMMA:,NUMBER:1906
 Canuleius 777-spinosus Redtenbacher, 1906	WORD:CanuleiusWORD:777-spinosusWORD:RedtenbacherCOMMA:,NUMBER:1906
-Rhynchophorus 13punctatus Herbst, J.F.W., 1795	WORD:RhynchophorusNUMBER:13WORD:punctatusWORD:HerbstCOMMA:,WORD:JDOT:.WORD:FDOT:.WORD:WDOT:.COMMA:,NUMBER:1795
+Rhynchophorus 13punctatus Herbst, J.F.W., 1795	WORD:RhynchophorusWORD:13punctatusWORD:HerbstCOMMA:,WORD:JDOT:.WORD:FDOT:.WORD:WDOT:.COMMA:,NUMBER:1795
 Rhynchophorus 13.punctatus Herbst, J.F.W., 1795	WORD:RhynchophorusNUMBER:13DOT:.WORD:punctatusWORD:HerbstCOMMA:,WORD:JDOT:.WORD:FDOT:.WORD:WDOT:.COMMA:,NUMBER:1795
 Seleuca chûjôi Voss, 1957	WORD:SeleucaWORD:chûjôiWORD:VossCOMMA:,NUMBER:1957
 Pleurotus ëous (Berk.) Sacc. 1887	WORD:PleurotusWORD:ëousOPEN_PAREN:(WORD:BerkDOT:.CLOSE_PAREN:)WORD:SaccDOT:.NUMBER:1887

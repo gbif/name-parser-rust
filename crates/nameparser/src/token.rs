@@ -1,5 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::sync::LazyLock;
+
+use regex::Regex;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TokenKind {
     Word,
@@ -100,6 +104,31 @@ fn is_letter(c: char) -> bool {
 /// Non-ASCII decimal digits (rare in names) will show up as Task 3 mismatches for triage.
 fn is_digit(c: char) -> bool {
     c.is_ascii_digit()
+}
+
+/// A numeral-prefixed LATIN EPITHET — `11-punctata`, `7-maculatus`, `4maculatus`, `2-pustulata`.
+/// One or two digits with no leading zero, an optional hyphen, then a run of at least three
+/// lowercase letters to the end.
+///
+/// The single authority for that shape, because three places must agree on it or they undo each
+/// other: [`tokenize`]'s two leading-numeral rules (which produce these WORD tokens),
+/// `StripAndStash::stash_trailing_strain_code` (which must NOT stash one as a strain code) and
+/// `NameTokens`' numbered-infraspecific phrase capture (which must NOT stash one as a phrase —
+/// `Benthogone rosea var. 4-lineata R. Perrier, 1896` has a real epithet there, and the 6.4M COL
+/// corpus found it). Real strain codes never take this shape: they keep going in digits
+/// (`18-41`), carry an uppercase segment (`47-T17`, `1-CPM-2005`) or have at most one trailing
+/// letter (`5a`).
+pub(crate) fn is_numeral_epithet(s: &str) -> bool {
+    static NUMERAL_EPITHET: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r"^(?-u:[1-9]\d?)-?\p{Ll}{3,}$").unwrap());
+    NUMERAL_EPITHET.is_match(s)
+}
+
+/// A lowercase letter, for the unhyphenated leading-numeral epithet rule in [`tokenize`].
+/// `is_letter` + `is_lowercase` rather than `is_ascii_lowercase`, so a Latinised epithet
+/// with a non-ASCII letter is glued on the same terms as an ASCII one.
+fn is_lowercase_letter(c: char) -> bool {
+    is_letter(c) && c.is_lowercase()
 }
 
 fn is_all_upper(s: &str) -> bool {
@@ -249,6 +278,42 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 });
                 continue;
             }
+            // gbif/name-parser-rust#16: the UNHYPHENATED spelling of the same leading-numeral
+            // epithet — "4maculatus" for "quadrimaculatus", "11punctata". Java (and this port
+            // until now) only glued the hyphenated form, so `Camponotus sericeus 4maculatus`
+            // tokenised as Number(4) + Word(maculatus) and the authorship parser dropped the 4
+            // and promoted "maculatus" to an author, leaving a canonical string identical to the
+            // real `Camponotus sericeus`.
+            //
+            // Deliberately much narrower than the hyphenated rule above, because without the
+            // hyphen the shape collides with things that must STAY split: at most two digits (a
+            // numeral epithet is `2`..`24`, never a year — so "1976var" keeps its Number), no
+            // leading zero (a numeral epithet never has one, but the OCR of a capital O does —
+            // "0ersted" for Ørsted, "0lsson" for Olsson, both in the golden corpus, where gluing
+            // would swallow the AUTHOR into the name), then at least three LOWERCASE letters (so
+            // the year disambiguator "1935h" and the strain codes "5a" / "16S" / "2016Iso3" are
+            // all untouched), and the word must end there (so "12abc4" stays a Number too).
+            let digits = k - num_start;
+            let leading_zero = cs[num_start].1 == '0';
+            if digits <= 2 && !leading_zero && k < n && is_lowercase_letter(cs[k].1) {
+                let mut k2 = k;
+                while k2 < n && is_lowercase_letter(cs[k2].1) {
+                    k2 += 1;
+                }
+                let word_ends = k2 == n || !(is_letter(cs[k2].1) || is_digit(cs[k2].1));
+                if k2 - k >= 3 && word_ends {
+                    let s = byte_at(num_start);
+                    let e = byte_at(k2);
+                    out.push(Token {
+                        kind: TokenKind::Word,
+                        text: input[s..e].to_string(),
+                        start: s,
+                        end: e,
+                    });
+                    k = k2;
+                    continue;
+                }
+            }
             let s = byte_at(num_start);
             let e = byte_at(k);
             out.push(Token {
@@ -338,6 +403,50 @@ mod tests {
         use TokenKind::*;
         assert_eq!(kinds("11-punctata"), vec![(Word, "11-punctata".into())]);
         assert_eq!(kinds("2-pustulata"), vec![(Word, "2-pustulata".into())]);
+    }
+
+    #[test]
+    fn unhyphenated_leading_numeral_epithet_is_one_word() {
+        // gbif/name-parser-rust#16
+        use TokenKind::*;
+        assert_eq!(kinds("4maculatus"), vec![(Word, "4maculatus".into())]);
+        assert_eq!(kinds("11punctata"), vec![(Word, "11punctata".into())]);
+        assert_eq!(kinds("13punctatus"), vec![(Word, "13punctatus".into())]);
+    }
+
+    #[test]
+    fn the_unhyphenated_glue_leaves_every_near_miss_split() {
+        use TokenKind::*;
+        for (input, number, rest) in [
+            // >2 digits: a year with a word glued on, not a numeral epithet
+            ("1976var", "1976", "var"),
+            // a leading zero is the OCR of a capital O ("Ørsted", "Olsson"), and gluing it
+            // would swallow the author into the name
+            ("0ersted", "0", "ersted"),
+            ("0lsson", "0", "lsson"),
+        ] {
+            assert_eq!(
+                kinds(input),
+                vec![(Number, number.into()), (Word, rest.into())],
+                "for {input:?}"
+            );
+        }
+        // <3 letters: the year disambiguator "1935h" and short strain codes stay split
+        assert_eq!(
+            kinds("1935h"),
+            vec![(Number, "1935".into()), (Word, "h".into())]
+        );
+        assert_eq!(kinds("5a"), vec![(Number, "5".into()), (Word, "a".into())]);
+        // uppercase letters are not an epithet
+        assert_eq!(
+            kinds("16S"),
+            vec![(Number, "16".into()), (Word, "S".into())]
+        );
+        // the word must END at the letter run
+        assert_eq!(
+            kinds("12abc4"),
+            vec![(Number, "12".into()), (Word, "abc4".into())]
+        );
     }
 
     #[test]
