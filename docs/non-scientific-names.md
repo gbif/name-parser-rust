@@ -282,6 +282,120 @@ ATCC11775                                                                       
 
 ---
 
+## Bare strain codes trailing a binomial — ✅
+
+A strain code with no collection acronym in front of it, sitting on an otherwise determined
+`Genus species`, is captured as the `phrase` (type `INFORMAL`) rather than fed to the authorship
+parser. Java only recognised codes that START WITH A LETTER (`Bacteroides caccae CAG21`,
+`Candida albicans RNA_CTR0-3`); a DIGIT-LEADING code was silently disposed of instead
+(gbif/name-parser-rust#16):
+
+| input | Java / ≤ 0.2.0 | now |
+|---|---|---|
+| `Escherichia coli 18-41` | `Escherichia coli`, code dropped | phrase `18-41` |
+| `Prunus domestica 5a` | `Prunus domestica` + fabricated author `a` | phrase `5a` |
+| `Acinetobacter baumannii 6112` | `Acinetobacter baumannii` + fabricated year `6112` | phrase `6112` |
+| `Prunus domestica 6/12` | `Prunus domestica`, code dropped | phrase `6/12` |
+
+All three old outcomes reported `type=SCIENTIFIC`, `state=COMPLETE` and an empty `unparsed`, so the
+truncated result was byte-identical to a DIFFERENT real taxon and collapsed onto it in a names
+index — which is how a ChecklistBank import ended up placing a taxon under its own grandchild
+(CatalogueOfLife/checklistbank#1725). Keeping the code in the `phrase` keeps it in the canonical
+rendering, so the collision cannot form.
+
+A single full stop closing the string (`Prunus domestica 6.`) is sentence punctuation: it is
+tolerated and left out of the phrase. Three shapes are deliberately excluded, because something
+else already reads them correctly:
+
+- **a bare `1xxx`/`2xxx`** — `Prunus domestica 1888` is a publication year, unchanged;
+- **a numeral-prefixed Latin epithet** — see the next section;
+- **an indeterminate marker in the epithet slot** — `Allium species 1` keeps its marker in the
+  phrase (`species 1`), the same treatment `Genus sp. <n>` already gets.
+
+---
+
+## Indeterminate `Genus <rank marker> <code>` — ✅
+
+A rank marker in the epithet slot is not an epithet, so the whole `<marker> <code>` tail is the
+designation: it becomes the verbatim `phrase` (type `INFORMAL`), the rank comes from the marker,
+and the taxon reduces to the bare genus, so `taxon + " " + phrase` round-trips.
+
+| input | Java / ≤ 0.2.0 | now |
+|---|---|---|
+| `Allium sect 1` | `Allium 1` — marker lost | phrase `sect 1` |
+| `Allium sect. 1` | `Allium` — whole tail lost | phrase `sect. 1` |
+| `Allium subg. 3` | `Allium` — whole tail lost | phrase `subg. 3` |
+| `Trachelomonas strain T101` | phrase `T101`, but `specificEpithet="strain"` | `STRAIN`, phrase `strain T101` |
+
+Only an **infraspecific** marker's rank is applied. An infrageneric one's is not: at an
+infrageneric rank the assembler reads the single remaining word as the infrageneric *epithet*, so
+`Allium sect 1` came back as `infragenericEpithet="Allium"` with no genus at all and rendered
+`sect. Allium sect 1`. Allium is the genus there — the section is the unnamed thing, and no field
+can hold an unnamed one. The marker survives verbatim in the phrase either way.
+
+`sp` / `spec` / `species` / `indet` are excluded — those are handled earlier and better, keeping
+the marker in the phrase at `SPECIES` rank.
+
+The four-token form, where the species IS named, is handled too — `Abies alba var. 3`,
+`subsp. 7`, `f. 2`, `var. 3a`, `var. B12`, `ssp. 1-CPM-2005`. There the marker stays OUT of the
+phrase (`rank` already carries it and the formatter re-emits it), so the phrase is just the
+designation and the input still round-trips. Previously the designation reached the authorship
+parser and was dropped there — a 3-4 digit one becoming a bogus year — so every numbered variety
+of a species rendered as the same bare `Abies alba var.`. A real authorship still parses
+alongside it: `Abies alba subsp. 7 Mill.` yields both phrase `7` and author `Mill.`.
+
+Two exclusions, both found by corpus diffs: a numeral-prefixed epithet after the marker
+(`Benthogone rosea var. 4-lineata R. Perrier, 1896` — a real epithet, not a designation), and the
+form with NO species epithet (`Aquificales str. OlB-6`), where nothing downstream would consume
+the designation and it would be dropped outright.
+
+---
+
+## Unhyphenated numeral epithets — ✅
+
+`Coccinella 11-punctata` (= *undecimpunctata*) has always tokenised as one word. The equally common
+unhyphenated spelling did not, so the digit was dropped and the epithet promoted to an author:
+
+| input | Java / ≤ 0.2.0 | now |
+|---|---|---|
+| `Coccinella 6maculata Fabricius, 1781` | uninomial `Coccinella`, author `maculata Fabricius` | species `6maculata`, author `Fabricius` |
+| `Camponotus sericeus 4maculatus` | `Camponotus sericeus`, author `maculatus` | infraspecific `4maculatus` |
+| `Chalcis 2spinosa (Fabricius, 1804)` | uninomial `Chalcis`, combination author `spinosa Fabricius` | species `2spinosa`, **basionym** author `Fabricius, 1804` |
+
+`token::is_numeral_epithet` is the single authority for the shape, because three places must agree
+on it or they undo each other: the tokenizer (which makes these words), the strain-code stash
+(which must not take one as a code) and the numbered-infraspecific capture (which must not take one
+as a designation).
+
+The tokenizer rule is deliberately much narrower than the hyphenated one, because without the
+hyphen the shape collides with things that must stay split: at most two digits (so a year with a
+word glued on, `1976var`, keeps its `NUMBER`), no leading zero (the OCR of a capital O — `0ersted`
+for Ørsted, `0lsson` for Olsson — where gluing would swallow the author), at least three lowercase
+letters (so the year disambiguator `1935h` and the codes `5a` / `16S` / `2016Iso3` are untouched),
+and the word must end there (`12abc4` stays split).
+
+It cannot be told apart lexically from a strain code of the same shape, so a handful of those
+(`Aeromonas hydrophila 11novo`, `Pandoraea pnomenusa 3kgm` — 6 names in 67.5M) come back as
+epithets rather than phrases. Both readings keep the whole input and invent no authorship, so
+neither can produce #16's collision.
+
+---
+
+## Measured impact
+
+Over the 67.5M-row verbatim corpus, 1,220,644 distinct names sit in the shapes these changes can
+touch, and **15,559 change**: 15,452 gain a phrase they previously lost, 34 gain or correct an
+epithet, and 72 keep a marker or a digit that used to fall out of a (junk) author string. **No name
+loses a phrase.** Over the 6.4M-name COL corpus, 38 change — 32 numeral epithets recovered from a
+fabricated author, 6 numbered varieties that gain their designation.
+
+One known regression, one name in 1.22M: `Aeromonas salmonicida subsp. pectinolytica 34mel` used
+to keep half its strain code as a fabricated author `mel` and now drops `34mel` entirely — the
+glued word becomes a fifth epithet on an already-complete quadrinomial, which the model cannot
+hold. Both readings are wrong; neither is worth a fifth mechanism.
+
+---
+
 ## Open backlog (summary)
 
 - ⬜ **Keyword-driven phrase capture** on a *complete binomial* (categories 1, 2) — `clone`/`isolate`/

@@ -628,6 +628,40 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         if i < ts.len() && ts[i].kind == TokenKind::Dot {
                             i += 1;
                         }
+                        // gbif/name-parser-rust#16: "no following EPITHET" did not mean nothing
+                        // follows — "Abies alba var. 3" / "subsp. 7" / "var. B12" carry a
+                        // DESIGNATION after the marker, and it was falling out of the loop
+                        // token-by-token below, leaving a name that rendered "Abies alba var."
+                        // and collided with every other numbered variety of the same species.
+                        // Same treatment the species-level indet marker already gets 200 lines
+                        // up: once a phrase starts it runs to the end, captured verbatim from
+                        // `ctx.working` so the original spelling and spacing survive. The rank
+                        // marker itself stays OUT of the phrase (unlike the supraspecific case,
+                        // where nothing else carries it) because `inline_rank` already holds it
+                        // and the formatter re-emits it — so `Abies alba var. 3` round-trips
+                        // with a phrase of just "3".
+                        //
+                        // `ts` is the NAME section only, so whatever is left here is by
+                        // construction not the authorship — AuthorshipSplit already carved that
+                        // off, and it keeps a designation in this section on purpose (see its own
+                        // "a NUMBERED indeterminate infraspecific" branch). That is what lets
+                        // "Abies alba subsp. 7 Mill." come back with BOTH phrase "7" and the
+                        // author Mill., instead of dropping the 7 as it used to.
+                        //
+                        // …and never over a numeral-prefixed epithet: `var. 4-lineata` is a real
+                        // infraspecific epithet that `has_infraspecific_epithet_after` does not
+                        // recognise (it starts with a digit, not a letter) but the ordinary
+                        // epithet path below does. See [`token::is_numeral_epithet`].
+                        let numeral_epithet_follows = i < ts.len()
+                            && ts[i].kind == TokenKind::Word
+                            && token::is_numeral_epithet(&ts[i].text);
+                        if ctx.name.phrase.is_none() && i < ts.len() && !numeral_epithet_follows {
+                            let start = ts[i].start;
+                            let end = ts[ts.len() - 1].end;
+                            ctx.name.phrase = Some(ctx.working[start..end].to_string());
+                            ctx.name.type_ = NameType::Informal;
+                            i = ts.len();
+                        }
                     } else {
                         // Rank marker before any lower epithet and no following epithet:
                         // treat it as the specific epithet (e.g. "Foa fo" — "fo" is the
