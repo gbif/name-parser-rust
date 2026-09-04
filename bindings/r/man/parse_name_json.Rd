@@ -19,3 +19,17 @@ The lossless representation — every field, including the nested
 \code{combinationAuthorship}/\code{basionymAuthorship} and the niche
 \code{genericAuthorship}/\code{specificAuthorship} bundles that \code{parse_names()} does not flatten.
 }
+\examples{
+parse_name_json("Abies alba Mill.")
+
+# An unparsable name yields an error envelope rather than an R condition.
+parse_name_json("Tobacco mosaic virus")
+
+if (requireNamespace("jsonlite", quietly = TRUE)) {
+  obj <- jsonlite::fromJSON(parse_name_json("Abies alba Mill."), simplifyVector = FALSE)
+  obj$combinationAuthorship$authors[[1]]
+}
+}
+\seealso{
+\code{\link[=parse_names]{parse_names()}} for the flat, vectorized tibble.
+}

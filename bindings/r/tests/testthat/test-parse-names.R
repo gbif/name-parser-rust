@@ -65,6 +65,7 @@ test_that("NameFormatter rendering columns match the Java oracle", {
 })
 
 test_that("parse_name_json returns the core's full nested JSON", {
+  skip_if_not_installed("jsonlite")   # Suggests-only; CRAN also checks without Suggests installed
   js <- parse_name_json("Abies alba Mill.")
   obj <- jsonlite::fromJSON(js, simplifyVector = FALSE)
   expect_equal(obj$genus, "Abies")
@@ -167,7 +168,13 @@ test_that("parse_name_json's error envelope matches the FFI/CLI shape exactly", 
     js_empty,
     '{"error":{"type":"OTHER","message":"Unparsable OTHER name: "}}'
   )
-  obj <- jsonlite::fromJSON(js_virus, simplifyVector = FALSE)
+})
+
+test_that("the error envelope carries no \"name\" key", {
+  # Split out from the byte-comparison above so that check runs without the Suggests
+  # installed still exercise the string assertions there.
+  skip_if_not_installed("jsonlite")
+  obj <- jsonlite::fromJSON(parse_name_json("Tobacco mosaic virus"), simplifyVector = FALSE)
   expect_false("name" %in% names(obj$error))
 })
 

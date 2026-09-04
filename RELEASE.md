@@ -19,7 +19,7 @@ version number means the **same underlying Rust engine** everywhere.
 | CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.2.0` released |
 | Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.2.0` published (setup done); later versions via tag |
 | Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.2.0` published (setup done); later versions via tag |
-| R | `nameparser` | CRAN | manual submission | ⚠️ not yet wired |
+| R | `nameparser` | CRAN | `scripts/build-r-tarball.sh` + manual submission | 🟡 tarball builds & checks clean; awaiting first submission |
 
 ---
 
@@ -141,18 +141,43 @@ reviewer, so the run pauses for approval before the (irreversible) upload.
 (`nameparser-cli`/`-ffi`/`-py` stay `publish = false` — they are not library crates.) The one-time
 crates.io Trusted-Publisher registration is already done (§0).
 
-### R → CRAN — *needs crates.io first*
+### R → CRAN
 
-CRAN is source-based and human-reviewed (no auto-publish). **Prerequisite: the core on crates.io**
-(above — now satisfied, `0.1.0` is published) — the R package isn't self-contained until it depends
-on `gbif-name-parser` *by version* and can vendor it (`cargo vendor` skips local path deps). Then:
+CRAN is source-based and human-reviewed (no auto-publish), and it compiles on machines with **no
+network**. `scripts/build-r-tarball.sh` produces a tarball that satisfies both:
 
-1. Point `bindings/r/src/rust/Cargo.toml`'s `nameparser_core` dependency at the crates.io version.
-2. `Rscript -e 'rextendr::vendor_pkgs("bindings/r")'` → bundles the core + all deps into
-   `src/rust/vendor.tar.xz` (the `Makevars` already builds offline from it).
-3. Add the vendored-crate license inventory (`inst/AUTHORS`) CRAN requires for bundled sources.
-4. `R CMD check --as-cran` until clean, then submit the source tarball via
-   <https://cran.r-project.org/submit.html>.
+```sh
+scripts/build-r-tarball.sh --check     # build + R CMD check --as-cran   (~2.1 MB tarball)
+```
+
+It works in a staging copy under `target/r-cran/`, never touching `bindings/r`, and it:
+
+1. **Bundles the core crate** into `src/rust/nameparser-core/`, rewriting the binding's
+   `path = "../../../../crates/nameparser"` to point at it. This is exactly what `maturin sdist`
+   already does for the Python binding — see the script header for why bundling beats switching the
+   binding onto the crates.io release.
+2. **Vendors the registry crates** (`rextendr::vendor_crates()`, *not* the deprecated
+   `vendor_pkgs()`) into `src/rust/vendor.tar.xz`. Both `Makevars` already unpack it and build
+   `--offline`; the check log should read `Building for CRAN` → `Using offline vendor tarball`.
+3. **Regenerates `LICENSE.note`** from `cargo metadata` — the licence inventory CRAN requires for
+   bundled sources — and refreshes `bindings/r/LICENSE.note` so the repo copy stays in step.
+
+The checked-in `bindings/r/src/rust/Cargo.lock` is carried over rather than regenerated, so CRAN
+compiles the dependency versions the test suite ran against. If it has drifted, the script stops
+and tells you to update it deliberately.
+
+Then submit the tarball via <https://cran.r-project.org/submit.html>. Expect a "New submission"
+NOTE — that one is unavoidable on a first submission.
+
+> **No crates.io prerequisite.** Because the core travels inside the tarball, a CRAN release never
+> waits on a crates.io release, and the R parity test always validates the engine in *this* working
+> tree. (A crates.io *version* dependency would do the opposite: `main` is routinely ahead of the
+> last published core, and the R tests would then check a published engine against re-baselined
+> goldens.)
+
+Two local tools only affect check completeness, not the package: `checkbashisms` (else `checking
+top-level files` WARNs) and a LaTeX install (else the PDF-manual check errors — pass `--no-manual`
+to skip). CRAN's own machines have both.
 
 ---
 
@@ -163,7 +188,8 @@ on `gbif-name-parser` *by version* and can vendor it (`cargo vendor` skips local
 [ ] Java:   Jenkins job (RELEASE=true) — or snapshot-only if not cutting a release
 [ ] CLI:    git tag cli-vX && git push origin cli-vX     → verify the GitHub release assets
 [ ] Python: TestPyPI dry-run → git tag py-vX && git push → verify `pip install gbif-name-parser`
-[ ] crates.io: dry-run → git tag crate-vX && git push   (CRAN: still unwired, see §2)
+[ ] crates.io: dry-run → git tag crate-vX && git push
+[ ] R/CRAN: scripts/build-r-tarball.sh --check → submit the tarball (manual; not tag-triggered)
 [ ] Confirm all published artifacts report version X (same engine everywhere)
 [ ] Flip the "published at <version>" claims to X: README.md (status banner + binding table),
     DISTRIBUTION.md §2 table. Everything else is bumped by scripts/bump-version.sh at §1.

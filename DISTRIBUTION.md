@@ -11,7 +11,8 @@ single "deploy"**, because each binding targets a different package ecosystem.
 > GBIF Nexus. The Java module ships a **thin main JAR plus one cdylib JAR per platform** (§3), so it
 > is consumable off-checkout. The Java binding is released at `0.2.0` and auto-deploys snapshots to GBIF Nexus on every
 > push to `main`; crates.io, PyPI and GitHub Releases have all published `0.2.0` and re-publish from a
-> `crate-v*` / `py-v*` / `cli-v*` tag, CRAN alone is still unwired (see [`RELEASE.md`](RELEASE.md)).
+> `crate-v*` / `py-v*` / `cli-v*` tag; CRAN is built by `scripts/build-r-tarball.sh` and submitted by hand
+> (see [`RELEASE.md`](RELEASE.md)).
 > This engine has **replaced** the pure-Java parser: `org.gbif:name-parser` ended at `4.2.0`, the
 > contract lives on as `org.gbif:name-parser-api` (5.x, API-only), and the ChecklistBank backend has
 > completed its cutover.
@@ -26,7 +27,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.2.0`, 4 targets |
 | **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — released `0.2.0`; `0.2.1-SNAPSHOT` auto-deploys |
 | Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.2.0` (`pip install gbif-name-parser`) |
-| R binding | `bindings/r` | GitHub (`install_github`), later CRAN | pkg `nameparser` | complete; CRAN submission not yet wired |
+| R binding | `bindings/r` | GitHub (`install_github`), CRAN | pkg `nameparser` | complete; tarball builds & checks clean, awaiting first CRAN submission |
 
 Every binding except the pure-Rust CLI wraps the **`nameparser-ffi` cdylib**
 (`crates/nameparser-ffi`) — so packaging that native library correctly is the cross-cutting
@@ -115,9 +116,12 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 - Distribute from **GitHub** first: `remotes::install_github("gbif/name-parser-rust", subdir = "bindings/r")`.
   This compiles the embedded Rust crate on the user's machine (they need a Rust toolchain;
   `SystemRequirements: Cargo` in `DESCRIPTION` declares it).
-- **CRAN** later: CRAN requires the Rust dependencies to be **vendored** into the source
-  tarball (`cargo vendor` under `src/rust/vendor/`) and an offline, network-free build — a
-  separate hardening step, deferred like the Python PyPI publish.
+- **CRAN**: `scripts/build-r-tarball.sh` produces the submission tarball. CRAN builds offline, so
+  the tarball has to carry everything the compile needs — the third-party crates, vendored into
+  `src/rust/vendor.tar.xz`, *and* the core crate itself, bundled into `src/rust/nameparser-core/`
+  (`cargo vendor` skips path dependencies, and the binding's path points outside the package).
+  Bundling the core mirrors what `maturin sdist` already does for the Python binding, and keeps a
+  CRAN release independent of a crates.io release. See [RELEASE.md](RELEASE.md) §2 "R → CRAN".
 
 ---
 
