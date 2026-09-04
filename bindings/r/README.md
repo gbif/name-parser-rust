@@ -10,7 +10,8 @@ no JVM dependency.
 
 Requires a Rust toolchain (`cargo`/`rustc`) on `PATH` at build time — this package compiles a
 small Rust crate (`src/rust/`) and links it into the R package's shared library. There is no
-CRAN release yet (see "Deferrals" below), so install from a local checkout or GitHub:
+CRAN release yet (see "Deferrals" below — the tarball is ready, the submission is pending), so
+install from a local checkout or GitHub:
 
 ```r
 # from a local checkout of this repo:
@@ -114,11 +115,13 @@ a separate `parsedPartially` flag; enum columns (`type`, `rank`, `code`, `state`
 - **`genericAuthorship`/`specificAuthorship` are JSON-only.** These niche botanical
   `CombinedAuthorship` bundles (infrageneric-rank names with two independent author strings)
   are not flattened into `parse_names()` columns; get them via `parse_name_json()`.
-- **Not on CRAN.** CRAN packages that build native code from a non-vendored, network-fetched
-  dependency tree (this crate's core-parser path dependency plus its own crates.io
-  dependencies) need the whole dependency graph vendored into the source tarball per CRAN's
-  offline-build policy. That vendoring step is deferred; today's only install path is a
-  local checkout or `remotes::install_github()`.
+- **Not on CRAN *yet*.** The submission tarball is built and passing: `scripts/build-r-tarball.sh
+  --check` bundles the core crate, vendors the whole dependency graph into
+  `src/rust/vendor.tar.xz` for CRAN's offline build, generates `LICENSE.note`, and runs
+  `R CMD check --as-cran`. What remains is the submission itself, which is a manual,
+  human-reviewed web form (<https://cran.r-project.org/submit.html>) — see
+  [`RELEASE.md`](../../RELEASE.md) §2 "R → CRAN". Until it lands, install from a local checkout or
+  `remotes::install_github()`.
 
 ## Testing
 

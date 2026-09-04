@@ -8,6 +8,9 @@ testthat::test_that("parse_name_json matches the golden snapshot over the benchm
   oracle <- file.path(root, "testdata", "golden", "expected-parse.jsonl")
   testthat::skip_if_not(file.exists(oracle) && file.exists(corpus),
                         "oracle/corpus not present (see parse_golden.rs to regenerate)")
+  # Neither is shipped in the CRAN tarball (they live at the repo root), so this test only ever
+  # runs from a checkout -- but guard the Suggests dependency too, for checks run without them.
+  testthat::skip_if_not_installed("jsonlite")
 
   # PlainTextReader rule: name is the text before the first TAB, trimmed; skip blank/# lines.
   raw <- readLines(corpus, warn = FALSE)

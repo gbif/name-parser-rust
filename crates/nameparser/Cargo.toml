@@ -2,6 +2,10 @@
 name = "gbif-name-parser"
 version.workspace = true
 edition = "2021"
+# Declared for attribution: CRAN requires the licence + authorship of every bundled source, and
+# this crate travels inside the R package's CRAN tarball (scripts/build-r-tarball.sh), where
+# `rextendr::write_license_note()` reads this field.
+authors = ["Markus Döring <mdoering@gbif.org>", "GBIF <informatics@gbif.org>"]
 license = "Apache-2.0"
 description = "A faithful Rust port of the GBIF scientific name parser: parses scientific names into their structured atoms (genus, epithets, authorship, rank, nomenclatural code)."
 repository = "https://github.com/gbif/name-parser-rust"

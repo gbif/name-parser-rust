@@ -15,6 +15,18 @@
 #'   `authorshipComplete`. `canonical` is populated for **informal** rows too — an informal name's
 #'   single canonical form (e.g. `"Rhizobium sp. RMCC TR1811"`); the other four are `NA` on informal
 #'   rows, and all five are `NA` on unparsable rows.
+#' @examples
+#' out <- parse_names(c(
+#'   "Abies alba Mill.",                     # a parsed species
+#'   "Vulpes vulpes silaceus Miller, 1907",  # a zoological subspecies
+#'   "Rhizobium sp. RMCC TR1811",            # informal: a provisional designation
+#'   "Tobacco mosaic virus"                  # unparsable
+#' ))
+#' out[, c("scientificName", "result", "rank", "genus", "specificEpithet", "phrase")]
+#'
+#' # A rank hint is applied to every name in the call.
+#' parse_names("Zodarion van Bosmans, 2009", rank = "SPECIES")$specificEpithet
+#' @seealso [parse_name_json()] for the full nested representation.
 #' @export
 parse_names <- function(scientificname, authorship = NULL, rank = NULL, code = NULL) {
   stopifnot(is.character(scientificname))
@@ -36,6 +48,17 @@ parse_names <- function(scientificname, authorship = NULL, rank = NULL, code = N
 #' @param name a single scientific name.
 #' @param authorship,rank,code optional scalar hints (see [parse_names()]).
 #' @return a length-1 JSON string (parse it with `jsonlite::fromJSON`).
+#' @examples
+#' parse_name_json("Abies alba Mill.")
+#'
+#' # An unparsable name yields an error envelope rather than an R condition.
+#' parse_name_json("Tobacco mosaic virus")
+#'
+#' if (requireNamespace("jsonlite", quietly = TRUE)) {
+#'   obj <- jsonlite::fromJSON(parse_name_json("Abies alba Mill."), simplifyVector = FALSE)
+#'   obj$combinationAuthorship$authors[[1]]
+#' }
+#' @seealso [parse_names()] for the flat, vectorized tibble.
 #' @export
 parse_name_json <- function(name, authorship = NULL, rank = NULL, code = NULL) {
   stopifnot(is.character(name), length(name) == 1L)

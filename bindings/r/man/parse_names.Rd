@@ -29,3 +29,18 @@ rows, and all five are \code{NA} on unparsable rows.
 \description{
 Parse scientific names into a tibble (one row per name).
 }
+\examples{
+out <- parse_names(c(
+  "Abies alba Mill.",                     # a parsed species
+  "Vulpes vulpes silaceus Miller, 1907",  # a zoological subspecies
+  "Rhizobium sp. RMCC TR1811",            # informal: a provisional designation
+  "Tobacco mosaic virus"                  # unparsable
+))
+out[, c("scientificName", "result", "rank", "genus", "specificEpithet", "phrase")]
+
+# A rank hint is applied to every name in the call.
+parse_names("Zodarion van Bosmans, 2009", rank = "SPECIES")$specificEpithet
+}
+\seealso{
+\code{\link[=parse_name_json]{parse_name_json()}} for the full nested representation.
+}
