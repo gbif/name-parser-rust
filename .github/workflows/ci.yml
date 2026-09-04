@@ -102,15 +102,29 @@ jobs:
   # the Rust via the package's configure/Makevars against the workspace core crate (path dep), so
   # it needs both R and a Rust toolchain. test-parity.R skips cleanly without the git-ignored
   # oracle; test-parse-names.R runs real assertions.
+  # Runs on all three OSes because CRAN builds on all three, and the Windows path is the one this
+  # package can plausibly break on: src/Makevars.win.in targets the GNU ABI, fabricates a libgcc_eh
+  # stub, and links against ws2_32/advapi32/userenv/bcrypt/ntdll -- none of which the Linux build
+  # exercises. Before this matrix the R binding had only ever been built on Linux (and a maintainer
+  # Mac), which is a poor position from which to submit to CRAN.
   r:
-    name: r binding
-    runs-on: ubuntu-latest
+    name: r binding (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      # R on Windows compiles through Rtools' GNU toolchain, so the crate needs the -gnu target;
+      # the default stable install only carries -msvc.
+      - name: Add the windows-gnu Rust target
+        if: runner.os == 'Windows'
+        run: rustup target add x86_64-pc-windows-gnu
       - uses: Swatinem/rust-cache@v2
         with:
-          key: r
+          key: r-${{ matrix.os }}
       - uses: r-lib/actions/setup-r@v2
         with:
           use-public-rspm: true

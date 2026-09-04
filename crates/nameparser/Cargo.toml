@@ -7,7 +7,7 @@ edition = "2021"
 # `rextendr::write_license_note()` reads this field.
 authors = ["Markus Döring <mdoering@gbif.org>"]
 license = "Apache-2.0"
-description = "A faithful Rust port of the GBIF scientific name parser: parses scientific names into their structured atoms (genus, epithets, authorship, rank, nomenclatural code)."
+description = "A faithful Rust port of the scientific name parser from the Global Biodiversity Information Facility (GBIF): parses biological scientific names into their structured components (genus, epithets, authorship, rank, nomenclatural code)."
 repository = "https://github.com/gbif/name-parser-rust"
 homepage = "https://github.com/gbif/name-parser-rust"
 documentation = "https://docs.rs/gbif-name-parser"
