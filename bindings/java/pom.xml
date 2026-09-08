@@ -147,7 +147,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.15.0</version>
+        <version>3.16.0</version>
       </plugin>
 
       <!-- git SHA for the JAR manifest (Rust-Engine-Git-Revision). Points at the repo-root .git;
@@ -155,7 +155,7 @@
       <plugin>
         <groupId>io.github.git-commit-id</groupId>
         <artifactId>git-commit-id-maven-plugin</artifactId>
-        <version>10.0.0</version>
+        <version>10.0.1</version>
         <executions>
           <execution>
             <id>get-git-info</id>
@@ -232,7 +232,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.5.6</version>
+        <version>3.6.0</version>
         <configuration>
           <!-- FFM downcalls are a JDK "restricted method": without opting in to native
                access the JVM only warns today, but a future JDK release blocks it
