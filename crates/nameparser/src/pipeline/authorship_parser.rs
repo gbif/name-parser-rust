@@ -45,7 +45,9 @@
 //!    chaining sub-loop (an uppercase "F" there is an initial, not the filius suffix) but
 //!    **case-insensitively** in the standalone-after-separator branch.
 //! 3. [`GENERATIONAL_SUFFIXES`] excludes bare `I`/`V`/`X` — those are genuine author
-//!    initials, not generation-suffix Roman numerals.
+//!    initials, not generation-suffix Roman numerals. Deliberate divergence (#22): an
+//!    undotted `I` is kept as the generation after an author with leading initials
+//!    (`G. B. Sowerby I`) or in a team that also carries a later generation.
 //! 4. A bracketed `[YYYY]` is always the *imprint* year (first-wins), never the main year,
 //!    even when it is the only year given. A second *plain* year is the imprint year. A
 //!    year range (`NUMBER "-"|"/" NUMBER`) keeps only the first year and sets
@@ -88,7 +90,8 @@ const AUTHOR_SUFFIXES: &[&str] = &[
 /// Java `AuthorshipParser.GENERATIONAL_SUFFIXES` — Roman-numeral generational suffixes on a
 /// surname ("Loeblich III" = Loeblich the third). Kept verbatim (upper-case) behind the
 /// surname, never read as the initials "I.I.I.". Single letters (I/V/X) are deliberately
-/// excluded — those are author initials, not suffixes.
+/// excluded — those are author initials, not suffixes — except for the `I` that
+/// [`parse_authors`] can tell is a generation (#22).
 const GENERATIONAL_SUFFIXES: &[&str] = &["II", "III", "IV", "VI", "VII", "VIII", "IX"];
 
 /// Java `AuthorshipParser.AuthState` (package-private nested class). All fields were
@@ -255,6 +258,15 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     let mut cur = String::new();
     let mut year_range = false;
     let mut i = from;
+    // A later generation in the same team (`Sowerby I & Sowerby II`) tells that a trailing `I`
+    // is a generation too (#22).
+    let team_has_generation = tokens[from..to].windows(2).any(|w| {
+        w[0].kind == TokenKind::Word
+            && contains_lower(&w[0].text)
+            && w[1].kind == TokenKind::Word
+            && starts_upper(&w[1].text)
+            && GENERATIONAL_SUFFIXES.contains(&w[1].text.to_uppercase().as_str())
+    });
 
     while i < to {
         let t = &tokens[i];
@@ -403,11 +415,17 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             // ("Loeblich III" = Loeblich the third) stays behind the surname as a suffix,
             // rendered upper-case ("Iii" → "III") — it is NOT the initials "I.I.I." that
             // the all-caps-trailing-initials inversion below would otherwise produce.
+            // An undotted `I` is the first generation when nothing else can be meant: the
+            // author already has leading initials (`G. B. Sowerby I`), or another author
+            // of the team carries a later generation (#22). Java read it as an initial.
+            let generation_i = text == "I"
+                && (i + 1 >= to || tokens[i + 1].kind != TokenKind::Dot)
+                && (starts_with_initial(&cur) || team_has_generation);
             if !cur.is_empty()
                 && contains_lower(&cur)
                 && !cur.ends_with('.')
                 && !ends_with_particle_only(&cur)
-                && GENERATIONAL_SUFFIXES.contains(&text.to_uppercase().as_str())
+                && (generation_i || GENERATIONAL_SUFFIXES.contains(&text.to_uppercase().as_str()))
             {
                 append_space(&mut cur);
                 cur.push_str(&text.to_uppercase());
@@ -892,6 +910,12 @@ fn ends_with_particle_only(cur: &str) -> bool {
         .rfind(|p| !p.is_empty())
         .unwrap_or("");
     is_particle(last)
+}
+
+/// True when the author buffer opens with a dotted initial (`G.B.Sowerby`, `A.Murray`).
+fn starts_with_initial(cur: &str) -> bool {
+    let mut cs = cur.chars();
+    cs.next().is_some_and(char::is_uppercase) && cs.next() == Some('.')
 }
 
 /// Java `AuthorshipParser.containsLower(CharSequence)`.

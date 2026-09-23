@@ -86,3 +86,46 @@ fn surname_then_initials_still_turns_round() {
     assert_authorship("DC. & Lam.", &["DC.", "Lam."]);
     assert_authorship("Humb. & Bonpl.", &["Humb.", "Bonpl."]);
 }
+
+// ---- #22: the generation `I` ---------------------------------------------------------------
+
+#[test]
+fn generation_i_after_leading_initials_stays_behind_the_surname() {
+    // An author with leading initials does not also carry initials behind the surname.
+    assert_authorship("G. B. Sowerby I, 1825", &["G.B.Sowerby I"]);
+    assert_authorship("G.B. Sowerby I", &["G.B.Sowerby I"]);
+    assert_authorship("G.B.Sowerby I", &["G.B.Sowerby I"]);
+    // II and III always were kept.
+    assert_authorship("G. B. Sowerby II, 1842", &["G.B.Sowerby II"]);
+    assert_authorship("G. B. Sowerby III, 1912", &["G.B.Sowerby III"]);
+}
+
+#[test]
+fn generation_i_next_to_a_later_generation_stays_behind_the_surname() {
+    assert_authorship("Sowerby I & Sowerby II", &["Sowerby I", "Sowerby II"]);
+}
+
+#[test]
+fn generation_i_in_a_name_and_in_a_basionym() {
+    assert_name("Conus textile G. B. Sowerby I, 1825")
+        .species("Conus", "textile")
+        .comb_authors(Some("1825"), &["G.B.Sowerby I"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Haliotis asinina", "(Broderip & G. B. Sowerby I, 1829)")
+        .species("Haliotis", "asinina")
+        .bas_authors(Some("1829"), &["Broderip", "G.B.Sowerby I"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn a_trailing_i_without_that_evidence_stays_an_initial() {
+    // Ambiguous on its own: `Sowerby I` may be the generation or the initial.
+    assert_authorship("Sowerby I", &["I.Sowerby"]);
+    // A dotted `I.` is an initial (`Kim I.` = I. Kim), even after leading initials.
+    assert_authorship("Kim I.", &["I.Kim"]);
+    assert_authorship("G.B. Sowerby I.", &["I.G.B.Sowerby"]);
+    // V and X are left alone.
+    assert_authorship("Smith V", &["V.Smith"]);
+}
