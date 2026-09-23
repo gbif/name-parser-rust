@@ -248,6 +248,10 @@ fn find_close(tokens: &[Token], open_idx: usize) -> Option<usize> {
 fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship) -> bool {
     let mut authors: Vec<String> = Vec::new();
     let mut ex_authors: Option<Vec<String>> = None;
+    // Indices into `authors` of the authors that follow an `&` / `and` / `et` / `y` / `;`, which
+    // [`invert_all`] joins to the author before them only as a comma-lost `Lea & A.M.` (#21).
+    let mut after_separator: Vec<usize> = Vec::new();
+    let mut ex_after_separator: Vec<usize> = Vec::new();
     let mut cur = String::new();
     let mut year_range = false;
     let mut i = from;
@@ -319,6 +323,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             // everything collected so far becomes ex authors
             ex_authors = Some(authors.clone());
             authors.clear();
+            ex_after_separator = std::mem::take(&mut after_separator);
             i += 1;
             continue;
         }
@@ -330,6 +335,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             || (t.kind == TokenKind::Word && t.text == "y")
         {
             flush(&mut cur, &mut authors);
+            after_separator.push(authors.len());
             i += 1;
             continue;
         }
@@ -337,6 +343,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         if t.kind == TokenKind::Semicolon {
             // Semicolons separate authors in citation lists ("Choi,J.H.; Im,W.T.; …")
             flush(&mut cur, &mut authors);
+            after_separator.push(authors.len());
             i += 1;
             continue;
         }
@@ -642,11 +649,11 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     flush(&mut cur, &mut authors);
 
     if !authors.is_empty() {
-        into.authors = invert_all(&authors);
+        into.authors = invert_all(&authors, &after_separator);
     }
     if let Some(ex) = ex_authors {
         if !ex.is_empty() {
-            into.ex_authors = invert_all(&ex);
+            into.ex_authors = invert_all(&ex, &ex_after_separator);
         }
     }
     year_range
@@ -657,14 +664,25 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
 /// only, producing the combined "Initials.Surname" form ("LeConte" + "J.L." →
 /// "J.L.LeConte"); (2) invert single authors of the form "Surname X.Y." or "Surname,
 /// X.Y." into the same canonical form.
-fn invert_all(authors: &[String]) -> Vec<String> {
+///
+/// Unlike Java, (1) is restricted across an `&` / `and` / `et` / `y` / `;` (`after_separator`
+/// holds the indices of the authors that follow one), which separate two authors: `Lam. & DC.`
+/// is Lamarck and de Candolle, not `D.C.Lam.` (#21). A join across one survives only for a
+/// full surname followed by dotted or hyphenated initials, because sources that turn the comma
+/// of `Lea, A.M.` into `Lea & A.M.` are common (4,272 ChecklistBank rows). It is refused when
+/// the left author is an abbreviation (`Lam.`, `Lap. & G.` = Laporte & Gory) or the right one
+/// has a capital run (`DC.`, `A.DC.`, `HBK.`, `MULSANT & REY`). The rare initials written as a
+/// run after a full surname (`Sclater & PL`) are the cost.
+fn invert_all(authors: &[String], after_separator: &[usize]) -> Vec<String> {
     let mut out = Vec::with_capacity(authors.len());
     let mut i = 0;
     while i < authors.len() {
         let cur = &authors[i];
         if i + 1 < authors.len() {
             let next = &authors[i + 1];
-            if looks_like_surname(cur) && looks_like_initials(next) {
+            let joinable = !after_separator.contains(&(i + 1))
+                || (!cur.ends_with('.') && !has_capital_run(next));
+            if joinable && looks_like_surname(cur) && looks_like_initials(next) {
                 out.push(format!("{}{}", format_initials(next), cur));
                 i += 2;
                 continue;
@@ -713,6 +731,20 @@ fn invert_author(s: &str) -> String {
         }
     }
     s.to_string()
+}
+
+/// Two capitals in a row (`DC`, `A.DC.`, `HBK.`), as opposed to one initial per letter
+/// (`A.M.`, `J-R`).
+fn has_capital_run(s: &str) -> bool {
+    let mut prev_upper = false;
+    for c in s.chars() {
+        let upper = c.is_uppercase();
+        if upper && prev_upper {
+            return true;
+        }
+        prev_upper = upper;
+    }
+    false
 }
 
 /// Java `AuthorshipParser.looksLikeSurname(String)`.
