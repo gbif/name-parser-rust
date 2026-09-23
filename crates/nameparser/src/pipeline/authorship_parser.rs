@@ -45,7 +45,9 @@
 //!    chaining sub-loop (an uppercase "F" there is an initial, not the filius suffix) but
 //!    **case-insensitively** in the standalone-after-separator branch.
 //! 3. [`GENERATIONAL_SUFFIXES`] excludes bare `I`/`V`/`X` — those are genuine author
-//!    initials, not generation-suffix Roman numerals.
+//!    initials, not generation-suffix Roman numerals. Deliberate divergence (#22): an
+//!    undotted `I` is kept as the generation after an author with leading initials
+//!    (`G. B. Sowerby I`) or in a team that also carries a later generation.
 //! 4. A bracketed `[YYYY]` is always the *imprint* year (first-wins), never the main year,
 //!    even when it is the only year given. A second *plain* year is the imprint year. A
 //!    year range (`NUMBER "-"|"/" NUMBER`) keeps only the first year and sets
@@ -88,7 +90,8 @@ const AUTHOR_SUFFIXES: &[&str] = &[
 /// Java `AuthorshipParser.GENERATIONAL_SUFFIXES` — Roman-numeral generational suffixes on a
 /// surname ("Loeblich III" = Loeblich the third). Kept verbatim (upper-case) behind the
 /// surname, never read as the initials "I.I.I.". Single letters (I/V/X) are deliberately
-/// excluded — those are author initials, not suffixes.
+/// excluded — those are author initials, not suffixes — except for the `I` that
+/// [`parse_authors`] can tell is a generation (#22).
 const GENERATIONAL_SUFFIXES: &[&str] = &["II", "III", "IV", "VI", "VII", "VIII", "IX"];
 
 /// Java `AuthorshipParser.AuthState` (package-private nested class). All fields were
@@ -248,9 +251,22 @@ fn find_close(tokens: &[Token], open_idx: usize) -> Option<usize> {
 fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship) -> bool {
     let mut authors: Vec<String> = Vec::new();
     let mut ex_authors: Option<Vec<String>> = None;
+    // Indices into `authors` of the authors that follow an `&` / `and` / `et` / `y` / `;`, which
+    // [`invert_all`] joins to the author before them only as a comma-lost `Lea & A.M.` (#21).
+    let mut after_separator: Vec<usize> = Vec::new();
+    let mut ex_after_separator: Vec<usize> = Vec::new();
     let mut cur = String::new();
     let mut year_range = false;
     let mut i = from;
+    // A later generation in the same team (`Sowerby I & Sowerby II`) tells that a trailing `I`
+    // is a generation too (#22).
+    let team_has_generation = tokens[from..to].windows(2).any(|w| {
+        w[0].kind == TokenKind::Word
+            && contains_lower(&w[0].text)
+            && w[1].kind == TokenKind::Word
+            && starts_upper(&w[1].text)
+            && GENERATIONAL_SUFFIXES.contains(&w[1].text.to_uppercase().as_str())
+    });
 
     while i < to {
         let t = &tokens[i];
@@ -319,6 +335,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             // everything collected so far becomes ex authors
             ex_authors = Some(authors.clone());
             authors.clear();
+            ex_after_separator = std::mem::take(&mut after_separator);
             i += 1;
             continue;
         }
@@ -330,6 +347,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             || (t.kind == TokenKind::Word && t.text == "y")
         {
             flush(&mut cur, &mut authors);
+            after_separator.push(authors.len());
             i += 1;
             continue;
         }
@@ -337,6 +355,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         if t.kind == TokenKind::Semicolon {
             // Semicolons separate authors in citation lists ("Choi,J.H.; Im,W.T.; …")
             flush(&mut cur, &mut authors);
+            after_separator.push(authors.len());
             i += 1;
             continue;
         }
@@ -396,11 +415,17 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             // ("Loeblich III" = Loeblich the third) stays behind the surname as a suffix,
             // rendered upper-case ("Iii" → "III") — it is NOT the initials "I.I.I." that
             // the all-caps-trailing-initials inversion below would otherwise produce.
+            // An undotted `I` is the first generation when nothing else can be meant: the
+            // author already has leading initials (`G. B. Sowerby I`), or another author
+            // of the team carries a later generation (#22). Java read it as an initial.
+            let generation_i = text == "I"
+                && (i + 1 >= to || tokens[i + 1].kind != TokenKind::Dot)
+                && (starts_with_initial(&cur) || team_has_generation);
             if !cur.is_empty()
                 && contains_lower(&cur)
                 && !cur.ends_with('.')
                 && !ends_with_particle_only(&cur)
-                && GENERATIONAL_SUFFIXES.contains(&text.to_uppercase().as_str())
+                && (generation_i || GENERATIONAL_SUFFIXES.contains(&text.to_uppercase().as_str()))
             {
                 append_space(&mut cur);
                 cur.push_str(&text.to_uppercase());
@@ -642,11 +667,11 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     flush(&mut cur, &mut authors);
 
     if !authors.is_empty() {
-        into.authors = invert_all(&authors);
+        into.authors = invert_all(&authors, &after_separator);
     }
     if let Some(ex) = ex_authors {
         if !ex.is_empty() {
-            into.ex_authors = invert_all(&ex);
+            into.ex_authors = invert_all(&ex, &ex_after_separator);
         }
     }
     year_range
@@ -657,14 +682,25 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
 /// only, producing the combined "Initials.Surname" form ("LeConte" + "J.L." →
 /// "J.L.LeConte"); (2) invert single authors of the form "Surname X.Y." or "Surname,
 /// X.Y." into the same canonical form.
-fn invert_all(authors: &[String]) -> Vec<String> {
+///
+/// Unlike Java, (1) is restricted across an `&` / `and` / `et` / `y` / `;` (`after_separator`
+/// holds the indices of the authors that follow one), which separate two authors: `Lam. & DC.`
+/// is Lamarck and de Candolle, not `D.C.Lam.` (#21). A join across one survives only for a
+/// full surname followed by dotted or hyphenated initials, because sources that turn the comma
+/// of `Lea, A.M.` into `Lea & A.M.` are common (4,272 ChecklistBank rows). It is refused when
+/// the left author is an abbreviation (`Lam.`, `Lap. & G.` = Laporte & Gory) or the right one
+/// has a capital run (`DC.`, `A.DC.`, `HBK.`, `MULSANT & REY`). The rare initials written as a
+/// run after a full surname (`Sclater & PL`) are the cost.
+fn invert_all(authors: &[String], after_separator: &[usize]) -> Vec<String> {
     let mut out = Vec::with_capacity(authors.len());
     let mut i = 0;
     while i < authors.len() {
         let cur = &authors[i];
         if i + 1 < authors.len() {
             let next = &authors[i + 1];
-            if looks_like_surname(cur) && looks_like_initials(next) {
+            let joinable = !after_separator.contains(&(i + 1))
+                || (!cur.ends_with('.') && !has_capital_run(next));
+            if joinable && looks_like_surname(cur) && looks_like_initials(next) {
                 out.push(format!("{}{}", format_initials(next), cur));
                 i += 2;
                 continue;
@@ -713,6 +749,20 @@ fn invert_author(s: &str) -> String {
         }
     }
     s.to_string()
+}
+
+/// Two capitals in a row (`DC`, `A.DC.`, `HBK.`), as opposed to one initial per letter
+/// (`A.M.`, `J-R`).
+fn has_capital_run(s: &str) -> bool {
+    let mut prev_upper = false;
+    for c in s.chars() {
+        let upper = c.is_uppercase();
+        if upper && prev_upper {
+            return true;
+        }
+        prev_upper = upper;
+    }
+    false
 }
 
 /// Java `AuthorshipParser.looksLikeSurname(String)`.
@@ -862,6 +912,12 @@ fn ends_with_particle_only(cur: &str) -> bool {
     is_particle(last)
 }
 
+/// True when the author buffer opens with a dotted initial (`G.B.Sowerby`, `A.Murray`).
+fn starts_with_initial(cur: &str) -> bool {
+    let mut cs = cur.chars();
+    cs.next().is_some_and(char::is_uppercase) && cs.next() == Some('.')
+}
+
 /// Java `AuthorshipParser.containsLower(CharSequence)`.
 fn contains_lower(s: &str) -> bool {
     s.chars().any(|c| c.is_lowercase())
@@ -953,11 +1009,19 @@ fn slice_text(tokens: &[Token], start: usize, end: usize) -> String {
 }
 
 /// Java `AuthorshipParser.hasUpperWord(List<Token>, int, int)`. True if any token in
-/// `[from, to)` is a WORD that starts with an upper-case letter.
+/// `[from, to)` is a WORD that starts with an upper-case letter — or, unlike Java, a surname
+/// behind an elided particle (`d'Orbigny`, `d'Urv.`, `l'Hér.`), which the tokenizer keeps as
+/// one lower-case-initial WORD. Java rejected `(d'Orbigny, 1826)` as a basionym, parking it as
+/// unparsed on the name string and dropping it silently from a separately supplied authorship.
 fn has_upper_word(tokens: &[Token], from: usize, to: usize) -> bool {
-    tokens[from..to]
-        .iter()
-        .any(|t| t.kind == TokenKind::Word && starts_upper(&t.text))
+    tokens[from..to].iter().any(|t| {
+        t.kind == TokenKind::Word && (starts_upper(&t.text) || is_elided_particle_surname(&t.text))
+    })
+}
+
+/// A word like `d'Orbigny`: an apostrophe directly followed by an upper-case letter.
+fn is_elided_particle_surname(s: &str) -> bool {
+    s.split('\'').skip(1).any(starts_upper)
 }
 
 /// Java `AuthorshipParser.containsFiliusSuffix(List<Token>, int, int)`. Scans the token
@@ -1230,6 +1294,22 @@ mod tests {
         assert_eq!(s.unparsed_from, 0);
         assert_eq!(s.unparsed_text, Some("(ilic)".to_string()));
         assert_eq!(s.combination.authors, vec!["L.".to_string()]);
+    }
+
+    #[test]
+    fn an_elided_particle_surname_is_a_basionym_author() {
+        // `d'Orbigny` starts lower-case but is a surname, not the malformed `(ilic)` the
+        // hasUpperWord guard exists for. Rejecting it parked (or, on a separately supplied
+        // authorship, silently dropped) ~15k d'Orbigny / d'Archiac / d'Urv. basionyms.
+        let s = parse_str("(d'Orbigny, 1826)");
+        assert!(s.basionym_present);
+        assert_eq!(s.basionym.authors, vec!["d'Orbigny".to_string()]);
+        assert_eq!(s.basionym.year, Some("1826".to_string()));
+        assert_eq!(s.unparsed_from, -1);
+
+        let s = parse_str("(d'Urv.) Mill.");
+        assert_eq!(s.basionym.authors, vec!["d'Urv.".to_string()]);
+        assert_eq!(s.combination.authors, vec!["Mill.".to_string()]);
     }
 
     #[test]
