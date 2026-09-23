@@ -953,11 +953,19 @@ fn slice_text(tokens: &[Token], start: usize, end: usize) -> String {
 }
 
 /// Java `AuthorshipParser.hasUpperWord(List<Token>, int, int)`. True if any token in
-/// `[from, to)` is a WORD that starts with an upper-case letter.
+/// `[from, to)` is a WORD that starts with an upper-case letter — or, unlike Java, a surname
+/// behind an elided particle (`d'Orbigny`, `d'Urv.`, `l'Hér.`), which the tokenizer keeps as
+/// one lower-case-initial WORD. Java rejected `(d'Orbigny, 1826)` as a basionym, parking it as
+/// unparsed on the name string and dropping it silently from a separately supplied authorship.
 fn has_upper_word(tokens: &[Token], from: usize, to: usize) -> bool {
-    tokens[from..to]
-        .iter()
-        .any(|t| t.kind == TokenKind::Word && starts_upper(&t.text))
+    tokens[from..to].iter().any(|t| {
+        t.kind == TokenKind::Word && (starts_upper(&t.text) || is_elided_particle_surname(&t.text))
+    })
+}
+
+/// A word like `d'Orbigny`: an apostrophe directly followed by an upper-case letter.
+fn is_elided_particle_surname(s: &str) -> bool {
+    s.split('\'').skip(1).any(starts_upper)
 }
 
 /// Java `AuthorshipParser.containsFiliusSuffix(List<Token>, int, int)`. Scans the token
@@ -1230,6 +1238,22 @@ mod tests {
         assert_eq!(s.unparsed_from, 0);
         assert_eq!(s.unparsed_text, Some("(ilic)".to_string()));
         assert_eq!(s.combination.authors, vec!["L.".to_string()]);
+    }
+
+    #[test]
+    fn an_elided_particle_surname_is_a_basionym_author() {
+        // `d'Orbigny` starts lower-case but is a surname, not the malformed `(ilic)` the
+        // hasUpperWord guard exists for. Rejecting it parked (or, on a separately supplied
+        // authorship, silently dropped) ~15k d'Orbigny / d'Archiac / d'Urv. basionyms.
+        let s = parse_str("(d'Orbigny, 1826)");
+        assert!(s.basionym_present);
+        assert_eq!(s.basionym.authors, vec!["d'Orbigny".to_string()]);
+        assert_eq!(s.basionym.year, Some("1826".to_string()));
+        assert_eq!(s.unparsed_from, -1);
+
+        let s = parse_str("(d'Urv.) Mill.");
+        assert_eq!(s.basionym.authors, vec!["d'Urv.".to_string()]);
+        assert_eq!(s.combination.authors, vec!["Mill.".to_string()]);
     }
 
     #[test]
