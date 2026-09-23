@@ -99,8 +99,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_aggregate_suffix(ctx, s);
     s = strip_published_page(ctx, s);
     s = strip_in_press(ctx, s);
-    s = strip_in_author_in_parens(ctx, s);
-    s = strip_in_author_citation(ctx, s);
+    s = strip_in_author_citations(ctx, s);
     s = strip_ipni_citation(ctx, s);
     s = strip_period_separated_reference(ctx, s);
     s = strip_comma_prefixed_reference(ctx, s);
@@ -2535,6 +2534,18 @@ fn strip_in_press(ctx: &mut ParseContext, s: String) -> String {
         return format!("{}{}", &s[..m.start()], &s[m.end()..]);
     }
     s
+}
+
+// ---- Steps 47 + 48: `in` / `apud` citations ----
+
+/// Steps 47 and 48 together: split an `in` / `apud` citation off its author, first inside the
+/// basionym parentheses, then at the tail. Shared by `run` and by the separately supplied
+/// authorship in `pipeline::run`, so `Grunow in Van Heurck, 1883` gives the author `Grunow` and
+/// `publishedIn="Van Heurck, 1883"` whichever way it arrives. Java only ran these steps on the
+/// name string, so a separately supplied authorship kept the host inside the author (#20).
+pub(crate) fn strip_in_author_citations(ctx: &mut ParseContext, s: String) -> String {
+    let s = strip_in_author_in_parens(ctx, s);
+    strip_in_author_citation(ctx, s)
 }
 
 // ---- Step 47: stripInAuthorInParens ----

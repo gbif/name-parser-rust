@@ -179,12 +179,27 @@ pub fn run(
     // Separately-supplied authorship: run the same annotation strippers (sic / corrig /
     // extinct dagger / brackets etc.) on the auxiliary string via `strip_authorship_markers`
     // so its tokens are clean before parsing, then re-tokenise and parse it independently.
+    // An `in` / `apud` citation is split off exactly as on the name string (#20): the host
+    // goes to `publishedIn` and its year becomes the pending, code-neutral publication year.
+    // A reference the name string already gave is kept as it is: sources often repeat the
+    // authorship in both columns, not always identically (`Hwass in Bruguiere, 1792` +
+    // `Hwass in Bruguiere`), and appending the second copy would record the reference twice.
     // A sanctioning author found here is applied immediately (the embedded path's own
     // sanctioning author, applied further below, overwrites it — last-write-wins).
     let mut extra_state: Option<AuthState> = None;
     if let Some(authorship) = ctx.authorship_input.clone() {
         if !authorship.chars().all(crate::token::is_whitespace_java) {
             let auth_clean = stripandstash::strip_authorship_markers(&authorship, &mut ctx.name);
+            let embedded_reference = ctx
+                .name
+                .published_in
+                .clone()
+                .map(|r| (r, ctx.name.published_in_year));
+            let auth_clean = stripandstash::strip_in_author_citations(&mut ctx, auth_clean);
+            if let Some((reference, year)) = embedded_reference {
+                ctx.name.published_in = Some(reference);
+                ctx.name.published_in_year = year;
+            }
             let aux = tokenize(&auth_clean);
             let st = authorship_parser::parse(&aux, 0);
             apply_authorship(&mut ctx.name, &st);
