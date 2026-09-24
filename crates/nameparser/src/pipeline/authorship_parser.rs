@@ -65,7 +65,9 @@
 //!    `combAuthors(..., "F.Zhang", "Z-X.Pan")` — "F" is immediately followed by "&", a
 //!    separator, and still flips) and against the Java repo's `CLAUDE.md` authorship-
 //!    conventions note, which documents the flipping behaviour directly. Ported to match
-//!    the verified *behaviour*.
+//!    the verified *behaviour*. Deliberate divergence (#24): a dotted initial takes the rest
+//!    of its run (`Sars G.O.` → `G.O.Sars`, where Java gave `O.G.Sars`), and the
+//!    middle-initial check looks past the whole run (`Roy G.O. Taylor` stays one author).
 //! 6. `format_initials` keeps a dot-per-letter and the input case of a hyphenated
 //!    lower-case follow-up for dotted input (`"Y.-j."` stays `"Y.-j."`), but upper-cases a
 //!    dot-less CJK-style hyphenated pair and adds a single trailing dot (`"Z-X"` →
@@ -449,6 +451,26 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                 while j < to && tokens[j].kind == TokenKind::Dot {
                     initials.push('.');
                     j += 1;
+                }
+                // Take the rest of a dotted run ("Sars G.O.", "Smith A.B.C."), including a
+                // last initial glued on without its dot ("de Souza J.I"). Stopping after
+                // the first letter left "O." as an author of its own, which invert_all
+                // then put in front: "O.G.Sars" (#24). Java does the same.
+                if j > i + 1 {
+                    while j < to
+                        && tokens[j].kind == TokenKind::Word
+                        && tokens[j].text.chars().count() == 1
+                        && is_all_upper(&tokens[j].text)
+                        && ((j + 1 < to && tokens[j + 1].kind == TokenKind::Dot)
+                            || tokens[j].start == tokens[j - 1].end)
+                    {
+                        initials.push_str(&tokens[j].text);
+                        j += 1;
+                        while j < to && tokens[j].kind == TokenKind::Dot {
+                            initials.push('.');
+                            j += 1;
+                        }
+                    }
                 }
                 // Pick up an optional "-X" continuation so "Pan Z-X" is treated as one
                 // author pair (initials "Z-X") rather than two. (In practice the
@@ -1128,6 +1150,37 @@ mod tests {
         assert_eq!(
             authors(&parse_str("Zhang F & Pan Z-X")),
             &["F.Zhang".to_string(), "Z-X.Pan".to_string()]
+        );
+    }
+
+    #[test]
+    fn trailing_dotted_initials_keep_their_order() {
+        // #24: "Sars G.O." used to flip only "G." onto the surname and leave "O." as an
+        // author of its own, which invert_all then put in front: "O.G.Sars".
+        assert_eq!(authors(&parse_str("Sars G.O.")), &["G.O.Sars".to_string()]);
+        assert_eq!(authors(&parse_str("Sars G. O.")), &["G.O.Sars".to_string()]);
+        assert_eq!(authors(&parse_str("Sars G.O")), &["G.O.Sars".to_string()]);
+        assert_eq!(
+            authors(&parse_str("de Souza J.I")),
+            &["J.I.de Souza".to_string()]
+        );
+        assert_eq!(
+            authors(&parse_str("Smith A.B.C.")),
+            &["A.B.C.Smith".to_string()]
+        );
+        assert_eq!(
+            authors(&parse_str("Sars G.O. & Smith A.B.")),
+            &["G.O.Sars".to_string(), "A.B.Smith".to_string()]
+        );
+    }
+
+    #[test]
+    fn several_middle_initials_before_a_surname_keep_one_author() {
+        // #24: the same split turned "Roy G.O. Taylor" into "G.Roy" + "O.Taylor", while
+        // "Roy L. Taylor" with one middle initial stayed a single author.
+        assert_eq!(
+            authors(&parse_str("Roy G.O. Taylor")),
+            &["Roy G.O.Taylor".to_string()]
         );
     }
 
