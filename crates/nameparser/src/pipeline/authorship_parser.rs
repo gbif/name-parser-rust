@@ -47,7 +47,9 @@
 //! 3. [`GENERATIONAL_SUFFIXES`] excludes bare `I`/`V`/`X` — those are genuine author
 //!    initials, not generation-suffix Roman numerals. Deliberate divergence (#22): an
 //!    undotted `I` is kept as the generation after an author with leading initials
-//!    (`G. B. Sowerby I`) or in a team that also carries a later generation.
+//!    (`G. B. Sowerby I`) or in a team that also carries a later generation. Deliberate
+//!    divergence too: a generation behind surname-first initials stays behind the surname
+//!    (`Sowerby G.B. II` → `G.B.Sowerby II`, where Java gave `I.I.G.B.Sowerby`).
 //! 4. A bracketed `[YYYY]` is always the *imprint* year (first-wins), never the main year,
 //!    even when it is the only year given. A second *plain* year is the imprint year. A
 //!    year range (`NUMBER "-"|"/" NUMBER`) keeps only the first year and sets
@@ -504,7 +506,13 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                 // undotted run-on ("Balsamo M Fregni") still flips to end the current
                 // author, and always does so regardless of what follows (see the module
                 // doc comment's Quirk 5 note on the stale Java inline comment here).
-                let middle_initial_surname_follows = j > i + 1
+                //
+                // A generation after the initials ("Sowerby G.B. II", "Turnbow R.H. Jr.")
+                // belongs to the surname: Java read "II" as the initials "I.I." and "Jr"
+                // as the surname of a spelled-out-forename author.
+                let generation = generation_after_initials(tokens, k, to);
+                let middle_initial_surname_follows = generation.is_none()
+                    && j > i + 1
                     && k < to
                     && tokens[k].kind == TokenKind::Word
                     && starts_upper(&tokens[k].text)
@@ -512,7 +520,13 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                 if !middle_initial_surname_follows {
                     let surname = cur.trim().to_string();
                     cur.clear();
-                    authors.push(format!("{}{}", format_initials(&initials), surname));
+                    let mut author = format!("{}{}", format_initials(&initials), surname);
+                    if let Some((suffix, next)) = generation {
+                        author.push(' ');
+                        author.push_str(&suffix);
+                        k = next;
+                    }
+                    authors.push(author);
                     i = k;
                     continue;
                 }
@@ -771,6 +785,32 @@ fn invert_author(s: &str) -> String {
         }
     }
     s.to_string()
+}
+
+/// The generation at `tokens[k]` behind a surname-first author's initials, rendered as it
+/// goes after the surname (`II`, `Jr.`), and the index past it. Roman numerals come out
+/// upper-case and lose a trailing dot. A spaced, undotted `I` counts too, since the author
+/// already has initials (#22); a dotted `I.` is another initial, and so is an `I` glued to
+/// the run (`J.I`), which the caller has taken already.
+fn generation_after_initials(tokens: &[Token], k: usize, to: usize) -> Option<(String, usize)> {
+    if k >= to || tokens[k].kind != TokenKind::Word {
+        return None;
+    }
+    let text = &tokens[k].text;
+    let dotted = k + 1 < to && tokens[k + 1].kind == TokenKind::Dot;
+    let next = if dotted { k + 2 } else { k + 1 };
+    let upper = text.to_uppercase();
+    if GENERATIONAL_SUFFIXES.contains(&upper.as_str()) || (text == "I" && !dotted) {
+        return Some((upper, next));
+    }
+    let lower = text.to_lowercase();
+    if ["jr", "junior", "jun", "sr", "senior", "sen"].contains(&lower.as_str()) {
+        // ASCII by the match above, so slicing at 1 is safe.
+        let dot = if dotted { "." } else { "" };
+        let suffix = format!("{}{}{dot}", &upper[..1], &lower[1..]);
+        return Some((suffix, next));
+    }
+    None
 }
 
 /// Two capitals in a row (`DC`, `A.DC.`, `HBK.`), as opposed to one initial per letter
@@ -1172,6 +1212,35 @@ mod tests {
             authors(&parse_str("Sars G.O. & Smith A.B.")),
             &["G.O.Sars".to_string(), "A.B.Smith".to_string()]
         );
+    }
+
+    #[test]
+    fn generation_after_trailing_initials_stays_behind_the_surname() {
+        // A generation written after surname-first initials belongs to that surname:
+        // "Sowerby G.B. II" was read as the initials "I.I." (I.I.G.B.Sowerby) and
+        // "Stekhoven J.H. Jr" as a forename-initials-surname author.
+        assert_eq!(
+            authors(&parse_str("Sowerby G.B. II")),
+            &["G.B.Sowerby II".to_string()]
+        );
+        assert_eq!(
+            authors(&parse_str("Sowerby G. III")),
+            &["G.Sowerby III".to_string()]
+        );
+        assert_eq!(
+            authors(&parse_str("Sowerby G.B. I")),
+            &["G.B.Sowerby I".to_string()]
+        );
+        assert_eq!(
+            authors(&parse_str("Schuurmans Stekhoven J.H. Jr")),
+            &["J.H.Schuurmans Stekhoven Jr".to_string()]
+        );
+        assert_eq!(
+            authors(&parse_str("TURNBOW R. H. JR., FRANKLIN R. T.")),
+            &["R.H.Turnbow Jr.".to_string(), "R.T.Franklin".to_string()]
+        );
+        // A dotted "I." is still an initial ("Kim I." = I. Kim).
+        assert_eq!(authors(&parse_str("Kim I.")), &["I.Kim".to_string()]);
     }
 
     #[test]
