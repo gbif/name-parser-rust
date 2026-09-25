@@ -3608,7 +3608,7 @@
 {"line":3609,"input":"Thermus phage P37-14","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Thermus phage P37-14"}}
 {"line":3610,"input":"Thermus phage P7426","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Thermus phage P7426"}}
 {"line":3611,"input":"Thermus thermophilus bacteriophage p23-77","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Thermus thermophilus bacteriophage p23-77"}}
-{"line":3612,"input":"Thermus thermophilus phagein in93","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Thermus thermophilus phagein in93"}}
+{"line":3612,"input":"Thermus thermophilus phagein in93","parsed":{"rank":"INFRASUBSPECIFIC_NAME","genus":"Thermus","specificEpithet":"thermophilus","infraspecificEpithet":"in93","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}}
 {"line":3613,"input":"Thetapapillomavirus 1","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Thetapapillomavirus 1"}}
 {"line":3614,"input":"Thiafora virus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Thiafora virus"}}
 {"line":3615,"input":"Thimiri virus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Thimiri virus"}}

@@ -46,10 +46,14 @@ use crate::viral::is_viral;
 // Match anything ending in -virus / -viruses / -viroid / -viroids / -phage(s) /
 // -satellite, plus standalone viral keywords. Word characters can precede the
 // suffix (so "Sapovirus", "papillomavirus", "C2-like viruses" all match).
+// Divergence from Java: `phages?` is anchored to a word end or a glued `_`/digit (`phage_Kente`,
+// `phage1_…`), plus a word-initial `phage` followed by a mixed-case strain code (`phageBT1`) or
+// `phagemid`. Java's unanchored `phages?` also fired inside words — Sphagesauridae,
+// Sphagebranchus, `Treponema phagedenis` — rejecting ~460 real CLB names as viruses.
 // Java: `Pattern.CASE_INSENSITIVE`. No `\p{…}`, so the whole alternation is `(?-u:…)`-wrapped.
 static VIRUS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b|(?:fusion\s+)?vector\b|\bprions?\b|\bparticles?\b|\breplicons?\b|\bRNA\b))",
+        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b|(?:fusion\s+)?vector\b|\bprions?\b|\bparticles?\b|\breplicons?\b|\bRNA\b))",
     )
     .unwrap()
 });
@@ -91,7 +95,7 @@ static SOFT_GENUS: LazyLock<Regex> =
 // Java: `Pattern.CASE_INSENSITIVE`. Same treatment as VIRUS.
 static HARD_VIRUS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b))",
+        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b))",
     )
     .unwrap()
 });

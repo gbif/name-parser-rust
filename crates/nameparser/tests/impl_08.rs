@@ -93,6 +93,74 @@ fn virus_false_positive_animals() {
         .nothing_else();
 }
 
+/// `phage` is a viral trigger only as a word ending (`coliphage`, `Escherichia phage T4`) or glued
+/// to a strain code (`phage_Kente`, `phageBT1`). Inherited from Java, the unanchored `phages?`
+/// used to fire inside any word, rejecting ~460 CLB names as OTHER + VIRUS — e.g.
+/// Sphagesauridae and Phagesaurus, the eel genus Sphagebranchus, `Treponema phagedenis`, …
+#[test]
+fn phage_inside_a_word_is_not_viral() {
+    assert_name("Sphagesauridae")
+        .monomial("Sphagesauridae")
+        .nothing_else();
+    assert_name("Sphagesauridae Kuhn, 1968")
+        .monomial("Sphagesauridae")
+        .comb_authors(Some("1968"), &["Kuhn"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_hinted(
+        "Sphagesauridae",
+        None,
+        Some(Rank::Family),
+        Some(NomCode::Zoological),
+    )
+    .monomial_rank("Sphagesauridae", Rank::Family)
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name_hinted(
+        "Sphagesauridae",
+        Some("Kuhn, 1968"),
+        Some(Rank::Family),
+        Some(NomCode::Zoological),
+    )
+    .monomial_rank("Sphagesauridae", Rank::Family)
+    .comb_authors(Some("1968"), &["Kuhn"])
+    .code(NomCode::Zoological)
+    .nothing_else();
+
+    // `phage` as the word start: only a glued strain code (`phageBT1`) makes it viral
+    assert_name("Phagesaurus")
+        .monomial("Phagesaurus")
+        .nothing_else();
+    assert_name("Phagesaurus Price, 1950")
+        .monomial("Phagesaurus")
+        .comb_authors(Some("1950"), &["Price"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Phagesaurus neuquenensis")
+        .species("Phagesaurus", "neuquenensis")
+        .nothing_else();
+
+    assert_name("Sphagebranchus Bloch, 1795")
+        .monomial("Sphagebranchus")
+        .comb_authors(Some("1795"), &["Bloch"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Treponema phagedenis")
+        .species("Treponema", "phagedenis")
+        .nothing_else();
+
+    // still viral
+    assert_unparsable_code("Escherichia phage T4", NameType::Other, NomCode::Virus);
+    assert_unparsable_code("Escherichia phage_Kente", NameType::Other, NomCode::Virus);
+    assert_unparsable_code(
+        "Enterococcus phage1_EfsPF36",
+        NameType::Other,
+        NomCode::Virus,
+    );
+    assert_unparsable_code("Streptomyces phageBT1", NameType::Other, NomCode::Virus);
+    assert_unparsable_code("Mini Mu phagemid DH5alpha", NameType::Other, NomCode::Virus);
+}
+
 /// The Preflight `ZOOLOGICAL_BINOMIAL` regex used to be an overlapping-alternation ReDoS —
 /// on an input that triggers the virus gate but has no trailing year it could backtrack
 /// exponentially. The parser has no execution timeout, so this guards the hardened (possessive)
