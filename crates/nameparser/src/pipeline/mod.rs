@@ -52,6 +52,25 @@ const LONG_NAME_LENGTH: usize = 250;
 static GLUED_PHRASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)([\p{Lu}]{2,}[\p{Lu}\d_]*)$").unwrap());
 
+/// A separately supplied bracketed source citation, `[of Dohrmann et al., 2023]`, joins a provisional
+/// designation's phrase — as it does when embedded in the name string (`Accacladocoelium sp. [of
+/// Sokolov et al., 2025]`) — instead of being parsed into the authors `of Dohrmann` + `al.`. Not
+/// appended twice when the name string already ends with it (sources often repeat the authorship in
+/// both columns). Returns whether the authorship was consumed.
+fn append_citation_to_phrase(authorship: &str, name: &mut ParsedName) -> bool {
+    let a = java_trim(authorship);
+    let Some(phrase) = name.phrase.as_ref() else {
+        return false;
+    };
+    if name.type_ != NameType::Informal || !(a.starts_with("[of ") && a.ends_with(']')) {
+        return false;
+    }
+    if !phrase.ends_with(a) {
+        name.phrase = Some(format!("{phrase} {a}"));
+    }
+    true
+}
+
 /// Java `Pipeline.run`. Orchestrates the staged parsing pipeline: guards → normalize →
 /// build [`ParseContext`] → split-glued-phrase → Preflight → StripAndStash → Tokenizer →
 /// AuthorshipSplit → NameTokens → AuthorshipParser (embedded / autonym mid-author /
@@ -193,6 +212,7 @@ pub fn run(
     if let Some(authorship) = ctx.authorship_input.clone() {
         if !authorship.chars().all(crate::token::is_whitespace_java)
             && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
+            && !append_citation_to_phrase(&authorship, &mut ctx.name)
         {
             let auth_clean = stripandstash::strip_authorship_markers(&authorship, &mut ctx.name);
             let embedded_reference = ctx

@@ -63,6 +63,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_trailing_strain_code(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
     s = stash_bracketed_annotation(ctx, s);
+    s = stash_underscore_designation(ctx, s);
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
@@ -784,6 +785,51 @@ static BRACKETED_ANNOTATION: LazyLock<Regex> = LazyLock::new(|| {
 fn stash_bracketed_annotation(ctx: &mut ParseContext, s: String) -> String {
     let Some(caps) = BRACKETED_ANNOTATION.captures(&s) else {
         return s;
+    };
+    ctx.name.phrase = Some(caps[2].to_string());
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
+}
+
+/// Underscore-glued provisional designations from barcoding / survey papers, optionally followed by
+/// a bracketed source citation: `Aulocalyx n_sp_NIWA_SO254 [of Dohrmann et al., 2023]`,
+/// `Eurythenes sp_DISCOLL_PAP_B`, `Farrea occa n_ssp_NIWA_SO254`. The tokenizer keeps the
+/// underscores inside one word, so the designation was read as the epithet and the citation as the
+/// authors `of Dohrmann` + `al.`. The designation plus citation become the phrase (INFORMAL), the
+/// working string the anchor — a genus, or a `Genus species` head for a subspecies designation.
+static UNDERSCORE_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^([\p{Lu}][\p{Ll}]+(?:(?-u:\s+)[\p{Ll}]+)?)(?-u:\s+)((?:n_)?(sp|ssp|subsp)_[\p{L}\d_]+(?:(?-u:\s+)\[[^\]]*\])?)(?-u:\s*)$",
+    )
+    .unwrap()
+});
+/// A new genus glued onto its family, `Rossellidae_n_gen`, with an optional designation/citation
+/// tail (`Rossellidae_n_gen n_sp_NIWA_SO254 [of …]`): the family is the anchor, the rest the phrase.
+static GLUED_NEW_GENUS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)_(n_gen(?:(?-u:\s+).*)?)$").unwrap());
+static NEW_SPECIES_TAG: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b)(?:n_)?sp_").unwrap());
+
+/// See [`UNDERSCORE_DESIGNATION`] and [`GLUED_NEW_GENUS`].
+fn stash_underscore_designation(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = GLUED_NEW_GENUS.captures(&s) {
+        let tail = java_trim(&caps[2]).to_string();
+        ctx.name.rank = if NEW_SPECIES_TAG.is_match(&tail) {
+            Rank::Species
+        } else {
+            Rank::Genus
+        };
+        ctx.name.phrase = Some(tail);
+        ctx.name.type_ = NameType::Informal;
+        return caps[1].to_string();
+    }
+    let Some(caps) = UNDERSCORE_DESIGNATION.captures(&s) else {
+        return s;
+    };
+    ctx.name.rank = if &caps[3] == "sp" {
+        Rank::Species
+    } else {
+        Rank::Subspecies
     };
     ctx.name.phrase = Some(caps[2].to_string());
     ctx.name.type_ = NameType::Informal;

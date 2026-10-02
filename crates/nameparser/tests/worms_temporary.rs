@@ -70,6 +70,120 @@ fn nbsp_separated_name_parses_like_a_spaced_one() {
         .nothing_else();
 }
 
+// ---- B. underscore-glued provisional designations ---------------------------------------------
+
+#[test]
+fn underscore_new_species_designation_is_informal() {
+    assert_informal("Aulocalyx n_sp_NIWA_SO254 [of Dohrmann et al., 2023]")
+        .taxon("Aulocalyx")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("n_sp_NIWA_SO254 [of Dohrmann et al., 2023]")
+        .nothing_else();
+    assert_informal_hinted(
+        "Aulocalyx n_sp_NIWA_SO254",
+        Some("[of Dohrmann et al., 2023]"),
+        Some(Rank::Species),
+        None,
+    )
+    .taxon("Aulocalyx")
+    .taxon_rank(Rank::Genus)
+    .rank(Rank::Species)
+    .phrase("n_sp_NIWA_SO254 [of Dohrmann et al., 2023]")
+    .nothing_else();
+}
+
+#[test]
+fn underscore_sp_designation_is_informal() {
+    assert_informal("Eurythenes sp_DISCOLL_PAP_B [of Horton et al., 2020]")
+        .taxon("Eurythenes")
+        .rank(Rank::Species)
+        .phrase("sp_DISCOLL_PAP_B [of Horton et al., 2020]");
+    assert_informal("Oerstedia sp_Bering [of Chernyshev & Polyakova, 2022]")
+        .taxon("Oerstedia")
+        .rank(Rank::Species)
+        .phrase("sp_Bering [of Chernyshev & Polyakova, 2022]");
+    assert_informal("Parandaniexis sp_JAVA")
+        .taxon("Parandaniexis")
+        .rank(Rank::Species)
+        .phrase("sp_JAVA");
+}
+
+#[test]
+fn underscore_new_subspecies_designation_keeps_the_species() {
+    assert_name("Farrea occa n_ssp_NIWA_SO254 [of Dohrmann et al., 2023]")
+        .binomial("Farrea", None, "occa", Rank::Subspecies)
+        .type_(NameType::Informal)
+        .phrase("n_ssp_NIWA_SO254 [of Dohrmann et al., 2023]")
+        .nothing_else();
+}
+
+#[test]
+fn glued_new_genus_designation_is_informal_not_a_binomial() {
+    assert_informal("Rossellidae_n_gen [of Dohrmann et al., 2023]")
+        .taxon("Rossellidae")
+        .rank(Rank::Genus)
+        .phrase("n_gen [of Dohrmann et al., 2023]");
+    assert_informal("Rossellidae_n_gen n_sp_NIWA_SO254 [of Dohrmann et al., 2023]")
+        .taxon("Rossellidae")
+        .rank(Rank::Species)
+        .phrase("n_gen n_sp_NIWA_SO254 [of Dohrmann et al., 2023]");
+}
+
+#[test]
+fn underscore_designation_canonical_has_no_synthetic_sp_marker() {
+    // the designation already names the rank — rendering must not prepend its own "sp."
+    for (input, canonical) in [
+        (
+            "Aulocalyx n_sp_NIWA_SO254 [of Dohrmann et al., 2023]",
+            "Aulocalyx n_sp_NIWA_SO254 [of Dohrmann et al., 2023]",
+        ),
+        ("Parandaniexis sp_JAVA", "Parandaniexis sp_JAVA"),
+        (
+            "Rossellidae_n_gen n_sp_NIWA_SO254 [of Dohrmann et al., 2023]",
+            "Rossellidae n_gen n_sp_NIWA_SO254 [of Dohrmann et al., 2023]",
+        ),
+    ] {
+        match nameparser::parse(input, None, None, None) {
+            nameparser::ParseResult::Informal(i) => assert_eq!(i.canonical_name(), canonical),
+            other => panic!("expected `{input}` to be Informal, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn separate_of_citation_of_a_designation_lands_in_the_phrase() {
+    assert_informal_hinted(
+        "Accacladocoelium sp.",
+        Some("[of Sokolov et al., 2025]"),
+        Some(Rank::Species),
+        None,
+    )
+    .taxon("Accacladocoelium")
+    .rank(Rank::Species)
+    .phrase("sp. [of Sokolov et al., 2025]")
+    .nothing_else();
+    assert_name_hinted(
+        "Farrea occa n_ssp_NIWA_SO254",
+        Some("[of Dohrmann et al., 2023]"),
+        Some(Rank::Subspecies),
+        None,
+    )
+    .binomial("Farrea", None, "occa", Rank::Subspecies)
+    .type_(NameType::Informal)
+    .phrase("n_ssp_NIWA_SO254 [of Dohrmann et al., 2023]")
+    .nothing_else();
+    // the same citation repeated in both columns is not appended twice
+    assert_informal_hinted(
+        "Accacladocoelium sp. [of Sokolov et al., 2025]",
+        Some("[of Sokolov et al., 2025]"),
+        None,
+        None,
+    )
+    .taxon("Accacladocoelium")
+    .phrase("sp. [of Sokolov et al., 2025]");
+}
+
 // ---- C. a bracketed single word is an annotation, not an author --------------------------------
 
 #[test]

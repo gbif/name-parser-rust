@@ -783,6 +783,10 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             } else {
                 Rank::InfrasubspecificName
             });
+        } else if ctx.name.phrase.is_some() && ctx.name.rank.is_infraspecific() {
+            // A stashed infraspecific designation (`Farrea occa n_ssp_NIWA_SO254`) already set
+            // the rank of the unnamed taxon the phrase stands for — the binomial is only its head.
+            rank = Some(ctx.name.rank);
         } else {
             rank = Some(Rank::Species);
         }
@@ -868,7 +872,10 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     {
         ctx.name.type_ = NameType::Informal;
         ctx.name.rank = requested.unwrap();
-        ctx.name.add_warning(warnings::INDETERMINED);
+        // a stashed designation phrase (`n_ssp_NIWA_SO254`) is the missing terminal epithet
+        if ctx.name.phrase.is_none() {
+            ctx.name.add_warning(warnings::INDETERMINED);
+        }
     }
     if requested == Some(Rank::Species) && infraspecific.is_some() {
         ctx.name.add_warning(warnings::SUBSPECIES_ASSIGNED);
