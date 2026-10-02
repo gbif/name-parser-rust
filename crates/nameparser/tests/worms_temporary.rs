@@ -152,6 +152,43 @@ fn underscore_designation_canonical_has_no_synthetic_sp_marker() {
 }
 
 #[test]
+fn separate_authorship_of_a_provisional_name_lands_in_the_phrase() {
+    // The embedded form swallows a trailing authorship into the phrase
+    // (`Cantuaria sp. Forster, 1968` → phrase `sp. Forster, 1968`); the CLB shape must not
+    // silently drop it instead.
+    assert_informal_hinted(
+        "Cantuaria sp.",
+        Some("Forster, 1968"),
+        Some(Rank::Species),
+        None,
+    )
+    .taxon("Cantuaria")
+    .taxon_rank(Rank::Genus)
+    .rank(Rank::Species)
+    .phrase("sp. Forster, 1968")
+    .nothing_else();
+}
+
+#[test]
+fn redundant_separate_authorship_is_not_appended_twice() {
+    // sources often repeat the authorship in both columns, not always identically
+    for authorship in ["Forster, 1968", "Forster 1968", "Forster"] {
+        assert_informal_hinted(
+            "Cantuaria sp. Forster, 1968",
+            Some(authorship),
+            Some(Rank::Species),
+            None,
+        )
+        .taxon("Cantuaria")
+        .phrase("sp. Forster, 1968");
+    }
+    // a bare marker repeated as the "authorship"
+    assert_informal_hinted("Saprinus sp.", Some("sp."), Some(Rank::Genus), None)
+        .taxon("Saprinus")
+        .phrase("sp.");
+}
+
+#[test]
 fn separate_of_citation_of_a_designation_lands_in_the_phrase() {
     assert_informal_hinted(
         "Accacladocoelium sp.",

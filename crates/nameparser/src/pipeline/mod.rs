@@ -52,23 +52,39 @@ const LONG_NAME_LENGTH: usize = 250;
 static GLUED_PHRASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)([\p{Lu}]{2,}[\p{Lu}\d_]*)$").unwrap());
 
-/// A separately supplied bracketed source citation, `[of Dohrmann et al., 2023]`, joins a provisional
-/// designation's phrase — as it does when embedded in the name string (`Accacladocoelium sp. [of
-/// Sokolov et al., 2025]`) — instead of being parsed into the authors `of Dohrmann` + `al.`. Not
-/// appended twice when the name string already ends with it (sources often repeat the authorship in
-/// both columns). Returns whether the authorship was consumed.
-fn append_citation_to_phrase(authorship: &str, name: &mut ParsedName) -> bool {
+/// A provisional name's separately supplied authorship joins its phrase, exactly as the embedded
+/// form does (`Cantuaria sp. Forster, 1968` → phrase `sp. Forster, 1968`): an informal name with no
+/// species epithet has no authorship slot of its own, so parsing it there lost it outright
+/// (`Cantuaria sp.` + `Forster, 1968` came back as phrase `sp.`). A bracketed `[of … et al., 2023]`
+/// source citation joins any designation's phrase, epithet or not — it is no authorship at all
+/// (`Farrea occa n_ssp_NIWA_SO254` + `[of Dohrmann et al., 2023]`). Sources often repeat the
+/// authorship in both columns, not always identically, so it is not appended when the phrase
+/// already contains it ([`contains_ignoring_punctuation`]). Returns whether it was consumed.
+fn append_authorship_to_phrase(authorship: &str, name: &mut ParsedName) -> bool {
     let a = java_trim(authorship);
     let Some(phrase) = name.phrase.as_ref() else {
         return false;
     };
-    if name.type_ != NameType::Informal || !(a.starts_with("[of ") && a.ends_with(']')) {
+    let is_citation = a.starts_with("[of ") && a.ends_with(']');
+    if name.type_ != NameType::Informal || (name.specific_epithet.is_some() && !is_citation) {
         return false;
     }
-    if !phrase.ends_with(a) {
+    if !contains_ignoring_punctuation(phrase, a) {
         name.phrase = Some(format!("{phrase} {a}"));
     }
     true
+}
+
+/// `haystack` contains `needle` once both are reduced to their letters and digits — so
+/// `sp. Forster, 1968` contains `Forster 1968`, and `sp.` contains `sp.`.
+fn contains_ignoring_punctuation(haystack: &str, needle: &str) -> bool {
+    let squash = |s: &str| {
+        s.chars()
+            .filter(|c| c.is_alphanumeric())
+            .collect::<String>()
+    };
+    let needle = squash(needle);
+    needle.is_empty() || squash(haystack).contains(&needle)
 }
 
 /// Java `Pipeline.run`. Orchestrates the staged parsing pipeline: guards → normalize →
@@ -212,7 +228,7 @@ pub fn run(
     if let Some(authorship) = ctx.authorship_input.clone() {
         if !authorship.chars().all(crate::token::is_whitespace_java)
             && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
-            && !append_citation_to_phrase(&authorship, &mut ctx.name)
+            && !append_authorship_to_phrase(&authorship, &mut ctx.name)
         {
             let auth_clean = stripandstash::strip_authorship_markers(&authorship, &mut ctx.name);
             let embedded_reference = ctx
