@@ -234,6 +234,93 @@ fn parenthesised_single_word_is_still_a_basionym_author() {
         .nothing_else();
 }
 
+// ---- D. single-letter epithets are informal designations ---------------------------------------
+
+#[test]
+fn single_letter_species_epithet_is_informal() {
+    // ICZN Art. 11.9.1: a species-group name has more than one letter. `a` is also an author
+    // particle, which used to swallow it into the authorship.
+    for letter in ["a", "b"] {
+        assert_name(&format!(
+            "Collettea {letter} Blazewicz-Paszkowycz & Larsen, 2005"
+        ))
+        .species("Collettea", letter)
+        .type_(NameType::Informal)
+        .comb_authors(Some("2005"), &["Blazewicz-Paszkowycz", "Larsen"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    }
+    assert_name_hinted(
+        "Collettea a",
+        Some("Blazewicz-Paszkowycz & Larsen, 2005"),
+        Some(Rank::Species),
+        None,
+    )
+    .species("Collettea", "a")
+    .type_(NameType::Informal)
+    .comb_authors(Some("2005"), &["Blazewicz-Paszkowycz", "Larsen"])
+    .nothing_else();
+}
+
+#[test]
+fn abbreviated_particle_after_the_genus_is_still_an_author_particle() {
+    assert_name("Micropleura v Linstow, 1906")
+        .monomial("Micropleura")
+        .comb_authors(Some("1906"), &["v Linstow"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn single_letter_after_an_infraspecific_marker_is_the_epithet() {
+    // mirrors the existing uppercase handling (`var. A` → infraspecificEpithet `A`, INFORMAL)
+    for letter in ["a", "b"] {
+        assert_name(&format!("Undella hyalina var. {letter} Brandt, 1907"))
+            .infra_species("Undella", "hyalina", Rank::Variety, letter)
+            .type_(NameType::Informal)
+            .comb_authors(Some("1907"), &["Brandt"])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+}
+
+#[test]
+fn letter_ahead_of_a_real_epithet_is_not_a_designation() {
+    // an informal rank letter before the epithet, after a marker…
+    assert_name("Tetraria compar var. b minor Kük.")
+        .infra_species("Tetraria", "compar", Rank::Variety, "minor")
+        .comb_authors(None, &["Kük."])
+        .nothing_else();
+    // …and abbreviated or split letter epithets in the species slot keep their type
+    for name in [
+        "Curculio c.album Scopoli, J.A., 1763",
+        "Drepana z nigrum Bryk, 1942",
+    ] {
+        match nameparser::parse(name, None, None, None) {
+            nameparser::ParseResult::Parsed(pn) => {
+                assert_eq!(pn.type_, NameType::Scientific, "{name}")
+            }
+            other => panic!("expected `{name}` to parse, got {other:?}"),
+        }
+    }
+}
+
+#[test]
+fn parenthesised_letter_after_an_infraspecific_marker_is_the_phrase() {
+    // the #16 designation path keeps it verbatim, like `var. 3`
+    for letter in ["a", "A"] {
+        assert_name(&format!(
+            "Paraconchoecia oblonga f. ({letter}) Müller, 1906"
+        ))
+        .binomial("Paraconchoecia", None, "oblonga", Rank::Form)
+        .phrase(&format!("({letter})"))
+        .type_(NameType::Informal)
+        .comb_authors(Some("1906"), &["Müller"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    }
+}
+
 // ---- E. a parenthesised sensu is a taxonomic note ----------------------------------------------
 
 #[test]
