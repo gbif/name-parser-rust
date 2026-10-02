@@ -57,6 +57,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = apply_missing_genus_placeholder(ctx, s);
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_rank_lineage(ctx, s);
+    s = strip_leading_species_label(ctx, s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
@@ -457,6 +458,35 @@ fn strip_rank_lineage(ctx: &mut ParseContext, s: String) -> String {
         }
         None => s,
     }
+}
+
+/// A stray species label in front of a binomial or trinomial, `Sp. Abacobius jekelii` /
+/// `spec. Abacobius jekelii` (~900 CLB names): read as is, `Sp` became the uninomial and the name
+/// its author. The label is dropped; a plain binomial head gets the SPECIES rank it announces,
+/// anything richer keeps the rank parsing infers.
+static LEADING_SPECIES_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:[Ss]p|[Ss]pec)\.(?-u:\s+)([\p{Lu}][\p{L}.]*(?:(?-u:\s+)\([\p{Lu}][\p{L}]*\))?(?-u:\s+)[\p{Ll}].*)$",
+    )
+    .unwrap()
+});
+static BINOMIAL_HEAD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^[\p{Lu}][\p{L}.]*(?:(?-u:\s+)\([\p{Lu}][\p{L}]*\))?(?-u:\s+)[\p{Ll}][\p{L}\-]*(?:(?-u:\s+)[^\p{Ll}].*)?$",
+    )
+    .unwrap()
+});
+
+/// See [`LEADING_SPECIES_LABEL`].
+fn strip_leading_species_label(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = LEADING_SPECIES_LABEL.captures(&s) else {
+        return s;
+    };
+    let name = caps[1].to_string();
+    if BINOMIAL_HEAD.is_match(&name) {
+        ctx.name.rank = Rank::Species;
+    }
+    name
 }
 
 // ---- Step 5: stripInfraRankLetters ----

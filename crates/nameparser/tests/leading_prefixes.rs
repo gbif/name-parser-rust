@@ -159,3 +159,42 @@ fn rank_prefixed_taxon_keeps_its_authorship() {
         .code(nameparser::model::NomCode::Zoological)
         .nothing_else();
 }
+
+// ---- a stray leading species label --------------------------------------------------------------
+
+#[test]
+fn leading_species_label_is_dropped_from_a_binomial() {
+    for name in [
+        "Sp. Abacobius jekelii",
+        "sp. Abacobius jekelii",
+        "spec. Abacobius jekelii",
+    ] {
+        assert_name(name)
+            .species("Abacobius", "jekelii")
+            .nothing_else();
+    }
+    assert_name("Sp. Lupocyclus sexspinosus Leene, 1940")
+        .species("Lupocyclus", "sexspinosus")
+        .comb_authors(Some("1940"), &["Leene"])
+        .code(nameparser::model::NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn leading_species_label_before_a_trinomial_keeps_the_trinomial() {
+    assert_name("Sp. Antitrophus lygodesmiae pisum")
+        .infra_species(
+            "Antitrophus",
+            "lygodesmiae",
+            Rank::InfraspecificName,
+            "pisum",
+        )
+        .nothing_else();
+}
+
+#[test]
+fn leading_species_label_before_a_subgenus_binomial_is_dropped() {
+    assert_name("Sp. Eubulus (Cryptorhynchus) orthomasticus")
+        .species_ig("Eubulus", "Cryptorhynchus", "orthomasticus")
+        .nothing_else();
+}
