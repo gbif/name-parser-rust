@@ -1,0 +1,71 @@
+// SPDX-License-Identifier: Apache-2.0
+//! WoRMS "temporary names": the 464 names WoRMS flags `taxonomicStatus = temporary name` — mostly
+//! placeholders (`X incertae sedis`, `[unassigned] X`), provisional designations
+//! (`Genus n_sp_NIWA_SO254 [of Dohrmann et al., 2023]`) and informal groupings. Each case is pinned
+//! in both call shapes it reaches us in: the full string (name + authority concatenated) and the
+//! ChecklistBank shape (name and authorship passed separately, plus the WoRMS rank as a hint).
+
+mod common;
+use common::*;
+use nameparser::model::{NameType, Rank};
+
+// ---- still-correct cases pinned so the fixes below can't regress them -------------------------
+
+#[test]
+fn incertae_sedis_variants_are_placeholders() {
+    for name in [
+        "Abyssochrysoidea incertae sedis",
+        "Cephalopoda <i>incertae sedis</i>",
+        "Ophiuroidea Incertae sedis",
+        "Erpocotyle (incertae sedis)",
+        "Paleopneustina incertae sedis A",
+        "Sordariomycetes incertae sedis (fam.)",
+        "Astrophorida incertae sedis Hooper & Maldonado, 2002",
+        "[unassigned] Decapodiformes",
+    ] {
+        assert_unparsable(name, NameType::Placeholder);
+    }
+}
+
+#[test]
+fn fish_suborders_are_scientific_monomials() {
+    assert_name("Acanthistioidei")
+        .monomial("Acanthistioidei")
+        .nothing_else();
+    assert_name("Trigloidei")
+        .monomial("Trigloidei")
+        .nothing_else();
+}
+
+#[test]
+fn bracketed_of_citation_after_sp_stays_in_the_phrase() {
+    assert_informal("Accacladocoelium sp. [of Sokolov et al., 2025]")
+        .taxon("Accacladocoelium")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. [of Sokolov et al., 2025]")
+        .nothing_else();
+}
+
+// ---- A. a non-breaking space must not hide a placeholder ---------------------------------------
+
+#[test]
+fn nbsp_incertae_sedis_is_a_placeholder() {
+    assert_unparsable(
+        "Assimineidae\u{a0}incertae\u{a0}sedis",
+        NameType::Placeholder,
+    );
+    assert_unparsable_rank(
+        "Assimineidae\u{a0}incertae\u{a0}sedis",
+        Rank::Genus,
+        NameType::Placeholder,
+    );
+}
+
+#[test]
+fn nbsp_separated_name_parses_like_a_spaced_one() {
+    assert_name("Abies\u{a0}alba\u{a0}Mill.")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Mill."])
+        .nothing_else();
+}

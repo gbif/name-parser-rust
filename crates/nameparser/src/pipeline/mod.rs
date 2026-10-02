@@ -25,7 +25,7 @@ use crate::model::{
 };
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
-use crate::unicode::{java_trim, normalize_quotes};
+use crate::unicode::{java_trim, normalize_quotes, normalize_spaces};
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -67,7 +67,10 @@ pub fn run(
     // Java also null-checks `scientificName` here (`throw new
     // UnparsableNameException(NameType.OTHER, null)`); unreachable in Rust since `&str`
     // can never be null — only the empty-after-trim case below can actually occur.
-    let trimmed = java_trim(name);
+    // Unicode space separators (NBSP & co) become ASCII spaces first, so the trim and every
+    // later stage treat them as the word breaks they are; `name` itself stays raw for echoes.
+    let spaced = normalize_spaces(name);
+    let trimmed = java_trim(&spaced);
     if trimmed.is_empty() {
         return Err(ParseError::new(NameType::Other, None, name));
     }
@@ -100,7 +103,7 @@ pub fn run(
     // ctx)` — that call passes `Pipeline.run`'s own original parameter, not the
     // trimmed+normalized local.
     let trimmed = normalize_quotes(trimmed);
-    let authorship = authorship.map(normalize_quotes);
+    let authorship = authorship.map(|a| normalize_quotes(&normalize_spaces(a)));
 
     let mut ctx = ParseContext::new(trimmed.clone(), authorship, rank, code);
     if trimmed.chars().count() > LONG_NAME_LENGTH {
