@@ -10,7 +10,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 > GitHub Releases, `python-release.yml` → PyPI); the `Jenkinsfile` deploys the Java FFM binding to
 > GBIF Nexus. The Java module ships a **thin main JAR plus one cdylib JAR per platform** (§3), so it
 > is consumable off-checkout. The Java binding is released at `0.2.1` and auto-deploys snapshots to GBIF Nexus on every
-> push to `main`; crates.io, PyPI and GitHub Releases have all published `0.2.1` and re-publish from a
+> push to `main`; crates.io, PyPI and GitHub Releases have all published `0.2.2` and re-publish from a
 > `crate-v*` / `py-v*` / `cli-v*` tag; CRAN is built by `scripts/build-r-tarball.sh` and submitted by hand
 > (see [`RELEASE.md`](RELEASE.md)).
 > This engine has **replaced** the pure-Java parser: `org.gbif:name-parser` ended at `4.2.0`, the
@@ -23,10 +23,10 @@ single "deploy"**, because each binding targets a different package ecosystem.
 
 | Artifact | Path | Channel | Coordinates / name | Status |
 |---|---|---|---|---|
-| Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | published — `0.2.1` |
-| Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.2.1`, 4 targets |
+| Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | published — `0.2.2` |
+| Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.2.2`, 4 targets |
 | **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — released `0.2.1`; `0.2.2-SNAPSHOT` auto-deploys |
-| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.2.1` (`pip install gbif-name-parser`) |
+| Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.2.2` (`pip install gbif-name-parser`) |
 | R binding | `bindings/r` | GitHub (`install_github`), CRAN | pkg `nameparser` | complete; built on Linux/macOS/Windows, tarball checks clean locally, win-builder pending, awaiting first CRAN submission |
 
 Every binding except the pure-Rust CLI wraps the **`nameparser-ffi` cdylib**
@@ -40,7 +40,7 @@ problem, addressed in §3.
 ### 2.1 Rust core + CLI
 
 - **Library** → `cargo publish` to crates.io. The crate is package **`gbif-name-parser`**
-  `0.2.1` (Apache-2.0) with lib name `nameparser` (so dependents keep `use nameparser::`). The
+  `0.2.2` (Apache-2.0) with lib name `nameparser` (so dependents keep `use nameparser::`). The
   manifest already carries `description`/`repository`/`keywords`/`categories` and is publishable
   (`cargo publish --dry-run -p gbif-name-parser` passes); a `crate-v*` tag publishes it via
   `crate-release.yml` (OIDC Trusted Publishing — no stored token).

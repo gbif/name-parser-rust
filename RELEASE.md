@@ -16,9 +16,9 @@ version number means the **same underlying Rust engine** everywhere.
 | Channel | Artifact | Registry | Trigger | Status |
 |---|---|---|---|---|
 | Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.2.1` released |
-| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.2.1` released |
-| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.2.1` published (setup done); later versions via tag |
-| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.2.1` published (setup done); later versions via tag |
+| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.2.2` released |
+| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.2.2` published (setup done); later versions via tag |
+| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.2.2` published (setup done); later versions via tag |
 | R | `nameparser` | CRAN | `scripts/build-r-tarball.sh` + manual submission | 🟡 tarball checks clean locally + on Linux/macOS/Windows CI; win-builder pending, then first submission |
 
 ---
@@ -131,7 +131,7 @@ For any subsequent release, after the §1 version bump — **dry-run first** (re
 never publishes). Then the real release:
 
 ```sh
-git tag crate-v0.2.1 && git push origin crate-v0.2.1   # a NEW version each time — 0.1.0/0.2.0/0.2.1 are published
+git tag crate-v0.2.1 && git push origin crate-v0.2.1   # a NEW version each time — 0.1.0/0.2.0/0.2.1/0.2.2 are published
 ```
 
 `.github/workflows/crate-release.yml` guards the tag against the engine version (root `Cargo.toml`
