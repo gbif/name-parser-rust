@@ -9,7 +9,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 > binding (`ci.yml`) and publishes on tags (`crate-release.yml` → crates.io, `cli-release.yml` →
 > GitHub Releases, `python-release.yml` → PyPI); the `Jenkinsfile` deploys the Java FFM binding to
 > GBIF Nexus. The Java module ships a **thin main JAR plus one cdylib JAR per platform** (§3), so it
-> is consumable off-checkout. The Java binding is released at `0.2.1` and auto-deploys snapshots to GBIF Nexus on every
+> is consumable off-checkout. The Java binding is released at `0.2.2` and auto-deploys snapshots to GBIF Nexus on every
 > push to `main`; crates.io, PyPI and GitHub Releases have all published `0.2.2` and re-publish from a
 > `crate-v*` / `py-v*` / `cli-v*` tag; CRAN is built by `scripts/build-r-tarball.sh` and submitted by hand
 > (see [`RELEASE.md`](RELEASE.md)).
@@ -25,7 +25,7 @@ single "deploy"**, because each binding targets a different package ecosystem.
 |---|---|---|---|---|
 | Rust core library | `crates/nameparser` | crates.io | `gbif-name-parser` (lib `nameparser`) | published — `0.2.2` |
 | Native CLI | `crates/nameparser-cli` | GitHub Releases | `nameparser-cli` binaries | released — `cli-v0.2.2`, 4 targets |
-| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — released `0.2.1`; `0.2.2-SNAPSHOT` auto-deploys |
+| **Java FFM binding** | `bindings/java` | **repository.gbif.org** (Jenkins) | `org.gbif.nameparser:name-parser-rust` (+ per-arch classifier JARs) | **LIVE** — released `0.2.2`; `0.2.3-SNAPSHOT` auto-deploys |
 | Python binding | `crates/nameparser-py` | PyPI | dist `gbif-name-parser`, import `nameparser` | published — `0.2.2` (`pip install gbif-name-parser`) |
 | R binding | `bindings/r` | GitHub (`install_github`), CRAN | pkg `nameparser` | complete; built on Linux/macOS/Windows, tarball checks clean locally, win-builder pending, awaiting first CRAN submission |
 
@@ -56,7 +56,7 @@ enforces `maven.compiler.release=17`, and `java.lang.foreign` (FFM/Panama) needs
 compiler release at **22**. Current coordinates:
 
 ```
-org.gbif.nameparser:name-parser-rust:0.2.2-SNAPSHOT   (packaging: jar)
+org.gbif.nameparser:name-parser-rust:0.2.3-SNAPSHOT   (packaging: jar)
 ```
 
 It compiles `org.gbif.nameparser.rust.NameParserRust implements org.gbif.nameparser.api.NameParser`,
@@ -81,7 +81,7 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
   reference-impl / oracle was removed at 5.0.0 (api-only), so it is no longer a test dependency.
   The api is an independently versioned **dependency** — the stable contract — **not** this
   module's own version.
-- ✅ **Version = `0.2.1` released** (`0.2.2-SNAPSHOT` on `main`) — the Java FFM binding **shares the Rust engine's version**
+- ✅ **Version = `0.2.2` released** (`0.2.3-SNAPSHOT` on `main`) — the Java FFM binding **shares the Rust engine's version**
   (the Cargo `[workspace.package]` version at the repo root), released in lockstep with the
   CLI/Python/R bindings: **one version across every binding ⇒ the same engine**. It is *not* tied
   to the `name-parser-api` version it implements (an implementation versioning independently from
@@ -263,8 +263,8 @@ If your build does not already resolve from GBIF's Nexus, add:
 ```
 
 **The Rust-backed FFM binding** — a drop-in `NameParser` on **JDK 22+**. Add the thin main JAR
-plus your platform's native classifier JAR (via `os-maven-plugin`, §3). `0.2.1` is the current
-release; `0.2.2-SNAPSHOT` deploys on every push to `main`:
+plus your platform's native classifier JAR (via `os-maven-plugin`, §3). `0.2.2` is the current
+release; `0.2.3-SNAPSHOT` deploys on every push to `main`:
 
 ```xml
 <build><extensions>
@@ -278,12 +278,12 @@ release; `0.2.2-SNAPSHOT` deploys on every push to `main`:
   <dependency>                               <!-- thin main JAR: Java + FFM loader -->
     <groupId>org.gbif.nameparser</groupId>
     <artifactId>name-parser-rust</artifactId>
-    <version>0.2.1</version>
+    <version>0.2.2</version>
   </dependency>
   <dependency>                               <!-- your platform's native cdylib -->
     <groupId>org.gbif.nameparser</groupId>
     <artifactId>name-parser-rust</artifactId>
-    <version>0.2.1</version>
+    <version>0.2.2</version>
     <classifier>${os.detected.classifier}</classifier>
   </dependency>
 </dependencies>

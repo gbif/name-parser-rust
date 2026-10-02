@@ -15,7 +15,7 @@ version number means the **same underlying Rust engine** everywhere.
 
 | Channel | Artifact | Registry | Trigger | Status |
 |---|---|---|---|---|
-| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.2.1` released |
+| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.2.2` released |
 | CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.2.2` released |
 | Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.2.2` published (setup done); later versions via tag |
 | Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.2.2` published (setup done); later versions via tag |
