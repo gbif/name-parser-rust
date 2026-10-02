@@ -1,6 +1,6 @@
 Package: nameparser
 Title: Structured Parsing of Biological Scientific Names
-Version: 0.2.1
+Version: 0.2.2
 Authors@R:
     person("Markus", "Döring", email = "mdoering@gbif.org", role = c("aut", "cre"))
 Description: Parses biological scientific names into their structured
