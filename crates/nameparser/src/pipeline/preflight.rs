@@ -183,6 +183,59 @@ static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+// One to four lowercase words ending in a generic organism word. Group 1 = the qualifier words
+// before it (`marine `, `delta `), group 2 = the remainder after it.
+static ORGANISM_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^((?:[a-z][a-z-]* ){0,4}?)[a-z]*(?:bacteri(?:um|a)|archae(?:on|a)|actinomycetes?|symbionts?|fung(?:us|al|i)|yeasts?|algae?|protists?|microorganisms?)(?: (.+))?$",
+    )
+    .unwrap()
+});
+// The authorship of a real epithet whose genus is missing (`fungi Meigen, 1830`).
+static AUTHOR_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    // a lowercase-bearing surname and a plausible year — `DSM 6505`, `RCC 1888` are accessions
+    Regex::new(
+        r"^\(?\p{Lu}\p{Ll}[\p{L}'.\-]*(?:(?:,? | & | et )\p{Lu}[\p{L}'.\-]+)*,? (?:1[789]\d\d|20[0-2]\d)\)?$",
+    )
+    .unwrap()
+});
+// What may precede the code: `enrichment culture`, then a `clone`/`strain`/`str.`/`isolate`/`sp.`.
+static CODE_LEAD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:enrichment culture )?(?:(?:clone|strain|str\.?|isolate|sp\.?) )?").unwrap()
+});
+
+/// [`ORGANISM_LABEL`]: `Some(Identifier)` when a strain/clone code follows the label, `Some(Other)`
+/// for any other label, `None` when it is no such label — or the label word is a real epithet
+/// with an authorship, its genus missing (`fungi Meigen, 1830`), left to the missing-genus path.
+fn classify_organism_label(s: &str) -> Option<NameType> {
+    let caps = ORGANISM_LABEL.captures(s)?;
+    let Some(rest) = caps.get(2).map(|m| m.as_str()) else {
+        return Some(NameType::Other);
+    };
+    if caps[1].is_empty() && AUTHOR_YEAR.is_match(rest) {
+        return None;
+    }
+    let code = &rest[CODE_LEAD.find(rest).map_or(0, |m| m.end())..];
+    let quoted = (code.starts_with('\'') && code.ends_with('\''))
+        || (code.starts_with('"') && code.ends_with('"'));
+    let tokens: Vec<&str> = code.split_whitespace().collect();
+    let codeish = |t: &str| {
+        t.chars().any(|c| c.is_ascii_digit()) || t.chars().filter(|c| c.is_uppercase()).count() >= 2
+    };
+    let is_code = quoted
+        || tokens.len() == 1
+        || (tokens.len() <= 3
+            && (tokens
+                .last()
+                .is_some_and(|t| t.chars().any(|c| c.is_ascii_digit()))
+                || tokens.iter().all(|t| codeish(t))));
+    Some(if is_code {
+        NameType::Identifier
+    } else {
+        NameType::Other
+    })
+}
+
 /// The `unclassified` placeholder word, kept out of [`PLACEHOLDER_KEYWORDS`] so it is tested after
 /// the virus gate.
 static UNCLASSIFIED: LazyLock<Regex> =
@@ -389,6 +442,14 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // (`Grapevine red globe virus (unclassified)`) keeps its VIRUS code.
     if UNCLASSIFIED.is_match(&s) {
         return Err(ParseError::new(NameType::Placeholder, None, original));
+    }
+
+    // A generic organism label instead of a genus — `bacterium Ac10`, `marine actinobacterium F10`,
+    // `bacterium enrichment culture clone OB115` (~90k CLB names): the label plus a strain/clone
+    // code is an IDENTIFIER; any other label (`endosymbiont of Chlamys farreri`) is OTHER. These
+    // used to come back as genus `?` + epithet `bacterium`, or as a SCIENTIFIC genus `marine`.
+    if let Some(type_) = classify_organism_label(&s) {
+        return Err(ParseError::new(type_, None, s));
     }
 
     // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a single
