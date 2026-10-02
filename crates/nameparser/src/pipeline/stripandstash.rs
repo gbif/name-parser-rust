@@ -156,7 +156,7 @@ fn has_earlier_year(s: &str, end: usize) -> bool {
 fn fancy_replace_all(
     re: &FancyRegex,
     s: &str,
-    replacement: impl Fn(&fancy_regex::Captures) -> String,
+    replacement: impl Fn(&fancy_regex::Captures<'_, str>) -> String,
 ) -> String {
     let mut result = String::with_capacity(s.len());
     let mut last = 0usize;
@@ -603,7 +603,7 @@ static STRAIN_DESIGNATION: LazyLock<FancyRegex> = LazyLock::new(|| {
 /// `rank=STRAIN, phrase="Aph K2", type=INFORMAL`. Only fires when a plausible name (a
 /// capitalised genus) precedes the marker, never on junk.
 fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
-    if let Ok(Some(caps)) = STRAIN_DESIGNATION.captures(&s) {
+    if let Ok(Some(caps)) = STRAIN_DESIGNATION.captures(s.as_str()) {
         let whole = caps.get(0).unwrap();
         let prefix = java_trim(&s[..whole.start()]).to_string();
         if !prefix.is_empty() && prefix.chars().next().is_some_and(|c| c.is_uppercase()) {
