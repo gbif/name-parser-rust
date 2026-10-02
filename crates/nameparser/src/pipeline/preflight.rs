@@ -211,6 +211,10 @@ static INDET_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[\p{Lu}][\p{L}\-]+(?:\s+[\p{Lu}][\p{L}]+)?\s+(?:indet|undet)\.?\s*$").unwrap()
 });
 
+// Two or more Title-case words and nothing else: an informal group label once its quotes are gone.
+static QUOTED_LABEL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+(?:[ -]\p{Lu}\p{Ll}+)+$").unwrap());
+
 // "clade" as a standalone word: a phylogenetic clade label, not a Linnean name.
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\b` (x2), no `\p{…}` → whole pattern wrapped.
 static CLADE_KEYWORD: LazyLock<Regex> =
@@ -278,10 +282,22 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // `ctx.working` is a plain owned `String`; copy the trimmed text out so `s` doesn't
     // keep an outstanding borrow of `ctx` alive across the later `&mut ctx` needed by
     // `apply_virus_gate`.
-    let s: String = java_trim(&ctx.working).to_string();
+    let mut s: String = java_trim(&ctx.working).to_string();
     if s.is_empty() {
         return Err(ParseError::new(NameType::Other, None, original));
     }
+
+    // A whole multi-word input wrapped in one pair of double quotes is a CSV/export artefact
+    // (`"Accipiter bicolor (Vieillot, 1817)"`): unwrap it so every stage sees the name itself.
+    // A single quoted word (`"Prosthete"`) is left to StripAndStash's quoted-monomial step.
+    let was_quoted = match unwrap_quoted_phrase(&s) {
+        Some(inner) => {
+            s = inner.to_string();
+            ctx.working = s.clone();
+            true
+        }
+        None => false,
+    };
 
     // Inputs that are too short or that are just an HTML entity stub (no real name content)
     // — bail out before any regex work touches them. A single bare letter ("X" / "a") is not
@@ -386,6 +402,12 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // grouping the model can't hang off a single taxon → Unparsable(OTHER). (Was `Err(INFORMAL)` in
     // 4.2.0; 5.0.0 forbids a parsable type in an unparsable result, and these have no clean anchor.)
     if CLADE_KEYWORD.is_match(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+
+    // A quoted label of Title-case words only ("Lower Heterobranchia", "Sieblosioid Group") is an
+    // informal group name with no anchor — the quotes mark it as not-a-name.
+    if was_quoted && QUOTED_LABEL.is_match(&s) && !s.starts_with("Candidatus ") {
         return Err(ParseError::new(NameType::Other, None, original));
     }
 
@@ -645,6 +667,13 @@ fn is_plausible_single_word_name(s: &str) -> bool {
     !has_digit(s)
 }
 
+/// The trimmed content of `"two or more words"` — one pair of double quotes wrapping the whole
+/// input, with an inner space and no further double quote — or `None`.
+fn unwrap_quoted_phrase(s: &str) -> Option<&str> {
+    let inner = java_trim(s.strip_prefix('"')?.strip_suffix('"')?);
+    (inner.contains(' ') && !inner.contains('"')).then_some(inner)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -876,6 +905,29 @@ mod tests {
     }
 
     // ---------- category: placeholder ----------
+
+    #[test]
+    fn fully_quoted_multi_word_label_is_unparsable_other() {
+        assert_eq!(
+            check("\"Lower Heterobranchia\"").unwrap_err().type_,
+            NameType::Other
+        );
+        assert_eq!(
+            check("\"Sieblosioid Group\"").unwrap_err().type_,
+            NameType::Other
+        );
+        assert!(check("\"Prosthete\"").is_ok());
+        assert!(check("\"Candidatus Riegeria\"").is_ok());
+        assert!(check("\"Aus\" bus").is_ok());
+    }
+
+    #[test]
+    fn fully_quoted_name_is_unwrapped() {
+        let input = "\"Accipiter bicolor (Vieillot, 1817)\"";
+        let mut ctx = ParseContext::new(input.to_string(), None, None, None);
+        assert!(run(input, &mut ctx).is_ok());
+        assert_eq!(ctx.working, "Accipiter bicolor (Vieillot, 1817)");
+    }
 
     #[test]
     fn incertae_sedis_is_placeholder() {

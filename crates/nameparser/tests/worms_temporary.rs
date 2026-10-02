@@ -7,7 +7,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NameType, Rank};
+use nameparser::model::{NameType, NomCode, Rank};
 
 // ---- still-correct cases pinned so the fixes below can't regress them -------------------------
 
@@ -87,4 +87,21 @@ fn parenthesised_sensu_of_a_provisional_name_stays_in_the_phrase() {
         .taxon("Coprosma")
         .rank(Rank::Species)
         .phrase("species a (sensu Eagle)");
+}
+
+// ---- F. a fully quoted multi-word label is not a name ------------------------------------------
+
+#[test]
+fn fully_quoted_group_label_is_unparsable() {
+    assert_unparsable("\"Lower Heterobranchia\"", NameType::Other);
+}
+
+#[test]
+fn fully_quoted_name_is_parsed_without_its_quotes() {
+    // a CSV/export artefact: the quotes wrap a perfectly good name
+    assert_name("\"Accipiter bicolor (Vieillot, 1817)\"")
+        .species("Accipiter", "bicolor")
+        .bas_authors(Some("1817"), &["Vieillot"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
