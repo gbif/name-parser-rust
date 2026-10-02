@@ -7,7 +7,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NameType, NomCode, Rank};
+use nameparser::model::{NamePart, NameType, NomCode, Rank};
 
 // ---- still-correct cases pinned so the fixes below can't regress them -------------------------
 
@@ -422,4 +422,68 @@ fn ichno_genera_and_bare_anchor_stay_scientific() {
         .monomial("Ichnospongia")
         .nothing_else();
     assert_name("Echinoid").monomial("Echinoid").nothing_else();
+}
+
+// ---- H. a leading question mark doubts the genus ----------------------------------------------
+
+#[test]
+fn leading_question_mark_doubts_the_genus() {
+    // like `Sydonia? alba` (a `?` qualifier, INFORMAL, doubtful) — the genus must not be lost
+    for name in ["?Sydonia alba", "? Sydonia alba"] {
+        assert_name(name)
+            .species("Sydonia", "alba")
+            .qualifiers(&[(NamePart::Generic, "?")])
+            .type_(NameType::Informal)
+            .doubtful()
+            .warning(&["question marks removed"])
+            .nothing_else();
+    }
+    assert_name("?Lupocyclus sexspinosus Leene, 1940")
+        .species("Lupocyclus", "sexspinosus")
+        .qualifiers(&[(NamePart::Generic, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&["question marks removed"])
+        .comb_authors(Some("1940"), &["Leene"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a bare uninomial stays a Parsed name, so the qualifier and the flag survive
+    assert_name("?Monotremata")
+        .monomial("Monotremata")
+        .qualifiers(&[(NamePart::Generic, "?")])
+        .doubtful()
+        .warning(&["question marks removed"])
+        .nothing_else();
+}
+
+#[test]
+fn leading_question_mark_before_an_indet_marker_keeps_the_genus() {
+    assert_informal_hinted(
+        "?Archaeopharetra sp.",
+        Some("of Zhuravlev & Gravestock 1994"),
+        Some(Rank::Species),
+        None,
+    )
+    .taxon("Archaeopharetra")
+    .rank(Rank::Species)
+    .phrase("sp. of Zhuravlev & Gravestock 1994");
+}
+
+#[test]
+fn leading_question_mark_before_an_epithet_is_still_a_missing_genus() {
+    assert_name("? alba Smith")
+        .species("?", "alba")
+        .comb_authors(None, &["Smith"])
+        .nothing_else();
+}
+
+#[test]
+fn leading_question_mark_with_a_subgenus_doubts_the_genus() {
+    assert_name("? Callidium (Phymatodes) semicircularis")
+        .species_ig("Callidium", "Phymatodes", "semicircularis")
+        .qualifiers(&[(NamePart::Generic, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&["question marks removed"])
+        .nothing_else();
 }

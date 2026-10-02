@@ -177,6 +177,12 @@ pub fn run(
     ctx.tokens = tokenize(&ctx.working);
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
+    // A doubted genus (`?Sydonia alba`) makes a binomial open nomenclature, like `Sydonia? alba`.
+    // A bare doubtful uninomial (`?Monotremata`) keeps its type: as INFORMAL it would become a flat
+    // Informal result, which has no slot for the qualifier or the doubtful flag.
+    if ctx.doubtful_genus && ctx.name.specific_epithet.is_some() {
+        ctx.name.type_ = NameType::Informal;
+    }
 
     // Java `Pipeline.run`, `Pipeline.java:79-185` (the AuthorshipParser → Assemble back
     // end). Each of the three embedded/mid-author/aux authorship spans is parsed
