@@ -238,6 +238,21 @@ static MONOMIAL_AGGREGATE: LazyLock<Regex> =
 static LINEAGE_LABEL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{L}][\p{L}\d]*)(?:-|\s+)(lineage)$").unwrap());
 
+// Trace-fossil / ichnotaxon labels ("Echinoid trace fossils (ichnotaxa)", "Trilobita-trace fossils",
+// "Trace fossils"): an informal grouping of ichnotaxa, optionally hung off an anchor. Captures:
+// group 1 = the optional stem, group 2 = the marker (kept verbatim as the phrase). Only the whole
+// words count — real genera like Ichnospongia or Ichnoceros never match.
+static TRACE_FOSSIL_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)^(?:(\p{L}+)(?:-|\s+))?((?:trace[-\s]+fossils?|ichnotax(?:a|on))(?:\s+\((?:ichnotaxa|ichnotaxon)\))?)$",
+    )
+    .unwrap()
+});
+// The same marker words anywhere in the string — a label the anchored form above can't take apart.
+static TRACE_FOSSIL_WORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\b)(?:trace[-\s]+fossils?|ichnotax(?:a|on))(?-u:\b)").unwrap()
+});
+
 // ---------- Precompiled in-method literals ----------
 /// Java: no flags. No `\s`/`\d`/`\w`/`\b`; called via `.matches()` on an UNANCHORED Java
 /// pattern, so the Rust port adds explicit `^…$` to reproduce full-match semantics.
@@ -382,6 +397,20 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
             rescue_informal_group(ctx, &caps[1], &caps[2]);
             return Ok(());
         }
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+
+    // Trace-fossil / ichnotaxon labels. RESCUE to `Informal` when a clean anchor precedes the marker
+    // ("Trilobita-trace fossils"); an anchorless label ("Trace fossils") or one the anchored form
+    // can't take apart ("Trace-fossils attributed to") is Unparsable(OTHER).
+    if let Some(caps) = TRACE_FOSSIL_LABEL.captures(&s) {
+        if let Some(stem) = caps.get(1).filter(|m| is_clean_genus_stem(m.as_str())) {
+            rescue_informal_group(ctx, stem.as_str(), &caps[2]);
+            return Ok(());
+        }
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+    if TRACE_FOSSIL_WORD.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, original));
     }
 
@@ -839,6 +868,31 @@ mod tests {
         assert_eq!(ctx.name.type_, NameType::Informal);
         assert_eq!(ctx.name.genus.as_deref(), Some("Vermistella"));
         assert_eq!(ctx.name.phrase.as_deref(), Some("lineage"));
+    }
+
+    #[test]
+    fn trace_fossil_label_with_clean_stem_rescued_to_informal() {
+        let n = rescued("Echinoid trace fossils (ichnotaxa)").name;
+        assert_eq!(n.genus.as_deref(), Some("Echinoid"));
+        assert_eq!(n.phrase.as_deref(), Some("trace fossils (ichnotaxa)"));
+        assert_eq!(n.type_, NameType::Informal);
+        let n = rescued("Trilobita-trace fossils").name;
+        assert_eq!(n.genus.as_deref(), Some("Trilobita"));
+        assert_eq!(n.phrase.as_deref(), Some("trace fossils"));
+    }
+
+    #[test]
+    fn trace_fossil_label_without_stem_is_unparsable_other() {
+        for label in [
+            "Trace fossils",
+            "Trace-fossils",
+            "Trace-fossils attributed to",
+            "ichnotaxa",
+        ] {
+            assert_eq!(check(label).unwrap_err().type_, NameType::Other, "{label}");
+        }
+        assert!(check("Ichnospongia").is_ok());
+        assert!(check("Ichnoceros robustus").is_ok());
     }
 
     #[test]

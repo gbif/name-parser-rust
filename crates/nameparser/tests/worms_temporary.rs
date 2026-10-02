@@ -105,3 +105,33 @@ fn fully_quoted_name_is_parsed_without_its_quotes() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+// ---- G. trace fossils / ichnotaxa ---------------------------------------------------------------
+
+#[test]
+fn trace_fossil_label_with_an_anchor_is_informal() {
+    assert_informal("Echinoid trace fossils (ichnotaxa)")
+        .taxon("Echinoid")
+        .phrase("trace fossils (ichnotaxa)");
+    assert_informal("Echinoid trace fossils")
+        .taxon("Echinoid")
+        .phrase("trace fossils");
+    assert_informal("Trilobita-trace fossils")
+        .taxon("Trilobita")
+        .phrase("trace fossils");
+}
+
+#[test]
+fn trace_fossil_label_without_an_anchor_is_unparsable() {
+    assert_unparsable("Trace fossils", NameType::Other);
+    assert_unparsable("Trace-fossils", NameType::Other);
+    assert_unparsable("Trace-fossils attributed to", NameType::Other);
+}
+
+#[test]
+fn ichno_genera_and_bare_anchor_stay_scientific() {
+    assert_name("Ichnospongia")
+        .monomial("Ichnospongia")
+        .nothing_else();
+    assert_name("Echinoid").monomial("Echinoid").nothing_else();
+}
