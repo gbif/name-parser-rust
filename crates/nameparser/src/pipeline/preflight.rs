@@ -183,6 +183,10 @@ static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+/// The `unclassified` placeholder word, kept out of [`PLACEHOLDER_KEYWORDS`] so it is tested after
+/// the virus gate.
+static UNCLASSIFIED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\bunclassified\b)").unwrap());
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\s` (in `[-\s]`), no `\p{…}` → whole pattern
 /// (after `^`) wrapped.
 static PLACEHOLDER_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
@@ -379,6 +383,13 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // Clean ICTV binomials/monomials with a viral genus suffix are let through to parse;
     // legacy vernacular virus names become OTHER + NomCode::Virus.
     apply_virus_gate(&s, ctx, original)?;
+
+    // `unclassified` (61k CLB names: `unclassified Aaadonta constricta`) is a placeholder like
+    // `unidentified` — but checked only after the virus gate, so a virus that carries it
+    // (`Grapevine red globe virus (unclassified)`) keeps its VIRUS code.
+    if UNCLASSIFIED.is_match(&s) {
+        return Err(ParseError::new(NameType::Placeholder, None, original));
+    }
 
     // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a single
     // Title-case uninomial + an aggregate marker. The stem is always a clean genus-shaped anchor, so
