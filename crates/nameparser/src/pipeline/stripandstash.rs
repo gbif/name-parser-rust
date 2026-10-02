@@ -2180,13 +2180,25 @@ fn strip_bracketed_tax_note(ctx: &mut ParseContext, s: String) -> String {
 // ---- Step 40: stripParenTaxNote ----
 
 /// Java PAREN_TAX_NOTE (StripAndStash.java:101-103):
-/// `\s*\(\s*((?:nec|non|not)\s+[^)]+)\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE`. `[^)]` is
+/// `\s*\(\s*((?:nec|non|not)\s+[^)]+)\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE` — extended
+/// beyond Java with the concept keywords `auct`/`auctt`/`sensu`/`sec` (the set the separate
+/// authorship's `PAREN_NOTE` already strips), so WoRMS' `Gregariella splendida (sensu Reeve,
+/// 1858)` keeps its note instead of reading `sensu Reeve` as the basionym author. `[^)]` is
 /// a negated custom class -> atom-only `\s` scoping (same precedent as
 /// `BRACKETED_TAX_NOTE` above). No lookaround/backreference -> plain `regex` crate.
 static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+)\)(?-u:\s*)\.?(?-u:\s*)$")
-        .unwrap()
+    Regex::new(
+        r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+|(?:auctt?|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)\.?(?-u:\s*)$",
+    )
+    .unwrap()
 });
+
+/// The Rust-only concept-keyword branch of [`PAREN_TAX_NOTE`] (`auct`/`auctt`/`sensu`/`sec`).
+static PAREN_CONCEPT_NOTE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:auctt?|sensu|sec)(?-u:\b)").unwrap());
+/// A standalone indeterminate rank-marker word (`sp.`, `spp.`, `spec.`, `species`, `indet.`).
+static INDET_MARKER_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:spp?|spec|species|indet)(?-u:\b)").unwrap());
 
 /// Java `StripAndStash.stripParenTaxNote` (StripAndStash.java:1334-1344). A trailing
 /// "(nec/non/not …, YYYY)" parenthesised homonym citation — the WHOLE bracket wraps the
@@ -2197,9 +2209,16 @@ static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// Foo, 1850)" -> `taxonomicNote="non Foo, 1850"`, authors=["Smith"].
 fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = PAREN_TAX_NOTE.captures(&s) {
-        let note = java_trim(caps.get(1).unwrap().as_str()).to_string();
-        ctx.name.add_taxonomic_note(&note);
         let whole = caps.get(0).unwrap();
+        // A provisional `Genus sp. a (sensu Eagle)` keeps its concept citation in the phrase: the
+        // flat Informal result has no note slot, so stripping it here would silently drop it.
+        if PAREN_CONCEPT_NOTE.is_match(caps.get(1).unwrap().as_str())
+            && INDET_MARKER_WORD.is_match(&s[..whole.start()])
+        {
+            return s;
+        }
+        let note = normalise_leading_auct(java_trim(caps.get(1).unwrap().as_str()));
+        ctx.name.add_taxonomic_note(&note);
         return java_trim(&s[..whole.start()]).to_string();
     }
     s

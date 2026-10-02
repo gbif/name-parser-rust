@@ -69,3 +69,22 @@ fn nbsp_separated_name_parses_like_a_spaced_one() {
         .comb_authors(None, &["Mill."])
         .nothing_else();
 }
+
+// ---- E. a parenthesised sensu is a taxonomic note ----------------------------------------------
+
+#[test]
+fn parenthesised_sensu_is_a_taxonomic_note() {
+    assert_name("Gregariella splendida (sensu Reeve, 1858)")
+        .species("Gregariella", "splendida")
+        .sensu("sensu Reeve, 1858")
+        .nothing_else();
+}
+
+#[test]
+fn parenthesised_sensu_of_a_provisional_name_stays_in_the_phrase() {
+    // the flat Informal result has no note slot — the citation must not be dropped
+    assert_informal("Coprosma species a (sensu Eagle)")
+        .taxon("Coprosma")
+        .rank(Rank::Species)
+        .phrase("species a (sensu Eagle)");
+}
