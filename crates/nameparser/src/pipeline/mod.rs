@@ -25,7 +25,7 @@ use crate::model::{
 };
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
-use crate::unicode::{java_trim, normalize_quotes};
+use crate::unicode::{java_trim, normalize_quotes, normalize_spaces};
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -52,6 +52,41 @@ const LONG_NAME_LENGTH: usize = 250;
 static GLUED_PHRASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)([\p{Lu}]{2,}[\p{Lu}\d_]*)$").unwrap());
 
+/// A provisional name's separately supplied authorship joins its phrase, exactly as the embedded
+/// form does (`Cantuaria sp. Forster, 1968` → phrase `sp. Forster, 1968`): an informal name with no
+/// species epithet has no authorship slot of its own, so parsing it there lost it outright
+/// (`Cantuaria sp.` + `Forster, 1968` came back as phrase `sp.`). A bracketed `[of … et al., 2023]`
+/// source citation joins any designation's phrase, epithet or not — it is no authorship at all
+/// (`Farrea occa n_ssp_NIWA_SO254` + `[of Dohrmann et al., 2023]`). Sources often repeat the
+/// authorship in both columns, not always identically, so it is not appended when the phrase
+/// already contains it ([`contains_ignoring_punctuation`]). Returns whether it was consumed.
+fn append_authorship_to_phrase(authorship: &str, name: &mut ParsedName) -> bool {
+    let a = java_trim(authorship);
+    let Some(phrase) = name.phrase.as_ref() else {
+        return false;
+    };
+    let is_citation = a.starts_with("[of ") && a.ends_with(']');
+    if name.type_ != NameType::Informal || (name.specific_epithet.is_some() && !is_citation) {
+        return false;
+    }
+    if !contains_ignoring_punctuation(phrase, a) {
+        name.phrase = Some(format!("{phrase} {a}"));
+    }
+    true
+}
+
+/// `haystack` contains `needle` once both are reduced to their letters and digits — so
+/// `sp. Forster, 1968` contains `Forster 1968`, and `sp.` contains `sp.`.
+fn contains_ignoring_punctuation(haystack: &str, needle: &str) -> bool {
+    let squash = |s: &str| {
+        s.chars()
+            .filter(|c| c.is_alphanumeric())
+            .collect::<String>()
+    };
+    let needle = squash(needle);
+    needle.is_empty() || squash(haystack).contains(&needle)
+}
+
 /// Java `Pipeline.run`. Orchestrates the staged parsing pipeline: guards → normalize →
 /// build [`ParseContext`] → split-glued-phrase → Preflight → StripAndStash → Tokenizer →
 /// AuthorshipSplit → NameTokens → AuthorshipParser (embedded / autonym mid-author /
@@ -67,7 +102,10 @@ pub fn run(
     // Java also null-checks `scientificName` here (`throw new
     // UnparsableNameException(NameType.OTHER, null)`); unreachable in Rust since `&str`
     // can never be null — only the empty-after-trim case below can actually occur.
-    let trimmed = java_trim(name);
+    // Unicode space separators (NBSP & co) become ASCII spaces first, so the trim and every
+    // later stage treat them as the word breaks they are; `name` itself stays raw for echoes.
+    let spaced = normalize_spaces(name);
+    let trimmed = java_trim(&spaced);
     if trimmed.is_empty() {
         return Err(ParseError::new(NameType::Other, None, name));
     }
@@ -100,7 +138,7 @@ pub fn run(
     // ctx)` — that call passes `Pipeline.run`'s own original parameter, not the
     // trimmed+normalized local.
     let trimmed = normalize_quotes(trimmed);
-    let authorship = authorship.map(normalize_quotes);
+    let authorship = authorship.map(|a| normalize_quotes(&normalize_spaces(a)));
 
     let mut ctx = ParseContext::new(trimmed.clone(), authorship, rank, code);
     if trimmed.chars().count() > LONG_NAME_LENGTH {
@@ -139,6 +177,13 @@ pub fn run(
     ctx.tokens = tokenize(&ctx.working);
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
+    // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a binomial open
+    // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`.
+    // A bare qualified uninomial (`?Monotremata`) keeps its type: as INFORMAL it would become a flat
+    // Informal result, which has no slot for the qualifier or the doubtful flag.
+    if ctx.qualified_genus && ctx.name.specific_epithet.is_some() {
+        ctx.name.type_ = NameType::Informal;
+    }
 
     // Java `Pipeline.run`, `Pipeline.java:79-185` (the AuthorshipParser → Assemble back
     // end). Each of the three embedded/mid-author/aux authorship spans is parsed
@@ -188,7 +233,10 @@ pub fn run(
     // sanctioning author, applied further below, overwrites it — last-write-wins).
     let mut extra_state: Option<AuthState> = None;
     if let Some(authorship) = ctx.authorship_input.clone() {
-        if !authorship.chars().all(crate::token::is_whitespace_java) {
+        if !authorship.chars().all(crate::token::is_whitespace_java)
+            && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
+            && !append_authorship_to_phrase(&authorship, &mut ctx.name)
+        {
             let auth_clean = stripandstash::strip_authorship_markers(&authorship, &mut ctx.name);
             let embedded_reference = ctx
                 .name

@@ -271,15 +271,11 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                             i += 1;
                         }
                     }
-                    // Single uppercase letter immediately after a rank marker is an
-                    // informal infra epithet ("form A", "f. B"), not the start of
-                    // authorship.
-                    if i < n
-                        && tokens[i].kind == TokenKind::Word
-                        && tokens[i].text.chars().count() == 1
-                        && starts_upper(&tokens[i])
-                    {
-                        i += 1;
+                    // A single letter immediately after a rank marker is an informal infra
+                    // epithet ("form A", "f. B", "var. a", "f. (a)"), not the start of
+                    // authorship — a lowercase `a` would otherwise open an author particle.
+                    if let Some(len) = single_letter_designation(tokens, i) {
+                        i += len;
                         have_epithet = true;
                     } else if have_epithet && i < n && tokens[i].kind == TokenKind::Number {
                         // gbif/name-parser-rust#16: a NUMBERED indeterminate infraspecific —
@@ -339,6 +335,24 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         i += 1;
                         after_subgenus = true;
                     }
+                    continue;
+                }
+                // A lone lowercase letter straight after the genus is a provisional species
+                // designation (`Collettea a Blazewicz-Paszkowycz & Larsen, 2005`): no
+                // species-group name has a single letter (ICZN Art. 11.9.1), and reading `a` as an
+                // author particle swallowed it into the authorship. The abbreviated particles
+                // `v` (von), `d` (de) and `y` stay particles: `Micropleura v Linstow, 1906`.
+                if after_genus
+                    && !have_epithet
+                    && w.chars().count() == 1
+                    && starts_lower(t)
+                    && !matches!(w, "v" | "d" | "y")
+                    && (i + 1 == n
+                        || (tokens[i + 1].kind == TokenKind::Word && starts_upper(&tokens[i + 1])))
+                {
+                    name_words += 1;
+                    have_epithet = true;
+                    i += 1;
                     continue;
                 }
                 if token::is_particle(&t.text) || looks_like_apostrophe_particle(&t.text) {
@@ -880,6 +894,38 @@ fn is_all_upper(s: &str) -> bool {
         }
     }
     any
+}
+
+/// A single-letter designation starting at `i` — a bare letter (`A`, `a`) or a parenthesised one
+/// (`(a)`) — as its token count, or `None`. Used after an infraspecific rank marker.
+pub(crate) fn single_letter_designation(tokens: &[Token], i: usize) -> Option<usize> {
+    let is_letter = |t: &Token| {
+        // ASCII only: a Greek letter (`var. β`) is the classic name of a variety and stays one
+        t.kind == TokenKind::Word && t.text.len() == 1 && t.text.as_bytes()[0].is_ascii_alphabetic()
+    };
+    if tokens.get(i).is_some_and(is_letter) {
+        // Not before a lowercase word: `ab. n. undularia` abbreviates (n. = nova), and
+        // `var. b minor` is an informal rank letter ahead of the real epithet.
+        let lower_word_at = |j: usize| {
+            tokens
+                .get(j)
+                .is_some_and(|t| t.kind == TokenKind::Word && starts_lower(t))
+        };
+        let dot_next = tokens.get(i + 1).is_some_and(|t| t.kind == TokenKind::Dot);
+        let epithet_follows = lower_word_at(i + 1) || (dot_next && lower_word_at(i + 2));
+        return (!epithet_follows).then_some(1);
+    }
+    if tokens
+        .get(i)
+        .is_some_and(|t| t.kind == TokenKind::OpenParen)
+        && tokens.get(i + 1).is_some_and(is_letter)
+        && tokens
+            .get(i + 2)
+            .is_some_and(|t| t.kind == TokenKind::CloseParen)
+    {
+        return Some(3);
+    }
+    None
 }
 
 #[cfg(test)]
