@@ -6,7 +6,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::NameType;
+use nameparser::model::{NameType, Rank};
 
 // ---- unclassified ------------------------------------------------------------------------------
 
@@ -102,4 +102,60 @@ fn organism_label_with_a_culture_accession_or_a_letter_is_an_identifier() {
     ] {
         assert_unparsable(name, NameType::Identifier);
     }
+}
+
+// ---- rank-prefixed classification paths ---------------------------------------------------------
+
+#[test]
+fn rank_prefixed_lineage_keeps_the_last_taxon_at_its_rank() {
+    for (name, uninomial, rank) in [
+        (
+            "supf. Arrenuroidea fam. Arrenuridae",
+            "Arrenuridae",
+            Rank::Family,
+        ),
+        (
+            "fam. Clavidae gen. Cordylophora",
+            "Cordylophora",
+            Rank::Genus,
+        ),
+        ("subo. Apocrita supf. Apoidea", "Apoidea", Rank::Superfamily),
+        (
+            "subf. Brachytroninae gen. Dendroaeschna",
+            "Dendroaeschna",
+            Rank::Genus,
+        ),
+        (
+            "info. Anomopoda fam. Daphniidae",
+            "Daphniidae",
+            Rank::Family,
+        ),
+        ("phy. Annelida cla. Polychaeta", "Polychaeta", Rank::Class),
+        (
+            "supo. Decapodiformes ord. Teuthida",
+            "Teuthida",
+            Rank::Order,
+        ),
+        ("subc. Copepoda ord. Cyclopoida", "Cyclopoida", Rank::Order),
+        (
+            "infc. Marsupialia ord. Diprotodontia",
+            "Diprotodontia",
+            Rank::Order,
+        ),
+        ("fam. Arrenuridae", "Arrenuridae", Rank::Family),
+        ("(supergen. Allopsontus)", "Allopsontus", Rank::Supergenus),
+    ] {
+        assert_name(name)
+            .monomial_rank(uninomial, rank)
+            .nothing_else();
+    }
+}
+
+#[test]
+fn rank_prefixed_taxon_keeps_its_authorship() {
+    assert_name("fam. Arrenuridae Thor, 1900")
+        .monomial_rank("Arrenuridae", Rank::Family)
+        .comb_authors(Some("1900"), &["Thor"])
+        .code(nameparser::model::NomCode::Zoological)
+        .nothing_else();
 }

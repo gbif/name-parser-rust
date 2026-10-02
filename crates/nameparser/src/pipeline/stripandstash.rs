@@ -56,6 +56,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_quoted_monomial(ctx, s);
     s = apply_missing_genus_placeholder(ctx, s);
     s = strip_leading_genus_qualifier(ctx, s);
+    s = strip_rank_lineage(ctx, s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
@@ -392,6 +393,70 @@ fn strip_leading_genus_qualifier(ctx: &mut ParseContext, s: String) -> String {
     }
     ctx.qualified_genus = true;
     caps[3].to_string()
+}
+
+/// A classification path written as abbreviated rank markers, `supf. Arrenuroidea fam. Arrenuridae`
+/// / `phy. Annelida cla. Polychaeta` / `(supergen. Allopsontus)`: the last taxon is the name, at
+/// the last marker's rank; every earlier `marker. Taxon` pair is dropped. Read as is, the first
+/// marker became the uninomial (`Supf`) and the rest its author. Only the lowercase, dotted
+/// abbreviations seen in the wild count, so a capitalised `Gen. Nov.` or a real genus never does.
+/// (`trib.`/`subtrib.`/`subfam.` keep their own step, [`strip_supra_rank_prefix`].)
+static LINEAGE_HEAD_PAIR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?:{LINEAGE_MARKERS})\.(?-u:\s+)[\p{{Lu}}][\p{{L}}]+(?-u:\s+)((?:{LINEAGE_MARKERS})\..+)$"
+    ))
+    .unwrap()
+});
+static LINEAGE_LAST: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?:\(({LINEAGE_MARKERS})\.(?-u:\s+)([\p{{Lu}}][\p{{L}}]+)\)|({LINEAGE_MARKERS})\.(?-u:\s+)([\p{{Lu}}][\p{{L}}]+(?:(?-u:\s).*)?))$"
+    ))
+    .unwrap()
+});
+const LINEAGE_MARKERS: &str =
+    "phy|subphy|cla|subc|infc|supo|ord|subo|info|supf|fam|subf|supergen|gen";
+
+fn lineage_marker_rank(marker: &str) -> Option<Rank> {
+    Some(match marker {
+        "phy" => Rank::Phylum,
+        "subphy" => Rank::Subphylum,
+        "cla" => Rank::Class,
+        "subc" => Rank::Subclass,
+        "infc" => Rank::Infraclass,
+        "supo" => Rank::Superorder,
+        "ord" => Rank::Order,
+        "subo" => Rank::Suborder,
+        "info" => Rank::Infraorder,
+        "supf" => Rank::Superfamily,
+        "fam" => Rank::Family,
+        "subf" => Rank::Subfamily,
+        "supergen" => Rank::Supergenus,
+        "gen" => Rank::Genus,
+        _ => return None,
+    })
+}
+
+/// See [`LINEAGE_LAST`].
+fn strip_rank_lineage(ctx: &mut ParseContext, s: String) -> String {
+    let mut path = s.as_str();
+    while let Some(caps) = LINEAGE_HEAD_PAIR.captures(path) {
+        path = caps.get(1).unwrap().as_str();
+    }
+    let Some(caps) = LINEAGE_LAST.captures(path) else {
+        return s;
+    };
+    let (marker, taxon) = match (caps.get(1), caps.get(3)) {
+        (Some(m), _) => (m.as_str(), caps.get(2).unwrap().as_str()),
+        (None, Some(m)) => (m.as_str(), caps.get(4).unwrap().as_str()),
+        (None, None) => return s,
+    };
+    match lineage_marker_rank(marker) {
+        Some(rank) => {
+            ctx.name.rank = rank;
+            taxon.to_string()
+        }
+        None => s,
+    }
 }
 
 // ---- Step 5: stripInfraRankLetters ----
