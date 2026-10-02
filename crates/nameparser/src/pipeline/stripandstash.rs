@@ -55,7 +55,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = extract_generic_author(ctx, s);
     s = strip_quoted_monomial(ctx, s);
     s = apply_missing_genus_placeholder(ctx, s);
-    s = strip_doubtful_genus_question_mark(ctx, s);
+    s = strip_leading_genus_qualifier(ctx, s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
@@ -362,25 +362,36 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
     s
 }
 
-/// A question mark in front of a capitalised genus, glued or spaced (`?Sydonia alba`,
-/// `? Dudresnaya sp.`, `?Monotremata`): the genus attribution is doubtful. Tokenised as is, the
-/// `?` became the uninomial and the real genus was read as an author. Mirrors the in-name
-/// `Sydonia? alba` handling — the mark becomes the GENERIC epithet qualifier and the name doubtful;
-/// `Pipeline::run` adds INFORMAL once a species epithet is parsed (see `ParseContext::doubtful_genus`). A `?` before a lowercase epithet (`? alba`) is the missing-genus placeholder
-/// handled by [`apply_missing_genus_placeholder`] and never reaches this capitalised form.
-static LEADING_DOUBTFUL_GENUS: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\?(?-u:\s*)(\p{Lu}\p{Ll}.*)$").unwrap());
+/// A qualifier in front of a capitalised genus: a question mark, glued or spaced (`?Sydonia alba`,
+/// `? Dudresnaya sp.`, `?Monotremata`), or an open-nomenclature `cf.`/`aff.` (`cf. Platypeltis
+/// croftii`, `aff. Tetradonia sp. BOLD:AEF5834`). Tokenised as is, the `?` / `Cf` became the
+/// uninomial and the real genus was read as an author. Mirrors the in-name `Sydonia? alba` /
+/// `Abies cf. alba` handling — the mark becomes the GENERIC epithet qualifier (`cf.`/`aff.`
+/// normalised to lowercase with a dot) and a `?` also flags the name doubtful; `Pipeline::run` adds
+/// INFORMAL once a species epithet is parsed (see `ParseContext::qualified_genus`). A `?` before a
+/// lowercase epithet (`? alba`) is the missing-genus placeholder handled by
+/// [`apply_missing_genus_placeholder`] and never reaches this capitalised form.
+static LEADING_GENUS_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    // the genus may still carry HTML (`cf. <em>Dicopia</em> fragilis`) — strip_html runs later
+    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}\p{Ll}.*)$")
+        .unwrap()
+});
 
-/// See [`LEADING_DOUBTFUL_GENUS`].
-fn strip_doubtful_genus_question_mark(ctx: &mut ParseContext, s: String) -> String {
-    let Some(caps) = LEADING_DOUBTFUL_GENUS.captures(&s) else {
+/// See [`LEADING_GENUS_QUALIFIER`].
+fn strip_leading_genus_qualifier(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = LEADING_GENUS_QUALIFIER.captures(&s) else {
         return s;
     };
-    ctx.name.set_epithet_qualifier(NamePart::Generic, "?");
-    ctx.doubtful_genus = true;
-    ctx.name.doubtful = true;
-    ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
-    caps[1].to_string()
+    if caps.get(1).is_some() {
+        ctx.name.set_epithet_qualifier(NamePart::Generic, "?");
+        ctx.name.doubtful = true;
+        ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+    } else {
+        let q = format!("{}.", caps[2].to_ascii_lowercase());
+        ctx.name.set_epithet_qualifier(NamePart::Generic, &q);
+    }
+    ctx.qualified_genus = true;
+    caps[3].to_string()
 }
 
 // ---- Step 5: stripInfraRankLetters ----

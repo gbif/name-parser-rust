@@ -177,10 +177,11 @@ pub fn run(
     ctx.tokens = tokenize(&ctx.working);
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
-    // A doubted genus (`?Sydonia alba`) makes a binomial open nomenclature, like `Sydonia? alba`.
-    // A bare doubtful uninomial (`?Monotremata`) keeps its type: as INFORMAL it would become a flat
+    // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a binomial open
+    // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`.
+    // A bare qualified uninomial (`?Monotremata`) keeps its type: as INFORMAL it would become a flat
     // Informal result, which has no slot for the qualifier or the doubtful flag.
-    if ctx.doubtful_genus && ctx.name.specific_epithet.is_some() {
+    if ctx.qualified_genus && ctx.name.specific_epithet.is_some() {
         ctx.name.type_ = NameType::Informal;
     }
 

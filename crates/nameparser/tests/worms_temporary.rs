@@ -487,3 +487,60 @@ fn leading_question_mark_with_a_subgenus_doubts_the_genus() {
         .warning(&["question marks removed"])
         .nothing_else();
 }
+
+// ---- I. a leading cf./aff. qualifies the genus -------------------------------------------------
+
+#[test]
+fn leading_cf_aff_qualifies_the_genus() {
+    // like the in-name `Abies cf. alba` (qualifier, INFORMAL) — the genus must not be lost
+    for (name, q) in [
+        ("cf. Platypeltis croftii", "cf."),
+        ("Cf. Platypeltis croftii", "cf."),
+        ("cf Platypeltis croftii", "cf."),
+        ("aff. Platypeltis croftii", "aff."),
+    ] {
+        assert_name(name)
+            .species("Platypeltis", "croftii")
+            .qualifiers(&[(NamePart::Generic, q)])
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    assert_name("aff. Abies alba Mill.")
+        .species("Abies", "alba")
+        .qualifiers(&[(NamePart::Generic, "aff.")])
+        .type_(NameType::Informal)
+        .comb_authors(None, &["Mill."])
+        .nothing_else();
+    // a bare uninomial stays a Parsed name, so the qualifier survives
+    assert_name("cf. Anthomuricea")
+        .monomial("Anthomuricea")
+        .qualifiers(&[(NamePart::Generic, "cf.")])
+        .nothing_else();
+}
+
+#[test]
+fn leading_cf_before_an_indet_marker_keeps_the_genus() {
+    assert_informal("cf. Stichococcus sp. FontaineG1")
+        .taxon("Stichococcus")
+        .rank(Rank::Species)
+        .phrase("sp. FontaineG1");
+}
+
+#[test]
+fn leading_cf_canonical_shows_the_qualifier() {
+    let pn = nameparser::parse_name("cf. Platypeltis croftii", None, None, None).unwrap();
+    assert_eq!(
+        pn.canonical_name_complete().as_deref(),
+        Some("cf. Platypeltis croftii")
+    );
+}
+
+#[test]
+fn leading_cf_before_an_html_wrapped_genus_qualifies_the_genus() {
+    assert_name("cf. <em>Dicopia</em> fragilis")
+        .species("Dicopia", "fragilis")
+        .qualifiers(&[(NamePart::Generic, "cf.")])
+        .type_(NameType::Informal)
+        .warning(&["xml tags removed"])
+        .nothing_else();
+}
