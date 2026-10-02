@@ -70,6 +70,56 @@ fn nbsp_separated_name_parses_like_a_spaced_one() {
         .nothing_else();
 }
 
+// ---- C. a bracketed single word is an annotation, not an author --------------------------------
+
+#[test]
+fn bracketed_single_word_is_a_phrase_not_an_author() {
+    assert_informal("Acanthoecidae [Nudiform]")
+        .taxon("Acanthoecidae")
+        .phrase("[Nudiform]");
+    assert_informal("Leptocephalus [Moringuidae]")
+        .taxon("Leptocephalus")
+        .phrase("[Moringuidae]");
+    assert_informal_hinted(
+        "Leptocephalus",
+        Some("[Ophichthidae]"),
+        Some(Rank::Genus),
+        None,
+    )
+    .taxon("Leptocephalus")
+    .rank(Rank::Genus)
+    .phrase("[Ophichthidae]");
+}
+
+#[test]
+fn bracketed_author_in_the_separate_authorship_is_still_an_author() {
+    // `[Renier]`, `[Boucek]`, `[Röding]` are common anonymous-work authors in CLB's authorship
+    // column — only a family-group name in brackets is an annotation.
+    assert_name_hinted("Spongia", Some("[Renier]"), Some(Rank::Genus), None)
+        .monomial_rank("Spongia", Rank::Genus)
+        .comb_authors(None, &["Renier"])
+        .nothing_else();
+}
+
+#[test]
+fn bracketed_anonymous_author_with_year_is_still_an_author() {
+    // ICZN Recommendation 51D: the author of an anonymous work in square brackets.
+    assert_name("Aus bus [Hübner], 1806")
+        .species("Aus", "bus")
+        .comb_authors(Some("1806"), &["Hübner"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn parenthesised_single_word_is_still_a_basionym_author() {
+    assert_name("Abies alba (Müller)")
+        .species("Abies", "alba")
+        .bas_authors(None, &["Müller"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
 // ---- E. a parenthesised sensu is a taxonomic note ----------------------------------------------
 
 #[test]

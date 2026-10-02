@@ -62,6 +62,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_trailing_rank_marker_code(ctx, s);
     s = stash_trailing_strain_code(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
+    s = stash_bracketed_annotation(ctx, s);
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
@@ -767,6 +768,52 @@ fn stash_trailing_rank_marker_code(ctx: &mut ParseContext, s: String) -> String 
         ctx.name.rank = rank;
     }
     caps.get(1).unwrap().as_str().to_string()
+}
+
+/// `Uninomial [Word]` — one capitalised word in square brackets after a uninomial, nothing else:
+/// WoRMS' `Acanthoecidae [Nudiform]`, `Leptocephalus [Moringuidae]`. Read as an authorship, the word
+/// became the author; it is an annotation (a morphotype, the family of a larval form), so it moves to
+/// the phrase and the name turns INFORMAL. Square brackets only — `(Müller)` stays a basionym author
+/// — and without a year: an anonymous-work author is bracketed too, but cited with its year
+/// (`[Hübner], 1806`, ICZN Recommendation 51D).
+static BRACKETED_ANNOTATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^([\p{Lu}][\p{Ll}]+)(?-u:\s+)(\[[\p{Lu}][\p{L}\-]+\])(?-u:\s*)$").unwrap()
+});
+
+/// See [`BRACKETED_ANNOTATION`].
+fn stash_bracketed_annotation(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = BRACKETED_ANNOTATION.captures(&s) else {
+        return s;
+    };
+    ctx.name.phrase = Some(caps[2].to_string());
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
+}
+
+/// A separately supplied authorship that is nothing but a bracketed family-group name
+/// (`[Ophichthidae]`, WoRMS' leptocephalus larvae): an annotation, not an author. Unlike in the name
+/// string a bare bracketed word is NOT enough here — `[Renier]`, `[Boucek]`, `[Röding]` are common
+/// anonymous-work authors in that column — so only the family-group suffixes count.
+static BRACKETED_FAMILY_GROUP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\[[\p{Lu}][\p{Ll}]+(?:idae|inae|oidea|oideae|aceae)\]$").unwrap()
+});
+
+/// Moves a [`BRACKETED_FAMILY_GROUP`] authorship into the name's phrase (INFORMAL) and returns
+/// `true`, or leaves `name` alone and returns `false`.
+pub(crate) fn stash_bracketed_family_group_authorship(
+    authorship: &str,
+    name: &mut crate::model::ParsedName,
+) -> bool {
+    let a = java_trim(authorship);
+    if !BRACKETED_FAMILY_GROUP.is_match(a) {
+        return false;
+    }
+    name.phrase = Some(match name.phrase.take() {
+        Some(p) => format!("{p} {a}"),
+        None => a.to_string(),
+    });
+    name.type_ = NameType::Informal;
+    true
 }
 
 /// A bare undotted infrageneric / infraspecific rank marker (`sect`, `subg`, `var`, `strain`, …).

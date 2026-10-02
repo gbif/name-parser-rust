@@ -191,7 +191,9 @@ pub fn run(
     // sanctioning author, applied further below, overwrites it — last-write-wins).
     let mut extra_state: Option<AuthState> = None;
     if let Some(authorship) = ctx.authorship_input.clone() {
-        if !authorship.chars().all(crate::token::is_whitespace_java) {
+        if !authorship.chars().all(crate::token::is_whitespace_java)
+            && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
+        {
             let auth_clean = stripandstash::strip_authorship_markers(&authorship, &mut ctx.name);
             let embedded_reference = ctx
                 .name
