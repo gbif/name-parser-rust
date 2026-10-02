@@ -37,7 +37,7 @@ use std::sync::LazyLock;
 use fancy_regex::Regex as FancyRegex;
 use regex::Regex;
 
-use crate::model::{warnings, NameType, NomCode, ParsedName, Rank};
+use crate::model::{warnings, NamePart, NameType, NomCode, ParsedName, Rank};
 use crate::pipeline::ParseContext;
 use crate::token;
 use crate::unicode::java_trim;
@@ -55,6 +55,9 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = extract_generic_author(ctx, s);
     s = strip_quoted_monomial(ctx, s);
     s = apply_missing_genus_placeholder(ctx, s);
+    s = strip_leading_genus_qualifier(ctx, s);
+    s = strip_rank_lineage(ctx, s);
+    s = strip_leading_species_label(ctx, s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
@@ -62,6 +65,8 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_trailing_rank_marker_code(ctx, s);
     s = stash_trailing_strain_code(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
+    s = stash_bracketed_annotation(ctx, s);
+    s = stash_underscore_designation(ctx, s);
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
@@ -357,6 +362,131 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
         return missing;
     }
     s
+}
+
+/// A qualifier in front of a capitalised genus: a question mark, glued or spaced (`?Sydonia alba`,
+/// `? Dudresnaya sp.`, `?Monotremata`), or an open-nomenclature `cf.`/`aff.` (`cf. Platypeltis
+/// croftii`, `aff. Tetradonia sp. BOLD:AEF5834`). Tokenised as is, the `?` / `Cf` became the
+/// uninomial and the real genus was read as an author. Mirrors the in-name `Sydonia? alba` /
+/// `Abies cf. alba` handling — the mark becomes the GENERIC epithet qualifier (`cf.`/`aff.`
+/// normalised to lowercase with a dot) and a `?` also flags the name doubtful; `Pipeline::run` adds
+/// INFORMAL once a species epithet is parsed (see `ParseContext::qualified_genus`). A `?` before a
+/// lowercase epithet (`? alba`) is the missing-genus placeholder handled by
+/// [`apply_missing_genus_placeholder`] and never reaches this capitalised form.
+static LEADING_GENUS_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    // the genus may still carry HTML (`cf. <em>Dicopia</em> fragilis`) — strip_html runs later
+    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}\p{Ll}.*)$")
+        .unwrap()
+});
+
+/// See [`LEADING_GENUS_QUALIFIER`].
+fn strip_leading_genus_qualifier(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = LEADING_GENUS_QUALIFIER.captures(&s) else {
+        return s;
+    };
+    if caps.get(1).is_some() {
+        ctx.name.set_epithet_qualifier(NamePart::Generic, "?");
+        ctx.name.doubtful = true;
+        ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+    } else {
+        let q = format!("{}.", caps[2].to_ascii_lowercase());
+        ctx.name.set_epithet_qualifier(NamePart::Generic, &q);
+    }
+    ctx.qualified_genus = true;
+    caps[3].to_string()
+}
+
+/// A classification path written as abbreviated rank markers, `supf. Arrenuroidea fam. Arrenuridae`
+/// / `phy. Annelida cla. Polychaeta` / `(supergen. Allopsontus)`: the last taxon is the name, at
+/// the last marker's rank; every earlier `marker. Taxon` pair is dropped. Read as is, the first
+/// marker became the uninomial (`Supf`) and the rest its author. Only the lowercase, dotted
+/// abbreviations seen in the wild count, so a capitalised `Gen. Nov.` or a real genus never does.
+/// (`trib.`/`subtrib.`/`subfam.` keep their own step, [`strip_supra_rank_prefix`].)
+static LINEAGE_HEAD_PAIR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?:{LINEAGE_MARKERS})\.(?-u:\s+)[\p{{Lu}}][\p{{L}}]+(?-u:\s+)((?:{LINEAGE_MARKERS})\..+)$"
+    ))
+    .unwrap()
+});
+static LINEAGE_LAST: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?:\(({LINEAGE_MARKERS})\.(?-u:\s+)([\p{{Lu}}][\p{{L}}]+)\)|({LINEAGE_MARKERS})\.(?-u:\s+)([\p{{Lu}}][\p{{L}}]+(?:(?-u:\s).*)?))$"
+    ))
+    .unwrap()
+});
+const LINEAGE_MARKERS: &str =
+    "phy|subphy|cla|subc|infc|supo|ord|subo|info|supf|fam|subf|supergen|gen";
+
+fn lineage_marker_rank(marker: &str) -> Option<Rank> {
+    Some(match marker {
+        "phy" => Rank::Phylum,
+        "subphy" => Rank::Subphylum,
+        "cla" => Rank::Class,
+        "subc" => Rank::Subclass,
+        "infc" => Rank::Infraclass,
+        "supo" => Rank::Superorder,
+        "ord" => Rank::Order,
+        "subo" => Rank::Suborder,
+        "info" => Rank::Infraorder,
+        "supf" => Rank::Superfamily,
+        "fam" => Rank::Family,
+        "subf" => Rank::Subfamily,
+        "supergen" => Rank::Supergenus,
+        "gen" => Rank::Genus,
+        _ => return None,
+    })
+}
+
+/// See [`LINEAGE_LAST`].
+fn strip_rank_lineage(ctx: &mut ParseContext, s: String) -> String {
+    let mut path = s.as_str();
+    while let Some(caps) = LINEAGE_HEAD_PAIR.captures(path) {
+        path = caps.get(1).unwrap().as_str();
+    }
+    let Some(caps) = LINEAGE_LAST.captures(path) else {
+        return s;
+    };
+    let (marker, taxon) = match (caps.get(1), caps.get(3)) {
+        (Some(m), _) => (m.as_str(), caps.get(2).unwrap().as_str()),
+        (None, Some(m)) => (m.as_str(), caps.get(4).unwrap().as_str()),
+        (None, None) => return s,
+    };
+    match lineage_marker_rank(marker) {
+        Some(rank) => {
+            ctx.name.rank = rank;
+            taxon.to_string()
+        }
+        None => s,
+    }
+}
+
+/// A stray species label in front of a binomial or trinomial, `Sp. Abacobius jekelii` /
+/// `spec. Abacobius jekelii` (~900 CLB names): read as is, `Sp` became the uninomial and the name
+/// its author. The label is dropped; a plain binomial head gets the SPECIES rank it announces,
+/// anything richer keeps the rank parsing infers.
+static LEADING_SPECIES_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:[Ss]p|[Ss]pec)\.(?-u:\s+)([\p{Lu}][\p{L}.]*(?:(?-u:\s+)\([\p{Lu}][\p{L}]*\))?(?-u:\s+)[\p{Ll}].*)$",
+    )
+    .unwrap()
+});
+static BINOMIAL_HEAD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^[\p{Lu}][\p{L}.]*(?:(?-u:\s+)\([\p{Lu}][\p{L}]*\))?(?-u:\s+)[\p{Ll}][\p{L}\-]*(?:(?-u:\s+)[^\p{Ll}].*)?$",
+    )
+    .unwrap()
+});
+
+/// See [`LEADING_SPECIES_LABEL`].
+fn strip_leading_species_label(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = LEADING_SPECIES_LABEL.captures(&s) else {
+        return s;
+    };
+    let name = caps[1].to_string();
+    if BINOMIAL_HEAD.is_match(&name) {
+        ctx.name.rank = Rank::Species;
+    }
+    name
 }
 
 // ---- Step 5: stripInfraRankLetters ----
@@ -767,6 +897,97 @@ fn stash_trailing_rank_marker_code(ctx: &mut ParseContext, s: String) -> String 
         ctx.name.rank = rank;
     }
     caps.get(1).unwrap().as_str().to_string()
+}
+
+/// `Uninomial [Word]` — one capitalised word in square brackets after a uninomial, nothing else:
+/// WoRMS' `Acanthoecidae [Nudiform]`, `Leptocephalus [Moringuidae]`. Read as an authorship, the word
+/// became the author; it is an annotation (a morphotype, the family of a larval form), so it moves to
+/// the phrase and the name turns INFORMAL. Square brackets only — `(Müller)` stays a basionym author
+/// — and without a year: an anonymous-work author is bracketed too, but cited with its year
+/// (`[Hübner], 1806`, ICZN Recommendation 51D).
+static BRACKETED_ANNOTATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^([\p{Lu}][\p{Ll}]+)(?-u:\s+)(\[[\p{Lu}][\p{L}\-]+\])(?-u:\s*)$").unwrap()
+});
+
+/// See [`BRACKETED_ANNOTATION`].
+fn stash_bracketed_annotation(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = BRACKETED_ANNOTATION.captures(&s) else {
+        return s;
+    };
+    ctx.name.phrase = Some(caps[2].to_string());
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
+}
+
+/// Underscore-glued provisional designations from barcoding / survey papers, optionally followed by
+/// a bracketed source citation: `Aulocalyx n_sp_NIWA_SO254 [of Dohrmann et al., 2023]`,
+/// `Eurythenes sp_DISCOLL_PAP_B`, `Farrea occa n_ssp_NIWA_SO254`. The tokenizer keeps the
+/// underscores inside one word, so the designation was read as the epithet and the citation as the
+/// authors `of Dohrmann` + `al.`. The designation plus citation become the phrase (INFORMAL), the
+/// working string the anchor — a genus, or a `Genus species` head for a subspecies designation.
+static UNDERSCORE_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^([\p{Lu}][\p{Ll}]+(?:(?-u:\s+)[\p{Ll}]+)?)(?-u:\s+)((?:n_)?(sp|ssp|subsp)_[\p{L}\d_]+(?:(?-u:\s+)\[[^\]]*\])?)(?-u:\s*)$",
+    )
+    .unwrap()
+});
+/// A new genus glued onto its family, `Rossellidae_n_gen`, with an optional designation/citation
+/// tail (`Rossellidae_n_gen n_sp_NIWA_SO254 [of …]`): the family is the anchor, the rest the phrase.
+static GLUED_NEW_GENUS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)_(n_gen(?:(?-u:\s+).*)?)$").unwrap());
+static NEW_SPECIES_TAG: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\b)(?:n_)?sp_").unwrap());
+
+/// See [`UNDERSCORE_DESIGNATION`] and [`GLUED_NEW_GENUS`].
+fn stash_underscore_designation(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = GLUED_NEW_GENUS.captures(&s) {
+        let tail = java_trim(&caps[2]).to_string();
+        ctx.name.rank = if NEW_SPECIES_TAG.is_match(&tail) {
+            Rank::Species
+        } else {
+            Rank::Genus
+        };
+        ctx.name.phrase = Some(tail);
+        ctx.name.type_ = NameType::Informal;
+        return caps[1].to_string();
+    }
+    let Some(caps) = UNDERSCORE_DESIGNATION.captures(&s) else {
+        return s;
+    };
+    ctx.name.rank = if &caps[3] == "sp" {
+        Rank::Species
+    } else {
+        Rank::Subspecies
+    };
+    ctx.name.phrase = Some(caps[2].to_string());
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
+}
+
+/// A separately supplied authorship that is nothing but a bracketed family-group name
+/// (`[Ophichthidae]`, WoRMS' leptocephalus larvae): an annotation, not an author. Unlike in the name
+/// string a bare bracketed word is NOT enough here — `[Renier]`, `[Boucek]`, `[Röding]` are common
+/// anonymous-work authors in that column — so only the family-group suffixes count.
+static BRACKETED_FAMILY_GROUP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\[[\p{Lu}][\p{Ll}]+(?:idae|inae|oidea|oideae|aceae)\]$").unwrap()
+});
+
+/// Moves a [`BRACKETED_FAMILY_GROUP`] authorship into the name's phrase (INFORMAL) and returns
+/// `true`, or leaves `name` alone and returns `false`.
+pub(crate) fn stash_bracketed_family_group_authorship(
+    authorship: &str,
+    name: &mut crate::model::ParsedName,
+) -> bool {
+    let a = java_trim(authorship);
+    if !BRACKETED_FAMILY_GROUP.is_match(a) {
+        return false;
+    }
+    name.phrase = Some(match name.phrase.take() {
+        Some(p) => format!("{p} {a}"),
+        None => a.to_string(),
+    });
+    name.type_ = NameType::Informal;
+    true
 }
 
 /// A bare undotted infrageneric / infraspecific rank marker (`sect`, `subg`, `var`, `strain`, …).
@@ -2180,13 +2401,25 @@ fn strip_bracketed_tax_note(ctx: &mut ParseContext, s: String) -> String {
 // ---- Step 40: stripParenTaxNote ----
 
 /// Java PAREN_TAX_NOTE (StripAndStash.java:101-103):
-/// `\s*\(\s*((?:nec|non|not)\s+[^)]+)\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE`. `[^)]` is
+/// `\s*\(\s*((?:nec|non|not)\s+[^)]+)\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE` — extended
+/// beyond Java with the concept keywords `auct`/`auctt`/`sensu`/`sec` (the set the separate
+/// authorship's `PAREN_NOTE` already strips), so WoRMS' `Gregariella splendida (sensu Reeve,
+/// 1858)` keeps its note instead of reading `sensu Reeve` as the basionym author. `[^)]` is
 /// a negated custom class -> atom-only `\s` scoping (same precedent as
 /// `BRACKETED_TAX_NOTE` above). No lookaround/backreference -> plain `regex` crate.
 static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+)\)(?-u:\s*)\.?(?-u:\s*)$")
-        .unwrap()
+    Regex::new(
+        r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+|(?:auctt?|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)\.?(?-u:\s*)$",
+    )
+    .unwrap()
 });
+
+/// The Rust-only concept-keyword branch of [`PAREN_TAX_NOTE`] (`auct`/`auctt`/`sensu`/`sec`).
+static PAREN_CONCEPT_NOTE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:auctt?|sensu|sec)(?-u:\b)").unwrap());
+/// A standalone indeterminate rank-marker word (`sp.`, `spp.`, `spec.`, `species`, `indet.`).
+static INDET_MARKER_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:spp?|spec|species|indet)(?-u:\b)").unwrap());
 
 /// Java `StripAndStash.stripParenTaxNote` (StripAndStash.java:1334-1344). A trailing
 /// "(nec/non/not …, YYYY)" parenthesised homonym citation — the WHOLE bracket wraps the
@@ -2197,9 +2430,16 @@ static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// Foo, 1850)" -> `taxonomicNote="non Foo, 1850"`, authors=["Smith"].
 fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = PAREN_TAX_NOTE.captures(&s) {
-        let note = java_trim(caps.get(1).unwrap().as_str()).to_string();
-        ctx.name.add_taxonomic_note(&note);
         let whole = caps.get(0).unwrap();
+        // A provisional `Genus sp. a (sensu Eagle)` keeps its concept citation in the phrase: the
+        // flat Informal result has no note slot, so stripping it here would silently drop it.
+        if PAREN_CONCEPT_NOTE.is_match(caps.get(1).unwrap().as_str())
+            && INDET_MARKER_WORD.is_match(&s[..whole.start()])
+        {
+            return s;
+        }
+        let note = normalise_leading_auct(java_trim(caps.get(1).unwrap().as_str()));
+        ctx.name.add_taxonomic_note(&note);
         return java_trim(&s[..whole.start()]).to_string();
     }
     s

@@ -38,6 +38,7 @@ const DOUBLE_QUOTES: &[char] = &[
 // to their canonical ASCII/Latin letter.
 // ---------------------------------------------------------------------------------------
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
@@ -210,6 +211,32 @@ pub fn java_trim(s: &str) -> &str {
     s.trim_matches(|c: char| (c as u32) <= 0x20)
 }
 
+/// Folds every Unicode space separator (category `Zs`: NBSP U+00A0, U+1680, U+2000–U+200A, the
+/// narrow NBSP U+202F, U+205F, U+3000) to an ASCII space. The parser's own whitespace handling is
+/// ASCII-only (Java parity: `String.trim()`, `Character.isWhitespace`, and the `(?-u:\s)` regexes
+/// all skip NBSP), so an NBSP left in place glues words together and hides keywords from every
+/// stage — `Assimineidae\u{a0}incertae\u{a0}sedis` read as a monomial with the author
+/// `incertae sedis`. Runs once on the raw input, before [`java_trim`], so the guards and every
+/// later stage see plain spaces. Borrows when there is nothing to fold (the common case).
+pub fn normalize_spaces(x: &str) -> Cow<'_, str> {
+    if x.chars().any(is_unicode_space) {
+        Cow::Owned(
+            x.chars()
+                .map(|c| if is_unicode_space(c) { ' ' } else { c })
+                .collect(),
+        )
+    } else {
+        Cow::Borrowed(x)
+    }
+}
+
+fn is_unicode_space(c: char) -> bool {
+    matches!(
+        c,
+        '\u{00A0}' | '\u{1680}' | '\u{2000}'..='\u{200A}' | '\u{202F}' | '\u{205F}' | '\u{3000}'
+    )
+}
+
 /// Normalises the many unicode apostrophe / single-quote variants to the ASCII apostrophe
 /// (') and the unicode double-quote variants to the ASCII double quote ("). Author names
 /// and quoted/provisional names routinely arrive with curly, prime, modifier-letter,
@@ -337,6 +364,18 @@ mod tests {
     fn folds_curly_single_quotes_to_ascii_apostrophe() {
         assert_eq!(normalize_quotes("d\u{2019}Urville"), "d'Urville");
         assert_eq!(normalize_quotes("\u{2018}Aus\u{2019}"), "'Aus'");
+    }
+
+    #[test]
+    fn normalize_spaces_folds_unicode_space_separators_only() {
+        assert_eq!(
+            normalize_spaces("Abies\u{a0}alba\u{202f}L.\u{3000}x"),
+            "Abies alba L. x"
+        );
+        assert!(matches!(
+            normalize_spaces("Abies alba\tL."),
+            Cow::Borrowed(_)
+        ));
     }
 
     #[test]

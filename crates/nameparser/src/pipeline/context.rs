@@ -93,6 +93,10 @@ pub(crate) struct ParseContext {
     /// than erroring. `Pipeline::run` then returns `ctx.name` as-is and skips the whole
     /// tokenizer/classifier/assembler back end.
     pub preflight_complete: bool,
+    /// Set by StripAndStash when it removed a leading `?` / `cf.` / `aff.` qualifying the genus
+    /// (`?Sydonia alba`, `cf. Platypeltis croftii`);
+    /// `Pipeline::run` types the name INFORMAL once it knows a species epithet follows.
+    pub qualified_genus: bool,
 }
 
 impl ParseContext {
@@ -135,6 +139,7 @@ impl ParseContext {
             pending_specific_author: None,
             pending_generic_author: None,
             preflight_complete: false,
+            qualified_genus: false,
         }
     }
 

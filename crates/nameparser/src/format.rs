@@ -43,9 +43,12 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// (CASE_INSENSITIVE, tested with `Matcher.matches()`). Java's `\b` here is ASCII (no
 /// UNICODE_CHARACTER_CLASS flag on this pattern), so it is pinned to `(?-u:\b)`. Detects a
 /// phrase that already spells out the species marker as its leading word ("species 1"), so
-/// the formatter must not also synthesise an "sp." marker.
-static PHRASE_SPECIES_MARKER: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)^(?:species|spec|sp)(?-u:\b).*$").unwrap());
+/// the formatter must not also synthesise an "sp." marker. Extended beyond Java with the
+/// underscore-glued designations (`n_sp_NIWA_SO254`, `sp_JAVA`, `n_gen n_sp_…`): `\b` sees no
+/// boundary between `sp` and `_`, which rendered "Aulocalyx sp. n_sp_NIWA_SO254".
+static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:(?:species|spec|sp)(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)).*$").unwrap()
+});
 
 /// Java's inline author-tail pattern `(?U)[\p{Lu}](?:\.[\p{Lu}])*\..+`, tested with
 /// `String.matches()` (full match → anchored `^…$` here). Recognises an author-shaped tail

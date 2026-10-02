@@ -183,6 +183,63 @@ static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+// One to four lowercase words ending in a generic organism word. Group 1 = the qualifier words
+// before it (`marine `, `delta `), group 2 = the remainder after it.
+static ORGANISM_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^((?:[a-z][a-z-]* ){0,4}?)[a-z]*(?:bacteri(?:um|a)|archae(?:on|a)|actinomycetes?|symbionts?|fung(?:us|al|i)|yeasts?|algae?|protists?|microorganisms?)(?: (.+))?$",
+    )
+    .unwrap()
+});
+// The authorship of a real epithet whose genus is missing (`fungi Meigen, 1830`).
+static AUTHOR_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    // a lowercase-bearing surname and a plausible year — `DSM 6505`, `RCC 1888` are accessions
+    Regex::new(
+        r"^\(?\p{Lu}\p{Ll}[\p{L}'.\-]*(?:(?:,? | & | et )\p{Lu}[\p{L}'.\-]+)*,? (?:1[789]\d\d|20[0-2]\d)\)?$",
+    )
+    .unwrap()
+});
+// What may precede the code: `enrichment culture`, then a `clone`/`strain`/`str.`/`isolate`/`sp.`.
+static CODE_LEAD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:enrichment culture )?(?:(?:clone|strain|str\.?|isolate|sp\.?) )?").unwrap()
+});
+
+/// [`ORGANISM_LABEL`]: `Some(Identifier)` when a strain/clone code follows the label, `Some(Other)`
+/// for any other label, `None` when it is no such label — or the label word is a real epithet
+/// with an authorship, its genus missing (`fungi Meigen, 1830`), left to the missing-genus path.
+fn classify_organism_label(s: &str) -> Option<NameType> {
+    let caps = ORGANISM_LABEL.captures(s)?;
+    let Some(rest) = caps.get(2).map(|m| m.as_str()) else {
+        return Some(NameType::Other);
+    };
+    if caps[1].is_empty() && AUTHOR_YEAR.is_match(rest) {
+        return None;
+    }
+    let code = &rest[CODE_LEAD.find(rest).map_or(0, |m| m.end())..];
+    let quoted = (code.starts_with('\'') && code.ends_with('\''))
+        || (code.starts_with('"') && code.ends_with('"'));
+    let tokens: Vec<&str> = code.split_whitespace().collect();
+    let codeish = |t: &str| {
+        t.chars().any(|c| c.is_ascii_digit()) || t.chars().filter(|c| c.is_uppercase()).count() >= 2
+    };
+    let is_code = quoted
+        || tokens.len() == 1
+        || (tokens.len() <= 3
+            && (tokens
+                .last()
+                .is_some_and(|t| t.chars().any(|c| c.is_ascii_digit()))
+                || tokens.iter().all(|t| codeish(t))));
+    Some(if is_code {
+        NameType::Identifier
+    } else {
+        NameType::Other
+    })
+}
+
+/// The `unclassified` placeholder word, kept out of [`PLACEHOLDER_KEYWORDS`] so it is tested after
+/// the virus gate.
+static UNCLASSIFIED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\bunclassified\b)").unwrap());
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\s` (in `[-\s]`), no `\p{…}` → whole pattern
 /// (after `^`) wrapped.
 static PLACEHOLDER_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
@@ -211,6 +268,10 @@ static INDET_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[\p{Lu}][\p{L}\-]+(?:\s+[\p{Lu}][\p{L}]+)?\s+(?:indet|undet)\.?\s*$").unwrap()
 });
 
+// Two or more Title-case words and nothing else: an informal group label once its quotes are gone.
+static QUOTED_LABEL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+(?:[ -]\p{Lu}\p{Ll}+)+$").unwrap());
+
 // "clade" as a standalone word: a phylogenetic clade label, not a Linnean name.
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\b` (x2), no `\p{…}` → whole pattern wrapped.
 static CLADE_KEYWORD: LazyLock<Regex> =
@@ -233,6 +294,21 @@ static MONOMIAL_AGGREGATE: LazyLock<Regex> =
 // `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 static LINEAGE_LABEL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{L}][\p{L}\d]*)(?:-|\s+)(lineage)$").unwrap());
+
+// Trace-fossil / ichnotaxon labels ("Echinoid trace fossils (ichnotaxa)", "Trilobita-trace fossils",
+// "Trace fossils"): an informal grouping of ichnotaxa, optionally hung off an anchor. Captures:
+// group 1 = the optional stem, group 2 = the marker (kept verbatim as the phrase). Only the whole
+// words count — real genera like Ichnospongia or Ichnoceros never match.
+static TRACE_FOSSIL_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)^(?:(\p{L}+)(?:-|\s+))?((?:trace[-\s]+fossils?|ichnotax(?:a|on))(?:\s+\((?:ichnotaxa|ichnotaxon)\))?)$",
+    )
+    .unwrap()
+});
+// The same marker words anywhere in the string — a label the anchored form above can't take apart.
+static TRACE_FOSSIL_WORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\b)(?:trace[-\s]+fossils?|ichnotax(?:a|on))(?-u:\b)").unwrap()
+});
 
 // ---------- Precompiled in-method literals ----------
 /// Java: no flags. No `\s`/`\d`/`\w`/`\b`; called via `.matches()` on an UNANCHORED Java
@@ -278,10 +354,22 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // `ctx.working` is a plain owned `String`; copy the trimmed text out so `s` doesn't
     // keep an outstanding borrow of `ctx` alive across the later `&mut ctx` needed by
     // `apply_virus_gate`.
-    let s: String = java_trim(&ctx.working).to_string();
+    let mut s: String = java_trim(&ctx.working).to_string();
     if s.is_empty() {
         return Err(ParseError::new(NameType::Other, None, original));
     }
+
+    // A whole multi-word input wrapped in one pair of double quotes is a CSV/export artefact
+    // (`"Accipiter bicolor (Vieillot, 1817)"`): unwrap it so every stage sees the name itself.
+    // A single quoted word (`"Prosthete"`) is left to StripAndStash's quoted-monomial step.
+    let was_quoted = match unwrap_quoted_phrase(&s) {
+        Some(inner) => {
+            s = inner.to_string();
+            ctx.working = s.clone();
+            true
+        }
+        None => false,
+    };
 
     // Inputs that are too short or that are just an HTML entity stub (no real name content)
     // — bail out before any regex work touches them. A single bare letter ("X" / "a") is not
@@ -349,6 +437,21 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // legacy vernacular virus names become OTHER + NomCode::Virus.
     apply_virus_gate(&s, ctx, original)?;
 
+    // `unclassified` (61k CLB names: `unclassified Aaadonta constricta`) is a placeholder like
+    // `unidentified` — but checked only after the virus gate, so a virus that carries it
+    // (`Grapevine red globe virus (unclassified)`) keeps its VIRUS code.
+    if UNCLASSIFIED.is_match(&s) {
+        return Err(ParseError::new(NameType::Placeholder, None, original));
+    }
+
+    // A generic organism label instead of a genus — `bacterium Ac10`, `marine actinobacterium F10`,
+    // `bacterium enrichment culture clone OB115` (~90k CLB names): the label plus a strain/clone
+    // code is an IDENTIFIER; any other label (`endosymbiont of Chlamys farreri`) is OTHER. These
+    // used to come back as genus `?` + epithet `bacterium`, or as a SCIENTIFIC genus `marine`.
+    if let Some(type_) = classify_organism_label(&s) {
+        return Err(ParseError::new(type_, None, s));
+    }
+
     // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a single
     // Title-case uninomial + an aggregate marker. The stem is always a clean genus-shaped anchor, so
     // 5.0.0 RESCUES this into an `Informal` (anchor = the monomial, phrase = the marker) rather than
@@ -369,6 +472,20 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         return Err(ParseError::new(NameType::Other, None, original));
     }
 
+    // Trace-fossil / ichnotaxon labels. RESCUE to `Informal` when a clean anchor precedes the marker
+    // ("Trilobita-trace fossils"); an anchorless label ("Trace fossils") or one the anchored form
+    // can't take apart ("Trace-fossils attributed to") is Unparsable(OTHER).
+    if let Some(caps) = TRACE_FOSSIL_LABEL.captures(&s) {
+        if let Some(stem) = caps.get(1).filter(|m| is_clean_genus_stem(m.as_str())) {
+            rescue_informal_group(ctx, stem.as_str(), &caps[2]);
+            return Ok(());
+        }
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+    if TRACE_FOSSIL_WORD.is_match(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+
     // Leading "?? …" — a run of two or more question marks is junk, not a missing-genus
     // placeholder (that is a single "?"). Reject before the single-"?" handling below.
     if MULTI_QUESTION_PREFIX.is_match(&s) {
@@ -386,6 +503,12 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // grouping the model can't hang off a single taxon → Unparsable(OTHER). (Was `Err(INFORMAL)` in
     // 4.2.0; 5.0.0 forbids a parsable type in an unparsable result, and these have no clean anchor.)
     if CLADE_KEYWORD.is_match(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+
+    // A quoted label of Title-case words only ("Lower Heterobranchia", "Sieblosioid Group") is an
+    // informal group name with no anchor — the quotes mark it as not-a-name.
+    if was_quoted && QUOTED_LABEL.is_match(&s) && !s.starts_with("Candidatus ") {
         return Err(ParseError::new(NameType::Other, None, original));
     }
 
@@ -645,6 +768,13 @@ fn is_plausible_single_word_name(s: &str) -> bool {
     !has_digit(s)
 }
 
+/// The trimmed content of `"two or more words"` — one pair of double quotes wrapping the whole
+/// input, with an inner space and no further double quote — or `None`.
+fn unwrap_quoted_phrase(s: &str) -> Option<&str> {
+    let inner = java_trim(s.strip_prefix('"')?.strip_suffix('"')?);
+    (inner.contains(' ') && !inner.contains('"')).then_some(inner)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -813,6 +943,31 @@ mod tests {
     }
 
     #[test]
+    fn trace_fossil_label_with_clean_stem_rescued_to_informal() {
+        let n = rescued("Echinoid trace fossils (ichnotaxa)").name;
+        assert_eq!(n.genus.as_deref(), Some("Echinoid"));
+        assert_eq!(n.phrase.as_deref(), Some("trace fossils (ichnotaxa)"));
+        assert_eq!(n.type_, NameType::Informal);
+        let n = rescued("Trilobita-trace fossils").name;
+        assert_eq!(n.genus.as_deref(), Some("Trilobita"));
+        assert_eq!(n.phrase.as_deref(), Some("trace fossils"));
+    }
+
+    #[test]
+    fn trace_fossil_label_without_stem_is_unparsable_other() {
+        for label in [
+            "Trace fossils",
+            "Trace-fossils",
+            "Trace-fossils attributed to",
+            "ichnotaxa",
+        ] {
+            assert_eq!(check(label).unwrap_err().type_, NameType::Other, "{label}");
+        }
+        assert!(check("Ichnospongia").is_ok());
+        assert!(check("Ichnoceros robustus").is_ok());
+    }
+
+    #[test]
     fn lineage_with_code_stem_is_unparsable_other() {
         // OTU-/strain-like code stems have no real anchor → Unparsable(OTHER), not rescued.
         assert_eq!(check("NC12A-lineage").unwrap_err().type_, NameType::Other);
@@ -876,6 +1031,29 @@ mod tests {
     }
 
     // ---------- category: placeholder ----------
+
+    #[test]
+    fn fully_quoted_multi_word_label_is_unparsable_other() {
+        assert_eq!(
+            check("\"Lower Heterobranchia\"").unwrap_err().type_,
+            NameType::Other
+        );
+        assert_eq!(
+            check("\"Sieblosioid Group\"").unwrap_err().type_,
+            NameType::Other
+        );
+        assert!(check("\"Prosthete\"").is_ok());
+        assert!(check("\"Candidatus Riegeria\"").is_ok());
+        assert!(check("\"Aus\" bus").is_ok());
+    }
+
+    #[test]
+    fn fully_quoted_name_is_unwrapped() {
+        let input = "\"Accipiter bicolor (Vieillot, 1817)\"";
+        let mut ctx = ParseContext::new(input.to_string(), None, None, None);
+        assert!(run(input, &mut ctx).is_ok());
+        assert_eq!(ctx.working, "Accipiter bicolor (Vieillot, 1817)");
+    }
 
     #[test]
     fn incertae_sedis_is_placeholder() {

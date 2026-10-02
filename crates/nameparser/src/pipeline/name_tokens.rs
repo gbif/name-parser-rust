@@ -95,6 +95,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     let mut inline_rank: Option<Rank> = None;
     let mut inline_rank_notho = false;
     let mut indet = false;
+    // a lone-letter species designation (`Collettea a`), see step 8 below
+    let mut letter_designation = false;
     // A bare supraspecific indet ("Genus sp." with no distinguishing tail) — stays flagged
     // INDETERMINED even though its phrase now carries the verbatim marker (see the top-check
     // in the indet branch and the warning block near the end of this fn).
@@ -604,18 +606,20 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                                 i += 1;
                             }
                         }
-                        // Informal infra epithet: a single uppercase letter / digit
-                        // immediately following the rank marker ("form A", "f. B") —
-                        // consume it here so the normal lowercase-epithet path doesn't
-                        // drop it as an "upper word".
-                        if i < ts.len()
-                            && ts[i].kind == TokenKind::Word
-                            && ts[i].text.chars().count() == 1
-                            && starts_upper(&ts[i])
+                        // Informal infra epithet: a single letter immediately following the
+                        // rank marker ("form A", "f. B", "var. a", "f. (a)") — consume it here
+                        // so the normal lowercase-epithet path doesn't drop it as an "upper
+                        // word" or a parenthesised remainder.
+                        // The full token list, so a dotted abbreviation (`ab. n. undularia`)
+                        // can see the epithet AuthorshipSplit already carved off as authorship.
+                        if let Some(len) =
+                            super::authorship_split::single_letter_designation(&ctx.tokens, i)
+                                .filter(|len| i + len <= ts.len())
                         {
-                            lower_epithets.push(ts[i].text.clone());
+                            let letter = &ts[i + len / 2];
+                            lower_epithets.push(letter.text.clone());
                             indet = true; // INFORMAL informal infra epithet
-                            i += 1;
+                            i += len;
                         }
                     } else if !lower_epithets.is_empty() {
                         // Trailing rank marker with no following epithet = indetermined
@@ -739,6 +743,20 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     continue;
                 }
                 // 8. ordinary epithet
+                // A lone letter in the species slot (`Collettea a`) is a provisional designation
+                // — no species-group name has a single letter (ICZN Art. 11.9.1) — unless it is
+                // an abbreviation (`c.album`, `h.-čejkai`, `Abacina s.`) or the first half of a
+                // split epithet (`Drepana z nigrum`). Looks at the full token list so a following
+                // word AuthorshipSplit carved off still counts.
+                if lower_epithets.is_empty()
+                    && t.text.len() == 1
+                    && t.text.as_bytes()[0].is_ascii_lowercase()
+                {
+                    letter_designation = !ctx.tokens.get(i + 1).is_some_and(|nx| {
+                        nx.kind == TokenKind::Dot
+                            || (nx.kind == TokenKind::Word && starts_lower(nx))
+                    });
+                }
                 lower_epithets.push(t.text.clone());
                 i += 1;
                 continue;
@@ -783,6 +801,10 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             } else {
                 Rank::InfrasubspecificName
             });
+        } else if ctx.name.phrase.is_some() && ctx.name.rank.is_infraspecific() {
+            // A stashed infraspecific designation (`Farrea occa n_ssp_NIWA_SO254`) already set
+            // the rank of the unnamed taxon the phrase stands for — the binomial is only its head.
+            rank = Some(ctx.name.rank);
         } else {
             rank = Some(Rank::Species);
         }
@@ -848,6 +870,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         };
         ctx.name.set_epithet_qualifier(part, q);
     }
+    if letter_designation && specific.is_some() {
+        ctx.name.type_ = NameType::Informal;
+    }
     if indet {
         ctx.name.type_ = NameType::Informal;
         if infraspecific.is_none() {
@@ -868,7 +893,10 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     {
         ctx.name.type_ = NameType::Informal;
         ctx.name.rank = requested.unwrap();
-        ctx.name.add_warning(warnings::INDETERMINED);
+        // a stashed designation phrase (`n_ssp_NIWA_SO254`) is the missing terminal epithet
+        if ctx.name.phrase.is_none() {
+            ctx.name.add_warning(warnings::INDETERMINED);
+        }
     }
     if requested == Some(Rank::Species) && infraspecific.is_some() {
         ctx.name.add_warning(warnings::SUBSPECIES_ASSIGNED);
