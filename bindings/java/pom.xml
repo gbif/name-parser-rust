@@ -124,6 +124,15 @@
       <id>gbif-all</id>
       <url>https://repository.gbif.org/repository/gbif</url>
     </repository>
+    <!-- The gbif group does not serve the hosted snapshots repository, so an api SNAPSHOT (e.g.
+         5.1.0-SNAPSHOT while Authorship.anonymous is unreleased) only resolves from here. CI
+         outside GBIF's Jenkins (GitHub Actions) has no other route to it. -->
+    <repository>
+      <id>gbif-snapshots</id>
+      <url>https://repository.gbif.org/repository/snapshots</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
   </repositories>
 
   <!-- INTERIM `mvn deploy` targets (GBIF Nexus) — used only while this module is standalone;
