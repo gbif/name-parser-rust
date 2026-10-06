@@ -36,9 +36,15 @@ class Authorship:
     def year(self) -> str | None: ...
     @property
     def imprint_year(self) -> str | None: ...
+    @property
+    def anonymous(self) -> bool:
+        """The work was published anonymously ("Anon.", "Anonymous"); any `authors` are then
+        attributed from external evidence, cited in square brackets (ICZN Recommendation 51D)."""
+        ...
     def to_dict(self) -> dict[str, Any]:
         """The complete structure straight from the core's own `serde::Serialize` impl —
-        `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ...}`."""
+        `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ...,
+        "anonymous": ...}`."""
         ...
     def __repr__(self) -> str: ...
 

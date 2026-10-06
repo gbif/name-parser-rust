@@ -174,7 +174,12 @@ def test_to_dict_uses_wire_field_names_and_string_enums():
     assert d["type"] == "SCIENTIFIC"
     assert d["state"] == "COMPLETE"
 
-    assert d["combinationAuthorship"] == {"authors": ["Miller"], "exAuthors": [], "year": "1907"}
+    assert d["combinationAuthorship"] == {
+        "authors": ["Miller"],
+        "exAuthors": [],
+        "year": "1907",
+        "anonymous": False,
+    }
 
 
 def test_type_attribute_not_type_underscore():
@@ -195,7 +200,7 @@ def test_classes_report_the_nameparser_module_not_builtins():
 def test_authorship_to_dict_and_repr():
     pn = sci("Abies alba Mill.")
     ca = pn.combination_authorship
-    assert ca.to_dict() == {"authors": ["Mill."], "exAuthors": []}
+    assert ca.to_dict() == {"authors": ["Mill."], "exAuthors": [], "anonymous": False}
     assert "Mill." in repr(ca)
 
 
@@ -291,3 +296,13 @@ def test_parse_all_mixes_parsed_and_informal_and_none():
     assert isinstance(results[0], nameparser.ParsedName)
     assert isinstance(results[1], nameparser.Informal)
     assert results[2] is None  # unparsable → None (never raises mid-batch)
+
+
+def test_anonymous_authorship():
+    # attributed author of an anonymous work, in square brackets (ICZN Recommendation 51D)
+    bas = nameparser.parse("Rhinobatos typus (Anonymous [Bennett], 1830)").basionym_authorship
+    assert bas.anonymous is True
+    assert bas.authors == ["Bennett"]
+    assert bas.year == "1830"
+    assert "anonymous=True" in repr(bas)
+    assert nameparser.parse("Abies alba Mill.").combination_authorship.anonymous is False

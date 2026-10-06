@@ -39,13 +39,24 @@ pub struct Authorship {
     pub year: Option<String>,
     #[serde(rename = "imprintYear", skip_serializing_if = "Option::is_none")]
     pub imprint_year: Option<String>,
+    /// Java `Authorship.anonymous` (name-parser-api 5.1): the work was published anonymously,
+    /// "Anon." / "anon." / "Anonymous". Any [`Self::authors`] are then attributed from external
+    /// evidence, cited in square brackets: `[Denis & Schiffermüller], 1775` (ICZN Recommendation
+    /// 51D). Always serialized, like Java's primitive boolean.
+    pub anonymous: bool,
 }
 
 impl Authorship {
     /// Java `Authorship.exists()` = `!isEmpty()`, and Java `isEmpty()` checks ONLY
-    /// authors and year (NOT exAuthors) — see Authorship.java:145-151.
+    /// authors, year and the anonymous flag (NOT exAuthors) — see Authorship.java.
     pub fn exists(&self) -> bool {
-        !self.authors.is_empty() || self.year.is_some()
+        !self.authors.is_empty() || self.year.is_some() || self.anonymous
+    }
+
+    /// True if there are authors or the work is anonymous: an anonymous author takes an author's
+    /// place in `pipeline::code_inference`'s votes ("(Fr.) anon." is a botanical recombination).
+    pub fn has_authors_or_anon(&self) -> bool {
+        !self.authors.is_empty() || self.anonymous
     }
 
     /// Java `Authorship.hasAuthors()`: true if `authors` is non-empty. (Java's own
@@ -402,7 +413,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907"},"basionymAuthorship":{"authors":[],"exAuthors":[]}}"#;
+        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -425,7 +436,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}"#;
+        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -451,7 +462,7 @@ mod tests {
         // Sanity check independent of the two golden rows above: a bare `default()`
         // must omit every Option field and every nested-struct Option, while still
         // emitting the always-on primitives/collections/enums.
-        let expected = r#"{"rank":"UNRANKED","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}"#;
+        let expected = r#"{"rank":"UNRANKED","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}"#;
         assert_eq!(
             serde_json::to_string(&ParsedName::default()).unwrap(),
             expected
@@ -613,6 +624,7 @@ mod tests {
             ex_authors: vec!["hort.".into()],
             year: None,
             imprint_year: None,
+            anonymous: false,
         };
         assert!(
             !a.exists(),
@@ -623,6 +635,12 @@ mod tests {
             ..Default::default()
         };
         assert!(b.exists());
+        // an anonymous authorship exists without authors or year, like Java's isEmpty()
+        let c = Authorship {
+            anonymous: true,
+            ..Default::default()
+        };
+        assert!(c.exists());
     }
 
     #[test]

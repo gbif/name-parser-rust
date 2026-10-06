@@ -233,6 +233,9 @@ pub fn run(
     // sanctioning author, applied further below, overwrites it — last-write-wins).
     let mut extra_state: Option<AuthState> = None;
     if let Some(authorship) = ctx.authorship_input.clone() {
+        // a placeholder ("Missing", "Not specified") is dropped first, so it never reaches the
+        // phrase of a provisional name or the authorship parser
+        let authorship = stripandstash::strip_authorship_placeholder(&authorship, &mut ctx.name);
         if !authorship.chars().all(crate::token::is_whitespace_java)
             && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
             && !append_authorship_to_phrase(&authorship, &mut ctx.name)
@@ -244,6 +247,9 @@ pub fn run(
                 .clone()
                 .map(|r| (r, ctx.name.published_in_year));
             let auth_clean = stripandstash::strip_in_author_citations(&mut ctx, auth_clean);
+            // after the in-citation, as on the name string: "Busk ms in Chimonides, 1987"
+            let auth_clean =
+                stripandstash::strip_trailing_manuscript_marker(&auth_clean, &mut ctx.name);
             if let Some((reference, year)) = embedded_reference {
                 ctx.name.published_in = Some(reference);
                 ctx.name.published_in_year = year;

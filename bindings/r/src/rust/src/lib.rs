@@ -57,9 +57,12 @@ struct Cols {
     combination_authors: Vec<Option<String>>,
     combination_ex_authors: Vec<Option<String>>,
     combination_year: Vec<Option<String>>,
+    /// The work was published anonymously ("Anon."); any authors are attributed (`[Bennett]`).
+    combination_anonymous: Vec<Option<bool>>,
     basionym_authors: Vec<Option<String>>,
     basionym_ex_authors: Vec<Option<String>>,
     basionym_year: Vec<Option<String>>,
+    basionym_anonymous: Vec<Option<bool>>,
     sanctioning_author: Vec<Option<String>>,
     warnings: Vec<Option<String>>,
     // NameFormatter renderings (Java org.gbif.nameparser.util.NameFormatter).
@@ -88,8 +91,9 @@ impl Cols {
             nomenclatural_note: v!(), published_in: v!(), published_in_year: v!(),
             published_in_page: v!(), unparsed: v!(), doubtful: v!(), manuscript: v!(),
             state: v!(), combination_authors: v!(), combination_ex_authors: v!(),
-            combination_year: v!(), basionym_authors: v!(), basionym_ex_authors: v!(),
-            basionym_year: v!(), sanctioning_author: v!(), warnings: v!(),
+            combination_year: v!(), combination_anonymous: v!(), basionym_authors: v!(),
+            basionym_ex_authors: v!(), basionym_year: v!(), basionym_anonymous: v!(),
+            sanctioning_author: v!(), warnings: v!(),
             canonical: v!(), canonical_without_authorship: v!(), canonical_minimal: v!(),
             canonical_complete: v!(), authorship_complete: v!(),
         }
@@ -137,9 +141,11 @@ impl Cols {
         self.combination_authors.push(join_authors(&pn.combination_authorship.authors));
         self.combination_ex_authors.push(join_authors(&pn.combination_authorship.ex_authors));
         self.combination_year.push(pn.combination_authorship.year.clone());
+        self.combination_anonymous.push(Some(pn.combination_authorship.anonymous));
         self.basionym_authors.push(join_authors(&pn.basionym_authorship.authors));
         self.basionym_ex_authors.push(join_authors(&pn.basionym_authorship.ex_authors));
         self.basionym_year.push(pn.basionym_authorship.year.clone());
+        self.basionym_anonymous.push(Some(pn.basionym_authorship.anonymous));
         self.sanctioning_author.push(pn.sanctioning_author.clone());
         self.warnings.push(join_authors(&pn.warnings));   // same "join or NA" semantics
         // NameFormatter renderings (each already `None` => NA when it renders empty).
@@ -181,6 +187,8 @@ impl Cols {
         self.published_in_year.push(None);
         self.doubtful.push(None);
         self.manuscript.push(None);
+        self.combination_anonymous.push(None);
+        self.basionym_anonymous.push(None);
     }
 
     /// 5.0.0 informal / semistructured row: the flat anchor (`taxon`/`taxonRank`) + `rank`/`phrase`/
@@ -226,6 +234,8 @@ impl Cols {
         self.published_in_year.push(None);
         self.doubtful.push(None);
         self.manuscript.push(None);
+        self.combination_anonymous.push(None);
+        self.basionym_anonymous.push(None);
     }
 }
 
@@ -269,8 +279,8 @@ fn parse_names_impl(
             "epithetQualifier", "extinct", "taxonomicNote", "nomenclaturalNote",
             "publishedIn", "publishedInYear", "publishedInPage", "unparsed", "doubtful",
             "manuscript", "state", "combinationAuthors", "combinationExAuthors",
-            "combinationYear", "basionymAuthors", "basionymExAuthors", "basionymYear",
-            "sanctioningAuthor", "warnings", "canonical", "canonicalWithoutAuthorship",
+            "combinationYear", "combinationAnonymous", "basionymAuthors", "basionymExAuthors",
+            "basionymYear", "basionymAnonymous", "sanctioningAuthor", "warnings", "canonical", "canonicalWithoutAuthorship",
             "canonicalMinimal", "canonicalComplete", "authorshipComplete",
         ],
         [
@@ -283,8 +293,9 @@ fn parse_names_impl(
             r!(c.nomenclatural_note), r!(c.published_in), r!(c.published_in_year),
             r!(c.published_in_page), r!(c.unparsed), r!(c.doubtful), r!(c.manuscript),
             r!(c.state), r!(c.combination_authors), r!(c.combination_ex_authors),
-            r!(c.combination_year), r!(c.basionym_authors), r!(c.basionym_ex_authors),
-            r!(c.basionym_year), r!(c.sanctioning_author), r!(c.warnings),
+            r!(c.combination_year), r!(c.combination_anonymous), r!(c.basionym_authors),
+            r!(c.basionym_ex_authors), r!(c.basionym_year), r!(c.basionym_anonymous),
+            r!(c.sanctioning_author), r!(c.warnings),
             r!(c.canonical), r!(c.canonical_without_authorship), r!(c.canonical_minimal),
             r!(c.canonical_complete), r!(c.authorship_complete),
         ],

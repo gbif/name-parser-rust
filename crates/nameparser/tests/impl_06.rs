@@ -310,7 +310,9 @@ fn test_authorteam() {
     );
     assert_single_author("VanLand.");
     assert_single_author("MacLeish");
-    assert_single_author("Monterosato ms.");
+    // Java kept "ms." in a separate authorship's author; the name string always stripped it as a
+    // manuscript marker ("Aus bus Monterosato ms."), and now both do.
+    assert_authorship("Monterosato ms.", &["Monterosato"]).manuscript();
     assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"]);
     assert_authorship(
         "Choi,J.H.; Im,W.T.; Yoo,J.S.; Lee,S.M.; Moon,D.S.; Kim,H.J.; Rhee,S.K.; Roh,D.H.",
@@ -448,7 +450,9 @@ fn test_authorteam() {
     );
     assert_single_author("VanLand.");
     assert_single_author("MacLeish");
-    assert_single_author("Monterosato ms.");
+    // Java kept "ms." in a separate authorship's author; the name string always stripped it as a
+    // manuscript marker ("Aus bus Monterosato ms."), and now both do.
+    assert_authorship("Monterosato ms.", &["Monterosato"]).manuscript();
     assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"]);
     assert_ex_authorship("Griseb. ex. Wedd.", Some("Griseb."), &["Wedd."]);
     assert_authorship(

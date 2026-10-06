@@ -59,6 +59,11 @@ final class StructCodec {
   private static final int OFF_EXTINCT = 27;
   private static final int OFF_ORIGINAL_SPELLING = 28;
   private static final int OFF_NOTHO_BITS = 29;
+  // ABI 5: the anonymous flags of the combination (bit 0) and basionym (bit 1) authorships; a
+  // present nested group carries the same bits in a u32 right after its present flag.
+  private static final int OFF_AUTHORSHIP_FLAGS = 30;
+  private static final int ANON_COMBINATION_BIT = 1;
+  private static final int ANON_BASIONYM_BIT = 2;
   private static final int OFF_PUBLISHED_IN_YEAR = 32;
 
   private static final int STATUS_SUCCESS = 0;
@@ -124,10 +129,10 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 4) {
+    if (abi != 5) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 4 -- rebuild the cdylib "
+              + ", StructCodec was written against 5 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
@@ -318,6 +323,7 @@ final class StructCodec {
     boolean extinct = seg.get(ValueLayout.JAVA_BYTE, OFF_EXTINCT) != 0;
     int originalSpellingByte = seg.get(ValueLayout.JAVA_BYTE, OFF_ORIGINAL_SPELLING) & 0xFF;
     int nothoBits = seg.get(ValueLayout.JAVA_BYTE, OFF_NOTHO_BITS) & 0xFF;
+    int authorshipFlags = seg.get(ValueLayout.JAVA_BYTE, OFF_AUTHORSHIP_FLAGS) & 0xFF;
     int publishedInYear = seg.get(LE_INT, OFF_PUBLISHED_IN_YEAR);
 
     // The string-table count is a fixed constant, not a length-driving wire value: it must be
@@ -418,10 +424,10 @@ final class StructCodec {
       pn.setEpithetQualifier(enumByOrdinal(NamePart.values(), eqParts[i], "epithetQualifier namePart"), eqValues[i]);
     }
 
-    pn.setCombinationAuthorship(
-        authorship(authorsComb, exAuthorsComb, strings[SLOT_YEAR_COMB], strings[SLOT_IMPRINT_YEAR_COMB]));
-    pn.setBasionymAuthorship(
-        authorship(authorsBas, exAuthorsBas, strings[SLOT_YEAR_BAS], strings[SLOT_IMPRINT_YEAR_BAS]));
+    pn.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, strings[SLOT_YEAR_COMB],
+        strings[SLOT_IMPRINT_YEAR_COMB], (authorshipFlags & ANON_COMBINATION_BIT) != 0));
+    pn.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, strings[SLOT_YEAR_BAS],
+        strings[SLOT_IMPRINT_YEAR_BAS], (authorshipFlags & ANON_BASIONYM_BIT) != 0));
 
     if (genericAuthorship != null) {
       pn.setGenericAuthorship(genericAuthorship);
@@ -519,9 +525,9 @@ final class StructCodec {
   }
 
   /** Reads one nested authorship group ({@code generic_authorship}/{@code specific_authorship})
-   *  at {@code cur.pos}, advancing past it: a {@code present} flag, and -- only if present --
-   *  four run-slot tables and five fixed string refs, reconstructed here as a whole {@link
-   *  CombinedAuthorship}. Returns {@code null} for an absent group. */
+   *  at {@code cur.pos}, advancing past it: a {@code present} flag, and -- only if present -- the
+   *  anonymous flags, four run-slot tables and five fixed string refs, reconstructed here as a
+   *  whole {@link CombinedAuthorship}. Returns {@code null} for an absent group. */
   private static CombinedAuthorship readNestedGroup(MemorySegment seg, Cursor cur, int len) {
     int present = seg.get(LE_INT, cur.pos);
     cur.pos += 4;
@@ -532,6 +538,8 @@ final class StructCodec {
       throw new IllegalStateException(
           "nameparser-ffi: nested authorship group present flag=" + present + ", expected 0 or 1");
     }
+    int flags = seg.get(LE_INT, cur.pos);
+    cur.pos += 4;
 
     List<String> authorsComb = readStringRun(seg, cur, len, "nested combination authors");
     List<String> exAuthorsComb = readStringRun(seg, cur, len, "nested combination ex-authors");
@@ -550,20 +558,24 @@ final class StructCodec {
     cur.pos += STRING_REF_SIZE;
 
     CombinedAuthorship ca = new CombinedAuthorship();
-    ca.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, yearComb, imprintYearComb));
-    ca.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, yearBas, imprintYearBas));
+    ca.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, yearComb, imprintYearComb,
+        (flags & ANON_COMBINATION_BIT) != 0));
+    ca.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, yearBas, imprintYearBas,
+        (flags & ANON_BASIONYM_BIT) != 0));
     ca.setSanctioningAuthor(sanctioningAuthor);
     return ca;
   }
 
   /** Builds an {@link Authorship} via its plain setters -- NOT {@code addAuthor}/{@code
    *  addExAuthor}, which have an inverted-blank-check bug making them no-ops for real authors. */
-  private static Authorship authorship(List<String> authors, List<String> exAuthors, String year, String imprintYear) {
+  private static Authorship authorship(List<String> authors, List<String> exAuthors, String year, String imprintYear,
+                                       boolean anonymous) {
     Authorship a = new Authorship();
     a.setAuthors(authors);
     a.setExAuthors(exAuthors);
     a.setYear(year);
     a.setImprintYear(imprintYear);
+    a.setAnonymous(anonymous);
     return a;
   }
 }

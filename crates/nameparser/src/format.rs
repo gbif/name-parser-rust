@@ -481,6 +481,16 @@ fn join_authors(authors: &[String], max_authors: Option<usize>) -> String {
 }
 
 /// Java `NameFormatter.appendAuthorship(StringBuilder, Authorship, boolean, NomCode)`.
+/// Java `NameFormatter.anonymousAuthor(NomCode)`: the author citation of an anonymous work
+/// without attributed authors — "anon." in the botanical codes, "Anon." (ICZN Recommendation 51D)
+/// in all others and when the code is unknown.
+pub fn anonymous_author(code: Option<NomCode>) -> &'static str {
+    match code {
+        Some(NomCode::Botanical | NomCode::Cultivars | NomCode::Phyto) => "anon.",
+        _ => "Anon.",
+    }
+}
+
 fn append_authorship(
     sb: &mut String,
     auth: &Authorship,
@@ -501,7 +511,17 @@ fn append_authorship(
         sb.push_str(" ex ");
         authors_appended = true;
     }
-    if !auth.authors.is_empty() {
+    if auth.anonymous {
+        // attributed authors of an anonymous work go in square brackets (ICZN Recommendation 51D)
+        if auth.authors.is_empty() {
+            sb.push_str(anonymous_author(code));
+        } else {
+            sb.push('[');
+            sb.push_str(&join_authors(&auth.authors, max));
+            sb.push(']');
+        }
+        authors_appended = true;
+    } else if !auth.authors.is_empty() {
         sb.push_str(&join_authors(&auth.authors, max));
         authors_appended = true;
     }

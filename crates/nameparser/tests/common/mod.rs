@@ -469,6 +469,21 @@ impl NameAssertion {
     pub fn comb_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
         assert_eq!(Self::author_year(&self.n.combination_authorship), year);
         assert_eq!(self.n.combination_authorship.authors, str_vec(authors));
+        assert!(
+            !self.n.combination_authorship.anonymous,
+            "unexpected anonymous combination"
+        );
+        self.mark(&[Np::Auth])
+    }
+
+    /// An anonymous combination ("Anon., 1830"), with the authors attributed to it (`[Bennett]`).
+    pub fn comb_anon(self, year: Option<&str>, authors: &[&str]) -> Self {
+        assert!(
+            self.n.combination_authorship.anonymous,
+            "expected an anonymous combination"
+        );
+        assert_eq!(Self::author_year(&self.n.combination_authorship), year);
+        assert_eq!(self.n.combination_authorship.authors, str_vec(authors));
         self.mark(&[Np::Auth])
     }
 
@@ -478,6 +493,21 @@ impl NameAssertion {
     }
 
     pub fn bas_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
+        assert_eq!(Self::author_year(&self.n.basionym_authorship), year);
+        assert_eq!(self.n.basionym_authorship.authors, str_vec(authors));
+        assert!(
+            !self.n.basionym_authorship.anonymous,
+            "unexpected anonymous basionym"
+        );
+        self.mark(&[Np::Bas])
+    }
+
+    /// An anonymous basionym ("(Anon., 1830)"), with the authors attributed to it (`[Bennett]`).
+    pub fn bas_anon(self, year: Option<&str>, authors: &[&str]) -> Self {
+        assert!(
+            self.n.basionym_authorship.anonymous,
+            "expected an anonymous basionym"
+        );
         assert_eq!(Self::author_year(&self.n.basionym_authorship), year);
         assert_eq!(self.n.basionym_authorship.authors, str_vec(authors));
         self.mark(&[Np::Bas])
@@ -773,7 +803,7 @@ impl NameAssertion {
                 "unexpected comb year"
             );
             assert!(
-                !n.combination_authorship.has_authors(),
+                !n.combination_authorship.has_authors_or_anon(),
                 "unexpected comb authors"
             );
         }
@@ -786,7 +816,7 @@ impl NameAssertion {
         if untested(Np::Bas) {
             assert!(n.basionym_authorship.year.is_none(), "unexpected bas year");
             assert!(
-                !n.basionym_authorship.has_authors(),
+                !n.basionym_authorship.has_authors_or_anon(),
                 "unexpected bas authors"
             );
         }

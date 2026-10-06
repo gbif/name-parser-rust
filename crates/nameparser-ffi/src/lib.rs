@@ -35,10 +35,13 @@ use nameparser::model::{NameType, NomCode, ParseError, Rank};
 /// adds the `NameType.IDENTIFIER` variant (ordinal 4, placed before the `OTHER` catch-all, which
 /// shifts to 5): the wire layout is unchanged, but a new cdylib emits the reordered ordinals in the
 /// `name_type` slot, which an older decoder (expecting 5 `NameType` values, `OTHER` at 4) would
-/// misdecode — so the bump forces lockstep.
+/// misdecode — so the bump forces lockstep. **Version 5** carries `Authorship.anonymous`: the
+/// header's former padding byte 30 becomes [`layout::OFF_AUTHORSHIP_FLAGS`], and a present nested
+/// authorship group gains a `u32 flags` word after its `present` flag, shifting the rest of the
+/// group — an older decoder would misread both.
 #[no_mangle]
 pub extern "C" fn np_abi_version() -> u32 {
-    std::panic::catch_unwind(|| 4u32).unwrap_or(0)
+    std::panic::catch_unwind(|| 5u32).unwrap_or(0)
 }
 
 /// SAFETY: `p` must be either null or a valid, NUL-terminated C string for the duration of
@@ -183,8 +186,8 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn np_abi_version_is_4() {
-        assert_eq!(np_abi_version(), 4);
+    fn np_abi_version_is_5() {
+        assert_eq!(np_abi_version(), 5);
     }
 
     #[test]

@@ -102,6 +102,45 @@ const AUTHOR_SUFFIXES: &[&str] = &[
 /// [`parse_authors`] can tell is a generation (#22).
 const GENERATIONAL_SUFFIXES: &[&str] = &["II", "III", "IV", "VI", "VII", "VIII", "IX"];
 
+/// Spellings of the anonymous author, compared case-insensitively and without a trailing dot:
+/// "Anon.", "anon.", "Anonymous", "Anonymus", "Anonyme", "Anonym", "Anonymi". Alone in an author
+/// slot they are [`Authorship::anonymous`], not an author.
+const ANON_WORDS: &[&str] = &[
+    "anon",
+    "anonymous",
+    "anonymus",
+    "anonyme",
+    "anonym",
+    "anonymi",
+];
+
+/// Capitalised words that open a note, an annotation or a manuscript marker, never an author,
+/// inside square brackets ("[Orth. error]", "[Sensu Smith]", "[M. Sars MS]").
+const BRACKET_NOTE_WORDS: &[&str] = &[
+    "auct",
+    "auctt",
+    "auctorum",
+    "hort",
+    "sensu",
+    "non",
+    "nec",
+    "not",
+    "sec",
+    "emend",
+    "fide",
+    "orth",
+    "nom",
+    "comb",
+    "sic",
+    "corrig",
+    "error",
+    "lapsus",
+    "misspelling",
+    "ms",
+    "msc",
+    "ined",
+];
+
 /// Java `AuthorshipParser.AuthState` (package-private nested class). All fields were
 /// package-private in Java; kept `pub` here (the enclosing struct is already capped at
 /// `pub(crate)`, so this changes nothing about actual visibility, matching the interface
@@ -158,8 +197,10 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 }
             }
             // Reject a basionym made up of only lowercase tokens (no real surname).
-            // "(ilic)" is malformed — capture it as unparsed instead.
-            if has_upper_word(tokens, bas_from, bas_end) {
+            // "(ilic)" is malformed — capture it as unparsed instead. An anonymous author
+            // ("(anon.)", "(anon., 1830)") is a basionym all the same.
+            if has_upper_word(tokens, bas_from, bas_end) || has_anon_word(tokens, bas_from, bas_end)
+            {
                 let yr = parse_authors(tokens, bas_from, bas_end, &mut s.basionym);
                 s.year_range |= yr;
                 s.has_filius |= contains_filius_suffix(tokens, bas_from, bas_end);
@@ -275,8 +316,26 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             && starts_upper(&w[1].text)
             && GENERATIONAL_SUFFIXES.contains(&w[1].text.to_uppercase().as_str())
     });
+    let brackets = BracketedAuthors::read(tokens, from, to);
 
     while i < to {
+        // "Anonymous [Bennett]": the anonymous word gives way to the attributed authors
+        if brackets.skip.is_some_and(|(start, _)| i == start) {
+            i = brackets.skip.expect("just checked").1;
+            continue;
+        }
+        // "[Tourn.] L.": the pre-starting-point author ends where the bracket closes
+        if brackets.ex_at == Some(i) {
+            start_ex_authors(
+                &mut cur,
+                &mut authors,
+                &mut ex_authors,
+                &mut after_separator,
+                &mut ex_after_separator,
+            );
+            i += 1;
+            continue;
+        }
         let t = &tokens[i];
 
         // year
@@ -339,11 +398,13 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
 
         // ex separator
         if t.kind == TokenKind::Word && t.text == "ex" {
-            flush(&mut cur, &mut authors);
-            // everything collected so far becomes ex authors
-            ex_authors = Some(authors.clone());
-            authors.clear();
-            ex_after_separator = std::mem::take(&mut after_separator);
+            start_ex_authors(
+                &mut cur,
+                &mut authors,
+                &mut ex_authors,
+                &mut after_separator,
+                &mut ex_after_separator,
+            );
             i += 1;
             continue;
         }
@@ -715,6 +776,17 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         i += 1;
     }
     flush(&mut cur, &mut authors);
+
+    // An anonymous author alone ("Anon., 1830", "(Fr.) anon.", "Sw. ex Anon.") is the work's
+    // anonymity, not an author. In a team ("Anonymous & Bennett") or as the ex author ("Anon. ex
+    // Schltdl.") it stays an author string: the flag cannot say which author it means.
+    if authors.len() == 1 && is_anon_word(&authors[0]) {
+        authors.clear();
+        into.anonymous = true;
+    }
+    if brackets.attributed {
+        into.anonymous = true;
+    }
 
     if !authors.is_empty() {
         into.authors = invert_all(&authors, &after_separator);
@@ -1173,6 +1245,212 @@ fn has_upper_word(tokens: &[Token], from: usize, to: usize) -> bool {
 /// A word like `d'Orbigny`: an apostrophe directly followed by an upper-case letter.
 fn is_elided_particle_surname(s: &str) -> bool {
     s.split('\'').skip(1).any(starts_upper)
+}
+
+/// A spelling of the anonymous author, see [`ANON_WORDS`].
+fn is_anon_word(s: &str) -> bool {
+    let word = s.trim_end_matches('.');
+    ANON_WORDS.iter().any(|a| word.eq_ignore_ascii_case(a))
+}
+
+/// Does `tokens[from..to)` hold a word spelling the anonymous author?
+fn has_anon_word(tokens: &[Token], from: usize, to: usize) -> bool {
+    tokens[from..to]
+        .iter()
+        .any(|t| t.kind == TokenKind::Word && is_anon_word(&t.text))
+}
+
+/// "Everything collected so far becomes ex authors": the authors before an `ex`, or before the
+/// closing bracket of a pre-starting-point author ("[Tourn.] L.").
+fn start_ex_authors(
+    cur: &mut String,
+    authors: &mut Vec<String>,
+    ex_authors: &mut Option<Vec<String>>,
+    after_separator: &mut Vec<usize>,
+    ex_after_separator: &mut Vec<usize>,
+) {
+    flush(cur, authors);
+    *ex_authors = Some(std::mem::take(authors));
+    *ex_after_separator = std::mem::take(after_separator);
+}
+
+/// A year the [`parse_authors`] walk reads as one: a 3-4 digit number.
+fn is_year(t: &Token) -> bool {
+    t.kind == TokenKind::Number && (3..=4).contains(&t.text.chars().count())
+}
+
+/// Square brackets around authors, read by their shape, for every nomenclatural code. The walk
+/// in [`parse_authors`] skips the bracket tokens themselves; this says what they meant.
+///
+/// - The whole author slot in brackets — `[Denis & Schiffermüller], 1775`, `([Lightfoot],
+///   1786)`, `(Gouan) [Clairv.]`, `L'Her. ex [Soland.]` — or an anonymous word followed by one —
+///   `Anonymous [Bennett], 1830`: the work was published anonymously and its authors are known
+///   from external evidence, "enclosed in square brackets to show the original anonymity" (ICZN
+///   Recommendation 51D, <https://code.iczn.org/authorship/article-51-citation-of-names-of-authors/>).
+///   Sets [`Authorship::anonymous`] and keeps the bracketed authors.
+/// - Bracketed authors followed by a real author — `Lupinus [Tourn.] L.`, `[Kar. & Kir.] Regel`:
+///   a pre-starting-point author, which the botanical code cited "preferably between square
+///   brackets or by the use of the word ex" (Paris Code 1956, Recommendation 50D,
+///   <https://www.iapt-taxon.org/historic/1956.htm>). Current codes keep only the *ex* form
+///   (Tokyo 1994 Art. 46.5; Shenzhen 2018 Art. 46.7, Ex. 40: "Lupinus Tourn. ex L.",
+///   <https://www.iapt-taxon.org/nomen/pages/main/art_46.html>; the Madrid Code 2025 was not
+///   checked), so the bracketed authors become ex authors.
+/// - Any other bracket — supplied initials (`Gerstaecker, [C.E.] A.`), dates (`Fieber [Nov.
+///   1860]`), a year inside (`[Hübner, 1806]`), annotations (`[Orth. error]`) — keeps the walk's
+///   behaviour: the brackets are dropped.
+#[derive(Debug, Default)]
+struct BracketedAuthors {
+    /// The whole author slot is bracketed: the authors are attributed to an anonymous work.
+    attributed: bool,
+    /// `(anonymous word, opening bracket)` of "Anonymous [Bennett]": the walk jumps over the word.
+    skip: Option<(usize, usize)>,
+    /// The closing bracket of a pre-starting-point author, read like an `ex`.
+    ex_at: Option<usize>,
+}
+
+impl BracketedAuthors {
+    fn read(tokens: &[Token], from: usize, to: usize) -> Self {
+        let mut shape = BracketedAuthors::default();
+        let head = author_head_end(tokens, from, to);
+        // the authors after the last `ex` outside brackets ("L'Her. ex [Soland.]")
+        let run = last_ex_outside_brackets(tokens, from, head).map_or(from, |ex| ex + 1);
+        if run >= head {
+            return shape;
+        }
+        let first = &tokens[run];
+        if first.kind == TokenKind::OpenBracket {
+            let Some(close) = matching_bracket(tokens, run, head) else {
+                return shape;
+            };
+            if close + 1 == head && looks_like_author_run(tokens, run + 1, close, false) {
+                shape.attributed = true;
+            } else if run == from
+                && close + 1 < head
+                && tokens[close + 1].kind == TokenKind::Word
+                && starts_upper(&tokens[close + 1].text)
+                && looks_like_author_run(tokens, run + 1, close, true)
+            {
+                // "[Sawada ex] Goh" already carries its `ex`
+                if tokens[close - 1].text != "ex" {
+                    shape.ex_at = Some(close);
+                }
+            }
+        } else if first.kind == TokenKind::Word && is_anon_word(&first.text) {
+            let mut open = run + 1;
+            if open < head && tokens[open].kind == TokenKind::Dot {
+                open += 1;
+            }
+            if open < head && tokens[open].kind == TokenKind::OpenBracket {
+                if let Some(close) = matching_bracket(tokens, open, head) {
+                    if close + 1 == head && looks_like_author_run(tokens, open + 1, close, false) {
+                        shape.attributed = true;
+                        shape.skip = Some((run, open));
+                    }
+                }
+            }
+        }
+        shape
+    }
+}
+
+/// Where the author names of `tokens[from..to)` end: at the first year outside brackets or an
+/// imprint year in brackets ("[Hübner], [1806]"), less the commas before it.
+fn author_head_end(tokens: &[Token], from: usize, to: usize) -> usize {
+    let mut depth = 0i32;
+    let mut end = to;
+    for j in from..to {
+        match tokens[j].kind {
+            TokenKind::OpenBracket if j + 1 < to && is_year(&tokens[j + 1]) => {
+                end = j;
+                break;
+            }
+            TokenKind::OpenBracket => depth += 1,
+            TokenKind::CloseBracket => depth -= 1,
+            TokenKind::Number if depth == 0 && is_year(&tokens[j]) => {
+                end = j;
+                break;
+            }
+            _ => {}
+        }
+    }
+    while end > from && tokens[end - 1].kind == TokenKind::Comma {
+        end -= 1;
+    }
+    end
+}
+
+/// The last `ex` of `tokens[from..to)` that is not inside square brackets.
+fn last_ex_outside_brackets(tokens: &[Token], from: usize, to: usize) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut last = None;
+    for (j, t) in tokens.iter().enumerate().take(to).skip(from) {
+        match t.kind {
+            TokenKind::OpenBracket => depth += 1,
+            TokenKind::CloseBracket => depth -= 1,
+            TokenKind::Word if depth == 0 && t.text == "ex" => last = Some(j),
+            _ => {}
+        }
+    }
+    last
+}
+
+/// The `]` closing the `[` at `open`, within `tokens[..to)`.
+fn matching_bracket(tokens: &[Token], open: usize, to: usize) -> Option<usize> {
+    let mut depth = 0i32;
+    for (j, t) in tokens.iter().enumerate().take(to).skip(open) {
+        match t.kind {
+            TokenKind::OpenBracket => depth += 1,
+            TokenKind::CloseBracket => {
+                depth -= 1;
+                if depth == 0 {
+                    return Some(j);
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+/// Is `tokens[from..to)` nothing but author names: at least one surname-like word (a capital and
+/// one more letter, or `d'Orbigny`-style — bare initials are no author run), lower-case words
+/// only as particles, team separators, author suffixes or anonymous words, no numbers, colons or
+/// nested brackets, no note word, no in-citation ("[Péron in] Lamarck"), and ending in a word or
+/// a dot ("[Bethune-] Baker" and "[Lambillion &] Cabeau" are no author runs). `trailing_ex` admits
+/// a final `ex` ("[Sawada ex] Goh").
+fn looks_like_author_run(tokens: &[Token], from: usize, to: usize, trailing_ex: bool) -> bool {
+    if from >= to || !matches!(tokens[to - 1].kind, TokenKind::Word | TokenKind::Dot) {
+        return false;
+    }
+    let mut surname = false;
+    for (j, t) in tokens.iter().enumerate().take(to).skip(from) {
+        match t.kind {
+            TokenKind::Word => {
+                let word = t.text.as_str();
+                let lower = word.to_lowercase();
+                if lower == "in" || lower == "apud" {
+                    return false;
+                }
+                if starts_upper(word) || is_elided_particle_surname(word) {
+                    if BRACKET_NOTE_WORDS.contains(&lower.as_str()) {
+                        return false;
+                    }
+                    surname |= word.chars().filter(|c| c.is_alphabetic()).count() >= 2;
+                } else if !(is_particle(word)
+                    || matches!(word, "et" | "and" | "y" | "al")
+                    || AUTHOR_SUFFIXES.contains(&lower.as_str())
+                    || is_anon_word(word)
+                    || (trailing_ex && word == "ex" && j + 1 == to))
+                {
+                    return false;
+                }
+            }
+            TokenKind::Dot | TokenKind::Comma | TokenKind::Ampersand => {}
+            TokenKind::Other if t.text == "-" || t.text == "'" => {}
+            _ => return false,
+        }
+    }
+    surname
 }
 
 /// Java `AuthorshipParser.containsFiliusSuffix(List<Token>, int, int)`. Scans the token
