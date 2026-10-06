@@ -18,7 +18,7 @@
   -->
   <groupId>org.gbif.nameparser</groupId>
   <artifactId>name-parser-rust</artifactId>
-  <version>0.2.3-SNAPSHOT</version>
+  <version>0.3.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>GBIF Name Parser :: Rust FFM binding</name>
