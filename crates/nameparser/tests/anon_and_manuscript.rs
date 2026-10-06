@@ -5,8 +5,9 @@
 //! trailing manuscript marker ("ined.", "ms.") into the `manuscript` flag only on the name string.
 //! A separately supplied authorship — how ChecklistBank parses almost every name — skipped both,
 //! so the same author came out as "Anon." or "anon." depending on the column, and "(Fr.) anon.
-//! ined." gave the author "anon.ined." without the flag. Both paths now agree. "Anonymous" and the
-//! other spelled-out variants stay as written. Deliberate changes against Java parity.
+//! ined." gave the author "anon.ined." without the flag. Both paths now agree, and an anonymous
+//! author alone — any spelling, "Anonymous" included — is `Authorship::anonymous`, not an author
+//! string (see `anonymous_authorship.rs`). Deliberate changes against Java parity.
 
 mod common;
 use common::*;
@@ -51,14 +52,14 @@ fn anon_is_normalised_in_both_paths() {
     }
     assert_name_auth("Physalospora sepincoliformis", "(De Not.) Anon.")
         .species("Physalospora", "sepincoliformis")
-        .comb_authors(None, &["anon."])
+        .comb_anon(None, &[])
         .bas_authors(None, &["De Not."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // the spelled-out forms are kept as written
+    // the spelled-out forms are the anonymous flag too
     assert_name_auth("Aus bus", "Anonymous")
         .species("Aus", "bus")
-        .comb_authors(None, &["Anonymous"])
+        .comb_anon(None, &[])
         .nothing_else();
 }
 
@@ -75,7 +76,7 @@ fn a_trailing_manuscript_marker_sets_the_flag_in_both_paths() {
     }
     assert_name_auth("Acetabula acetabulum", "(L.) anon. ined.")
         .species("Acetabula", "acetabulum")
-        .comb_authors(None, &["anon."])
+        .comb_anon(None, &[])
         .bas_authors(None, &["L."])
         .nom_note("ined.")
         .manuscript()
@@ -97,13 +98,13 @@ fn a_trailing_manuscript_marker_sets_the_flag_in_both_paths() {
     // repeated in both columns, the marker is recorded once
     assert_name_auth("Weiseria palustris anon. ined.", "anon. ined.")
         .species("Weiseria", "palustris")
-        .comb_authors(None, &["anon."])
+        .comb_anon(None, &[])
         .nom_note("ined.")
         .manuscript()
         .nothing_else();
     assert_name_auth("Hygrocybe pratensis var. roseipes", "anon. ined.")
         .infra_species("Hygrocybe", "pratensis", Rank::Variety, "roseipes")
-        .comb_authors(None, &["anon."])
+        .comb_anon(None, &[])
         .nom_note("ined.")
         .manuscript()
         .nothing_else();

@@ -99,6 +99,8 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
         layout::GROUP_PRESENT,
         "nested group present flag must be GROUP_ABSENT (0) or GROUP_PRESENT (1)"
     );
+    let flags = read_u32(buf, *cursor) as u8;
+    *cursor += 4;
     let authors_comb = read_string_run(buf, cursor);
     let exauthors_comb = read_string_run(buf, cursor);
     let authors_bas = read_string_run(buf, cursor);
@@ -114,12 +116,14 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
             ex_authors: exauthors_comb,
             year: year_comb,
             imprint_year: imprint_year_comb,
+            anonymous: flags & layout::ANON_COMBINATION_BIT != 0,
         },
         basionym_authorship: Authorship {
             authors: authors_bas,
             ex_authors: exauthors_bas,
             year: year_bas,
             imprint_year: imprint_year_bas,
+            anonymous: flags & layout::ANON_BASIONYM_BIT != 0,
         },
         sanctioning_author,
     })
@@ -139,6 +143,7 @@ struct DecodedHeader {
     extinct: bool,
     original_spelling: u8,
     notho_bits: u8,
+    authorship_flags: u8,
     published_in_year: i32,
 }
 
@@ -156,6 +161,7 @@ fn decode_header(buf: &[u8]) -> DecodedHeader {
         extinct: buf[layout::OFF_EXTINCT] != 0,
         original_spelling: buf[layout::OFF_ORIGINAL_SPELLING],
         notho_bits: buf[layout::OFF_NOTHO_BITS],
+        authorship_flags: buf[layout::OFF_AUTHORSHIP_FLAGS],
         published_in_year: read_i32(buf, layout::OFF_PUBLISHED_IN_YEAR),
     }
 }
@@ -282,6 +288,16 @@ fn assert_decoded_matches(name: &str, decoded: &Decoded, pn: &ParsedName) {
         "{name}: manuscript"
     );
     assert_eq!(decoded.header.extinct, pn.extinct, "{name}: extinct");
+    assert_eq!(
+        decoded.header.authorship_flags & layout::ANON_COMBINATION_BIT != 0,
+        pn.combination_authorship.anonymous,
+        "{name}: combination anonymous"
+    );
+    assert_eq!(
+        decoded.header.authorship_flags & layout::ANON_BASIONYM_BIT != 0,
+        pn.basionym_authorship.anonymous,
+        "{name}: basionym anonymous"
+    );
 
     let expected_original_spelling = match pn.original_spelling {
         None => layout::ORIGINAL_SPELLING_UNKNOWN,
@@ -683,6 +699,27 @@ fn specific_authorship_on_another_cultivar() {
     assert_eq!(decoded.authors_comb, vec!["Door.".to_string()]);
 }
 
+// ---- anonymous authorships ----
+
+#[test]
+fn anonymous_authorships_round_trip() {
+    for name in [
+        "Aus bus Anon., 1830",
+        "Rhinobatos typus (Anonymous [Bennett], 1830)",
+        "Physalospora rubiginosa (Fr.) anon.",
+        "Acleris forskoliana [Denis & Schiffermüller], 1775",
+    ] {
+        let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
+        assert!(
+            pn.combination_authorship.anonymous || pn.basionym_authorship.anonymous,
+            "{name}: test name must carry an anonymous authorship"
+        );
+        let buf = parse_struct_success(name);
+        assert_abi_version_header(&buf);
+        assert_decoded_matches(name, &decode(&buf), &pn);
+    }
+}
+
 // ---- imprint years on the base authorship (real corpus examples) ----
 
 #[test]
@@ -851,6 +888,6 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
 }
 
 #[test]
-fn np_abi_version_is_4() {
-    assert_eq!(nameparser_ffi::np_abi_version(), 4);
+fn np_abi_version_is_5() {
+    assert_eq!(nameparser_ffi::np_abi_version(), 5);
 }

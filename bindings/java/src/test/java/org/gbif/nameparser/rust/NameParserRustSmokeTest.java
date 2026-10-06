@@ -72,6 +72,21 @@ class NameParserRustSmokeTest {
   }
 
   @Test
+  void anonymousAuthorshipCrossesTheWireAndRendersPerCode() throws UnparsableNameException {
+    // ABI 5: Authorship.anonymous, attributed authors in square brackets (ICZN Rec. 51D)
+    ParsedName pn = parser.parse("Rhinobatos typus (Anonymous [Bennett], 1830)", null, null, null).orElseThrow();
+    assertTrue(pn.getBasionymAuthorship().isAnonymous());
+    assertEquals(List.of("Bennett"), pn.getBasionymAuthorship().getAuthors());
+    assertEquals("([Bennett], 1830)", pn.authorshipComplete());
+
+    ParsedName bot = parser.parse("Physalospora rubiginosa (Fr.) anon.", null, null, null).orElseThrow();
+    assertTrue(bot.getCombinationAuthorship().isAnonymous());
+    assertTrue(bot.getCombinationAuthorship().getAuthors().isEmpty());
+    assertEquals(NomCode.BOTANICAL, bot.getCode());
+    assertEquals("(Fr.) anon.", bot.authorshipComplete());
+  }
+
+  @Test
   void unparsableVirusNameIsAnUnparsableResultCarryingTypeCodeAndName() {
     // 5.0.0: no throw — the result IS an Unparsable variant carrying the classification.
     ParseResult result = parser.parse("Tobacco mosaic virus", null, null, null);

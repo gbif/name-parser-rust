@@ -144,7 +144,7 @@ fn todo_names() {
     assert_name("Roridomyces albororidus (Maas Geest. & de Meijer) anon., 2010")
         .species("Roridomyces", "albororidus")
         .bas_authors(None, &["Maas Geest.", "de Meijer"])
-        .comb_authors(Some("2010"), &["anon."])
+        .comb_anon(Some("2010"), &[])
         .nothing_else();
 
     assert_name("Collybia mephitica sensu Rea (1922); fide Checklist of Basidiomycota of Great Britain and Ireland (2005)")

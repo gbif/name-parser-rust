@@ -1302,7 +1302,7 @@ mod tests {
         let row = render_row(2, "Abies alba Mill.", &Ok(pn), Canonical::Off);
         assert_eq!(
             row,
-            r#"{"line":2,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}}"#
+            r#"{"line":2,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}"#
         );
     }
 
@@ -1350,7 +1350,7 @@ mod tests {
         );
         assert_eq!(
             with,
-            r#"{"line":1,"input":"Abies alba Mill.","canonical":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[]},"basionymAuthorship":{"authors":[],"exAuthors":[]}}}"#
+            r#"{"line":1,"input":"Abies alba Mill.","canonical":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}"#
         );
     }
 

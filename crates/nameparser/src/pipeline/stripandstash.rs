@@ -2367,9 +2367,11 @@ static ANON_LOWER: LazyLock<FancyRegex> =
 /// (no `ctx.name` mutation, no warnings): TWO sequential, UNCONDITIONAL replacements —
 /// title-case "Anon"/"Anon." and lower-case "anon" (not already followed by a dot) both
 /// normalise to the canonical lower-case "anon." so the authorship
-/// parser captures it as a real anonymous-author token — spot-checked: "Aus bus Anon." ->
-/// authors=["anon."]; "Aus bus anon" -> authors=["anon."] (same result either input
-/// casing).
+/// parser captures it as a real anonymous-author token. Alone in an author slot the authorship
+/// parser turns any spelling of it into `Authorship::anonymous` (no author string, rendered per
+/// code); this spelling survives where it stays a string — an ex author ("Anon. ex Schltdl."),
+/// a team member, or the anonymous work an in-citation names ("Swainson in Anon. 1837" ->
+/// publishedIn "anon. 1837").
 fn normalise_anon(_ctx: &mut ParseContext, s: String) -> String {
     normalise_anon_str(&s)
 }

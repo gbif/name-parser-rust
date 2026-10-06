@@ -490,12 +490,13 @@ fn bacteria_with_pathovar_rank() {
 
 #[test]
 fn stray_ex_is_not_parsed_as_species() {
-    // group: "Stray" ex is not parsed as species. Botanical subsp. kept in canonical;
-    // square brackets around an ex-author are stripped silently. Modern interpretation:
-    // post-"ex" author is the validating author, pre-"ex" becomes the exAuthor.
+    // group: "Stray" ex is not parsed as species. Botanical subsp. kept in canonical.
+    // Modern interpretation: post-"ex" author is the validating author, pre-"ex" becomes the
+    // exAuthor. Unlike Java, the bracketed validating author is kept as the attributed author
+    // of an anonymous work (Solander, in Aiton's anonymous Hortus Kewensis).
     assert_name("Pelargonium cucullatum ssp. cucullatum (L.) L'Her. ex [Soland.]")
         .infra_species("Pelargonium", "cucullatum", Rank::Subspecies, "cucullatum")
-        .comb_authors(None, &["Soland."])
+        .comb_anon(None, &["Soland."])
         .comb_ex_authors(&["L'Her."])
         .bas_authors(None, &["L."])
         .code(NomCode::Botanical);

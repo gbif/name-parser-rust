@@ -55,14 +55,19 @@ out[, c("scientificName", "parsed", "rank", "genus", "specificEpithet",
 `authorship`, `rank`, `code` (the parser's `SCREAMING_SNAKE_CASE` enum names, e.g.
 `"SPECIES"`, `"ZOOLOGICAL"`).
 
-All 43 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
+All 45 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
 `taxonRank`, `rank`, `code`, `uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`,
 `infraspecificEpithet`, `cultivarEpithet`, `phrase`, `candidatus`, `notho`, `originalSpelling`,
 `epithetQualifier`, `extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`,
 `publishedInYear`, `publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`,
-`combinationAuthors`, `combinationExAuthors`, `combinationYear`, `basionymAuthors`,
-`basionymExAuthors`, `basionymYear`, `sanctioningAuthor`, `warnings`, `canonical`,
-`canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`, `authorshipComplete`.
+`combinationAuthors`, `combinationExAuthors`, `combinationYear`, `combinationAnonymous`,
+`basionymAuthors`, `basionymExAuthors`, `basionymYear`, `basionymAnonymous`, `sanctioningAuthor`,
+`warnings`, `canonical`, `canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`,
+`authorshipComplete`.
+
+`combinationAnonymous` / `basionymAnonymous` are `TRUE` when the work was published anonymously
+("Anon.", "Anonymous"); the authors, if any, are then attributed from external evidence and
+rendered in square brackets (`[Denis & Schiffermüller], 1775`, ICZN Recommendation 51D).
 
 `result` is the 5.0.0 three-way outcome (`"parsed"` / `"informal"` / `"unparsable"`); `taxon`
 and `taxonRank` carry an informal name's supraspecific anchor; the last five are `NameFormatter`

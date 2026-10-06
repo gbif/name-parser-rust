@@ -77,11 +77,12 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
 
     if let Some(auth_state) = auth_state {
+        // An anonymous author ("Anon., 1830", "(Fr.) anon.") votes like any other author.
         let bas_year = auth_state.basionym_present
             && auth_state.basionym.year.is_some()
-            && auth_state.basionym.has_authors();
+            && auth_state.basionym.has_authors_or_anon();
         let comb_year =
-            auth_state.combination.year.is_some() && auth_state.combination.has_authors();
+            auth_state.combination.year.is_some() && auth_state.combination.has_authors_or_anon();
         let any_author_year = bas_year || comb_year;
 
         // --- botanical votes ---
@@ -90,7 +91,7 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
             votes.insert(NomCode::Botanical);
         }
         // "(Basionym) Recombination" — a parenthesised basionym plus a recombination author.
-        if auth_state.basionym_present && auth_state.combination.has_authors() {
+        if auth_state.basionym_present && auth_state.combination.has_authors_or_anon() {
             votes.insert(NomCode::Botanical);
         }
         // Filius ("f." / "fil.") without any year.
@@ -105,7 +106,7 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         // ("Heptacyclus (Vasileyev, 1939)"). A trailing "(Subgenus) Author, year" is split
         // into a subgenus + combination author by AuthorshipSplit, so its parens are not a
         // basionym here.
-        if auth_state.basionym_present && !auth_state.combination.has_authors() {
+        if auth_state.basionym_present && !auth_state.combination.has_authors_or_anon() {
             votes.insert(NomCode::Zoological);
         }
         // A year on an authored basionym or combination.

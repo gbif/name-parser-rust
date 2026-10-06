@@ -78,18 +78,18 @@
   </properties>
 
   <dependencies>
-    <!-- The 5.0.x exceptionless API this binding implements: NameParser (now returning
+    <!-- The 5.x exceptionless API this binding implements: NameParser (now returning
          ParseResult), the three-way ParseResult (Parsed | Informal | Unparsable), ParsedName,
-         UnparsableNameException, the enums (incl. NameType.IDENTIFIER). Pinned to the released
-         5.0.1 (a final release, not a moving SNAPSHOT); resolves from repository.gbif.org via the
-         <repositories> block below — see bindings/java/README.md. 5.0.1 is docs-only over 5.0.0: it
-         documents ParseResult.Informal.phrase as the VERBATIM tail, a trailing author citation
-         included — the contract this engine implements. NOTE: the 5.0.x api is api-ONLY — the Java
-         NameParserImpl reference impl was removed, so this Rust binding is the sole implementation. -->
+         UnparsableNameException, the enums (incl. NameType.IDENTIFIER). Resolves from
+         repository.gbif.org via the <repositories> block below — see bindings/java/README.md.
+         5.1.0 adds Authorship.anonymous (ABI 5); pin it to the released 5.1.0 before releasing this
+         binding (release:prepare refuses a SNAPSHOT dependency). NOTE: the 5.x api is api-ONLY — the
+         Java NameParserImpl reference impl was removed, so this Rust binding is the sole
+         implementation. -->
     <dependency>
       <groupId>org.gbif</groupId>
       <artifactId>name-parser-api</artifactId>
-      <version>5.0.1</version>
+      <version>5.1.0-SNAPSHOT</version>
     </dependency>
 
     <!-- TEST-ONLY. The binding itself no longer uses Gson (the struct wire path rebuilds

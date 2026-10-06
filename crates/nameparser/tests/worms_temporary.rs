@@ -243,21 +243,22 @@ fn bracketed_single_word_is_a_phrase_not_an_author() {
 }
 
 #[test]
-fn bracketed_author_in_the_separate_authorship_is_still_an_author() {
+fn bracketed_author_in_the_separate_authorship_is_an_attributed_author() {
     // `[Renier]`, `[Boucek]`, `[Röding]` are common anonymous-work authors in CLB's authorship
-    // column — only a family-group name in brackets is an annotation.
+    // column — only a family-group name in brackets is an annotation. The brackets mark the
+    // work's anonymity (ICZN Recommendation 51D).
     assert_name_hinted("Spongia", Some("[Renier]"), Some(Rank::Genus), None)
         .monomial_rank("Spongia", Rank::Genus)
-        .comb_authors(None, &["Renier"])
+        .comb_anon(None, &["Renier"])
         .nothing_else();
 }
 
 #[test]
-fn bracketed_anonymous_author_with_year_is_still_an_author() {
+fn bracketed_anonymous_author_with_year_is_an_attributed_author() {
     // ICZN Recommendation 51D: the author of an anonymous work in square brackets.
     assert_name("Aus bus [Hübner], 1806")
         .species("Aus", "bus")
-        .comb_authors(Some("1806"), &["Hübner"])
+        .comb_anon(Some("1806"), &["Hübner"])
         .code(NomCode::Zoological)
         .nothing_else();
 }

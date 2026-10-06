@@ -421,15 +421,15 @@ fn authorship_missing_one_parenthesis() {
 
 #[test]
 fn unknown_authorship() {
-    // group: Unknown authorship — "anon." (any case) is captured as an anonymous
-    // author placeholder; "(?)" / "(auct.)" / "(anon.)" parens before a real author
-    // are stripped as unparsed (PARTIAL state).
+    // group: Unknown authorship — "anon." (any case) is the anonymous flag, not an author;
+    // "(?)" / "(auct.)" parens before a real author are stripped as unparsed (PARTIAL state).
+    // Unlike Java, "(anon.)" is an anonymous basionym rather than unparsed.
     assert_name("Saccharomyces drosophilae anon.")
         .species("Saccharomyces", "drosophilae")
-        .comb_authors(None, &["anon."]);
+        .comb_anon(None, &[]);
     assert_name("Physalospora rubiginosa (Fr.) anon.")
         .species("Physalospora", "rubiginosa")
-        .comb_authors(None, &["anon."])
+        .comb_anon(None, &[])
         .bas_authors(None, &["Fr."]);
     assert_name("Tragacantha leporina (?) Kuntze")
         .species("Tragacantha", "leporina")
@@ -442,28 +442,29 @@ fn unknown_authorship() {
     assert_name("Lachenalia tricolor var. nelsonii (anon.) Baker")
         .infra_species("Lachenalia", "tricolor", Rank::Variety, "nelsonii")
         .comb_authors(None, &["Baker"])
-        .partial("(anon.)");
+        .bas_anon(None, &[])
+        .code(NomCode::Botanical)
+        .nothing_else();
     assert_name("Puya acris anon.")
         .species("Puya", "acris")
-        .comb_authors(None, &["anon."]);
+        .comb_anon(None, &[]);
 }
 
 #[test]
 fn anon_authorship() {
-    // "Anon."/"Anon"/"anon"/"anon." in any case are normalised to lowercase "anon."
-    // and captured as an anonymous-author placeholder.
+    // "Anon."/"Anon"/"anon"/"anon." in any case are the anonymous flag, not an author.
     assert_name("Saccharomyces drosophilae Anon.")
         .species("Saccharomyces", "drosophilae")
-        .comb_authors(None, &["anon."]);
+        .comb_anon(None, &[]);
     assert_name("Saccharomyces drosophilae Anon")
         .species("Saccharomyces", "drosophilae")
-        .comb_authors(None, &["anon."]);
+        .comb_anon(None, &[]);
     assert_name("Saccharomyces drosophilae anon")
         .species("Saccharomyces", "drosophilae")
-        .comb_authors(None, &["anon."]);
+        .comb_anon(None, &[]);
     assert_name("Saccharomyces drosophilae anon. 1923")
         .species("Saccharomyces", "drosophilae")
-        .comb_authors(Some("1923"), &["anon."])
+        .comb_anon(Some("1923"), &[])
         .code(NomCode::Zoological);
 }
 

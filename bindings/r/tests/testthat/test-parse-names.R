@@ -41,7 +41,16 @@ test_that("authorship columns and warnings are flattened", {
   expect_equal(out$combinationAuthors, "Miller")
   expect_equal(out$combinationYear, "1907")
   expect_true(is.na(out$basionymAuthors))
+  expect_false(out$combinationAnonymous)
   expect_true("warnings" %in% names(out))
+})
+
+test_that("an anonymous authorship is a flag, attributed authors render in brackets", {
+  out <- parse_names("Rhinobatos typus (Anonymous [Bennett], 1830)")
+  expect_true(out$basionymAnonymous)
+  expect_equal(out$basionymAuthors, "Bennett")
+  expect_false(out$combinationAnonymous)
+  expect_equal(out$authorshipComplete, "([Bennett], 1830)")
 })
 
 test_that("NameFormatter rendering columns match the Java oracle", {

@@ -47,7 +47,8 @@
 //! | 27 | 1 | u8  | `extinct` | 0/1 |
 //! | 28 | 1 | u8  | `original_spelling` | [`ORIGINAL_SPELLING_FALSE`]/[`_TRUE`]/[`_UNKNOWN`] (0/1/2) |
 //! | 29 | 1 | u8  | `notho_bits` | bitset, bit `i` = `NamePart` ordinal `i` present in the notho set |
-//! | 30 | 2 | —   | *(padding)* | reserved, always zero, keeps `published_in_year` 4-aligned |
+//! | 30 | 1 | u8  | `authorship_flags` | bit 0 = `combination_authorship.anonymous`, bit 1 = `basionym_authorship.anonymous` (ABI 5) |
+//! | 31 | 1 | —   | *(padding)* | reserved, always zero, keeps `published_in_year` 4-aligned |
 //! | 32 | 4 | i32 | `published_in_year` | -1 if absent |
 //!
 //! `rank`/`state` are never actually optional on [`ParsedName`] itself (both are `@Nonnull` in
@@ -152,6 +153,8 @@
 //!
 //! - `u32 present` — [`GROUP_ABSENT`] (0) or [`GROUP_PRESENT`] (1). **If absent, that 4-byte
 //!   flag is the whole group** (the common case costs 4 bytes and is unambiguous). If present:
+//! - `u32 flags` — the anonymous bits of its two inner authorships, laid out like the header's
+//!   `authorship_flags` ([`ANON_COMBINATION_BIT`], [`ANON_BASIONYM_BIT`]; ABI 5);
 //! - four run-slot tables (each a `u32 count` then `count` × 8-byte string refs), in this order:
 //!   its `combination_authorship.authors`, `combination_authorship.ex_authors`,
 //!   `basionym_authorship.authors`, `basionym_authorship.ex_authors`;
@@ -226,8 +229,29 @@ pub const OFF_MANUSCRIPT: usize = 26;
 pub const OFF_EXTINCT: usize = 27;
 pub const OFF_ORIGINAL_SPELLING: usize = 28;
 pub const OFF_NOTHO_BITS: usize = 29;
-// Offsets 30..32 are 2 bytes of reserved padding (keeps `published_in_year` 4-aligned).
+/// The anonymous flags of the two base authorships, see [`ANON_COMBINATION_BIT`] /
+/// [`ANON_BASIONYM_BIT`]. Offset 31 is 1 byte of reserved padding (keeps `published_in_year`
+/// 4-aligned).
+pub const OFF_AUTHORSHIP_FLAGS: usize = 30;
 pub const OFF_PUBLISHED_IN_YEAR: usize = 32;
+
+/// `authorship_flags` bit: `combination_authorship.anonymous`.
+pub const ANON_COMBINATION_BIT: u8 = 1;
+/// `authorship_flags` bit: `basionym_authorship.anonymous`.
+pub const ANON_BASIONYM_BIT: u8 = 2;
+
+/// The `authorship_flags` byte of a combination + basionym authorship pair (the header's, and a
+/// nested group's `flags` word).
+fn authorship_flags(combination: &Authorship, basionym: &Authorship) -> u8 {
+    let mut flags = 0;
+    if combination.anonymous {
+        flags |= ANON_COMBINATION_BIT;
+    }
+    if basionym.anonymous {
+        flags |= ANON_BASIONYM_BIT;
+    }
+    flags
+}
 
 /// Total header size in bytes — also the minimum `out_cap` a caller must supply to reliably
 /// decode the unparsable path's header (see the module doc's "Return convention").
@@ -437,6 +461,7 @@ struct Header {
     extinct: bool,
     original_spelling: u8,
     notho_bits: u8,
+    authorship_flags: u8,
     published_in_year: i32,
 }
 
@@ -457,7 +482,8 @@ impl Header {
         buf.push(self.extinct as u8); // OFF_EXTINCT
         buf.push(self.original_spelling); // OFF_ORIGINAL_SPELLING
         buf.push(self.notho_bits); // OFF_NOTHO_BITS
-        buf.extend_from_slice(&[0u8, 0u8]); // padding, offsets 30..32
+        buf.push(self.authorship_flags); // OFF_AUTHORSHIP_FLAGS
+        buf.push(0u8); // padding, offset 31
         buf.extend_from_slice(&self.published_in_year.to_le_bytes()); // OFF_PUBLISHED_IN_YEAR
         debug_assert_eq!(buf.len(), HEADER_SIZE);
     }
@@ -533,6 +559,7 @@ fn place_opt(placer: &mut StringPlacer, s: Option<&str>) -> (u32, u32) {
 /// The placed string refs for one nested `CombinedAuthorship` group (see the module doc's
 /// "Nested authorship groups" section). Strings are already in the blob by the time this exists.
 struct NestedAuthorshipRefs {
+    flags: u32,
     authors_comb: Vec<(u32, u32)>,
     exauthors_comb: Vec<(u32, u32)>,
     authors_bas: Vec<(u32, u32)>,
@@ -545,13 +572,14 @@ struct NestedAuthorshipRefs {
 }
 
 /// The byte size a nested authorship group occupies (count-driven, so computable before any
-/// string is placed): 4 bytes for the `present` flag when absent, else the flag + its four run
-/// tables + [`NESTED_GROUP_STRING_REFS`] fixed refs.
+/// string is placed): 4 bytes for the `present` flag when absent, else the flag + the `flags`
+/// word + its four run tables + [`NESTED_GROUP_STRING_REFS`] fixed refs.
 fn nested_group_size(ca: &Option<CombinedAuthorship>) -> usize {
     match ca {
         None => 4,
         Some(ca) => {
-            4 + (4 + ca.combination_authorship.authors.len() * STRING_REF_SIZE)
+            4 + 4
+                + (4 + ca.combination_authorship.authors.len() * STRING_REF_SIZE)
                 + (4 + ca.combination_authorship.ex_authors.len() * STRING_REF_SIZE)
                 + (4 + ca.basionym_authorship.authors.len() * STRING_REF_SIZE)
                 + (4 + ca.basionym_authorship.ex_authors.len() * STRING_REF_SIZE)
@@ -584,6 +612,7 @@ fn place_nested(placer: &mut StringPlacer, ca: &CombinedAuthorship) -> NestedAut
     let imprint_year_bas = place_opt(placer, ca.basionym_authorship.imprint_year.as_deref());
     let sanctioning_author = place_opt(placer, ca.sanctioning_author.as_deref());
     NestedAuthorshipRefs {
+        flags: authorship_flags(&ca.combination_authorship, &ca.basionym_authorship) as u32,
         authors_comb,
         exauthors_comb,
         authors_bas,
@@ -597,12 +626,14 @@ fn place_nested(placer: &mut StringPlacer, ca: &CombinedAuthorship) -> NestedAut
 }
 
 /// Appends a nested authorship group to `buf`: just the [`GROUP_ABSENT`] flag when `refs` is
-/// `None`, else the [`GROUP_PRESENT`] flag then its four run tables and five fixed string refs.
+/// `None`, else the [`GROUP_PRESENT`] flag, its `flags` word, four run tables and five fixed
+/// string refs.
 fn write_nested_group(buf: &mut Vec<u8>, refs: &Option<NestedAuthorshipRefs>) {
     match refs {
         None => buf.extend_from_slice(&GROUP_ABSENT.to_le_bytes()),
         Some(refs) => {
             buf.extend_from_slice(&GROUP_PRESENT.to_le_bytes());
+            buf.extend_from_slice(&refs.flags.to_le_bytes());
             write_string_run_table(buf, &refs.authors_comb);
             write_string_run_table(buf, &refs.exauthors_comb);
             write_string_run_table(buf, &refs.authors_bas);
@@ -736,6 +767,7 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
         extinct: pn.extinct,
         original_spelling: original_spelling_byte(pn.original_spelling),
         notho_bits: notho_bits(&pn.notho),
+        authorship_flags: authorship_flags(&pn.combination_authorship, &pn.basionym_authorship),
         published_in_year: pn.published_in_year.unwrap_or(-1),
     };
     header.write_to(&mut buf);
@@ -785,6 +817,7 @@ pub fn encode_unparsable(err: &ParseError, abi_version: u32) -> Vec<u8> {
         extinct: false,
         original_spelling: ORIGINAL_SPELLING_UNKNOWN,
         notho_bits: 0,
+        authorship_flags: 0,
         published_in_year: -1,
     };
     let name = err.name.as_bytes();
@@ -986,8 +1019,8 @@ mod tests {
     #[test]
     fn present_nested_group_size_counts_flag_four_run_tables_and_five_string_refs() {
         // combination has 1 author, basionym has 1 author, everything else empty:
-        // 4 (flag) + [4+8] comb authors + [4+0] comb ex + [4+8] bas authors + [4+0] bas ex
-        // + 5*8 fixed refs = 4 + 12 + 4 + 12 + 4 + 40 = 76.
+        // 4 (present) + 4 (flags) + [4+8] comb authors + [4+0] comb ex + [4+8] bas authors
+        // + [4+0] bas ex + 5*8 fixed refs = 4 + 4 + 12 + 4 + 12 + 4 + 40 = 80.
         let ca = CombinedAuthorship {
             combination_authorship: Authorship {
                 authors: vec!["Kuntze".to_string()],
@@ -999,7 +1032,31 @@ mod tests {
             },
             sanctioning_author: None,
         };
-        assert_eq!(nested_group_size(&Some(ca)), 76);
+        assert_eq!(nested_group_size(&Some(ca)), 80);
+    }
+
+    #[test]
+    fn anonymous_flags_go_to_the_header_byte() {
+        let pn = ParsedName {
+            basionym_authorship: Authorship {
+                anonymous: true,
+                authors: vec!["Bennett".to_string()],
+                year: Some("1830".to_string()),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        assert_eq!(encode(&pn, 5)[OFF_AUTHORSHIP_FLAGS], ANON_BASIONYM_BIT);
+        let pn = ParsedName {
+            combination_authorship: Authorship {
+                anonymous: true,
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+        let buf = encode(&pn, 5);
+        assert_eq!(buf[OFF_AUTHORSHIP_FLAGS], ANON_COMBINATION_BIT);
+        assert_eq!(buf[OFF_AUTHORSHIP_FLAGS + 1], 0, "offset 31 stays padding");
     }
 
     #[test]

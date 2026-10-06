@@ -104,6 +104,10 @@ def _assert_getters_match_to_dict(name: str, pn: "nameparser.ParsedName", d: dic
             f"{name!r}: pn.{attr}.imprint_year = {authorship.imprint_year!r} but "
             f"to_dict()[{wire_key!r}]['imprintYear'] = {sub.get('imprintYear')!r}"
         )
+        assert authorship.anonymous == sub.get("anonymous", False), (
+            f"{name!r}: pn.{attr}.anonymous = {authorship.anonymous!r} but "
+            f"to_dict()[{wire_key!r}]['anonymous'] = {sub.get('anonymous')!r}"
+        )
 
     for attr, wire_key in COMBINED_AUTHORSHIP_GETTERS.items():
         getter_val = getattr(pn, attr)
@@ -125,6 +129,7 @@ EXPLICIT_SAMPLE: list[str] = [
     "×Abies alba nothovar. rubra",  # hybrid -> notho
     "Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii",  # >= 2 warnings
     "Vulpes vulpes silaceus Miller, 1907",  # combination_authorship (authors + year)
+    "Rhinobatos typus (Anonymous [Bennett], 1830)",  # anonymous basionym, attributed author
 ]
 
 # Cap on the sample size — "~50" per the brief. The 5 small, curated corpora

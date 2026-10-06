@@ -89,17 +89,32 @@ impl PyAuthorship {
         self.inner.imprint_year.clone()
     }
 
+    /// The work was published anonymously ("Anon.", "Anonymous"); any `authors` are then
+    /// attributed from external evidence, cited in square brackets (ICZN Recommendation 51D).
+    #[getter]
+    fn anonymous(&self) -> bool {
+        self.inner.anonymous
+    }
+
     /// The complete structure straight from the core's own `serde::Serialize` impl —
-    /// `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ...}` — the
-    /// same escape hatch [`PyParsedName::to_dict`] provides at the top level.
+    /// `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ..., "anonymous": ...}`
+    /// — the same escape hatch [`PyParsedName::to_dict`] provides at the top level.
     fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         Ok(pythonize::pythonize(py, &self.inner)?.unbind())
     }
 
     fn __repr__(&self) -> String {
         format!(
-            "Authorship(authors={:?}, ex_authors={:?}, year={:?}, imprint_year={:?})",
-            self.inner.authors, self.inner.ex_authors, self.inner.year, self.inner.imprint_year
+            "Authorship(authors={:?}, ex_authors={:?}, year={:?}, imprint_year={:?}, anonymous={})",
+            self.inner.authors,
+            self.inner.ex_authors,
+            self.inner.year,
+            self.inner.imprint_year,
+            if self.inner.anonymous {
+                "True"
+            } else {
+                "False"
+            }
         )
     }
 }
