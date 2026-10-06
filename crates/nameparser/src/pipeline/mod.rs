@@ -247,6 +247,9 @@ pub fn run(
                 .clone()
                 .map(|r| (r, ctx.name.published_in_year));
             let auth_clean = stripandstash::strip_in_author_citations(&mut ctx, auth_clean);
+            // after the in-citation, as on the name string: "Busk ms in Chimonides, 1987"
+            let auth_clean =
+                stripandstash::strip_trailing_manuscript_marker(&auth_clean, &mut ctx.name);
             if let Some((reference, year)) = embedded_reference {
                 ctx.name.published_in = Some(reference);
                 ctx.name.published_in_year = year;

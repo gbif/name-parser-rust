@@ -2371,7 +2371,13 @@ static ANON_LOWER: LazyLock<FancyRegex> =
 /// authors=["anon."]; "Aus bus anon" -> authors=["anon."] (same result either input
 /// casing).
 fn normalise_anon(_ctx: &mut ParseContext, s: String) -> String {
-    let s = fancy_replace_all(&ANON_UPPER, &s, |_| "anon.".to_string());
+    normalise_anon_str(&s)
+}
+
+/// [`normalise_anon`] for any string — also run on a separately supplied authorship, which Java
+/// left as written, so the same author came out as "Anon." or "anon." depending on the column.
+fn normalise_anon_str(s: &str) -> String {
+    let s = fancy_replace_all(&ANON_UPPER, s, |_| "anon.".to_string());
     fancy_replace_all(&ANON_LOWER, &s, |_| "anon.".to_string())
 }
 
@@ -2907,9 +2913,11 @@ pub(crate) fn strip_in_author_citations(ctx: &mut ParseContext, s: String) -> St
 /// semantics reproduce Java's backtracking result exactly for this lookaround-free,
 /// backreference-free shape; confirmed empirically in an isolated scratch-crate spike against
 /// the exact worked example below, not just assumed). group(1) = basionym author span,
-/// group(2) = publication reference.
-static IN_AUTHOR_IN_PARENS: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\(([^()]*?)\s+(?:in|apud)\s+(\p{Lu}[^()]*?)\)").unwrap());
+/// group(2) = publication reference. Rust-only: the reference may also start with the anonymous
+/// author "anon." (step 37 has already lower-cased "Anon."), as in "(Swainson in Anon. 1837)".
+static IN_AUTHOR_IN_PARENS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\(([^()]*?)\s+(?:in|apud)\s+((?:\p{Lu}|anon\.)[^()]*?)\)").unwrap()
+});
 
 /// Java IN_AUTHOR_YEAR (StripAndStash.java:241-242): `,?\s*(\d{3,4})\s*\.?\s*$`, no flags. Has
 /// `\s`/`\d`, no `\p{...}`, no unescaped wildcard -> whole pattern ASCII-scoped. Shared between
@@ -2963,8 +2971,10 @@ fn strip_in_author_in_parens(ctx: &mut ParseContext, s: String) -> String {
 /// Unicode-default scope (same `SEROVAR_BARE` precedent from batch 1 — `(?-u:[^\s])`/
 /// `(?-u:\S)` are both rejected by `regex-syntax` as "pattern can match invalid UTF-8"); `.*`
 /// unescaped wildcard, Unicode default. No lookaround/backreference -> plain `regex` crate.
+/// Rust-only: the reference may also be the anonymous author "anon." (step 37 has already
+/// lower-cased "Anon."): "Swainson in Anon. 1837" -> author Swainson, publishedIn "anon. 1837".
 static IN_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?-u:\s+)(?:in|apud)(?-u:\s+)(\p{Lu}[^\t\n\x0B\f\r ].*)$").unwrap()
+    Regex::new(r"(?-u:\s+)(?:in|apud)(?-u:\s+)((?:\p{Lu}[^\t\n\x0B\f\r ]|anon\.).*)$").unwrap()
 });
 
 /// Java IN_AUTHOR_PAREN_YEAR (StripAndStash.java:243): `\((\d{4})\)`, no flags. Has `\d`, no
@@ -3265,15 +3275,35 @@ static MANUSCRIPT_MARKER: LazyLock<Regex> = LazyLock::new(|| {
 /// Chimonides, 1987" cleanly strips both (the in-author tail first, leaving "Busk ms" for this
 /// step to finish).
 fn strip_manuscript_marker(ctx: &mut ParseContext, s: String) -> String {
-    if let Some(caps) = MANUSCRIPT_MARKER.captures(&s) {
+    strip_trailing_manuscript_marker(&s, &mut ctx.name)
+}
+
+/// [`strip_manuscript_marker`] for any authorship string — also run on a separately supplied
+/// authorship, where Java only knew a marker that is the whole string ([`STANDALONE_MS`]), so
+/// "Mill. ined." / "(Fr.) anon. ined." came out as the author "Mill.ined." / "anon.ined.", with no
+/// manuscript flag.
+pub(crate) fn strip_trailing_manuscript_marker(s: &str, name: &mut ParsedName) -> String {
+    if let Some(caps) = MANUSCRIPT_MARKER.captures(s) {
         let whole = caps.get(0).unwrap();
         let tag = caps[1].to_lowercase();
-        ctx.name.manuscript = true;
-        ctx.name.add_nomenclatural_note(&tag);
-        return java_trim(&s[..whole.start()]).to_string();
+        name.manuscript = true;
+        // once: sources repeat it in the separate authorship
+        if !name
+            .nomenclatural_note
+            .as_deref()
+            .is_some_and(|existing| contains_words(existing, &tag))
+        {
+            name.add_nomenclatural_note(&tag);
+        }
+        // "F.C.How ex ined." — the unpublished name is How's; a dangling "ex" would drop him
+        let rest = java_trim(&s[..whole.start()]);
+        return java_trim(DANGLING_EX.replace(rest, "").as_ref()).to_string();
     }
     s.to_string()
 }
+
+/// A trailing "ex" left without its author once a manuscript marker is removed. Rust-only.
+static DANGLING_EX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(?-u:\s+ex\.?)$").unwrap());
 
 // ---------------------------------------------------------------------------------
 // Batch 5 / 2e (steps 53-55, THE FINAL StripAndStash batch): suprarank prefix, leading
@@ -3709,6 +3739,10 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // Deliberately omits `CV_EX`/`HT_MARKER` (see the section doc comment).
     s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
     s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
+    // "Anon"/"anon" -> "anon.", as on the name string (step 37). Padded: its patterns need
+    // whitespace before the word, and here it often starts the string ("Anon. 1837").
+    s = java_trim(&normalise_anon_str(&format!(" {s}"))).to_string();
+
     // The notes this authorship carries are collected in source order and added once, at the
     // end, so the whole of it can be checked against the note the name string already gave:
     // sources often repeat the note in both columns, not always identically
