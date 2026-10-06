@@ -698,6 +698,19 @@ fn aff_binomial_with_authorship_stays_parsed() {
 }
 
 #[test]
+fn aff_binomial_with_a_bracketed_non_note() {
+    // CLB verbatim corpus: a misapplication note in square brackets after an aff. binomial. The
+    // brackets are dropped and "non Vierh." lands in the taxonomic note — not in the authorship,
+    // and not swallowed into an informal phrase.
+    assert_name("Heliotropium aff. wagneri [non Vierh.]")
+        .species("Heliotropium", "wagneri")
+        .qualifiers(&[(NamePart::Specific, "aff.")])
+        .sensu("non Vierh.")
+        .type_(NameType::Informal)
+        .nothing_else();
+}
+
+#[test]
 fn near_binomial_stays_parsed_with_its_qualifier() {
     // "near" is an open-nomenclature qualifier synonymous with aff. ("Poa near pratensis" = a Poa
     // near/affinis pratensis). Like cf./aff. it annotates a complete binomial, so the name stays

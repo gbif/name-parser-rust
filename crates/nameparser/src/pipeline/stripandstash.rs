@@ -2100,10 +2100,9 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
 // Ported (Phase 1 Slice 2, batch 2c). This batch closes `taxonomicNote` — steps 38-42
 // APPEND to it (`ParsedName::add_taxonomic_note`, the Java inline `existing == null ?
 // note : existing + " " + note` idiom); step 43 (`stripTaxNote`, the LAST of the six
-// taxonomic-note steps to run) OVERWRITES it directly (`ctx.name.taxonomic_note =
-// Some(norm)`, mirroring Java's plain `setTaxonomicNote(norm)` call with no
-// null-check) since anything more specific was already peeled off by the steps above
-// it. All worked examples below were spot-checked against the real Java CLI oracle
+// taxonomic-note steps to run) PREPENDS to it, since its note stands in front of what the
+// steps above it peeled off the end (Java's plain `setTaxonomicNote(norm)` overwrote it).
+// All worked examples below were spot-checked against the real Java CLI oracle
 // (`name-parser-cli-4.2.0-SNAPSHOT-shaded.jar`), same convention as batches 1-2b.
 // ---------------------------------------------------------------------------------
 
@@ -2368,13 +2367,15 @@ fn normalise_leading_auct(note: &str) -> String {
 
 /// Java BRACKETED_TAX_NOTE (StripAndStash.java:123-125):
 /// `\s*\[\s*((?:auctt?|sensu|sec|non|nec|misspelling|misapplied|misident)\b[^\]]*)\]\s*\.?\s*$`,
-/// `Pattern.CASE_INSENSITIVE`. `[^\]]` is a negated custom class -> stays OUTSIDE any
+/// `Pattern.CASE_INSENSITIVE`, plus "auctorum" ("[auctorum]", see [`TAX_NOTE`]) and "not"
+/// ("[not used as valid]", "[not Amphisbetia pulchella Vannucci-Mendes 1954]"), which Java
+/// lacks and so read as authors. `[^\]]` is a negated custom class -> stays OUTSIDE any
 /// `(?-u:…)` (`SIC_WITH_COMMENT`/`BRACKETED_NOM_NOTE` precedent from batches 1-2) ->
 /// atom-only `\s`/`\b` scoping, not whole-wrap. No lookaround/backreference -> plain
 /// `regex` crate.
 static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|sensu|sec|non|nec|misspelling|misapplied|misident)(?-u:\b)[^\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
+        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident)(?-u:\b)[^\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });
@@ -2402,21 +2403,22 @@ fn strip_bracketed_tax_note(ctx: &mut ParseContext, s: String) -> String {
 
 /// Java PAREN_TAX_NOTE (StripAndStash.java:101-103):
 /// `\s*\(\s*((?:nec|non|not)\s+[^)]+)\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE` — extended
-/// beyond Java with the concept keywords `auct`/`auctt`/`sensu`/`sec` (the set the separate
+/// beyond Java with the concept keywords `auct`/`auctt`/`auctorum`/`sensu`/`sec` (the set the separate
 /// authorship's `PAREN_NOTE` already strips), so WoRMS' `Gregariella splendida (sensu Reeve,
 /// 1858)` keeps its note instead of reading `sensu Reeve` as the basionym author. `[^)]` is
 /// a negated custom class -> atom-only `\s` scoping (same precedent as
 /// `BRACKETED_TAX_NOTE` above). No lookaround/backreference -> plain `regex` crate.
 static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+|(?:auctt?|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)\.?(?-u:\s*)$",
+        r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+|(?:auctt?|auctorum|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });
 
-/// The Rust-only concept-keyword branch of [`PAREN_TAX_NOTE`] (`auct`/`auctt`/`sensu`/`sec`).
+/// The Rust-only concept-keyword branch of [`PAREN_TAX_NOTE`] (`auct`/`auctt`/`auctorum`/`sensu`/
+/// `sec`).
 static PAREN_CONCEPT_NOTE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)^(?:auctt?|sensu|sec)(?-u:\b)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?i)^(?:auctt?|auctorum|sensu|sec)(?-u:\b)").unwrap());
 /// A standalone indeterminate rank-marker word (`sp.`, `spp.`, `spec.`, `species`, `indet.`).
 static INDET_MARKER_WORD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:spp?|spec|species|indet)(?-u:\b)").unwrap());
@@ -2543,15 +2545,24 @@ fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
 /// combinable). No lookaround/backreference anywhere -> plain `regex` crate. Built via
 /// `concat!` (one alternative per line, matching Java's own `"..." + "..."` source
 /// layout) so it stays directly diffable against StripAndStash.java line-by-line, same
-/// convention as `NOM_NOTE` in batch 2.
+/// convention as `NOM_NOTE` in batch 2. One Rust-only alternative: the spelled-out "auctorum"
+/// ("of authors", i.e. auct.) — `Astacilla bonnieri Auctorum`, `auctorum non Westwood, 1847` —
+/// which Java read as an author or an infraspecific epithet. Also Rust-only: "not" shaped like
+/// "non" (`Ashmead 1887 not Motschulsky 1863`), which Java read as an author — but only before
+/// something shaped like an author (`Kirby`, `L.`, `DC.`, matched case-sensitively via `(?-i:…)`:
+/// under `(?i)` `\p{Lu}` matches any letter), so "species not specified", "Not applicable" and
+/// "[GENUS NOT SPECIFIED]" stay put. Both are real
+/// epithets too, so `strip_tax_note` keeps them in that slot (see [`note_keyword_is_epithet`]).
 static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
         r"auctt?(?-u:\b)\.?(?:[,.]?(?-u:\s).*)?",
+        r"|auctorum(?-u:\b)(?:[,.]?(?-u:\s).*)?",
         r"|sensu(?:(?-u:\s).*)?",
         r"|sec\.?(?:(?-u:\s).*)?",
         r"|nec(?-u:\b)(?:(?-u:\s).*)?",
         r"|nonn?\.?(?-u:\s+)\(?\p{Lu}.*",
+        r"|not(?-u:\s+)\(?(?-i:\p{Lu}(?:\p{Ll}|\.|\p{Lu}\.)).*",
         r"|emend(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
         r"|fide(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
         r"|according(?-u:\s+)to(?-u:\s+)\p{Lu}.*",
@@ -2577,6 +2588,19 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 static INITIAL_DOT_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:\b)(\p{Lu})\.(?-u:\s+)([\p{Ll}][\p{Ll}]{3,})").unwrap());
 
+/// A note keyword alone in brackets, followed by its author: "[sensu] Schmidt, 1878". Rust-only.
+static KEYWORD_ONLY_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)\[(?-u:\s*)(sensu|sec\.?|non|nec|not|auctt?\.?|auctorum)(?-u:\s*)\](?-u:\s+)")
+        .unwrap()
+});
+
+/// Drops the brackets around a lone note keyword ("[sensu] Schmidt, 1878" -> "sensu Schmidt,
+/// 1878") so [`TAX_NOTE`] takes the whole note. Java left the bracket in place, so TAX_NOTE (which
+/// needs whitespace before the keyword) missed it and "sensu Schmidt" became the author.
+fn unwrap_keyword_only_bracket(s: &str) -> String {
+    KEYWORD_ONLY_BRACKET.replace_all(s, "$1 ").into_owned()
+}
+
 /// Java `StripAndStash.stripTaxNote` (StripAndStash.java:1346-1367). The general,
 /// end-anchored taxonomic-note anchor (auct./auctt./sensu/sec./nec/non/nonn./emend./
 /// fide/according to/excl./ss/s.l./s.str./s.lat./s.ampl.) — the LAST of the six
@@ -2585,10 +2609,11 @@ static INITIAL_DOT_SPACE: LazyLock<Regex> =
 /// `strip_sensu_lato_remainder`/`strip_sensu_stricto_ss` above it. Applies
 /// `INITIAL_DOT_SPACE` (collapses a bare-initial-plus-lowercase-word gap) then
 /// `normalise_leading_auct` (lower-cases a leading title-case "Auct"/"Auctt") to the
-/// captured text, then OVERWRITES `taxonomicNote` directly (`ctx.name.taxonomic_note =
-/// Some(norm)` — Java's plain `setTaxonomicNote(norm)`, NO null-check/append, UNLIKE
-/// steps 38-42 above) — this is deliberately the one taxonomic-note step in this batch
-/// that does NOT call `add_taxonomic_note`. A guard skips entirely when the captured,
+/// captured text, then PREPENDS it to any `taxonomicNote` steps 38-43 already peeled off the
+/// end of the string, since this note stands in front of theirs — a deliberate divergence
+/// from Java's plain `setTaxonomicNote(norm)`, which overwrote and so silently dropped
+/// "[non (L.) Nees]" from "Fossombronia pusilla auct. amer. [non (L.) Nees]" (now "auct.
+/// amer. non (L.) Nees"). A guard skips entirely when the captured,
 /// trimmed group is empty (Java: `if (!raw.isEmpty())`) — the outer match can still have
 /// fired on pure separator text with nothing captured after trimming, in which case
 /// neither the working string nor `taxonomicNote` should change. After stripping, any
@@ -2605,6 +2630,7 @@ static INITIAL_DOT_SPACE: LazyLock<Regex> =
 /// branch); uppercase "Aus bus Mill. S.L." does NOT match at all (author initials, not a
 /// sensu-lato marker).
 fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    let s = unwrap_keyword_only_bracket(&s);
     let caps = match TAX_NOTE.captures(&s) {
         Some(c) => c,
         None => return s,
@@ -2613,10 +2639,18 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
     if raw.is_empty() {
         return s;
     }
+    let match_start = caps.get(0).unwrap().start();
+    if (raw.starts_with("auctorum") || raw.starts_with("not "))
+        && note_keyword_is_epithet(&s[..match_start], ctx.requested_rank)
+    {
+        return s;
+    }
     let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
     let norm = normalise_leading_auct(&with_dots);
-    ctx.name.taxonomic_note = Some(norm);
-    let match_start = caps.get(0).unwrap().start();
+    ctx.name.taxonomic_note = Some(match ctx.name.taxonomic_note.take() {
+        None => norm,
+        Some(later) => format!("{norm} {later}"),
+    });
     let mut result = java_trim(&s[..match_start]).to_string();
     while result.ends_with(',') {
         result.pop();
@@ -3162,7 +3196,7 @@ fn strip_manuscript_marker(ctx: &mut ParseContext, s: String) -> String {
         ctx.name.add_nomenclatural_note(&tag);
         return java_trim(&s[..whole.start()]).to_string();
     }
-    s
+    s.to_string()
 }
 
 // ---------------------------------------------------------------------------------
@@ -3543,7 +3577,8 @@ static LEADING_HOMONYM_PAREN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?-u:\(\s*(?:non|nec|not)\b)").unwrap());
 
 /// Java PAREN_NOTE (StripAndStash.java:108-109):
-/// `\(\s*((?:auctt?|sensu|sec)\b[^)]*)\)\s*`, `Pattern.CASE_INSENSITIVE`. `[^)]` is a
+/// `\(\s*((?:auctt?|sensu|sec)\b[^)]*)\)\s*`, `Pattern.CASE_INSENSITIVE`, plus "auctorum" (see
+/// [`TAX_NOTE`]). `[^)]` is a
 /// NEGATED custom class -> stays OUTSIDE any `(?-u:…)` (`BRACKETED_TAX_NOTE`/
 /// `SIC_WITH_COMMENT` precedent) -> atom-only `\s`/`\b` scoping. UNANCHORED (no leading/
 /// trailing `^`/`$`) — unlike its `BRACKETED_TAX_NOTE`/`PAREN_TAX_NOTE` siblings in the
@@ -3551,7 +3586,7 @@ static LEADING_HOMONYM_PAREN: LazyLock<Regex> =
 /// "(auct.) Rolfe" — a leading note with a trailing real author), not just at the end. No
 /// lookaround/backreference -> plain `regex` crate.
 static PAREN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)\((?-u:\s*)((?:auctt?|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)").unwrap()
+    Regex::new(r"(?i)\((?-u:\s*)((?:auctt?|auctorum|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)").unwrap()
 });
 
 /// Java `StripAndStash.stripAuthorshipMarkers(String authorship, ParsedName name)`
@@ -3598,14 +3633,42 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // Deliberately omits `CV_EX`/`HT_MARKER` (see the section doc comment).
     s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
     s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
+    // The notes this authorship carries are collected in source order and added once, at the
+    // end, so the whole of it can be checked against the note the name string already gave:
+    // sources often repeat the note in both columns, not always identically
+    // ("Hemicycla gaudryi auctt. (non d'Orbigny, 1839)" + "auctt. (non d'Orbigny, 1839)").
+    let mut notes: Vec<String> = Vec::new();
+    let mut tail_notes: Vec<String> = Vec::new();
 
-    // A leading parenthesised homonym citation "(non/nec/not ...)" makes the whole
-    // authorship a misapplied/taxonomic note rather than a basionym — capture it verbatim,
-    // no author left.
+    // Trailing bracketed notes, peeled off right to left: "[non Vierh.]", "[auct. misspelling]"
+    // (the name string's step 39) and "(non Salisb.)" (step 40). Without this the tokenizer
+    // dropped the brackets and "non Vierh." was read as an author. Any author in front is kept
+    // ("Focke [non Salisb.]"). A lone bracketed keyword is first unwrapped ("[sensu] Schmidt,
+    // 1878").
+    s = unwrap_keyword_only_bracket(&s);
+    loop {
+        let caps = match BRACKETED_TAX_NOTE.captures(&s) {
+            Some(c) => c,
+            None => match PAREN_TAX_NOTE.captures(&s) {
+                Some(c) => c,
+                None => break,
+            },
+        };
+        let collapsed = WHITESPACE.replace_all(java_trim(caps.get(1).unwrap().as_str()), " ");
+        tail_notes.push(normalise_leading_auct(&collapsed));
+        s = java_trim(&s[..caps.get(0).unwrap().start()]).to_string();
+        while s.ends_with(',') {
+            s.pop();
+            s = java_trim(&s).to_string();
+        }
+    }
+
+    // A leading parenthesised homonym citation "(non/nec/not ...)" followed by more text makes
+    // the whole authorship a misapplied/taxonomic note rather than a basionym — capture it
+    // verbatim, no author left.
     if LEADING_HOMONYM_PAREN.is_match(&s) {
-        let norm = collapse_whitespace(&s);
-        name.add_taxonomic_note(&norm);
-        return String::new();
+        notes.push(collapse_whitespace(&s));
+        s.clear();
     }
 
     // Parenthesised taxonomic note "(auct.)"/"(sensu ...)"/"(sec ...)" — the parens mark a
@@ -3615,8 +3678,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     if let Some(caps) = PAREN_NOTE.captures(&s) {
         let inner = java_trim(caps.get(1).unwrap().as_str());
         let norm = WHITESPACE.replace_all(inner, " ").into_owned();
-        let norm = normalise_leading_auct(&norm);
-        name.add_taxonomic_note(&norm);
+        notes.push(normalise_leading_auct(&norm));
         let whole = caps.get(0).unwrap();
         let (start, end) = (whole.start(), whole.end());
         s = java_trim(&format!("{}{}", &s[..start], &s[end..])).to_string();
@@ -3665,20 +3727,13 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // Strip taxonomic-note tails (sensu, emend., auct., etc.) from the auxiliary
     // authorship string — same patterns `run()`'s `strip_tax_note` applies to the main
     // working string. Matched against a space-padded copy (same reasoning as NOM_NOTE
-    // above). UNLIKE every other note-setter in this function, this one DEDUPS against an
-    // identical existing taxonomicNote instead of always appending (Java:
-    // `existing.equals(norm) ? existing : existing + " " + norm`).
+    // above).
     let padded_tax = format!(" {s}");
     if let Some(caps) = TAX_NOTE.captures(&padded_tax) {
         let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
         if !raw.is_empty() {
             let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
-            let norm = normalise_leading_auct(&with_dots);
-            name.taxonomic_note = Some(match name.taxonomic_note.take() {
-                None => norm.clone(),
-                Some(existing) if existing == norm => existing,
-                Some(existing) => format!("{existing} {norm}"),
-            });
+            notes.push(normalise_leading_auct(&with_dots));
             // Cut `s` right before group(1)'s content. Group(1) is a suffix of
             // `padded_tax` (TAX_NOTE's trailing `)$` anchors it to end-of-padded-string),
             // and `padded_tax` is `s` with exactly one ASCII-space byte prepended, so
@@ -3695,7 +3750,58 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
             }
         }
     }
+    notes.extend(tail_notes.into_iter().rev());
+    // Within the authorship only an exact repeat is dropped ("(auct.) auct."): "sensu Pers. [non
+    // sensu Pers.]" holds two different statements.
+    notes.dedup();
+    if let Some(note) = notes.into_iter().reduce(|a, b| format!("{a} {b}")) {
+        name.taxonomic_note = Some(match name.taxonomic_note.take() {
+            Some(existing) => merge_notes(existing, note),
+            None => note,
+        });
+    }
     java_trim(&s).to_string()
+}
+
+/// Lower-case "auctorum" and "not" are real epithets too (`Lobotes auctorum Günther, 1859`,
+/// `Harnischia viridula subsp. auctorum`, Erwin's `Agra not Erwin, 2002`): right after the genus
+/// (and any infrageneric) or after a rank marker they stay one — unless a genus-or-above rank hint
+/// says the name is a monomial (`Colobodus auctorum`). After a species epithet or an author they
+/// are the note (`Cucullia ledereri auctorum`, `Apseudes minutus Brown, 1956 not Claus, 1888`).
+fn note_keyword_is_epithet(prefix: &str, rank: Option<Rank>) -> bool {
+    let words: Vec<&str> = prefix
+        .split_whitespace()
+        .filter(|w| !w.starts_with('('))
+        .collect();
+    match words.as_slice() {
+        [_genus] => !rank.is_some_and(|r| r.higher_than(Rank::SpeciesAggregate)),
+        [.., last] => rank_of_marker(last.trim_end_matches('.')).is_some(),
+        [] => false,
+    }
+}
+
+/// Joins two taxonomic notes, unless one already holds the other word for word: the name's
+/// "sensu Blackburn, 1900 not Spinola, 1844" already says the authorship's "sensu Blackburn", and
+/// the authorship's "auct. non Vahl" says more than the name's "auct.". Java appended any note that
+/// was not identical.
+fn merge_notes(existing: String, note: String) -> String {
+    if contains_words(&existing, &note) {
+        existing
+    } else if contains_words(&note, &existing) {
+        note
+    } else {
+        format!("{existing} {note}")
+    }
+}
+
+/// Does `haystack` contain `needle` as whole words — starting at a word start and ending before a
+/// space, comma or semicolon (so "non L." is not found in "non L.f.")?
+fn contains_words(haystack: &str, needle: &str) -> bool {
+    haystack.match_indices(needle).any(|(i, _)| {
+        let after = &haystack[i + needle.len()..];
+        (i == 0 || haystack[..i].ends_with(' '))
+            && (after.is_empty() || after.starts_with([' ', ',', ';']))
+    })
 }
 
 #[cfg(test)]
@@ -5746,14 +5852,17 @@ mod tests {
     }
 
     #[test]
-    fn overwrites_rather_than_appends_to_an_existing_note() {
-        // The LAST of the six taxonomic-note steps: unlike steps 38-42 above it, this
-        // one calls the plain setter (no null-check) and REPLACES any pre-existing note.
+    fn prepends_to_an_existing_note() {
+        // The LAST of the six taxonomic-note steps: a note steps 38-43 already took came from
+        // further right, so this one goes in front of it. Java overwrote it instead.
         let mut c = ctx("x");
         c.name.taxonomic_note = Some("existing".to_string());
         let out = strip_tax_note(&mut c, "Aus bus sensu Miller".to_string());
         assert_eq!(out, "Aus bus");
-        assert_eq!(c.name.taxonomic_note, Some("sensu Miller".to_string()));
+        assert_eq!(
+            c.name.taxonomic_note,
+            Some("sensu Miller existing".to_string())
+        );
     }
 
     #[test]
@@ -6830,11 +6939,13 @@ mod tests {
     }
 
     #[test]
-    fn leading_homonym_paren_captures_the_whole_string_as_taxonomic_note() {
+    fn a_parenthesised_homonym_citation_is_the_whole_note() {
+        // Unlike Java, the parens are dropped, as on the name string ("Aus bus (non Smith,
+        // 1900)"), so the note a source repeats in both columns is recognised as the same.
         let mut n = name();
         let out = strip_authorship_markers("(non Smith, 1900)", &mut n);
         assert_eq!(out, "");
-        assert_eq!(n.taxonomic_note, Some("(non Smith, 1900)".to_string()));
+        assert_eq!(n.taxonomic_note, Some("non Smith, 1900".to_string()));
     }
 
     #[test]

@@ -1,0 +1,210 @@
+// SPDX-License-Identifier: Apache-2.0
+//! Taxonomic notes (`non …`, `auct.`, `auctorum`, `sensu …`) that `org.gbif:name-parser` 4.2.0
+//! lost or misread as authors. All of these are deliberate changes against Java parity.
+//!
+//! Most come from ChecklistBank, which passes the authorship separately and often repeats the
+//! note there: `Heliotropium aff. wagneri [non Vierh.]` + `[non Vierh.]`. The separate
+//! authorship lacked the name string's bracketed-note step, so the brackets were dropped and the
+//! note reached the authorship parser as an author.
+
+mod common;
+use common::*;
+use nameparser::model::{NamePart, NameType, NomCode, Rank};
+
+#[test]
+fn bracketed_non_note_as_separate_authorship() {
+    // As CLB passes the record: the note repeated in the separate authorship field, plus a rank
+    // hint. The bracketed note must not become a combination author "non Vierh.".
+    assert_name_hinted(
+        "Heliotropium aff. wagneri [non Vierh.]",
+        Some("[non Vierh.]"),
+        Some(Rank::Species),
+        None,
+    )
+    .species("Heliotropium", "wagneri")
+    .qualifiers(&[(NamePart::Specific, "aff.")])
+    .sensu("non Vierh.")
+    .type_(NameType::Informal)
+    .nothing_else();
+    // a real author before the bracket is kept
+    assert_name_auth("Rubus fragrans", "Focke [non Salisb.]")
+        .species("Rubus", "fragrans")
+        .comb_authors(None, &["Focke"])
+        .sensu("non Salisb.")
+        .nothing_else();
+    // a note in front of the bracket keeps its place
+    assert_name_auth("Fossombronia pusilla", "auct. amer. [non (L.) Nees]")
+        .species("Fossombronia", "pusilla")
+        .sensu("auct. amer. non (L.) Nees")
+        .nothing_else();
+}
+
+#[test]
+fn a_bare_note_in_front_of_a_bracketed_one_keeps_both() {
+    // The bracket is stripped first; the bare note in front of it used to overwrite it.
+    assert_name("Fossombronia pusilla auct. amer. [non (L.) Nees]")
+        .species("Fossombronia", "pusilla")
+        .sensu("auct. amer. non (L.) Nees")
+        .nothing_else();
+    assert_name("Andrena labiata auct. (nec Fabricius, 1781)")
+        .species("Andrena", "labiata")
+        .sensu("auct. nec Fabricius, 1781")
+        .nothing_else();
+    assert_name("Boletus chioneus sensu auct. [non Fr.]")
+        .species("Boletus", "chioneus")
+        .sensu("sensu auct. non Fr.")
+        .nothing_else();
+}
+
+#[test]
+fn auctorum_is_a_note() {
+    // the spelled-out "auctorum" ("of authors") is auct., not an author
+    assert_name("Astacilla bonnieri Auctorum")
+        .species("Astacilla", "bonnieri")
+        .sensu("auctorum")
+        .nothing_else();
+    // ... and not an infraspecific epithet after a species
+    assert_name("Cucullia ledereri auctorum")
+        .species("Cucullia", "ledereri")
+        .sensu("auctorum")
+        .nothing_else();
+    assert_name("Caradrina (Boursinidrina) jacobsi auctorum")
+        .species_ig("Caradrina", "Boursinidrina", "jacobsi")
+        .sensu("auctorum")
+        .nothing_else();
+    // in a separate authorship, bare, bracketed or followed by a homonym citation
+    for authorship in ["auctorum", "Auctorum", "[auctorum]"] {
+        assert_name_auth("Idotea viridis", authorship)
+            .species("Idotea", "viridis")
+            .sensu("auctorum")
+            .nothing_else();
+    }
+    assert_name_auth("Bombyx religiosae", "auctorum non Westwood, 1847")
+        .species("Bombyx", "religiosae")
+        .sensu("auctorum non Westwood, 1847")
+        .nothing_else();
+    assert_name_auth("Minuspio", "[auctorum]")
+        .monomial("Minuspio")
+        .sensu("auctorum")
+        .nothing_else();
+}
+
+#[test]
+fn auctorum_stays_an_epithet() {
+    // real species: right after the genus, or after a rank marker, it is the epithet
+    assert_name("Lobotes auctorum Günther, 1859")
+        .species("Lobotes", "auctorum")
+        .comb_authors(Some("1859"), &["Günther"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Pannaria auctorum Bory")
+        .species("Pannaria", "auctorum")
+        .comb_authors(None, &["Bory"])
+        .nothing_else();
+    assert_name("Harnischia (Cryptocladopelma) viridula subsp. auctorum")
+        .infra_species("Harnischia", "viridula", Rank::Subspecies, "auctorum")
+        .infrageneric("Cryptocladopelma")
+        .nothing_else();
+    // ... unless a genus rank hint says the name is a monomial
+    assert_name_rank("Colobodus auctorum", Rank::Genus)
+        .monomial_rank("Colobodus", Rank::Genus)
+        .sensu("auctorum")
+        .nothing_else();
+}
+
+#[test]
+fn a_bracketed_note_keyword_takes_its_author_along() {
+    // "[sensu] Schmidt, 1878": only the keyword is bracketed, the author follows outside
+    assert_name_auth("Coscinodiscus asteromphalus", "[sensu] Schmidt, 1878")
+        .species("Coscinodiscus", "asteromphalus")
+        .sensu("sensu Schmidt, 1878")
+        .nothing_else();
+    assert_name("Tubularia penicillus [sensu] Müller, 1776")
+        .species("Tubularia", "penicillus")
+        .sensu("sensu Müller, 1776")
+        .nothing_else();
+}
+
+#[test]
+fn not_is_a_note_like_non() {
+    assert_name_auth("Eurytoma maculipes", "Ashmead 1887 not Motschulsky 1863")
+        .species("Eurytoma", "maculipes")
+        .comb_authors(Some("1887"), &["Ashmead"])
+        .sensu("not Motschulsky 1863")
+        .nothing_else();
+    assert_name("Apseudes minutus Brown, 1956 not Claus, 1888")
+        .species("Apseudes", "minutus")
+        .comb_authors(Some("1956"), &["Brown"])
+        .sensu("not Claus, 1888")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // in square brackets, a homonym citation or a remark
+    assert_name(
+        "Amphisbetia pulchella (Thompson, 1879) [not Amphisbetia pulchella Vannucci-Mendes 1954]",
+    )
+    .species("Amphisbetia", "pulchella")
+    .bas_authors(Some("1879"), &["Thompson"])
+    .sensu("not Amphisbetia pulchella Vannucci-Mendes 1954")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name("Aotus lemurinus hirsutus (J. E. Gray, 1871) [not used as valid]")
+        .infra_species("Aotus", "lemurinus", Rank::Subspecies, "hirsutus")
+        .bas_authors(Some("1871"), &["J.E.Gray"])
+        .sensu("not used as valid")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // ... but Erwin's Agra not is a species
+    assert_name("Agra not Erwin, 2002")
+        .species("Agra", "not")
+        .comb_authors(Some("2002"), &["Erwin"])
+        .code(NomCode::Zoological)
+        .warning(&[nameparser::model::warnings::BLACKLISTED_EPITHET])
+        .doubtful()
+        .nothing_else();
+}
+
+#[test]
+fn a_parenthesised_homonym_citation_after_the_author() {
+    assert_name_auth("Rubus fragrans", "Focke (non Salisb.)")
+        .species("Rubus", "fragrans")
+        .comb_authors(None, &["Focke"])
+        .sensu("non Salisb.")
+        .nothing_else();
+    assert_name_auth("Prionus heros", "Fall, 1905 (nec Semenov, 1900)")
+        .species("Prionus", "heros")
+        .comb_authors(Some("1905"), &["Fall"])
+        .sensu("nec Semenov, 1900")
+        .nothing_else();
+}
+
+#[test]
+fn a_note_repeated_in_the_separate_authorship_is_kept_once() {
+    // sources repeat the note in both columns, not always identically
+    assert_name_auth(
+        "Hemicycla gaudryi auctt. (non d'Orbigny, 1839)",
+        "auctt. (non d'Orbigny, 1839)",
+    )
+    .species("Hemicycla", "gaudryi")
+    .sensu("auctt. non d'Orbigny, 1839")
+    .nothing_else();
+    assert_name_auth(
+        "Centropyge fisheri (non Snyder, 1904)",
+        "(non Snyder, 1904)",
+    )
+    .species("Centropyge", "fisheri")
+    .sensu("non Snyder, 1904")
+    .nothing_else();
+    // a shorter copy is already part of the name's note
+    assert_name_auth(
+        "Aulicus episcopalis sensu Blackburn, 1900 (not Spinola, 1844)",
+        "sensu Blackburn",
+    )
+    .species("Aulicus", "episcopalis")
+    .sensu("sensu Blackburn, 1900 not Spinola, 1844")
+    .nothing_else();
+    // two different notes within one authorship both stay
+    assert_name_auth("Boletus circinans", "sensu Pers. [non sensu Pers.]")
+        .species("Boletus", "circinans")
+        .sensu("sensu Pers. non sensu Pers.")
+        .nothing_else();
+}
