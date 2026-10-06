@@ -88,6 +88,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_synonym_bracket(ctx, s);
     s = strip_bracketed_nom_note(ctx, s);
     s = strip_nom_note(ctx, s);
+    s = strip_not_validly_published(ctx, s);
     s = strip_authorship_placeholders(ctx, s);
     s = strip_trailing_species_word(ctx, s);
     s = strip_pro_parte(ctx, s);
@@ -2110,10 +2111,21 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
 
 /// Java AUTHORSHIP_PLACEHOLDER (StripAndStash.java:226-228):
 /// `\s+Not\s+(?:applicable|given|known|recorded|found)\s*$`, `Pattern.CASE_INSENSITIVE`.
-/// Has `\s` (x3), no `\p{...}`, no unescaped wildcard -> whole-wrap ASCII scope (`$` left
-/// outside per convention). No lookaround/backreference -> plain `regex` crate.
+/// Extended beyond Java with the placeholders ChecklistBank sources actually use — "Missing"
+/// (22k rows, all in the separate authorship), "Not specified" (19k), "Unknown", "NONE", "NA",
+/// "author unknown", "Author" — after an optional comma ("Semenov, Unknown") and with an
+/// optional trailing dot. The bare single words are matched case-sensitively, Title or upper
+/// case only. Has `\s`, no `\p{...}`, no unescaped wildcard -> ASCII-scoped. No
+/// lookaround/backreference -> plain `regex` crate.
 static AUTHORSHIP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\s+Not\s+(?:applicable|given|known|recorded|found)\s*)$").unwrap()
+    Regex::new(concat!(
+        r"(?-u:[\s,]*\s)(?:",
+        r"(?i:not(?-u:\s+)(?:applicable|given|known|recorded|found|specified|available|provided|stated))",
+        r"|(?i:author(?-u:\s+)unknown|unknown(?-u:\s+)author)",
+        r"|Unknown|UNKNOWN|Missing|MISSING|None|NONE|NA|N/A|Author\??(?:,(?-u:\s*)\[0000\])?",
+        r")(?-u:\s*)\.?(?-u:\s*)$",
+    ))
+    .unwrap()
 });
 
 /// Java `StripAndStash.stripAuthorshipPlaceholders` (StripAndStash.java:1197-1208). A
@@ -2124,11 +2136,75 @@ static AUTHORSHIP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
 /// warnings=["authorship placeholder removed"]; "Aus bus Not applicable" -> no author,
 /// same warning.
 fn strip_authorship_placeholders(ctx: &mut ParseContext, s: String) -> String {
-    if let Some(m) = AUTHORSHIP_PLACEHOLDER.find(&s) {
-        ctx.name.add_warning(warnings::AUTHORSHIP_REMOVED);
-        return java_trim(&s[..m.start()]).to_string();
+    match find_placeholder(&s) {
+        Some(start) => {
+            ctx.name.add_warning(warnings::AUTHORSHIP_REMOVED);
+            java_trim(&s[..start]).to_string()
+        }
+        None => s,
     }
-    s
+}
+
+/// The name string without a trailing authorship placeholder, for Preflight's placeholder-name
+/// check: "Ascidia zara author unknown" is a species whose author is unknown, not an "unknown"
+/// placeholder taxon. A placeholder that is the whole string stays.
+pub(crate) fn without_authorship_placeholder(s: &str) -> &str {
+    find_placeholder(s).map_or(s, |start| &s[..start])
+}
+
+/// Where an [`AUTHORSHIP_PLACEHOLDER`] starts — unless it answers a label ("Type: Unknown."),
+/// which says nothing about the authorship.
+fn find_placeholder(s: &str) -> Option<usize> {
+    AUTHORSHIP_PLACEHOLDER
+        .find(s)
+        .map(|m| m.start())
+        .filter(|&start| !s[..start].ends_with(':'))
+}
+
+/// [`strip_authorship_placeholders`] for a separately supplied authorship, where the placeholder
+/// usually IS the whole string ("Missing", "Not specified") — so it is matched against a
+/// space-padded copy. (On the name string a placeholder must follow the name: "None" alone is a
+/// name.)
+pub(crate) fn strip_authorship_placeholder(authorship: &str, name: &mut ParsedName) -> String {
+    let padded = format!(" {authorship}");
+    if let Some(start) = find_placeholder(&padded) {
+        name.add_warning(warnings::AUTHORSHIP_REMOVED);
+        return java_trim(&padded[..start]).to_string();
+    }
+    authorship.to_string()
+}
+
+/// "not validly publ." / "not validly published" / "not effectively published" after the
+/// authorship: a nomenclatural status (nom. inval.), not an author — 3.7k ChecklistBank names, e.g.
+/// `Bridelia scleroneuroides var. typica Gehrm., not validly publ.`. Rust-only: Java read it as a
+/// second author.
+static NOT_VALIDLY_PUBLISHED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?-u:[\s,]*\s)(not(?-u:\s+)(?:validly|effectively)(?-u:\s+)publ(?:ished|\.)?)(?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+fn strip_not_validly_published(ctx: &mut ParseContext, s: String) -> String {
+    strip_not_validly_published_note(&s, &mut ctx.name)
+}
+
+/// Moves a trailing [`NOT_VALIDLY_PUBLISHED`] status into the nomenclatural note, verbatim — once:
+/// sources repeat it in the separate authorship. The status always follows an author or a name,
+/// so no padding is needed.
+pub(crate) fn strip_not_validly_published_note(s: &str, name: &mut ParsedName) -> String {
+    if let Some(caps) = NOT_VALIDLY_PUBLISHED.captures(s) {
+        let note = caps.get(1).unwrap().as_str();
+        if !name
+            .nomenclatural_note
+            .as_deref()
+            .is_some_and(|existing| contains_words(existing, note))
+        {
+            name.add_nomenclatural_note(note);
+        }
+        return java_trim(&s[..caps.get(0).unwrap().start()]).to_string();
+    }
+    s.to_string()
 }
 
 // ---- Step 32: stripTrailingSpeciesWord ----
@@ -3723,6 +3799,8 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
             }
         }
     }
+
+    s = strip_not_validly_published_note(&s, name);
 
     // Strip taxonomic-note tails (sensu, emend., auct., etc.) from the auxiliary
     // authorship string — same patterns `run()`'s `strip_tax_note` applies to the main

@@ -420,8 +420,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     }
 
     // Placeholder keywords first — some placeholder strings contain "virus" (e.g.
-    // "uncultured virus") and the explicit keyword wins over the virus marker.
-    if (PLACEHOLDER_KEYWORDS.is_match(&s)
+    // "uncultured virus") and the explicit keyword wins over the virus marker. A trailing
+    // authorship placeholder ("Ascidia zara author unknown") is no placeholder taxon — StripAndStash
+    // removes it later, with a warning.
+    if (PLACEHOLDER_KEYWORDS.is_match(super::stripandstash::without_authorship_placeholder(&s))
         || NN_PLACEHOLDER.is_match(&s)
         || PLACEHOLDER_PREFIX.is_match(&s)
         || s.starts_with("[unassigned]")

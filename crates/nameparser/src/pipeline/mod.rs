@@ -233,6 +233,9 @@ pub fn run(
     // sanctioning author, applied further below, overwrites it — last-write-wins).
     let mut extra_state: Option<AuthState> = None;
     if let Some(authorship) = ctx.authorship_input.clone() {
+        // a placeholder ("Missing", "Not specified") is dropped first, so it never reaches the
+        // phrase of a provisional name or the authorship parser
+        let authorship = stripandstash::strip_authorship_placeholder(&authorship, &mut ctx.name);
         if !authorship.chars().all(crate::token::is_whitespace_java)
             && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
             && !append_authorship_to_phrase(&authorship, &mut ctx.name)
