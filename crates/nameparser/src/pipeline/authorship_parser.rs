@@ -89,6 +89,7 @@
 //! private here.
 
 use crate::model::Authorship;
+use crate::pipeline::double_surnames;
 use crate::token::{is_particle, Token, TokenKind};
 
 /// Java `AuthorshipParser.AUTHOR_SUFFIXES` — tokens that are filius/junior/etc.
@@ -479,13 +480,18 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             continue;
         }
 
-        // separators; a `y` joining two surnames of one person falls through to the particles
+        // a y joining the two surnames of one person: "Bolívar y Pieltain", "Dus. y Alon."
+        if t.kind == TokenKind::Word && t.text == "y" && y_joins_surnames(tokens, i, from, to) {
+            cur.push_str(" y");
+            i += 1;
+            continue;
+        }
+
+        // separators
         if t.kind == TokenKind::Ampersand
             || (t.kind == TokenKind::Word
                 && (t.text.eq_ignore_ascii_case("and") || t.text.eq_ignore_ascii_case("et")))
-            || (t.kind == TokenKind::Word
-                && t.text == "y"
-                && !y_joins_surnames(tokens, i, from, to, !authors.is_empty()))
+            || (t.kind == TokenKind::Word && t.text == "y")
         {
             flush(&mut cur, &mut authors);
             after_separator.push(authors.len());
@@ -1048,57 +1054,23 @@ fn author_ends_at(tokens: &[Token], k: usize, to: usize) -> bool {
     }
 }
 
-/// True when the `y` at `tokens[i]` joins the paternal and maternal surname of one person
-/// (`Bolívar y Pieltain`, `Dusmet y Alonso`, `Caballero y C.`), as it does in about 3,200 of the
-/// 3,588 ChecklistBank rows with a capitalised `X y Y`; Java read it as `&`. It still separates
-/// two people where the string shows two: an abbreviation or a hyphenated double surname before it
-/// (`Amy. y Serv.`, `Ruiz-Carranza y Lynch`), initials or an abbreviation after it (`Skelton y
-/// G.R.South`), or a list it closes (`Smith, Jones y Brown`). `authors_before` tells that an
-/// author of the team is already complete. Two people written `Spix y Agassiz` are the cost.
-fn y_joins_surnames(
-    tokens: &[Token],
-    i: usize,
-    from: usize,
-    to: usize,
-    authors_before: bool,
-) -> bool {
-    if i == from || i + 1 >= to {
-        return false;
-    }
-    let prev = &tokens[i - 1];
-    if prev.kind != TokenKind::Word
-        || !starts_upper(&prev.text)
-        || !contains_lower(&prev.text)
-        || prev.text.contains('-')
-    {
-        return false;
-    }
-    // the team around the y: between the years before and after it, as a source may repeat its
-    // authorship with another separator ("Isbrücker, Nijssen & Nico, 1992 Isbrücker, Nijssen y
-    // Nico, 1992")
-    let team_from = (from..i)
-        .rev()
-        .find(|&k| is_year(&tokens[k]))
-        .map_or(from, |k| k + 1);
-    let team_to = (i..to).find(|&k| is_year(&tokens[k])).unwrap_or(to);
-    let team_separator = tokens[team_from..team_to].iter().any(|t| {
-        t.kind == TokenKind::Ampersand
-            || (t.kind == TokenKind::Word
-                && (t.text.eq_ignore_ascii_case("and") || t.text.eq_ignore_ascii_case("et")))
-    });
-    if authors_before && !team_separator {
-        return false;
-    }
-    let next = &tokens[i + 1];
-    if next.kind != TokenKind::Word || !starts_upper(&next.text) {
-        return false;
-    }
-    let dotted = i + 2 < to && tokens[i + 2].kind == TokenKind::Dot;
-    if contains_lower(&next.text) {
-        return !dotted;
-    }
-    // an abbreviated maternal surname: one capital, then the author ends
-    next.text.chars().count() == 1 && author_ends_at(tokens, i + 2 + usize::from(dotted), to)
+/// True when the `y` at `tokens[i]` joins the paternal and maternal surname of one person listed in
+/// [`double_surnames`] (`Bolívar y Pieltain`, `Dusmet y Alonso`, `Caballero y C.`, `Graells y de la
+/// Agüera`); Java read every `y` as `&`. Any other `y` still separates two people: the string
+/// cannot tell `Dusmet y Alonso` (one person) from `Spix y Agassiz` (two).
+fn y_joins_surnames(tokens: &[Token], i: usize, from: usize, to: usize) -> bool {
+    // the word before the y, behind an abbreviation's dot ("Dus. y Alon.")
+    let left = match tokens[from..i].iter().rev().take(2).collect::<Vec<_>>()[..] {
+        [w, ..] if w.kind == TokenKind::Word => w,
+        [d, w] if d.kind == TokenKind::Dot && w.kind == TokenKind::Word => w,
+        _ => return false,
+    };
+    // the first word after it that is no particle ("Asso y del Río")
+    let right = tokens[i + 1..to]
+        .iter()
+        .take_while(|t| t.kind == TokenKind::Word)
+        .find(|t| !double_surnames::skips(&t.text));
+    right.is_some_and(|right| double_surnames::joins(&left.text, &right.text))
 }
 
 /// True when `tokens[k]` starts a particle surname: one or more particles (`de`, `van den`,

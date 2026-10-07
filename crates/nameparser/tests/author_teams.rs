@@ -2,11 +2,10 @@
 //! How an authorship is cut into people.
 //!
 //! A Spanish `y` joins the two surnames of one person (`Bolívar y Pieltain`, `Dusmet y Alonso`)
-//! far more often than it joins two people: of the 3,588 ChecklistBank rows with a capitalised
-//! `X y Y`, about 3,200 are double surnames. Java read every `y` as `&`. It stays a separator
-//! where the string shows two people: a hyphenated double surname before it (`Ruiz-Carranza y
-//! Lynch`), initials after it (`Skelton y G.R.South`), an abbreviation before it (`Amy. y Serv.`),
-//! or a list it closes (`Smith, Jones y Brown`). Two people written `Spix y Agassiz` are the cost.
+//! as often as it joins two people (`Spix y Agassiz`, `Rivero y Serna`), and the string alone
+//! cannot tell which. An `X y Y` is one author only when the pair is listed in
+//! `resources/double-surnames.tsv` (164 people from ChecklistBank, COL, Wikidata and the CLB person
+//! registry); any other `y` separates two people, as in Java.
 //!
 //! Two initials sharing one surname are two people of that name (`A. & D. Löve`, `H. & A.
 //! Adams`), where Java kept the lone `A.` as an author of its own.
@@ -40,10 +39,31 @@ fn a_spanish_y_joins_the_two_surnames_of_one_person() {
     assert_authorship("Caballero y C., 1943", &["Caballero y C."])
         .comb_authors(Some("1943"), &["Caballero y C."])
         .nothing_else();
+    // without accents, misspelt or abbreviated as the data writes them
+    assert_single_author("Rodriguez y Femenias")
+        .comb_authors(None, &["Rodriguez y Femenias"])
+        .nothing_else();
+    assert_authorship("Bolivar y Pidtain, 1930", &["Bolivar y Pidtain"])
+        .comb_authors(Some("1930"), &["Bolivar y Pidtain"])
+        .nothing_else();
+    assert_single_author("Dus. y Alon.")
+        .comb_authors(None, &["Dus. y Alon."])
+        .nothing_else();
+    // a particle opening the maternal surname
+    assert_authorship("Graells y de la Agüera, 1858", &["Graells y de la Agüera"])
+        .comb_authors(Some("1858"), &["Graells y de la Agüera"])
+        .nothing_else();
 }
 
 #[test]
 fn a_spanish_y_between_people_stays_a_separator() {
+    // two people the list does not hold
+    assert_authorship("Spix y Agassiz, 1829", &["Spix", "Agassiz"])
+        .comb_authors(Some("1829"), &["Spix", "Agassiz"])
+        .nothing_else();
+    assert_authorship("(Rivero y Serna, 1986)", &[])
+        .bas_authors(Some("1986"), &["Rivero", "Serna"])
+        .nothing_else();
     // a hyphenated double surname already holds both surnames of its person
     assert_authorship("Ruiz-Carranza y Lynch, 1991", &["Ruiz-Carranza", "Lynch"])
         .comb_authors(Some("1991"), &["Ruiz-Carranza", "Lynch"])

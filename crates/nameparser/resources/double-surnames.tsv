@@ -1,0 +1,174 @@
+# Authors whose two surnames are joined by "y": Spanish double surnames, one person each
+# ("Bolívar y Pieltain", "Dusmet y Alonso"). An authorship "X y Y" joins into one author only when
+# the pair is listed here; any other "y" separates two people ("Spix y Agassiz"), as in Java.
+# See resources/README.md for how the list was built and how to extend it.
+#
+# Columns, tab-separated: surnames as cited, Wikidata item, IPNI author id, ZooBank author id,
+# other spellings seen in the data ("|"-separated). A pair is matched on the word before the "y"
+# and the first word after it that is no particle ("de", "del", "la"), case and accents ignored,
+# so "Bolivar y Pieltain" needs no line of its own; misspellings and abbreviations do.
+surnames	wikidata	ipni	zoobank	variants
+Abad y Mestre	Q17155126	30591-1		Abad y Merlin|Abat y Mestre
+Alaejos y Sanz				
+Alamán y Escalada	Q507298	20019108-1		
+del Amo y Mora	Q9029033	182-1		Del-Amo y Mora
+Andrés y Tubilla	Q6148408	10888-1		
+Aragón y Sevilla	Q5490688	35483-1		
+Arango y Molina				
+Arechavaleta y Balpardo	Q724785	259-1		
+Arias y Costa	Q21505319	35634-1		
+Asso y del Río	Q544052	320-1	B8AABE39-8420-444F-9D53-4281BD1AA4F3	
+Ávila y Zumarán	Q20741026			
+Azara y Perera	Q471014	37807-1		
+Azpeitia y Moros	Q8961857	353-1		
+Balmis y Berenguer	Q3325644	20024336-1		
+Barceló y Combis	Q21505652	471-1		
+Bárcena y Ramos	Q6762425	472-1		
+Barnades y Mainader	Q4078378	484-1		
+Bataller y Calatayud	Q36586578	32368-1		
+Bello y Espinosa	Q1237477	636-1		
+Berro y Bustamente	Q29042832			
+Betancourt y Sánchez Pereira		20046635-1		
+Bofill y Poch	Q54370448			
+Bolívar y Pieltain	Q5795857			Bolivar y Pidtain|Bolvar y Pieltain|Bolèvar y Pieltain
+Bolívar y Urrutia	Q1221568		D0047B9E-C293-438C-A236-5229CCC02012	
+Bolós y Saderra	Q36659078	20019160-2		
+Bolòs y Vayreda	Q5700152	934-1		Antonio de Bolòs y Vaireda
+Boscá y Casanoves	Q16179784			Bosca y Casanovas
+Boutelou y Agraz	Q5771876	1034-1		
+Boutelou y Soldevilla	Q5849923	35491-1		
+de Buen y del Cos	Q3825435	35586-1		
+de Buen y Lozano	Q45346			
+Caballero y Caballero	Q106811433			Cabalero y C.|Caballero y C|Caballero y CF.|Cabballero y C.
+Caballero y R.				
+Caballero y Segares	Q5707146	16790-1		
+Caballero y Villaldea				
+Cabrera y Corro	Q5697951	20045692-1		Cabrera y Curro
+Cabrera y Díaz	Q59603590	20033175-1		
+Cabrera y Latorre	Q742290	20000036-2	94582C43-EACC-4924-8279-8BD7136356F0	
+Cadevall y Diars	Q9011870	1346-1		
+Caldas y Tenorio	Q1442069	12108-1		Caldas y Thenorio
+Calderón y Arana	Q6117645	20005048-2	103C8843-47C6-453F-8867-7254AF2F3A95	
+Campderá y Camin	Q5865362	1377-1		
+Cano y Alcacio	Q28808127			
+Carmona y Valle	Q88814107	20035332-1		
+Castañeda y Núñez	Q13220132	1445-1		
+Cavanilles y Palop	Q545430	1465-1		
+Cazurro y Ruiz	Q55772396			
+Ceballos y Fernández	Q3848840	12491-1		
+Cerón y Martínez	Q123676456			
+Clemente y Rubio	Q2983280	12384-1		
+Colmeiro y Penido	Q3330424	17362-1		
+Costa y Cuxart	Q5698064	1823-1		
+Cuatrecasas y Arvoni	Q3088960	17562-1		
+Cutanda y Jarauta	Q5645312	1936-1		
+Draper y Díaz	Q21510893	20016517-1		
+Dusmet y Alonso	Q55008258			Dus. y Alon.|Dusm. y Alon.|Dusmet y Alonsa|Dusmet y Alsonso
+Echeandía y Jiménez	Q6069008	20016086-1		
+Escalera y Pérez	Q5993656			
+Escobar y Restrepo	Q6110682	18548-1		
+Faura y Sans	Q26047360			Faura y Sanz
+Fernández-Galiano y Fernández	Q21513683	2993-1		
+Ferrer y Vert				
+Font y Quer	Q2987664	2810-1		
+Fors y Reyes	Q123677261			
+Franganillo y Balboa				Franganillo y Balbao
+de la Fuente y Morales	Q6293250			
+Gabriel y Galán	Q47129216	20031618-1		
+Garcias y Font	Q11933519	12508-1		
+Gómez-Menor y Ortega				Menor y Ortega
+González y Azaola	Q21393036	350-1		
+Górriz y Muñoz	Q81620022			Gorriz y Muoz
+Graells y de la Agüera	Q3821587	3311-1		
+Gredilla y Gauna	Q21514240	3362-1		
+Guirao y Navarro	Q19897777	3476-1		
+Herrera y Garmendia	Q5561447	3885-1		
+Junco y Reyes				Junco y Rayes
+Lagasca y Segura	Q891966	5205-1		Gasca y Segura
+Laguna y Villanueva	Q4889495	5211-1		
+Liogier y Allut	Q783158	14944-1		
+Lizer y Trelles				
+Llenas y Fernández	Q36629533	5674-1		
+Lorente y Asensi	Q21519499	5748-1		
+Loscos y Bernal	Q3573578	5766-1		
+Lozano y Rey	Q5983793			
+Malagarriga y Heras	Q4276492	6020-1		
+Marcet y Poal	Q5657615	6085-1		
+de María y Campos				
+Martínez y Díaz de Salas	Q5990048	36025-1		
+Martínez y Fernández-Castillo				
+Martínez y Sáez	Q5484159			
+Martorell y Peña	Q17301888			
+Masferrer y Arquimbau	Q6099833	6189-1		
+de la Maza y Jiménez	Q3286846	3255-1		
+Mera y Sierra	Q99246670			
+Merina y Román	Q8240970	6370-1		Merino y Román
+Mier y Terán	Q3553796	12285-1		
+Mociño y Losada	Q2983655	6539-1		
+Monge y García-Moreno	Q21521643	20015768-1		
+Monteverde y Bello		20046634-1		
+Mutis y Bosio	Q731937	6819-1		
+Mutis y Consuegra	Q6129232	12702-1		
+Ochoterena y Mendieta	Q6449372	7079-1		
+Orfila y Rotger	Q106889544	20045574-1		
+Ortega y Hernández	Q51881486			
+Ortiz de Zárate y López				
+Osorio y Tafall	Q3398823	33754-1		Ossorio y Tafall
+Palau y Verdera	Q548758	7266-1		
+Pardo y Sastrón	Q3573569	7332-1		
+Pau y Español	Q2328400	7401-1		
+Pavón y Jiménez	Q332058	7422-1		
+Pérez y Llano	Q5877769	22454-1		
+Pittaluga y Fattorini	Q3326474	20093239-1		
+Poey y Aloy	Q500649			
+Pomata y Gisbert	Q36548857	7822-1		
+Ponce de León y Aimé	Q21523092	7825-1		León y Aymé
+Ponce de León y Carrillo	Q7145970	7826-1		
+Portilla y Andrade	Q21516328	36972-1		
+Prolongo y García	Q21523290	7991-1		
+de la Puerta y Ródenas	Q25422569	8011-1		Rodenas y Magaña
+Quer y Martínez	Q957879	8051-1		
+Quisumbing y Argüelles	Q555616	8060-1		
+Ramis y Ramis	Q6205387	8126-1		
+Reyes y Prósper	Q21607142	8324-1		
+Riba y Nava	Q21607158	14914-1		
+Rivas y Díaz	Q22112473		06E5FB1B-ADB5-4AB2-8352-689F35682067	
+Rodríguez y Femenías	Q5950135	30175-1		Rodriquez y Femenias|Rodrígues y Femenías
+Roig y Mesa	Q21607346	8542-1		
+Royo y Gómez	Q3186559			
+Ruiz y Sandoval	Q136592455	20093899-1		
+Sagarra y Castellarnau				Sagarra y Castellamau
+Sagra y Peris	Q973094	12261-1	1B9D6CDE-A468-4ABA-9A83-BAFFFB75E18C	
+Sallent y Gotés	Q21607648	8845-1		
+Salvador y Pedrol	Q28374988			
+Sánchez-Monge y Parellada	Q3726163	20043178-1		
+Sanchiz y Gil	Q21339142			
+Sarto y Monteys				
+Sauget y Barbis	Q928574	14965-1		
+Scott y Pacheco	Q21393358			
+Secall y Inda	Q21608591	12858-1		
+Sessé y Lacasta	Q2983613	9514-1		
+Teodoro y Gregorio	Q21610444	10512-1		
+Texidor y Cos	Q5952669	10537-1		
+Toro y Blanco	Q47127533	20017873-1		
+de la Torre y Callejas				
+de la Torre y Huerta	Q5042814			
+Torres y Mínguez				
+Trémols y Borrell	Q19289088	10808-1		
+Truan y Luard	Q21610977	10858-1		
+Uhagón y Vedia	Q59573904			
+Unanue y Pavón	Q2332382	10979-1		Unanue y Pabon
+Urbina y Altamirano	Q5994491	10996-1		
+Urríes y Azara	Q36637867	28097-1		
+Vayreda y Vila	Q5848812	11103-1		
+Vergara y Pérez	Q21611646	11135-1		
+Vidal y Carreras	Q5850813	11173-1		
+Vidal y López				
+Vidal y Soler	Q7442690	11174-1		
+Viera y Clavijo	Q326385	35377-1		
+Vilanova y Piera	Q5554447			
+Villar y Serratacó	Q3052331	11193-1		
+Villegas y de Gante	Q16599740	28380-1		
+Zapater y Marconell	Q21613407	31478-1		
+Zariquiey y Cenarro				
+Zerecero y Dávalos				Zerecero y D
