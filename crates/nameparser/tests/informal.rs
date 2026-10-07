@@ -96,15 +96,21 @@ fn a_trailing_author_citation_is_part_of_the_phrase() {
     assert_informal("Amphicynodon sp. 1 Filhol, 1881")
         .taxon("Amphicynodon")
         .rank(Rank::Species)
-        .phrase("sp. 1 Filhol, 1881");
+        .phrase("sp. 1 Filhol, 1881")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     assert_informal("Aster sp. Linnaeus, 1753")
         .taxon("Aster")
         .rank(Rank::Species)
-        .phrase("sp. Linnaeus, 1753");
+        .phrase("sp. Linnaeus, 1753")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     assert_informal("Anuropus species N. Bruce, 2008")
         .taxon("Anuropus")
         .rank(Rank::Species)
-        .phrase("species N. Bruce, 2008");
+        .phrase("species N. Bruce, 2008")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
 }
 
 /// The misparses the old exemption produced: a digit-bearing specimen or collection code was
@@ -115,17 +121,23 @@ fn digit_bearing_specimen_codes_are_no_longer_split_into_a_bogus_author() {
     assert_informal("Rhodococcus sp. 14-2483-1-2")
         .taxon("Rhodococcus")
         .rank(Rank::Species)
-        .phrase("sp. 14-2483-1-2");
+        .phrase("sp. 14-2483-1-2")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     // was: authors=["ZRC"], year=1999 — ZRC is the Zoological Reference Collection
     assert_informal("Atergatopsis sp. ZRC 1999.0472")
         .taxon("Atergatopsis")
         .rank(Rank::Species)
-        .phrase("sp. ZRC 1999.0472");
+        .phrase("sp. ZRC 1999.0472")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     // was: authors=["Ccap"], year=1310
     assert_informal("Ectocarpus sp. CCAP 1310/114")
         .taxon("Ectocarpus")
         .rank(Rank::Species)
-        .phrase("sp. CCAP 1310/114");
+        .phrase("sp. CCAP 1310/114")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
 }
 
 /// An underscored OTU code is a specimen tag like any other, so it belongs in the phrase.
@@ -482,7 +494,8 @@ fn the_sanctioning_author_colon_still_works() {
     assert_name("Agaricus campestris L. : Fr.")
         .species("Agaricus", "campestris")
         .comb_authors(None, &["L."])
-        .sanct_author("Fr.");
+        .sanct_author("Fr.")
+        .nothing_else();
 }
 
 /// A DETERMINED name keeps the page strip: it stays `Parsed`, so `publishedInPage` survives on the
@@ -694,8 +707,16 @@ fn a_genus_repeated_after_cf_is_skipped_not_read_as_an_author() {
 fn a_different_genus_after_cf_is_not_skipped() {
     // No species epithet is reachable, so these land in the informal band on the anchor alone —
     // unchanged by this fix, and pinned here so the skip cannot widen onto them.
-    assert_informal("Onthophagus cf. Aphodius").taxon("Onthophagus");
-    assert_informal("Eudoxia cf. Chelophyes contorta").taxon("Eudoxia");
+    assert_informal("Onthophagus cf. Aphodius")
+        .taxon("Onthophagus")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .nothing_else();
+    assert_informal("Eudoxia cf. Chelophyes contorta")
+        .taxon("Eudoxia")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .nothing_else();
 }
 
 #[test]
@@ -706,7 +727,12 @@ fn aff_binomial_with_authorship_stays_parsed() {
         .species("Turritella", "adulterata")
         .comb_authors(Some("1820"), &["Deshayes"])
         .qualifiers(&[(NamePart::Specific, "aff.")])
-        .type_(NameType::Informal);
+        .type_(NameType::Informal)
+        .warning(&[
+            "authorship year was extract but originally was a year range or other form of year",
+        ])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]
@@ -741,7 +767,8 @@ fn infraspecific_indeterminate_stays_parsed() {
     // could not hold an infraspecific-level designation hanging off a determined species.
     assert_name("Salix alba subsp. B")
         .infra_species("Salix", "alba", Rank::Subspecies, "B")
-        .type_(NameType::Informal);
+        .type_(NameType::Informal)
+        .nothing_else();
 }
 
 #[test]
@@ -759,7 +786,8 @@ fn binomial_with_a_trailing_annotation_currently_stays_parsed() {
             Rank::InfraspecificName,
             "phytoplasma",
         )
-        .type_(NameType::Scientific);
+        .type_(NameType::Scientific)
+        .nothing_else();
 }
 
 #[test]
@@ -862,16 +890,22 @@ fn the_spec_epithet_rescue_needs_both_a_missing_dot_and_an_authorship() {
     assert_informal("Hemicloeina spec. Platnick, 2002")
         .taxon("Hemicloeina")
         .rank(Rank::Species)
-        .phrase("spec. Platnick, 2002");
+        .phrase("spec. Platnick, 2002")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     // …and with no authorship there is nothing to say the word is an epithet.
     assert_informal("Globigerina spec")
         .taxon("Globigerina")
         .rank(Rank::Species)
-        .phrase("spec");
+        .phrase("spec")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     // `sp` is deliberately NOT rescued: a dot-less `sp` is overwhelmingly a sloppy `sp.`, so
     // even a real `Genus sp Author, Year` (they exist) stays indeterminate.
     assert_informal("Megakhosara sp Sharov, 1961")
         .taxon("Megakhosara")
         .rank(Rank::Species)
-        .phrase("sp Sharov, 1961");
+        .phrase("sp Sharov, 1961")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
 }

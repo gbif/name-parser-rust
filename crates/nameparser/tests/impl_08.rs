@@ -188,7 +188,8 @@ fn virus_caller_code_override() {
     // caller asserts a non-virus code → bucket-A name parses under that code
     assert_name_code("Tobamovirus tabaci", NomCode::Zoological)
         .species("Tobamovirus", "tabaci")
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     // without a hint, a legacy bare-virus binomial is still recognised → unparsable OTHER + VIRUS
     assert_unparsable_code("Acara virus", NameType::Other, NomCode::Virus);
 }
@@ -242,8 +243,12 @@ fn apostrophe_epithets() {
 /// front of the surname. Both the all-caps and title-case input forms normalise to "III".
 #[test]
 fn generational_suffix() {
-    assert_authorship("Loeblich III", &["Loeblich III"]);
-    assert_authorship("Loeblich Iii", &["Loeblich III"]);
+    assert_authorship("Loeblich III", &["Loeblich III"])
+        .comb_authors(None, &["Loeblich III"])
+        .nothing_else();
+    assert_authorship("Loeblich Iii", &["Loeblich III"])
+        .comb_authors(None, &["Loeblich III"])
+        .nothing_else();
     assert_name("Ceratium hirundinella (Paulsen) Loeblich III, 1969")
         .species("Ceratium", "hirundinella")
         .bas_authors(None, &["Paulsen"])

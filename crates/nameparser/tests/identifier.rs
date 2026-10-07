@@ -8,6 +8,7 @@
 mod common;
 use common::*;
 use nameparser::model::NameType;
+use nameparser::model::NomCode;
 
 // ---- Part A: anchorless machine identifiers -> NameType::Identifier ---------------------------
 
@@ -54,7 +55,11 @@ fn standalone_culture_collection_accessions_are_identifiers() {
 #[test]
 fn a_genus_starting_with_an_identifier_prefix_stays_a_name() {
     // "Uba" is a real beetle genus, not the UBA scheme (the whole-string + trailing-digit guard).
-    assert_name("Uba fallai Fletcher, 1938").species("Uba", "fallai");
+    assert_name("Uba fallai Fletcher, 1938")
+        .species("Uba", "fallai")
+        .comb_authors(Some("1938"), &["Fletcher"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]
@@ -72,11 +77,13 @@ fn trailing_culture_accession_on_a_binomial_becomes_the_phrase() {
     assert_name("Aquimarina muelleri DSM 19832")
         .species("Aquimarina", "muelleri")
         .type_(NameType::Informal)
-        .phrase("DSM 19832");
+        .phrase("DSM 19832")
+        .nothing_else();
     assert_name("Escherichia coli ATCC 11775")
         .species("Escherichia", "coli")
         .type_(NameType::Informal)
-        .phrase("ATCC 11775");
+        .phrase("ATCC 11775")
+        .nothing_else();
 }
 
 #[test]

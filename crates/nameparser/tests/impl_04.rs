@@ -659,11 +659,19 @@ fn explicit_marker_keeps_specific_rank() {
 /// or dropped a dot ("C-K.Yang"). (A2)
 #[test]
 fn comma_hyphenated_initials() {
-    assert_authorship("Wang, Y.-j.", &["Y.-j.Wang"]);
-    assert_authorship("Yang, C.-K.", &["C.-K.Yang"]);
-    assert_authorship("Wang, Y.-j. & Liu, Z.-q.", &["Y.-j.Wang", "Z.-q.Liu"]);
+    assert_authorship("Wang, Y.-j.", &["Y.-j.Wang"])
+        .comb_authors(None, &["Y.-j.Wang"])
+        .nothing_else();
+    assert_authorship("Yang, C.-K.", &["C.-K.Yang"])
+        .comb_authors(None, &["C.-K.Yang"])
+        .nothing_else();
+    assert_authorship("Wang, Y.-j. & Liu, Z.-q.", &["Y.-j.Wang", "Z.-q.Liu"])
+        .comb_authors(None, &["Y.-j.Wang", "Z.-q.Liu"])
+        .nothing_else();
     // the space form was already correct and stays so
-    assert_authorship("Y.-j. Wang", &["Y.-j.Wang"]);
+    assert_authorship("Y.-j. Wang", &["Y.-j.Wang"])
+        .comb_authors(None, &["Y.-j.Wang"])
+        .nothing_else();
 }
 
 /// A bare trailing "sp."/"spec." after a complete binomial is a redundant leftover marker: it is

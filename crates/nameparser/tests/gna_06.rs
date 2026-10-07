@@ -14,29 +14,43 @@ fn misc_annotations() {
     // an "agg./group/complex" annotation promotes the rank to SPECIES_AGGREGATE;
     // for trinomials it's stripped silently without touching the rank, so the
     // trinomial's regular code-driven rank (ZOOLOGICAL → SUBSPECIES) is kept.
-    assert_name("Feldmannia species").monomial("Feldmannia");
+    assert_name("Feldmannia species")
+        .monomial("Feldmannia")
+        .nothing_else();
     assert_name("Periglypta G. Paulay, MS")
         .monomial("Periglypta")
-        .comb_authors(None, &["G.Paulay"]);
-    assert_name("Teredo not found").monomial("Teredo");
+        .comb_authors(None, &["G.Paulay"])
+        .nom_note("ms")
+        .manuscript()
+        .nothing_else();
+    assert_name("Teredo not found")
+        .monomial("Teredo")
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
     assert_name("Velutina haliotoides (Linnaeus, 1758), sensu Fabricius, 1780")
         .species("Velutina", "haliotoides")
-        .bas_authors(Some("1758"), &["Linnaeus"]);
+        .bas_authors(Some("1758"), &["Linnaeus"])
+        .sensu("sensu Fabricius, 1780")
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Acarospora cratericola cratericola Shenk 1974 group")
         .infra_species("Acarospora", "cratericola", Rank::Subspecies, "cratericola")
-        .comb_authors(Some("1974"), &["Shenk"]);
+        .comb_authors(Some("1974"), &["Shenk"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Acarospora cratericola cratericola Shenk 1974 species group")
         .infra_species("Acarospora", "cratericola", Rank::Subspecies, "cratericola")
-        .comb_authors(Some("1974"), &["Shenk"]);
+        .comb_authors(Some("1974"), &["Shenk"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Acarospora cratericola cratericola Shenk 1974 species complex")
         .infra_species("Acarospora", "cratericola", Rank::Subspecies, "cratericola")
-        .comb_authors(Some("1974"), &["Shenk"]);
-    assert_name("Parus caeruleus species complex").binomial(
-        "Parus",
-        None,
-        "caeruleus",
-        Rank::SpeciesAggregate,
-    );
+        .comb_authors(Some("1974"), &["Shenk"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Parus caeruleus species complex")
+        .binomial("Parus", None, "caeruleus", Rank::SpeciesAggregate)
+        .nothing_else();
     // skipped: Crenarchaeote enrichment culture clone OREC-B1022
     //   — env-sample annotation pattern not implemented (parses as messy trinomial)
     // skipped: Diodora dorsata  CF
@@ -54,19 +68,23 @@ fn horticultural_annotation() {
     assert_name("Lachenalia tricolor var. nelsonii (ht.) Baker")
         .infra_species("Lachenalia", "tricolor", Rank::Variety, "nelsonii")
         .comb_authors(None, &["Baker"])
-        .partial("(hort.)");
+        .partial("(hort.)")
+        .nothing_else();
     assert_name("Lachenalia tricolor var. nelsonii (hort.) Baker")
         .infra_species("Lachenalia", "tricolor", Rank::Variety, "nelsonii")
         .comb_authors(None, &["Baker"])
-        .partial("(hort.)");
+        .partial("(hort.)")
+        .nothing_else();
     // Trailing "ht."/"hort." after a binomial both parse as a species with the
     // horticultural marker as the comb author ("ht." is normalised to "hort.").
     assert_name("Puya acris ht.")
         .species("Puya", "acris")
-        .comb_authors(None, &["hort."]);
+        .comb_authors(None, &["hort."])
+        .nothing_else();
     assert_name("Puya acris hort.")
         .species("Puya", "acris")
-        .comb_authors(None, &["hort."]);
+        .comb_authors(None, &["hort."])
+        .nothing_else();
 }
 
 #[test]
@@ -75,12 +93,14 @@ fn names_with_mihi() {
     // Stripped from the name with an AUTHORSHIP_REMOVED warning.
     assert_name("Characium obovatum mihi. var. longipes mihi")
         .infra_species("Characium", "obovatum", Rank::Variety, "longipes")
-        .warning(&[warnings::AUTHORSHIP_REMOVED]);
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
     assert_name("Regulus modestus mihi. Gould 1837")
         .species("Regulus", "modestus")
         .comb_authors(Some("1837"), &["Gould"])
         .code(NomCode::Zoological)
-        .warning(&[warnings::AUTHORSHIP_REMOVED]);
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
 }
 
 #[test]
@@ -91,7 +111,8 @@ fn exceptions_with_mihi() {
         .species("Eucyclops", "serrulatus")
         .comb_authors(Some("1966"), &["Dussart", "Graf", "Husson"])
         .code(NomCode::Zoological)
-        .warning(&[warnings::AUTHORSHIP_REMOVED]);
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
 }
 
 #[test]
@@ -102,11 +123,13 @@ fn exceptions_from_ranks_rank_line_epithets() {
     assert_name("Selenops ab Logunov & Jäger, 2015")
         .species("Selenops", "ab")
         .comb_authors(Some("2015"), &["Logunov", "Jäger"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Helophorus (Lihelophorus) ser Zaitzev, 1908")
         .species_ig("Helophorus", "Lihelophorus", "ser")
         .comb_authors(Some("1908"), &["Zaitzev"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     // "Serina subser Gredler, 1898" and "Serina ser Gredler, 1898" — the parser
     // takes "subser"/"ser" as infrageneric rank markers (SUBSERIES_BOTANY /
     // SERIES_BOTANY) and folds "Gredler" into the infrageneric epithet. Left
@@ -124,45 +147,56 @@ fn exceptions_from_author_prefixes_prefix_like_epithets() {
     assert_name("Campylosphaera dela (M.N.Bramlette & F.R.Sullivan) W.W.Hay & H.Mohler")
         .species("Campylosphaera", "dela")
         .comb_authors(None, &["W.W.Hay", "H.Mohler"])
-        .bas_authors(None, &["M.N.Bramlette", "F.R.Sullivan"]);
+        .bas_authors(None, &["M.N.Bramlette", "F.R.Sullivan"])
+        .code(NomCode::Botanical)
+        .nothing_else();
     assert_name("Antaplaga dela Druce, 1904")
         .species("Antaplaga", "dela")
         .comb_authors(Some("1904"), &["Druce"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Baeolidia dela (Er. Marcus & Ev. Marcus, 1960)")
         .species("Baeolidia", "dela")
         .bas_authors(Some("1960"), &["Er.Marcus", "Ev.Marcus"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Dicentria dela Druce, 1894")
         .species("Dicentria", "dela")
         .comb_authors(Some("1894"), &["Druce"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Eulaira dela Chamberlin & Ivie, 1933")
         .species("Eulaira", "dela")
         .comb_authors(Some("1933"), &["Chamberlin", "Ivie"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Paralvinella dela Detinova, 1988")
         .species("Paralvinella", "dela")
         .comb_authors(Some("1988"), &["Detinova"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Scoparia dela Clarke, 1965")
         .species("Scoparia", "dela")
         .comb_authors(Some("1965"), &["Clarke"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Tortolena dela Chamberlin & Ivie, 1941")
         .species("Tortolena", "dela")
         .comb_authors(Some("1941"), &["Chamberlin", "Ivie"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     // "den" is parsed as the species epithet here because the trailing author
     // span has initials (J.L.) — disambiguates from particle usage.
     assert_name("Gnathopleustes den (J.L. Barnard, 1969)")
         .species("Gnathopleustes", "den")
         .bas_authors(Some("1969"), &["J.L.Barnard"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Agnetina den Cao, T.K.T. & Bae, 2006")
         .species("Agnetina", "den")
         .comb_authors(Some("2006"), &["T.K.T.Cao", "Bae"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]
@@ -170,7 +204,9 @@ fn exceptions_from_author_suffixes_suffix_like_epithets() {
     // group: Exceptions from author suffixes (suffix-like epithets)
     assert_name("Ruteloryctes bis Dechambre, 2006")
         .species("Ruteloryctes", "bis")
-        .comb_authors(Some("2006"), &["Dechambre"]);
+        .comb_authors(Some("2006"), &["Dechambre"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]
@@ -180,7 +216,7 @@ fn icvcn_binomial_names_and_exceptions() {
     // skipped: Usarudivirus nymphense
     // skipped: Ictavirus ictaluridallo1
     // skipped: Aghbyvirus ISAO8
-    assert_name("Mahavira").monomial("Mahavira");
+    assert_name("Mahavira").monomial("Mahavira").nothing_else();
 }
 
 #[test]
@@ -215,18 +251,24 @@ fn no_parsing_bacterium_candidatus() {
     // as a flag (isCandidatus()) and rendered in the canonical inside quotes.
     assert_name("Acidobacterium ailaaui Myers & King, 2016")
         .species("Acidobacterium", "ailaaui")
-        .comb_authors(Some("2016"), &["Myers", "King"]);
-    assert_name("Candidatus").monomial("Candidatus");
+        .comb_authors(Some("2016"), &["Myers", "King"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Candidatus")
+        .monomial("Candidatus")
+        .nothing_else();
     assert_name("Candidatus Puniceispirillum Oh, Kwon, Kang, Kang, Lee, Kim & Cho, 2010")
         .monomial("Puniceispirillum")
         .comb_authors(
             Some("2010"),
             &["Oh", "Kwon", "Kang", "Kang", "Lee", "Kim", "Cho"],
         )
-        .candidatus();
+        .candidatus()
+        .nothing_else();
     assert_name("Candidatus Halobonum")
         .monomial("Halobonum")
-        .candidatus();
+        .candidatus()
+        .nothing_else();
 }
 
 #[test]
@@ -242,7 +284,9 @@ fn no_parsing_not_none_unidentified_phrases() {
     // skipped: NOT recorded
     // skipped: Not recorded
     // skipped: Not assigned
-    assert_name("Notassigned").monomial("Notassigned");
+    assert_name("Notassigned")
+        .monomial("Notassigned")
+        .nothing_else();
     // skipped: Unnamed clade
     // skipped: Unamed clade
 }
@@ -278,10 +322,12 @@ fn no_parsing_symbiont() {
     // group: No parsing symbiont — botanical "var." kept in canonical.
     assert_name("Dictyochloropsis symbiontica Tschermak-Woess")
         .species("Dictyochloropsis", "symbiontica")
-        .comb_authors(None, &["Tschermak-Woess"]);
+        .comb_authors(None, &["Tschermak-Woess"])
+        .nothing_else();
     assert_name("Dylakosoma symbionticum var. valens Skuja")
         .infra_species("Dylakosoma", "symbionticum", Rank::Variety, "valens")
-        .comb_authors(None, &["Skuja"]);
+        .comb_authors(None, &["Skuja"])
+        .nothing_else();
 }
 
 #[test]
@@ -373,16 +419,26 @@ fn html_tags_and_entities() {
 
     assert_name("Velutina haliotoides (Linnaeus, 1758), <i>sensu</i> Fabricius, 1780")
         .species("Velutina", "haliotoides")
-        .bas_authors(Some("1758"), &["Linnaeus"]);
+        .bas_authors(Some("1758"), &["Linnaeus"])
+        .sensu("sensu Fabricius, 1780")
+        .warning(&[warnings::XML_TAGS])
+        .code(NomCode::Zoological)
+        .nothing_else();
 
     assert_name("<i>Velutina halioides</i> (Linnaeus, 1758)")
         .species("Velutina", "halioides")
-        .bas_authors(Some("1758"), &["Linnaeus"]);
+        .bas_authors(Some("1758"), &["Linnaeus"])
+        .warning(&[warnings::XML_TAGS])
+        .code(NomCode::Zoological)
+        .nothing_else();
 
     assert_name("Quadrella steyermarkii (Standl.) Iltis &amp; Cornejo")
         .species("Quadrella", "steyermarkii")
         .comb_authors(None, &["Iltis", "Cornejo"])
-        .bas_authors(None, &["Standl."]);
+        .bas_authors(None, &["Standl."])
+        .warning(&[warnings::HTML_ENTITIES])
+        .code(NomCode::Botanical)
+        .nothing_else();
 
     assert_name("Torymus bangalorensis (Mani &amp; Kurian, 1953)")
         .species("Torymus", "bangalorensis")
@@ -395,11 +451,16 @@ fn html_tags_and_entities() {
 #[test]
 fn underscores_instead_of_spaces() {
     // group: Underscores instead of spaces
-    assert_name("Oxalis_barrelieri").species("Oxalis", "barrelieri");
+    assert_name("Oxalis_barrelieri")
+        .species("Oxalis", "barrelieri")
+        .nothing_else();
 
-    assert_name("Pseudocercospora__dendrobii").species("Pseudocercospora", "dendrobii");
+    assert_name("Pseudocercospora__dendrobii")
+        .species("Pseudocercospora", "dendrobii")
+        .nothing_else();
 
     assert_name("Oxalis barrelieri XXZ_21243")
         .species("Oxalis", "barrelieri")
-        .partial("XXZ_21243");
+        .partial("XXZ_21243")
+        .nothing_else();
 }

@@ -98,15 +98,21 @@ fn underscore_sp_designation_is_informal() {
     assert_informal("Eurythenes sp_DISCOLL_PAP_B [of Horton et al., 2020]")
         .taxon("Eurythenes")
         .rank(Rank::Species)
-        .phrase("sp_DISCOLL_PAP_B [of Horton et al., 2020]");
+        .phrase("sp_DISCOLL_PAP_B [of Horton et al., 2020]")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     assert_informal("Oerstedia sp_Bering [of Chernyshev & Polyakova, 2022]")
         .taxon("Oerstedia")
         .rank(Rank::Species)
-        .phrase("sp_Bering [of Chernyshev & Polyakova, 2022]");
+        .phrase("sp_Bering [of Chernyshev & Polyakova, 2022]")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     assert_informal("Parandaniexis sp_JAVA")
         .taxon("Parandaniexis")
         .rank(Rank::Species)
-        .phrase("sp_JAVA");
+        .phrase("sp_JAVA")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
 }
 
 #[test]
@@ -123,11 +129,15 @@ fn glued_new_genus_designation_is_informal_not_a_binomial() {
     assert_informal("Rossellidae_n_gen [of Dohrmann et al., 2023]")
         .taxon("Rossellidae")
         .rank(Rank::Genus)
-        .phrase("n_gen [of Dohrmann et al., 2023]");
+        .phrase("n_gen [of Dohrmann et al., 2023]")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
     assert_informal("Rossellidae_n_gen n_sp_NIWA_SO254 [of Dohrmann et al., 2023]")
         .taxon("Rossellidae")
         .rank(Rank::Species)
-        .phrase("n_gen n_sp_NIWA_SO254 [of Dohrmann et al., 2023]");
+        .phrase("n_gen n_sp_NIWA_SO254 [of Dohrmann et al., 2023]")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
 }
 
 #[test]
@@ -180,12 +190,18 @@ fn redundant_separate_authorship_is_not_appended_twice() {
             None,
         )
         .taxon("Cantuaria")
-        .phrase("sp. Forster, 1968");
+        .phrase("sp. Forster, 1968")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .nothing_else();
     }
     // a bare marker repeated as the "authorship"
     assert_informal_hinted("Saprinus sp.", Some("sp."), Some(Rank::Genus), None)
         .taxon("Saprinus")
-        .phrase("sp.");
+        .phrase("sp.")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Genus)
+        .nothing_else();
 }
 
 #[test]
@@ -219,7 +235,10 @@ fn separate_of_citation_of_a_designation_lands_in_the_phrase() {
         None,
     )
     .taxon("Accacladocoelium")
-    .phrase("sp. [of Sokolov et al., 2025]");
+    .phrase("sp. [of Sokolov et al., 2025]")
+    .taxon_rank(Rank::Genus)
+    .rank(Rank::Species)
+    .nothing_else();
 }
 
 // ---- C. a bracketed single word is an annotation, not an author --------------------------------
@@ -228,10 +247,16 @@ fn separate_of_citation_of_a_designation_lands_in_the_phrase() {
 fn bracketed_single_word_is_a_phrase_not_an_author() {
     assert_informal("Acanthoecidae [Nudiform]")
         .taxon("Acanthoecidae")
-        .phrase("[Nudiform]");
+        .phrase("[Nudiform]")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .nothing_else();
     assert_informal("Leptocephalus [Moringuidae]")
         .taxon("Leptocephalus")
-        .phrase("[Moringuidae]");
+        .phrase("[Moringuidae]")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .nothing_else();
     assert_informal_hinted(
         "Leptocephalus",
         Some("[Ophichthidae]"),
@@ -240,7 +265,9 @@ fn bracketed_single_word_is_a_phrase_not_an_author() {
     )
     .taxon("Leptocephalus")
     .rank(Rank::Genus)
-    .phrase("[Ophichthidae]");
+    .phrase("[Ophichthidae]")
+    .taxon_rank(Rank::Genus)
+    .nothing_else();
 }
 
 #[test]
@@ -377,7 +404,9 @@ fn parenthesised_sensu_of_a_provisional_name_stays_in_the_phrase() {
     assert_informal("Coprosma species a (sensu Eagle)")
         .taxon("Coprosma")
         .rank(Rank::Species)
-        .phrase("species a (sensu Eagle)");
+        .phrase("species a (sensu Eagle)")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
 }
 
 // ---- F. a fully quoted multi-word label is not a name ------------------------------------------
@@ -403,13 +432,22 @@ fn fully_quoted_name_is_parsed_without_its_quotes() {
 fn trace_fossil_label_with_an_anchor_is_informal() {
     assert_informal("Echinoid trace fossils (ichnotaxa)")
         .taxon("Echinoid")
-        .phrase("trace fossils (ichnotaxa)");
+        .phrase("trace fossils (ichnotaxa)")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .nothing_else();
     assert_informal("Echinoid trace fossils")
         .taxon("Echinoid")
-        .phrase("trace fossils");
+        .phrase("trace fossils")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .nothing_else();
     assert_informal("Trilobita-trace fossils")
         .taxon("Trilobita")
-        .phrase("trace fossils");
+        .phrase("trace fossils")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .nothing_else();
 }
 
 #[test]
@@ -469,7 +507,9 @@ fn leading_question_mark_before_an_indet_marker_keeps_the_genus() {
     )
     .taxon("Archaeopharetra")
     .rank(Rank::Species)
-    .phrase("sp. of Zhuravlev & Gravestock 1994");
+    .phrase("sp. of Zhuravlev & Gravestock 1994")
+    .taxon_rank(Rank::Genus)
+    .nothing_else();
 }
 
 #[test]
@@ -526,7 +566,9 @@ fn leading_cf_before_an_indet_marker_keeps_the_genus() {
     assert_informal("cf. Stichococcus sp. FontaineG1")
         .taxon("Stichococcus")
         .rank(Rank::Species)
-        .phrase("sp. FontaineG1");
+        .phrase("sp. FontaineG1")
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
 }
 
 #[test]
