@@ -392,14 +392,11 @@ fn genus_with_hyphen_allowed_by_icn() {
 
 #[test]
 fn misspelled_name() {
-    // group: Misspelled name — the trailing "Stål, 1862" is read as part of the
-    // hyphenated uninomial because the "-Stål" form looks like a single hyphenated
-    // genus token; case is preserved verbatim.
-    // FIXME(review): the author is glued into the genus and the year left authorless: Ambrysus
-    // Stål, 1862
+    // group: Misspelled name — the author is glued onto the genus by a hyphen: Ambrysus Stål, 1862
     assert_name("Ambrysus-Stål, 1862")
-        .monomial("Ambrysus-Stål")
-        .comb_authors(Some("1862"), &[])
+        .monomial("Ambrysus")
+        .comb_authors(Some("1862"), &["Stål"])
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 

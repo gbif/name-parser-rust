@@ -73,6 +73,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
+    s = split_hyphen_glued_author(ctx, s);
     s = replace_homoglyphs(ctx, s);
     s = repair_win1252_artefacts(ctx, s);
     s = normalise_double_underscores(ctx, s);
@@ -1210,6 +1211,17 @@ fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
 static OCR_ZERO: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(^|[\s(\[,&])0(\p{Ll}+)([\s.,;)\]]|$)").unwrap());
 
+/// A genus with its author glued on by a hyphen, and nothing but the year after it: "Ambrysus-Stål,
+/// 1862", "Leptocysta-Stal, 1873", "Vesperides-Coues 1875". Rust-only: Java read one genus
+/// "Ambrysus-Stål" with a year and no author. Only on the name string — in an authorship the same
+/// shape is a hyphenated surname ("Saint-Hilaire, 1830").
+static HYPHEN_GLUED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)-(\p{Lu}[\p{L}'.]*,?(?-u:\s+)\(?(?-u:\d{4})\)?)$").unwrap()
+});
+
+fn split_hyphen_glued_author(_ctx: &mut ParseContext, s: String) -> String {
+    HYPHEN_GLUED_AUTHOR.replace(&s, "$1 $2").into_owned()
+}
 // ---- Step 14: repairWin1252Artefacts (structural — no Pattern; shared w/ stripAuthorshipMarkers) ----
 
 /// Java `StripAndStash.repairWin1252Artefacts(ParsedName, String)`
