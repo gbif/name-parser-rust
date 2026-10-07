@@ -331,7 +331,7 @@ fn first_word(s: &str) -> &str {
 /// Missing-genus placeholder forms — the user-facing genus is replaced by "?":
 ///   `"denheyeri Eghbalian, …, 2017"`         -> `"? denheyeri Eghbalian, …, 2017"` (+ warning)
 ///   `"Missing penchinati Bourguignat, 1870"` -> `"? penchinati Bourguignat, 1870"` (no warning)
-///   `"\"? gryphoidis"`                       -> `"? gryphoidis"` (no warning)
+///   `"\"? gryphoidis"`, `"? alba Smith"`     -> `"? gryphoidis"`, `"? alba Smith"` (no warning)
 /// Emits `NameType::Placeholder` for all three forms; `Warnings::MISSING_GENUS` only for
 /// the inferred (third) form, since the other two carry an explicit "?"/"Missing" marker
 /// the user wrote on purpose — all three spot-checked against the Java CLI oracle. Skips
@@ -344,6 +344,14 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
     if s.starts_with("\"? ") || s.starts_with("\"?\t") {
         let rest: String = s.chars().skip(3).collect();
         missing = Some(format!("? {}", java_trim(&rest)));
+    } else if let Some(rest) = s
+        .strip_prefix('?')
+        .map(java_trim)
+        .filter(|r| r.chars().next().is_some_and(char::is_lowercase))
+    {
+        // "? alba Smith", "?alba": the same explicit mark without the quote. Rust-only: Java
+        // parsed a SCIENTIFIC name with the genus "?".
+        missing = Some(format!("? {rest}"));
     } else if s.starts_with("Missing ") {
         let rest: String = s.chars().skip(8).collect();
         if rest.chars().next().is_some_and(|c| c.is_lowercase()) {
