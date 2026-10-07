@@ -53,6 +53,9 @@
 
 #![allow(dead_code)] // the DSL surface is used across many test files; not every method in each
 
+mod paths;
+pub use paths::*;
+
 use std::collections::BTreeMap;
 
 use nameparser::model::{
@@ -93,6 +96,13 @@ pub fn assert_name_hinted(
     rank: Option<Rank>,
     code: Option<NomCode>,
 ) -> NameAssertion {
+    let call = Call {
+        input,
+        authorship,
+        rank,
+        code,
+    };
+    check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
         ParseResult::Parsed(pn) => NameAssertion::new(pn, input),
         ParseResult::Informal(inf) => {
@@ -121,6 +131,13 @@ pub fn assert_informal_hinted(
     rank: Option<Rank>,
     code: Option<NomCode>,
 ) -> InformalAssertion {
+    let call = Call {
+        input,
+        authorship,
+        rank,
+        code,
+    };
+    check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
         ParseResult::Informal(inf) => InformalAssertion::new(inf, input),
         ParseResult::Parsed(pn) => {
@@ -192,6 +209,7 @@ pub fn assert_unparsable_name(input: &str, rank: Rank, type_: NameType, expected
 
 /// `assertSensu(raw, sensu)` — parse `raw` and assert its taxonomic (sensu/sec) note.
 pub fn assert_sensu(raw: &str, sensu: &str) {
+    check_paths(Call::name(raw), Shape::Name);
     let n = nameparser::parse_name(raw, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{raw}` to parse: {e:?}"));
     assert_eq!(
@@ -210,6 +228,7 @@ pub fn assert_phrase_name(
     rank: Option<Rank>,
     phrase: &str,
 ) -> NameAssertion {
+    check_paths(Call::name(sciname), Shape::Name);
     let n = nameparser::parse_name(sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
     assert_eq!(
@@ -228,6 +247,7 @@ pub fn assert_phrase_name(
 /// `assertNomNote(note, sciname)` — parse `sciname` and assert its nomenclatural note. Returns
 /// the assertion for further chaining.
 pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
+    check_paths(Call::name(sciname), Shape::Name);
     let n = nameparser::parse_name(sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
     NameAssertion::new(n, sciname).nom_note(note)
@@ -237,6 +257,7 @@ pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
 /// equals `note` (Java's helper is misnamed; it checks the nom-note). Returns the assertion.
 pub fn assert_cultivar(note: &str) -> NameAssertion {
     let sciname = format!("Abies alba {note}");
+    check_paths(Call::name(&sciname), Shape::Name);
     let n = nameparser::parse_name(&sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
     NameAssertion::new(n, &sciname).nom_note(note)
@@ -261,6 +282,7 @@ pub fn assert_ex_authorship(
     ex_author: Option<&str>,
     expected_authors: &[&str],
 ) -> NameAssertion {
+    check_paths(Call::name(raw), Shape::Authorship);
     let full = nameparser::parse_name("Abies alba", Some(raw), Some(Rank::Species), None)
         .unwrap_or_else(|e| panic!("authorship `{raw}` should parse: {e:?}"));
     let auth = &full.combination_authorship;
@@ -310,6 +332,18 @@ pub fn assert_ex_authorship(
         ..Default::default()
     };
     NameAssertion::new(pn, raw)
+}
+
+/// The name with its authorship embedded, the name with the authorship passed separately, and the
+/// name with it in both must all parse alike — for checks that need no expectation of their own.
+pub fn assert_paths_agree(name: &str, authorship: &str) {
+    let call = Call {
+        input: name,
+        authorship: Some(authorship),
+        rank: None,
+        code: None,
+    };
+    check_paths(call, Shape::Name);
 }
 
 /// `isViralName(name)` — Java's test helper: parse `name` and report whether the nomenclatural
@@ -1205,9 +1239,10 @@ pub fn fields_equal(
     }
 }
 
-/// The `ParsedName` fields on which `a` and `b` differ, one `field: a | b` line each, compared on
-/// the JSON wire shape with [`fields_equal`]. Empty when the two parses are the same.
-pub fn parsed_name_diff(a: &ParsedName, b: &ParsedName) -> Vec<String> {
+/// The `ParsedName` fields on which `a` and `b` differ, as `(field, a, b)` with the JSON wire names
+/// and values (`-` for an absent field), compared with [`fields_equal`]. Empty when the two parses
+/// are the same.
+pub fn parsed_name_diff(a: &ParsedName, b: &ParsedName) -> Vec<(String, String, String)> {
     let (ja, jb) = (
         serde_json::to_value(a).expect("ParsedName serialises"),
         serde_json::to_value(b).expect("ParsedName serialises"),
@@ -1216,12 +1251,10 @@ pub fn parsed_name_diff(a: &ParsedName, b: &ParsedName) -> Vec<String> {
     let mut keys: Vec<&String> = ma.keys().chain(mb.keys()).collect();
     keys.sort();
     keys.dedup();
+    let show = |v: Option<&serde_json::Value>| v.map_or("-".to_string(), |v| v.to_string());
     keys.into_iter()
         .filter(|k| !fields_equal(k, ma.get(*k), mb.get(*k)))
-        .map(|k| {
-            let show = |v: Option<&serde_json::Value>| v.map_or("-".to_string(), |v| v.to_string());
-            format!("{k}: {} | {}", show(ma.get(k)), show(mb.get(k)))
-        })
+        .map(|k| (k.clone(), show(ma.get(k)), show(mb.get(k))))
         .collect()
 }
 

@@ -24,3 +24,21 @@ java -cp "$JAR:/tmp/oracle" FormatOracle < testdata/benchmark-data.txt > testdat
 The generated `.tsv` is git-ignored (`testdata/*.tsv`); `format_golden.rs` SKIPs cleanly when
 it is absent (the always-on structural coverage lives in `src/format.rs`'s own unit tests,
 whose expected values were produced by this same oracle).
+
+## `path_divergence.py`
+
+Measures how often ChecklistBank's own rows parse differently with the authorship passed
+separately (`parse(name, authorship, rank, code)`, how CLB calls the parser) and with it joined
+into the name string — the corpus counterpart of the test suite's
+`crates/nameparser/tests/common/path_divergences.tsv`. Needs the local
+`testdata/clb-verbatim-names.tsv` and the Python binding built from the working tree:
+
+```sh
+(cd crates/nameparser-py && .venv/bin/maturin develop --release)
+crates/nameparser-py/.venv/bin/python -I tools/path_divergence.py --sample 100000 --dump before.jsonl
+# … change the engine, rebuild the binding …
+crates/nameparser-py/.venv/bin/python -I tools/path_divergence.py --sample 100000 --dump after.jsonl
+crates/nameparser-py/.venv/bin/python -I tools/path_divergence.py --diff before.jsonl after.jsonl
+```
+
+The sample is seeded (`--seed`, default 42), so two runs over the same file compare the same rows.
