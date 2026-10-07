@@ -249,9 +249,14 @@ final class StructCodec {
    * {@link ParseResult.Informal} for a supraspecific taxon carrying a provisional designation with
    * no species epithet, else a {@link ParseResult.Parsed}. A name with a species epithet (incl.
    * cf./aff. and infraspecific-indeterminate binomials) stays {@code Parsed} so its
-   * {@code specificAuthorship} — unrepresentable by a flat anchor — is preserved.
+   * {@code specificAuthorship} — unrepresentable by a flat anchor — is preserved. A name whose type
+   * is not parsable (a placeholder with its genus missing, "? alba Smith") is an
+   * {@link ParseResult.Unparsable} echoing {@code name}, as in Rust's {@code parse}.
    */
-  static ParseResult toParseResult(ParsedName pn) {
+  static ParseResult toParseResult(ParsedName pn, String name) {
+    if (!pn.getType().isParsable()) {
+      return new ParseResult.Unparsable(pn.getType(), pn.getCode(), name);
+    }
     if (isInformal(pn)) {
       String taxon;
       Rank taxonRank;

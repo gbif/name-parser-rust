@@ -262,6 +262,17 @@ pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
     NameAssertion::new(n, &format!("`{sciname}`")).nom_note(note)
 }
 
+/// The raw [`nameparser::parse_name`] result, for a name [`nameparser::parse`] does not report as
+/// `Parsed`: a placeholder with its genus missing ("? alba Smith") is unparsable there, but keeps its
+/// parts here.
+#[track_caller]
+pub fn assert_raw_name(input: &str) -> NameAssertion {
+    check_paths(Call::name(input), Shape::Name);
+    let n = nameparser::parse_name(input, None, None, None)
+        .unwrap_or_else(|e| panic!("expected `{input}` to parse: {e:?}"));
+    NameAssertion::new(n, &format!("`{input}`"))
+}
+
 /// `assertCultivar(note)` — parse `"Abies alba <note>"` and assert its nomenclatural note
 /// equals `note` (Java's helper is misnamed; it checks the nom-note). Returns the assertion.
 #[track_caller]

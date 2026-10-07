@@ -70,13 +70,15 @@ fn organism_label_without_a_code_is_unparsable_other() {
 
 #[test]
 fn organism_word_as_a_missing_genus_epithet_is_untouched() {
-    // a real epithet + author with the genus missing still takes the missing-genus reading
-    assert_name("fungi Meigen, 1830")
+    // a real epithet + author with the genus missing still takes the missing-genus reading: a
+    // placeholder, unparsable, whose parts the raw parse keeps
+    assert_unparsable("fungi Meigen, 1830", NameType::Placeholder);
+    assert_raw_name("fungi Meigen, 1830")
         .species("?", "fungi")
-        .type_(NameType::Placeholder)
         .comb_authors(Some("1830"), &["Meigen"])
         .code(nameparser::model::NomCode::Zoological)
         .warning(&["epithet without genus"])
+        .type_(NameType::Placeholder)
         .nothing_else();
 }
 

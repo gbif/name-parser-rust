@@ -530,34 +530,47 @@ fn unparsable_placeholder() {
 
 #[test]
 fn placeholder() {
-    assert_name(
+    assert_unparsable(
+        "denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017",
+        NameType::Placeholder,
+    );
+    assert_raw_name(
         "denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017",
     )
     .species("?", "denheyeri")
     .comb_authors(Some("2017"), &["Eghbalian", "Khanjani", "Ueckermann"])
-    .type_(NameType::Placeholder)
     .published_in("Eghbalian, Khanjani & Ueckermann, 2017")
     .warning(&[warnings::MISSING_GENUS])
     .published_in_year(Some(2017))
+    .type_(NameType::Placeholder)
     .nothing_else();
 
-    assert_name("\"? gryphoidis")
+    assert_unparsable("\"? gryphoidis", NameType::Placeholder);
+    assert_raw_name("\"? gryphoidis")
         .species("?", "gryphoidis")
         .type_(NameType::Placeholder)
         .nothing_else();
 
-    assert_name("\"? gryphoidis (Bourguignat 1870) Schoepf. 1909")
+    assert_unparsable(
+        "\"? gryphoidis (Bourguignat 1870) Schoepf. 1909",
+        NameType::Placeholder,
+    );
+    assert_raw_name("\"? gryphoidis (Bourguignat 1870) Schoepf. 1909")
         .species("?", "gryphoidis")
         .bas_authors(Some("1870"), &["Bourguignat"])
         .comb_authors(Some("1909"), &["Schoepf."])
         .type_(NameType::Placeholder)
         .nothing_else();
 
-    assert_name("Missing penchinati Bourguignat, 1870")
+    assert_unparsable(
+        "Missing penchinati Bourguignat, 1870",
+        NameType::Placeholder,
+    );
+    assert_raw_name("Missing penchinati Bourguignat, 1870")
         .species("?", "penchinati")
         .comb_authors(Some("1870"), &["Bourguignat"])
-        .type_(NameType::Placeholder)
         .code(NomCode::Zoological)
+        .type_(NameType::Placeholder)
         .nothing_else();
 
     // A leading double question mark is not a "? epithet" missing-genus placeholder — the

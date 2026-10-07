@@ -26,7 +26,7 @@ use crate::model::{
 };
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
-use crate::unicode::{java_trim, normalize_quotes, normalize_spaces};
+use crate::unicode::{is_fullwidth, java_trim, normalize_input, normalize_quotes};
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -99,8 +99,9 @@ pub fn run(
     // UnparsableNameException(NameType.OTHER, null)`); unreachable in Rust since `&str`
     // can never be null — only the empty-after-trim case below can actually occur.
     // Unicode space separators (NBSP & co) become ASCII spaces first, so the trim and every
-    // later stage treat them as the word breaks they are; `name` itself stays raw for echoes.
-    let spaced = normalize_spaces(name);
+    // later stage treat them as the word breaks they are; invisible format characters go and
+    // fullwidth forms become ASCII (`normalize_input`). `name` itself stays raw for echoes.
+    let spaced = normalize_input(name);
     let trimmed = java_trim(&spaced);
     if trimmed.is_empty() {
         return Err(ParseError::new(NameType::Other, None, name));
@@ -134,7 +135,11 @@ pub fn run(
     // ctx)` — that call passes `Pipeline.run`'s own original parameter, not the
     // trimmed+normalized local.
     let trimmed = normalize_quotes(trimmed);
-    let authorship = authorship.map(|a| normalize_quotes(&normalize_spaces(a)));
+    let fullwidth = name
+        .chars()
+        .chain(authorship.unwrap_or_default().chars())
+        .any(is_fullwidth);
+    let authorship = authorship.map(|a| normalize_quotes(&normalize_input(a)));
 
     // The length of the name as a whole, whichever column its authorship came in — counted once
     // when the name string already repeats it.
@@ -145,6 +150,10 @@ pub fn run(
             .filter(|a| !a.is_empty() && !contains_ignoring_punctuation(&trimmed, a))
             .map_or(0, |a| a.chars().count() + 1);
     let mut ctx = ParseContext::new(trimmed.clone(), authorship, rank, code);
+    // folded up front (see `normalize_input`), but still flagged like the homoglyphs they are
+    if fullwidth {
+        ctx.name.add_warning(warnings::HOMOGLYHPS);
+    }
     if full_length > LONG_NAME_LENGTH {
         ctx.name.add_warning(warnings::LONG_NAME);
     }

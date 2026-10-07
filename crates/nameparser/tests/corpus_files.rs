@@ -11,9 +11,10 @@ use nameparser::ParseResult;
 /// still fail — a fixed one is reported, so it can be removed.
 const KNOWN: &[(&str, &str)] = &[(
     "Thermus thermophilus phagein in93",
-    // FIXME(review): a regression of the anchored `phages?` virus gate — "phagein" no longer
-    // marks a virus, so this comes back as an infrasubspecific name with the epithet "in93"
-    "phagein is a virus marker",
+    // the anchored `phages?` virus gate no longer fires inside a word, which `phagein` (for "phage
+    // IN93") needs — but the unanchored gate rejected ~460 real names (Sphagesauridae,
+    // `Treponema phagedenis`), a deliberate trade-off
+    "a word-initial phage-… is a real epithet as often",
 )];
 
 fn lines(file: &str) -> Option<Vec<String>> {
@@ -93,16 +94,7 @@ fn names_with_authors_keep_their_authors() {
 }
 
 /// Benchmark names `parse` returns in breach of its three-way contract, each still expected to.
-// FIXME(review): a missing-genus placeholder ("? epithet", "Missing epithet") comes back `Parsed`
-// with type PLACEHOLDER, which `NameType::is_parsable` says only an `Unparsable` may carry — either
-// it becomes `Unparsable(PLACEHOLDER)` or the contract admits it; an API decision.
-const CONTRACT_EXCEPTIONS: &[&str] = &[
-    "denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017",
-    "\"? gryphoidis",
-    "\"? gryphoidis (Bourguignat 1870) Schoepf. 1909",
-    "Missing penchinati Bourguignat, 1870",
-    "ex DC.",
-];
+const CONTRACT_EXCEPTIONS: &[&str] = &[];
 
 /// Over the benchmark corpus, `parse` keeps its three-way contract: a `Parsed` name has a parsable
 /// type, an `Informal` one a taxon, an `Unparsable` one a non-parsable type.

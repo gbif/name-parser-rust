@@ -322,6 +322,14 @@ def test_python_binding_matches_oracle_across_all_corpora():
 
             if "error" in row:
                 oracle_outcome = ("error", row["error"])
+            elif (row.get("parsed") or {}).get("type") not in (None, "SCIENTIFIC", "INFORMAL"):
+                # a parsed oracle row of a non-parsable type (a placeholder with its genus
+                # missing) is unparsable after the three-way split too, as in Rust `parse`
+                t = row["parsed"]["type"]
+                err = {"type": t, "message": f"Unparsable {t} name: {name}"}
+                if row["parsed"].get("code") is not None:
+                    err["code"] = row["parsed"]["code"]
+                oracle_outcome = ("error", err)
             elif _oracle_is_informal(row.get("parsed") or {}):
                 oracle_outcome = ("informal", _oracle_to_informal(row["parsed"]))
             else:

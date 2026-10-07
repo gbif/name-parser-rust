@@ -280,7 +280,7 @@ final class Ffi {
       if (ret == -1) {
         return StructCodec.unparsableResult(out, name);
       }
-      return StructCodec.toParseResult(StructCodec.decode(out, (int) ret));
+      return StructCodec.toParseResult(StructCodec.decode(out, (int) ret), name);
     }
   }
 
