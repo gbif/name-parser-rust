@@ -159,6 +159,11 @@ pub(crate) struct AuthState {
     pub year_range: bool,
     /// True when an "f."/"fil."/"filius" suffix appeared on any author — botanical signal.
     pub has_filius: bool,
+    /// True when the combination's year follows a comma ("Smith, 1900"), the zoological style.
+    pub combination_year_after_comma: bool,
+    /// True when a combination author is written with dotted initials before the surname
+    /// ("M.A. Curtis"), not behind it ("Lindberg H").
+    pub combination_initials_first: bool,
     /// Java `int unparsedFrom = -1;` — kept as a sentinel `i32`, matching the established
     /// convention for this exact shape of field elsewhere in the port (see
     /// `ParseContext::mid_author_from`/`mid_author_to`).
@@ -174,6 +179,8 @@ impl Default for AuthState {
             basionym_present: false,
             year_range: false,
             has_filius: false,
+            combination_year_after_comma: false,
+            combination_initials_first: false,
             unparsed_from: -1,
             unparsed_text: None,
         }
@@ -251,6 +258,27 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         }
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
         s.year_range |= yr;
+        s.combination_year_after_comma = (comb_from..comb_end)
+            .find(|&k| is_year(&tokens[k]))
+            .is_some_and(|k| k > comb_from && tokens[k - 1].kind == TokenKind::Comma);
+        s.combination_initials_first = (comb_from..comb_end).any(|k| {
+            let initial = |j: usize| {
+                j + 1 < comb_end
+                    && tokens[j].kind == TokenKind::Word
+                    && tokens[j].text.chars().count() == 1
+                    && is_all_upper(&tokens[j].text)
+                    && tokens[j + 1].kind == TokenKind::Dot
+            };
+            let mut j = k;
+            while initial(j) {
+                j += 2;
+            }
+            j > k
+                && j < comb_end
+                && tokens[j].kind == TokenKind::Word
+                && starts_upper(&tokens[j].text)
+                && contains_lower(&tokens[j].text)
+        });
         s.has_filius |= contains_filius_suffix(tokens, comb_from, comb_end);
         s.combination.sanctioning_author = comb_sanctioning;
         take_sanctioning_year(&tokens[comb_end..n], &mut s.combination);
@@ -1662,7 +1690,8 @@ fn contains_filius_suffix(tokens: &[Token], from: usize, to: usize) -> bool {
         if !(w == "f" || w == "fil" || w == "filius") {
             continue;
         }
-        if j > 0 && tokens[j - 1].end < t.start {
+        // spaced ("Hook. f.") or glued to an abbreviated surname ("Hook.f.", "L.f.")
+        if j > 0 && (tokens[j - 1].end < t.start || tokens[j - 1].kind == TokenKind::Dot) {
             return true;
         }
         if j == 0 {
@@ -2263,8 +2292,9 @@ mod tests {
     }
 
     #[test]
-    fn glued_f_does_not_set_has_filius_flag() {
-        assert!(!parse_str("Burm.f.").has_filius);
+    fn glued_f_after_an_abbreviation_sets_has_filius_flag() {
+        // "Burm.f." is as much Burman filius as "Burm. f."; Java needed the space
+        assert!(parse_str("Burm.f.").has_filius);
     }
 
     #[test]

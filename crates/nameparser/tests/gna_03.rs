@@ -269,6 +269,7 @@ fn hybrid_formulae() {
         .species("Pseudocercospora", "broussonetiae")
         .comb_authors(Some("1989"), &["X.J.Liu", "Y.L.Guo"])
         .bas_authors(None, &["Chupp", "Linder"])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -670,11 +671,13 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Glomopsis lonicerae Peck ex. C.J. Gould 1945")
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Acanthobasidium delicatum (Wakef.) Oberw. ex Jülich 1979")
         .species("Acanthobasidium", "delicatum")

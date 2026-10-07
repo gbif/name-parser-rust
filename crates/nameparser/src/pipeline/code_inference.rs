@@ -116,9 +116,15 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         let any_author_year = bas_year || comb_year;
         // Authors who are all abbreviated with a dot ("Müll. Arg. 1887", "Henn. 1908") are
         // botanical citation style: zoology spells its authors out, so their year is no zoological
-        // evidence. A filius suffix is no abbreviation ("Linnaeus f., 1789").
-        let zoological_year =
-            bas_year || (comb_year && !all_abbreviated(&auth_state.combination.authors));
+        // evidence. A filius suffix is no abbreviation ("Linnaeus f., 1789"). Nor is a year without
+        // the comma zoology puts before it, beside an author cited with leading initials ("Berk. &
+        // M.A. Curtis 1860", "U. Braun & Crous 2003").
+        let botanical_style_year =
+            !auth_state.combination_year_after_comma && auth_state.combination_initials_first;
+        let zoological_year = bas_year
+            || (comb_year
+                && !all_abbreviated(&auth_state.combination.authors)
+                && !botanical_style_year);
 
         // --- botanical votes ---
         // Sanctioning author (": Fr." / ": Pers.").
