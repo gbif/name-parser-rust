@@ -78,16 +78,24 @@ fn wsc_particle_epithets_parse_as_species_under_a_species_rank_hint() {
 fn the_same_names_without_a_rank_hint_stay_uninomials_with_a_particled_author() {
     assert_name("Cantuaria delli Forster, 1968")
         .monomial("Cantuaria")
-        .comb_authors(Some("1968"), &["delli Forster"]);
+        .comb_authors(Some("1968"), &["delli Forster"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Eresus da Lin & Li, 2022")
         .monomial("Eresus")
-        .comb_authors(Some("2022"), &["da Lin", "Li"]);
+        .comb_authors(Some("2022"), &["da Lin", "Li"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Leptonetela la Wang & Li, 2017")
         .monomial("Leptonetela")
-        .comb_authors(Some("2017"), &["la Wang", "Li"]);
+        .comb_authors(Some("2017"), &["la Wang", "Li"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Zodarion van Bosmans, 2009")
         .monomial("Zodarion")
-        .comb_authors(Some("2009"), &["van Bosmans"]);
+        .comb_authors(Some("2009"), &["van Bosmans"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 // ---- boundary: genuine particled authors must not be split into an epithet -------------------
@@ -100,14 +108,20 @@ fn genuine_particled_authors_of_uninomials_are_not_split() {
     // Richard zur Strassen, thrips taxonomist — 40 such genera in the CoL corpus.
     assert_name("Allidothrips zur Strassen, 1968")
         .monomial("Allidothrips")
-        .comb_authors(Some("1968"), &["zur Strassen"]);
+        .comb_authors(Some("1968"), &["zur Strassen"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name_rank("Allidothrips zur Strassen, 1968", Rank::Genus)
         .monomial_rank("Allidothrips", Rank::Genus)
-        .comb_authors(Some("1968"), &["zur Strassen"]);
+        .comb_authors(Some("1968"), &["zur Strassen"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     // Stefano delle Chiaje.
     assert_name("Balanoglossus delle Chiaje, 1829")
         .monomial("Balanoglossus")
-        .comb_authors(Some("1829"), &["delle Chiaje"]);
+        .comb_authors(Some("1829"), &["delle Chiaje"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 /// A multi-word particle chain ("van den Boom", "von der Linde") is never an epithet — a
@@ -117,10 +131,14 @@ fn genuine_particled_authors_of_uninomials_are_not_split() {
 fn a_particle_chain_is_never_taken_as_an_epithet() {
     assert_name("Cladoniicola van den Boom, 2001")
         .monomial("Cladoniicola")
-        .comb_authors(Some("2001"), &["van den Boom"]);
+        .comb_authors(Some("2001"), &["van den Boom"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Verrucaria von der Linde, 1902")
         .monomial("Verrucaria")
-        .comb_authors(Some("1902"), &["von der Linde"]);
+        .comb_authors(Some("1902"), &["von der Linde"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     // Under a (mistaken) SPECIES hint the chain is still refused: rather than inventing the
     // epithet "van" and the author "den Boom", the name stays indetermined.
     assert_informal_hinted(
@@ -131,7 +149,9 @@ fn a_particle_chain_is_never_taken_as_an_epithet() {
     )
     .taxon("Cladoniicola")
     .taxon_rank(Rank::Genus)
-    .rank(Rank::Species);
+    .rank(Rank::Species)
+    .code(NomCode::Zoological)
+    .nothing_else();
     assert_informal_hinted(
         "Verrucaria von der Linde, 1902",
         None,
@@ -139,7 +159,10 @@ fn a_particle_chain_is_never_taken_as_an_epithet() {
         None,
     )
     .taxon("Verrucaria")
-    .rank(Rank::Species);
+    .rank(Rank::Species)
+    .taxon_rank(Rank::Genus)
+    .code(NomCode::Zoological)
+    .nothing_else();
 }
 
 /// The hint only reaches the epithet slot: once a real epithet has been seen, a following
@@ -148,11 +171,14 @@ fn a_particle_chain_is_never_taken_as_an_epithet() {
 fn a_particle_after_a_real_epithet_is_still_an_author() {
     assert_name_rank("Cladoniicola staurospora van den Boom, 2001", Rank::Species)
         .species("Cladoniicola", "staurospora")
-        .comb_authors(Some("2001"), &["van den Boom"]);
+        .comb_authors(Some("2001"), &["van den Boom"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name_rank("Aaaba nodosa de Laubenfels, 1936", Rank::Species)
         .species("Aaaba", "nodosa")
         .comb_authors(Some("1936"), &["de Laubenfels"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 /// Words that merely *look* like particles but are not in the table ("dela", "den") already
@@ -162,9 +188,11 @@ fn non_table_prefix_like_epithets_are_unaffected_by_the_hint() {
     assert_name_rank("Antaplaga dela Druce, 1904", Rank::Species)
         .species("Antaplaga", "dela")
         .comb_authors(Some("1904"), &["Druce"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name_rank("Agnetina den Cao, T.K.T. & Bae, 2006", Rank::Species)
         .species("Agnetina", "den")
         .comb_authors(Some("2006"), &["T.K.T.Cao", "Bae"])
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
 }

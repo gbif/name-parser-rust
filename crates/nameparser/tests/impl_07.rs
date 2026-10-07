@@ -143,7 +143,6 @@ fn taxonomic_notes() {
         .monomial("Achromobacter")
         .comb_authors(Some("1981"), &["Yabuuchi", "Yano"])
         .sensu("emend. Yabuuchi et al., 1998")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // FishBase https://github.com/CatalogueOfLife/backend/issues/1067
@@ -178,7 +177,6 @@ fn taxonomic_notes() {
         .monomial("Dyadobacter")
         .bas_authors(Some("2000"), &["Chelius", "Triplett"])
         .sensu("emend. Reddy & Garcia-Pichel, 2005")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Thalassiosira praeconvexa Burckle emend Gersonde & Schrader, 1984")
@@ -229,12 +227,16 @@ fn taxonomic_notes() {
         .nothing_else();
 
     // authorship-level sensu cases (sensu.txt)
-    assert_authorship("Miller sensu Busch, 1930", &["Miller"]).sensu("sensu Busch, 1930");
+    assert_authorship("Miller sensu Busch, 1930", &["Miller"])
+        .sensu("sensu Busch, 1930")
+        .comb_authors(None, &["Miller"])
+        .nothing_else();
 
     // "(Author, year) sensu …": basionym authorship, sensu trails as the taxonomic note
     assert_authorship("(Mereschkowsky, 1878) sensu Jankowski, 1992", &[])
         .bas_authors(Some("1878"), &["Mereschkowsky"])
-        .sensu("sensu Jankowski, 1992");
+        .sensu("sensu Jankowski, 1992")
+        .nothing_else();
 
     assert_name("Latrodectus marikitates sensu Whittaker")
         .species("Latrodectus", "marikitates")
@@ -244,7 +246,8 @@ fn taxonomic_notes() {
     // pure taxonomic note supplied as the authorship, no author preceding it (sensu.txt)
     assert_authorship("sensu Turcz., p.p.", &[])
         .comb_authors(None, &[])
-        .sensu("sensu Turcz., p.p.");
+        .sensu("sensu Turcz., p.p.")
+        .nothing_else();
 }
 
 #[test]
@@ -310,7 +313,9 @@ fn misapplied() {
         .sensu("auct. nec Zeller, 1877")
         .nothing_else();
 
-    assert_authorship("auct. nec Zeller, 1877", &[]).sensu("auct. nec Zeller, 1877");
+    assert_authorship("auct. nec Zeller, 1877", &[])
+        .sensu("auct. nec Zeller, 1877")
+        .nothing_else();
 
     assert_name("Latrodectus marikitates auct. nec Whittaker")
         .species("Latrodectus", "marikitates")
@@ -327,9 +332,15 @@ fn quote_normalisation() {
         .comb_authors(None, &["O'Brien"])
         .nothing_else();
 
-    assert_authorship("O’Brien", &["O'Brien"]); // U+2019 right single quotation mark
-    assert_authorship("OʼBrien", &["O'Brien"]); // U+02BC modifier letter apostrophe
-    assert_authorship("L´Hér.", &["L'Hér."]); // U+00B4 acute accent used as apostrophe
+    assert_authorship("O’Brien", &["O'Brien"])
+        .comb_authors(None, &["O'Brien"])
+        .nothing_else(); // U+2019 right single quotation mark
+    assert_authorship("OʼBrien", &["O'Brien"])
+        .comb_authors(None, &["O'Brien"])
+        .nothing_else(); // U+02BC modifier letter apostrophe
+    assert_authorship("L´Hér.", &["L'Hér."])
+        .comb_authors(None, &["L'Hér."])
+        .nothing_else(); // U+00B4 acute accent used as apostrophe
 
     // In zoological nomenclature, names written like:
     //
@@ -440,9 +451,7 @@ fn viral_names() {
         .code(NomCode::Virus)
         .nothing_else();
 
-    // SKIPPED: the trailing viruses.txt loop (`resourceReader("viruses.txt")`, asserting
-    // `isViralName(line)` for every non-comment/non-blank line) — reads a resource corpus
-    // file, covered by the golden/cross-val harness.
+    // the trailing viruses.txt loop: see corpus_files.rs
 }
 
 #[test]

@@ -8,6 +8,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonNull;
 import com.google.gson.JsonObject;
 
+import org.gbif.nameparser.api.NameType;
 import org.gbif.nameparser.api.ParseResult;
 import org.junit.jupiter.api.Test;
 
@@ -103,14 +104,18 @@ class ParityTest {
    * match, else a short diff description.
    */
   private static String compare(ParseResult got, JsonObject row) {
-    boolean oracleError = row.has("error");
     JsonObject oracleParsed = row.has("parsed") ? row.getAsJsonObject("parsed") : null;
+    // a parsed oracle row of a non-parsable type (a placeholder with its genus missing) is
+    // unparsable after the three-way split too, as in StructCodec.toParseResult
+    boolean oracleUnparsable = oracleParsed != null
+        && !NameType.valueOf(oracleParsed.get("type").getAsString()).isParsable();
+    boolean oracleError = row.has("error") || oracleUnparsable;
 
     if (got instanceof ParseResult.Unparsable u) {
       if (!oracleError) {
         return "binding Unparsable but oracle parsed";
       }
-      JsonObject err = row.getAsJsonObject("error");
+      JsonObject err = oracleUnparsable ? oracleParsed : row.getAsJsonObject("error");
       String oType = clampType(err.get("type").getAsString());
       String gType = u.type().name();
       if (!Objects.equals(gType, oType)) {

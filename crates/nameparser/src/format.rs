@@ -230,7 +230,6 @@ impl ParsedName {
             &mut sb,
             &self.basionym_authorship,
             &self.combination_authorship,
-            self.sanctioning_author.as_deref(),
             true,
             self.code,
         );
@@ -541,17 +540,21 @@ fn append_authorship(
             sb.push(']');
         }
     }
+    // the sanctioning author via colon, inside the brackets of a basionym (ICN Rec. 50E)
+    if let Some(sanct) = &auth.sanctioning_author {
+        sb.push_str(" : ");
+        sb.push_str(sanct);
+    }
 }
 
 /// Java `NameFormatter.appendAuthorship(StringBuilder, CombinedAuthorshipIF, boolean,
 /// NomCode)` — used both for a name's own authorship (its flattened
-/// combination/basionym/sanctioning fields) and for the nested
+/// combination/basionym fields) and for the nested
 /// generic/specific `CombinedAuthorship` slots.
 fn append_authorship_parts(
     sb: &mut String,
     basionym: &Authorship,
     combination: &Authorship,
-    sanctioning: Option<&str>,
     include_year: bool,
     code: Option<NomCode>,
 ) {
@@ -566,10 +569,6 @@ fn append_authorship_parts(
             sb.push(' ');
         }
         append_authorship(sb, combination, include_year, code);
-        if let Some(sanct) = sanctioning {
-            sb.push_str(" : ");
-            sb.push_str(sanct);
-        }
     }
 }
 
@@ -580,7 +579,6 @@ fn append_name_authorship(sb: &mut String, n: &ParsedName, include_year: bool) {
         sb,
         &n.basionym_authorship,
         &n.combination_authorship,
-        n.sanctioning_author.as_deref(),
         include_year,
         n.code,
     );
@@ -597,7 +595,6 @@ fn append_combined_authorship(
         sb,
         &c.basionym_authorship,
         &c.combination_authorship,
-        c.sanctioning_author.as_deref(),
         include_year,
         code,
     );
@@ -1164,6 +1161,20 @@ mod tests {
             Some("Agaricus campestris L. : Fr.")
         );
         assert_eq!(n.authorship_complete().as_deref(), Some("L. : Fr."));
+    }
+
+    #[test]
+    fn basionym_sanctioning_author_rendered_inside_the_brackets() {
+        let n = p("Merulius lacrimans (Wulfen : Fr.) Schum.");
+        assert_eq!(
+            n.canonical_name().as_deref(),
+            Some("Merulius lacrimans (Wulfen : Fr.) Schum.")
+        );
+        let n = p("Boletus edulis Bull. : Fr., 1821");
+        assert_eq!(
+            n.authorship_complete().as_deref(),
+            Some("Bull., 1821 : Fr.")
+        );
     }
 
     #[test]

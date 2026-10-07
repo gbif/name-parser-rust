@@ -71,7 +71,10 @@ const PARTICLES: &[&str] = &[
 /// cannot change whether any of these ASCII words match (same reasoning already applied to
 /// `Preflight::run`'s `s.to_lowercase()` call).
 pub(crate) fn is_particle(word: &str) -> bool {
-    PARTICLES.contains(&word.to_lowercase().as_str())
+    let word = word.to_lowercase();
+    // a hyphenated run of particles too: "van-der Land", "de-la Cruz"
+    PARTICLES.contains(&word.as_str())
+        || (word.contains('-') && word.split('-').all(|p| PARTICLES.contains(&p)))
 }
 
 #[cfg(test)]
@@ -84,6 +87,8 @@ mod author_particles_tests {
         assert!(is_particle("Van"));
         assert!(is_particle("VAN"));
         assert!(is_particle("de"));
+        assert!(is_particle("van-der"));
+        assert!(!is_particle("da-silvae"));
     }
 
     #[test]

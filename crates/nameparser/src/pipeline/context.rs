@@ -23,6 +23,7 @@ use crate::token::Token;
 /// Every field now has a real reader, so the allow is no longer load-bearing; removing it
 /// is a separate cleanup from this comment.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub(crate) struct ParseContext {
     // ---- Java `final` (conceptually immutable after construction) ----
     pub original: String,
@@ -97,6 +98,12 @@ pub(crate) struct ParseContext {
     /// (`?Sydonia alba`, `cf. Platypeltis croftii`);
     /// `Pipeline::run` types the name INFORMAL once it knows a species epithet follows.
     pub qualified_genus: bool,
+    /// An "(Approved Lists 1980)" citation was stripped: the name is a prokaryote's (see
+    /// `code_inference::infer`).
+    pub approved_lists: bool,
+    /// The authorship coded its diacritics with a colon and a digit ("C. Mu:2ller"), as only
+    /// bryophyte sources do — botanical evidence for code inference.
+    pub coded_diacritics: bool,
 }
 
 impl ParseContext {
@@ -140,6 +147,8 @@ impl ParseContext {
             pending_generic_author: None,
             preflight_complete: false,
             qualified_genus: false,
+            approved_lists: false,
+            coded_diacritics: false,
         }
     }
 

@@ -12,7 +12,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NameType, Rank};
+use nameparser::model::{warnings, NameType, NomCode, Rank};
 
 #[test]
 fn a_placeholder_as_the_whole_authorship_is_removed_and_flagged() {
@@ -45,6 +45,7 @@ fn a_placeholder_after_a_real_author_or_basionym_is_removed() {
         .species("Monas", "vulgaris")
         .bas_authors(None, &["Cienkowski"])
         .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 

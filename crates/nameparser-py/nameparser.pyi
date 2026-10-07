@@ -41,10 +41,15 @@ class Authorship:
         """The work was published anonymously ("Anon.", "Anonymous"); any `authors` are then
         attributed from external evidence, cited in square brackets (ICZN Recommendation 51D)."""
         ...
+    @property
+    def sanctioning_author(self) -> str | None:
+        """The sanctioning author of a sanctioned fungal name (ICN Art. 15), Fries or Persoon —
+        for a basionym the one inside its brackets: `(Wulfen : Fr.) Schum.`."""
+        ...
     def to_dict(self) -> dict[str, Any]:
         """The complete structure straight from the core's own `serde::Serialize` impl —
         `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ...,
-        "anonymous": ...}`."""
+        "anonymous": ..., "sanctioningAuthor": ...}`."""
         ...
     def __repr__(self) -> str: ...
 
@@ -68,8 +73,8 @@ class ParsedName:
     def genus(self) -> str | None: ...
     @property
     def generic_authorship(self) -> dict[str, Any] | None:
-        """A `CombinedAuthorship` dict (`combinationAuthorship`/`basionymAuthorship`/
-        `sanctioningAuthor` keys, wire-cased) when the generic/uninomial part carries its own
+        """A `CombinedAuthorship` dict (`combinationAuthorship`/`basionymAuthorship` keys,
+        wire-cased) when the generic/uninomial part carries its own
         authorship (e.g. a sectional/subgeneric combination), else `None`. Unlike
         `combination_authorship`/`basionym_authorship` below, this is a raw `pythonize`d
         dict, not an `Authorship` instance — see `lib.rs`'s `PyParsedName::generic_authorship`
@@ -141,8 +146,6 @@ class ParsedName:
     def combination_authorship(self) -> Authorship: ...
     @property
     def basionym_authorship(self) -> Authorship: ...
-    @property
-    def sanctioning_author(self) -> str | None: ...
 
     # ---- name formatter (Java org.gbif.nameparser.util.NameFormatter) ----
     def canonical_name(self) -> str | None:

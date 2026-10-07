@@ -24,15 +24,18 @@ fn botanical_code_from_separate_recombination_authorship() {
 
 #[test]
 fn standalone_manuscript_authorship() {
-    // a standalone "ined." / "ms." supplied as the whole authorship is a manuscript marker,
-    // not an author (after an author, "Monterosato ms.", it is stripped off the author too).
+    // a standalone "ined." / "ms." supplied as the whole authorship is a manuscript marker and
+    // note, not an author — as after the name ("Eucnidoideae ined.") or an author
+    // ("Monterosato ms.").
     assert_name_hinted("Eucnidoideae", Some("ined."), Some(Rank::Superfamily), None)
         .monomial_rank("Eucnidoideae", Rank::Superfamily)
         .manuscript()
+        .nom_note("ined.")
         .nothing_else();
     assert_name_hinted("Eucnidoideae", Some("ms."), Some(Rank::Superfamily), None)
         .monomial_rank("Eucnidoideae", Rank::Superfamily)
         .manuscript()
+        .nom_note("ms.")
         .nothing_else();
 }
 
@@ -185,7 +188,8 @@ fn virus_caller_code_override() {
     // caller asserts a non-virus code → bucket-A name parses under that code
     assert_name_code("Tobamovirus tabaci", NomCode::Zoological)
         .species("Tobamovirus", "tabaci")
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     // without a hint, a legacy bare-virus binomial is still recognised → unparsable OTHER + VIRUS
     assert_unparsable_code("Acara virus", NameType::Other, NomCode::Virus);
 }
@@ -229,6 +233,7 @@ fn apostrophe_epithets() {
     assert_name("Serjania meridionalis Cambess. var. o'donelli F.A. Barkley")
         .infra_species("Serjania", "meridionalis", Rank::Variety, "o'donelli")
         .comb_authors(None, &["F.A.Barkley"])
+        .specific_authors(None, &["Cambess."])
         .nothing_else();
 }
 
@@ -239,8 +244,12 @@ fn apostrophe_epithets() {
 /// front of the surname. Both the all-caps and title-case input forms normalise to "III".
 #[test]
 fn generational_suffix() {
-    assert_authorship("Loeblich III", &["Loeblich III"]);
-    assert_authorship("Loeblich Iii", &["Loeblich III"]);
+    assert_authorship("Loeblich III", &["Loeblich III"])
+        .comb_authors(None, &["Loeblich III"])
+        .nothing_else();
+    assert_authorship("Loeblich Iii", &["Loeblich III"])
+        .comb_authors(None, &["Loeblich III"])
+        .nothing_else();
     assert_name("Ceratium hirundinella (Paulsen) Loeblich III, 1969")
         .species("Ceratium", "hirundinella")
         .bas_authors(None, &["Paulsen"])
@@ -545,6 +554,7 @@ fn indet_names() {
         .binomial("Melastoma", None, "vacillans", Rank::Variety)
         .type_(NameType::Informal)
         .warning(&[warnings::INDETERMINED])
+        .specific_authors(None, &["Blume"])
         .nothing_else();
 
     let n = nameparser::parse_name("Lepidoptera Hooker", None, Some(Rank::Species), None)

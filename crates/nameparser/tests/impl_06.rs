@@ -11,11 +11,10 @@ fn unparsable_authors() {
     assert_authorship("Allemão", &[])
         .comb_authors(None, &["Allemão"])
         .nothing_else();
-    //assertAuthorship("ex DC.")
-    //    .combAuthors(null, "DC.")
-    //    .nothingElse();
-
-    //TODO: https://github.com/gbif/name-parser/issues/49
+    // the lost ex-author: on the name string too, "ex" is no epithet
+    assert_authorship("ex DC.", &["DC."])
+        .comb_authors(None, &["DC."])
+        .nothing_else();
 }
 
 #[test]
@@ -45,10 +44,7 @@ fn extinct_names() {
         .nothing_else();
 }
 
-// SKIPPED: namesWithAuthorFile — reads a resource corpus file, covered by the golden/cross-val harness.
-// SKIPPED: otherFile — reads a resource corpus file, covered by the golden/cross-val harness.
-// SKIPPED: hybridsFile — reads a resource corpus file, covered by the golden/cross-val harness.
-// SKIPPED: placeholderFile — reads a resource corpus file, covered by the golden/cross-val harness.
+// namesWithAuthorFile, otherFile, hybridsFile, placeholderFile: see corpus_files.rs.
 
 /// Expect empty unparsable results for nothing or whitespace
 #[test]
@@ -128,13 +124,49 @@ fn abbreviated() {
 
 #[test]
 fn string_index_out_of_bounds_exception() {
-    assert_name("Amblyomma americanum (Linnaeus, 1758)");
-    assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & Y.H.Tseng ");
-    assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp  Y.H.Tseng ");
-    assert_name("Salix morrisonicola var. takasagoalpina (Koidz.) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp; Y.H.Tseng");
+    assert_name("Amblyomma americanum (Linnaeus, 1758)")
+        .species("Amblyomma", "americanum")
+        .bas_authors(Some("1758"), &["Linnaeus"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & Y.H.Tseng ")
+        .infra_species("Salix", "taiwanalpina", Rank::Variety, "chingshuishanensis")
+        .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "Y.H.Tseng"])
+        .bas_authors(None, &["S.S.Ying"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // FIXME(review): "& amp" is an HTML entity residue, not part of an author
+    assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp  Y.H.Tseng ")
+        .infra_species("Salix", "taiwanalpina", Rank::Variety, "chingshuishanensis")
+        .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "amp Y.H.Tseng"])
+        .bas_authors(None, &["S.S.Ying"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // FIXME(review): "& amp;" is an HTML entity residue, not an author
+    assert_name("Salix morrisonicola var. takasagoalpina (Koidz.) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp; Y.H.Tseng")
+        .infra_species("Salix", "morrisonicola", Rank::Variety, "takasagoalpina")
+        .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "amp", "Y.H.Tseng"])
+        .bas_authors(None, &["Koidz."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // FIXME(review): "& amp;" is an HTML entity residue, not an author
     assert_name(
         "Ficus ernanii Carauta, Pederneir., P.P.Souza, A.F.P.Machado, M.D.M.Vianna & amp; Romaniuc",
-    );
+    )
+    .species("Ficus", "ernanii")
+    .comb_authors(
+        None,
+        &[
+            "Carauta",
+            "Pederneir.",
+            "P.P.Souza",
+            "A.F.P.Machado",
+            "M.D.M.Vianna",
+            "amp",
+            "Romaniuc",
+        ],
+    )
+    .nothing_else();
 }
 
 #[test]
@@ -252,106 +284,238 @@ fn author_list_with_particle() {
 
 #[test]
 fn test_authorteam() {
-    assert_authorship("Jarocki or Schinz", &["Jarocki or Schinz"]);
-    assert_authorship("van der Wulp", &["van der Wulp"]);
+    assert_authorship("Jarocki or Schinz", &["Jarocki or Schinz"])
+        .comb_authors(None, &["Jarocki or Schinz"])
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+    assert_authorship("van der Wulp", &["van der Wulp"])
+        .comb_authors(None, &["van der Wulp"])
+        .nothing_else();
     assert_authorship(
         "Balsamo M Fregni E Tongiorgi MA",
         &["M.Balsamo", "E.Fregni", "M.A.Tongiorgi"],
-    );
-    assert_authorship("Walker, F.", &["F.Walker"]);
-    assert_authorship("Walker, F", &["F.Walker"]);
-    assert_authorship("Walker F", &["F.Walker"]);
-    assert_authorship("YJ Wang & ZQ Liu", &["YJ Wang", "ZQ Liu"]);
-    assert_authorship("Y.-j. Wang & Z.-q. Liu", &["Y.-j.Wang", "Z.-q.Liu"]);
-    assert_authorship("Petzold & G.Kirchn.", &["Petzold", "G.Kirchn."]);
+    )
+    .comb_authors(None, &["M.Balsamo", "E.Fregni", "M.A.Tongiorgi"])
+    .nothing_else();
+    assert_authorship("Walker, F.", &["F.Walker"])
+        .comb_authors(None, &["F.Walker"])
+        .nothing_else();
+    assert_authorship("Walker, F", &["F.Walker"])
+        .comb_authors(None, &["F.Walker"])
+        .nothing_else();
+    assert_authorship("Walker F", &["F.Walker"])
+        .comb_authors(None, &["F.Walker"])
+        .nothing_else();
+    assert_authorship("YJ Wang & ZQ Liu", &["YJ Wang", "ZQ Liu"])
+        .comb_authors(None, &["YJ Wang", "ZQ Liu"])
+        .nothing_else();
+    assert_authorship("Y.-j. Wang & Z.-q. Liu", &["Y.-j.Wang", "Z.-q.Liu"])
+        .comb_authors(None, &["Y.-j.Wang", "Z.-q.Liu"])
+        .nothing_else();
+    assert_authorship("Petzold & G.Kirchn.", &["Petzold", "G.Kirchn."])
+        .comb_authors(None, &["Petzold", "G.Kirchn."])
+        .nothing_else();
     assert_authorship(
         "Britton, Sterns, & Poggenb.",
         &["Britton", "Sterns", "Poggenb."],
-    );
-    assert_authorship("Van Heurck & Müll. Arg.", &["Van Heurck", "Müll.Arg."]);
-    assert_authorship("Gruber-Vodicka", &["Gruber-Vodicka"]);
-    assert_authorship("Gruber-Vodicka et al.", &["Gruber-Vodicka", "al."]);
-    assert_single_author("L.");
-    assert_single_author("Lin.");
-    assert_single_author("Linné");
-    assert_single_author("DC.");
-    assert_single_author("de Chaudoir");
-    assert_single_author("Hilaire");
-    assert_authorship("St. Hilaire", &["St.Hilaire"]);
-    assert_authorship("Geoffroy St. Hilaire", &["Geoffroy St.Hilaire"]);
-    assert_single_author("Acev.-Rodr.");
+    )
+    .comb_authors(None, &["Britton", "Sterns", "Poggenb."])
+    .nothing_else();
+    assert_authorship("Van Heurck & Müll. Arg.", &["Van Heurck", "Müll.Arg."])
+        .comb_authors(None, &["Van Heurck", "Müll.Arg."])
+        .nothing_else();
+    assert_authorship("Gruber-Vodicka", &["Gruber-Vodicka"])
+        .comb_authors(None, &["Gruber-Vodicka"])
+        .nothing_else();
+    assert_authorship("Gruber-Vodicka et al.", &["Gruber-Vodicka", "al."])
+        .comb_authors(None, &["Gruber-Vodicka", "al."])
+        .nothing_else();
+    assert_single_author("L.")
+        .comb_authors(None, &["L."])
+        .nothing_else();
+    assert_single_author("Lin.")
+        .comb_authors(None, &["Lin."])
+        .nothing_else();
+    assert_single_author("Linné")
+        .comb_authors(None, &["Linné"])
+        .nothing_else();
+    assert_single_author("DC.")
+        .comb_authors(None, &["DC."])
+        .nothing_else();
+    assert_single_author("de Chaudoir")
+        .comb_authors(None, &["de Chaudoir"])
+        .nothing_else();
+    assert_single_author("Hilaire")
+        .comb_authors(None, &["Hilaire"])
+        .nothing_else();
+    assert_authorship("St. Hilaire", &["St.Hilaire"])
+        .comb_authors(None, &["St.Hilaire"])
+        .nothing_else();
+    assert_authorship("Geoffroy St. Hilaire", &["Geoffroy St.Hilaire"])
+        .comb_authors(None, &["Geoffroy St.Hilaire"])
+        .nothing_else();
+    assert_single_author("Acev.-Rodr.")
+        .comb_authors(None, &["Acev.-Rodr."])
+        .nothing_else();
     assert_authorship(
         "Steyerm., Aristeg. & Wurdack",
         &["Steyerm.", "Aristeg.", "Wurdack"],
-    );
-    assert_authorship("Du Puy & Labat", &["Du Puy", "Labat"]);
-    assert_single_author("Baum.-Bod.");
-    assert_authorship("Engl. & v. Brehmer", &["Engl.", "v.Brehmer"]);
-    assert_authorship("F. v. Muell.", &["F.v.Muell."]);
-    assert_authorship("W.J.de Wilde & Duyfjes", &["W.J.de Wilde", "Duyfjes"]);
-    assert_single_author("C.E.M.Bicudo");
-    assert_single_author("Alves-da-Silva");
+    )
+    .comb_authors(None, &["Steyerm.", "Aristeg.", "Wurdack"])
+    .nothing_else();
+    assert_authorship("Du Puy & Labat", &["Du Puy", "Labat"])
+        .comb_authors(None, &["Du Puy", "Labat"])
+        .nothing_else();
+    assert_single_author("Baum.-Bod.")
+        .comb_authors(None, &["Baum.-Bod."])
+        .nothing_else();
+    assert_authorship("Engl. & v. Brehmer", &["Engl.", "v.Brehmer"])
+        .comb_authors(None, &["Engl.", "v.Brehmer"])
+        .nothing_else();
+    assert_authorship("F. v. Muell.", &["F.v.Muell."])
+        .comb_authors(None, &["F.v.Muell."])
+        .nothing_else();
+    assert_authorship("W.J.de Wilde & Duyfjes", &["W.J.de Wilde", "Duyfjes"])
+        .comb_authors(None, &["W.J.de Wilde", "Duyfjes"])
+        .nothing_else();
+    assert_single_author("C.E.M.Bicudo")
+        .comb_authors(None, &["C.E.M.Bicudo"])
+        .nothing_else();
+    assert_single_author("Alves-da-Silva")
+        .comb_authors(None, &["Alves-da-Silva"])
+        .nothing_else();
     assert_authorship(
         "Alves-da-Silva & C.E.M.Bicudo",
         &["Alves-da-Silva", "C.E.M.Bicudo"],
-    );
-    assert_single_author("Kingdon-Ward");
-    assert_authorship("Merr. & L.M.Perry", &["Merr.", "L.M.Perry"]);
+    )
+    .comb_authors(None, &["Alves-da-Silva", "C.E.M.Bicudo"])
+    .nothing_else();
+    assert_single_author("Kingdon-Ward")
+        .comb_authors(None, &["Kingdon-Ward"])
+        .nothing_else();
+    assert_authorship("Merr. & L.M.Perry", &["Merr.", "L.M.Perry"])
+        .comb_authors(None, &["Merr.", "L.M.Perry"])
+        .nothing_else();
     assert_authorship(
         "Calat., Nav.-Ros. & Hafellner",
         &["Calat.", "Nav.-Ros.", "Hafellner"],
-    );
-    assert_single_author("Barboza du Bocage");
-    assert_authorship("Payri & P.W.Gabrielson", &["Payri", "P.W.Gabrielson"]);
+    )
+    .comb_authors(None, &["Calat.", "Nav.-Ros.", "Hafellner"])
+    .nothing_else();
+    assert_single_author("Barboza du Bocage")
+        .comb_authors(None, &["Barboza du Bocage"])
+        .nothing_else();
+    assert_authorship("Payri & P.W.Gabrielson", &["Payri", "P.W.Gabrielson"])
+        .comb_authors(None, &["Payri", "P.W.Gabrielson"])
+        .nothing_else();
     assert_authorship(
         "N'Yeurt, Payri & P.W.Gabrielson",
         &["N'Yeurt", "Payri", "P.W.Gabrielson"],
-    );
-    assert_single_author("VanLand.");
-    assert_single_author("MacLeish");
+    )
+    .comb_authors(None, &["N'Yeurt", "Payri", "P.W.Gabrielson"])
+    .nothing_else();
+    assert_single_author("VanLand.")
+        .comb_authors(None, &["VanLand."])
+        .nothing_else();
+    assert_single_author("MacLeish")
+        .comb_authors(None, &["MacLeish"])
+        .nothing_else();
     // Java kept "ms." in a separate authorship's author; the name string always stripped it as a
     // manuscript marker ("Aus bus Monterosato ms."), and now both do.
-    assert_authorship("Monterosato ms.", &["Monterosato"]).manuscript();
-    assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"]);
+    assert_authorship("Monterosato ms.", &["Monterosato"])
+        .manuscript()
+        .comb_authors(None, &["Monterosato"])
+        .nom_note("ms.")
+        .nothing_else();
+    assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"])
+        .comb_authors(None, &["Arn.ms.", "Grunow"])
+        .nothing_else();
     assert_authorship(
         "Choi,J.H.; Im,W.T.; Yoo,J.S.; Lee,S.M.; Moon,D.S.; Kim,H.J.; Rhee,S.K.; Roh,D.H.",
         &[
             "J.H.Choi", "W.T.Im", "J.S.Yoo", "S.M.Lee", "D.S.Moon", "H.J.Kim", "S.K.Rhee",
             "D.H.Roh",
         ],
-    );
-    assert_authorship("da Costa Lima", &["da Costa Lima"]);
+    )
+    .comb_authors(
+        None,
+        &[
+            "J.H.Choi", "W.T.Im", "J.S.Yoo", "S.M.Lee", "D.S.Moon", "H.J.Kim", "S.K.Rhee",
+            "D.H.Roh",
+        ],
+    )
+    .nothing_else();
+    assert_authorship("da Costa Lima", &["da Costa Lima"])
+        .comb_authors(None, &["da Costa Lima"])
+        .nothing_else();
     assert_authorship(
         "Krapov., W.C.Greg. & C.E.Simpson",
         &["Krapov.", "W.C.Greg.", "C.E.Simpson"],
-    );
-    assert_authorship("de Jussieu", &["de Jussieu"]);
-    assert_authorship("van-der Land", &["van-der Land"]);
-    assert_authorship("van der Land", &["van der Land"]);
-    assert_authorship("van Helmsick", &["van Helmsick"]);
-    assert_authorship("Xing, Yan & Yin", &["Xing", "Yan", "Yin"]);
-    assert_authorship("Xiao & Knoll", &["Xiao", "Knoll"]);
+    )
+    .comb_authors(None, &["Krapov.", "W.C.Greg.", "C.E.Simpson"])
+    .nothing_else();
+    assert_authorship("de Jussieu", &["de Jussieu"])
+        .comb_authors(None, &["de Jussieu"])
+        .nothing_else();
+    assert_authorship("van-der Land", &["van-der Land"])
+        .comb_authors(None, &["van-der Land"])
+        .nothing_else();
+    assert_authorship("van der Land", &["van der Land"])
+        .comb_authors(None, &["van der Land"])
+        .nothing_else();
+    assert_authorship("van Helmsick", &["van Helmsick"])
+        .comb_authors(None, &["van Helmsick"])
+        .nothing_else();
+    assert_authorship("Xing, Yan & Yin", &["Xing", "Yan", "Yin"])
+        .comb_authors(None, &["Xing", "Yan", "Yin"])
+        .nothing_else();
+    assert_authorship("Xiao & Knoll", &["Xiao", "Knoll"])
+        .comb_authors(None, &["Xiao", "Knoll"])
+        .nothing_else();
     assert_authorship(
         "Wang, Yuwen & Xian-wei Liu",
         &["Wang", "Yuwen", "Xian-wei Liu"],
-    );
+    )
+    .comb_authors(None, &["Wang", "Yuwen", "Xian-wei Liu"])
+    .nothing_else();
     assert_authorship(
         "Liu, Xian-wei, Z. Zheng & G. Xi",
         &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"],
-    );
+    )
+    .comb_authors(None, &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"])
+    .nothing_else();
     assert_authorship(
         "Clayton, D.H.; Price, R.D.; Page, R.D.M.",
         &["D.H.Clayton", "R.D.Price", "R.D.M.Page"],
-    );
-    assert_authorship("Michiel de Ruyter", &["Michiel de Ruyter"]);
-    assert_authorship("DeFilipps", &["DeFilipps"]);
-    assert_authorship("Henk 't Hart", &["Henk 't Hart"]);
-    assert_authorship("P.E.Berry & Reg.B.Miller", &["P.E.Berry", "Reg.B.Miller"]);
+    )
+    .comb_authors(None, &["D.H.Clayton", "R.D.Price", "R.D.M.Page"])
+    .nothing_else();
+    assert_authorship("Michiel de Ruyter", &["Michiel de Ruyter"])
+        .comb_authors(None, &["Michiel de Ruyter"])
+        .nothing_else();
+    assert_authorship("DeFilipps", &["DeFilipps"])
+        .comb_authors(None, &["DeFilipps"])
+        .nothing_else();
+    assert_authorship("Henk 't Hart", &["Henk 't Hart"])
+        .comb_authors(None, &["Henk 't Hart"])
+        .nothing_else();
+    assert_authorship("P.E.Berry & Reg.B.Miller", &["P.E.Berry", "Reg.B.Miller"])
+        .comb_authors(None, &["P.E.Berry", "Reg.B.Miller"])
+        .nothing_else();
     // forename + spaced middle initial + surname is one author, not a surname-first flip
-    assert_authorship("Calder & Roy L. Taylor", &["Calder", "Roy L.Taylor"]);
-    assert_authorship("'t Hart", &["'t Hart"]);
-    assert_authorship("Abdallah & Sa'ad", &["Abdallah", "Sa'ad"]);
-    assert_single_author("Linnaeus filius");
+    assert_authorship("Calder & Roy L. Taylor", &["Calder", "Roy L.Taylor"])
+        .comb_authors(None, &["Calder", "Roy L.Taylor"])
+        .nothing_else();
+    assert_authorship("'t Hart", &["'t Hart"])
+        .comb_authors(None, &["'t Hart"])
+        .nothing_else();
+    assert_authorship("Abdallah & Sa'ad", &["Abdallah", "Sa'ad"])
+        .comb_authors(None, &["Abdallah", "Sa'ad"])
+        .nothing_else();
+    assert_single_author("Linnaeus filius")
+        .comb_authors(None, &["Linnaeus filius"])
+        .nothing_else();
     assert_authorship(
         "Bollmann, M.Y.Cortés, Kleijne, J.B.Østerg. & Jer.R.Young",
         &[
@@ -361,15 +525,36 @@ fn test_authorteam() {
             "J.B.Østerg.",
             "Jer.R.Young",
         ],
-    );
+    )
+    .comb_authors(
+        None,
+        &[
+            "Bollmann",
+            "M.Y.Cortés",
+            "Kleijne",
+            "J.B.Østerg.",
+            "Jer.R.Young",
+        ],
+    )
+    .nothing_else();
     assert_authorship(
         "Branco, M.T.P.Azevedo, Sant'Anna & Komárek",
         &["Branco", "M.T.P.Azevedo", "Sant'Anna", "Komárek"],
-    );
-    assert_single_author("Janick Hendrik van Kinsbergen");
-    assert_single_author("Jan Hendrik van Kinsbergen");
-    assert_single_author("Sainte-Claire Deville");
-    assert_single_author("Semenov-Tian-Shanskij");
+    )
+    .comb_authors(None, &["Branco", "M.T.P.Azevedo", "Sant'Anna", "Komárek"])
+    .nothing_else();
+    assert_single_author("Janick Hendrik van Kinsbergen")
+        .comb_authors(None, &["Janick Hendrik van Kinsbergen"])
+        .nothing_else();
+    assert_single_author("Jan Hendrik van Kinsbergen")
+        .comb_authors(None, &["Jan Hendrik van Kinsbergen"])
+        .nothing_else();
+    assert_single_author("Sainte-Claire Deville")
+        .comb_authors(None, &["Sainte-Claire Deville"])
+        .nothing_else();
+    assert_single_author("Semenov-Tian-Shanskij")
+        .comb_authors(None, &["Semenov-Tian-Shanskij"])
+        .nothing_else();
     assert_authorship(
         "Semenov-Tian-Shanskij, Sainte-Claire Deville, Janick Hendrik van Kinsbergen",
         &[
@@ -377,90 +562,224 @@ fn test_authorteam() {
             "Sainte-Claire Deville",
             "Janick Hendrik van Kinsbergen",
         ],
-    );
-    assert_single_author("Scotto la Massese");
-    assert_single_author("An der Lan");
-    assert_authorship("Bor & s'Jacob", &["Bor", "s'Jacob"]);
-    assert_single_author("Brunner von Wattenwyl v.W.");
+    )
+    .comb_authors(
+        None,
+        &[
+            "Semenov-Tian-Shanskij",
+            "Sainte-Claire Deville",
+            "Janick Hendrik van Kinsbergen",
+        ],
+    )
+    .nothing_else();
+    assert_single_author("Scotto la Massese")
+        .comb_authors(None, &["Scotto la Massese"])
+        .nothing_else();
+    assert_single_author("An der Lan")
+        .comb_authors(None, &["An der Lan"])
+        .nothing_else();
+    assert_authorship("Bor & s'Jacob", &["Bor", "s'Jacob"])
+        .comb_authors(None, &["Bor", "s'Jacob"])
+        .nothing_else();
+    assert_single_author("Brunner von Wattenwyl v.W.")
+        .comb_authors(None, &["Brunner von Wattenwyl v.W."])
+        .nothing_else();
     // spanish "et"
-    assert_authorship("Martinez y Saez", &["Martinez", "Saez"]);
+    assert_authorship("Martinez y Saez", &["Martinez", "Saez"])
+        .comb_authors(None, &["Martinez", "Saez"])
+        .nothing_else();
     // not two separate names — a compound surname (family name), common in Portuguese-speaking cultures like Portugal and Brazil.
-    assert_single_author("Da Silva e Castro");
-    assert_authorship("LafuenteRoca & Carbonell", &["LafuenteRoca", "Carbonell"]);
-    assert_authorship("Mas-ComaBargues & Esteban", &["Mas-ComaBargues", "Esteban"]);
-    assert_single_author("Hondt d");
-    assert_single_author("Abou-El-Naga");
+    assert_single_author("Da Silva e Castro")
+        .comb_authors(None, &["Da Silva e Castro"])
+        .nothing_else();
+    assert_authorship("LafuenteRoca & Carbonell", &["LafuenteRoca", "Carbonell"])
+        .comb_authors(None, &["LafuenteRoca", "Carbonell"])
+        .nothing_else();
+    assert_authorship("Mas-ComaBargues & Esteban", &["Mas-ComaBargues", "Esteban"])
+        .comb_authors(None, &["Mas-ComaBargues", "Esteban"])
+        .nothing_else();
+    assert_single_author("Hondt d")
+        .comb_authors(None, &["Hondt d"])
+        .nothing_else();
+    assert_single_author("Abou-El-Naga")
+        .comb_authors(None, &["Abou-El-Naga"])
+        .nothing_else();
     assert_authorship(
         "Yong Wang bis, Y. Song, K. Geng & K.D. Hyde",
         &["Yong Wang bis", "Y.Song", "K.Geng", "K.D.Hyde"],
-    );
+    )
+    .comb_authors(None, &["Yong Wang bis", "Y.Song", "K.Geng", "K.D.Hyde"])
+    .nothing_else();
     assert_authorship(
         "Sh. Kumar, R. Singh ter, Gond & Saini",
         &["Sh.Kumar", "R.Singh ter", "Gond", "Saini"],
-    );
-    assert_single_author("R.Singh bis");
-    assert_authorship("zur Strassen", &["zur Strassen"]);
+    )
+    .comb_authors(None, &["Sh.Kumar", "R.Singh ter", "Gond", "Saini"])
+    .nothing_else();
+    assert_single_author("R.Singh bis")
+        .comb_authors(None, &["R.Singh bis"])
+        .nothing_else();
+    assert_authorship("zur Strassen", &["zur Strassen"])
+        .comb_authors(None, &["zur Strassen"])
+        .nothing_else();
     // Malformed input with stray "(" at the end — preserved verbatim as ex-authorship form.
-    assert_ex_authorship("Wedd. ex Sch. Bip. (", Some("Wedd."), &["Sch.Bip."]);
-    assert_ex_authorship("Plesn¡k ex F.Ritter", Some("Plesnik"), &["F.Ritter"]);
+    assert_ex_authorship("Wedd. ex Sch. Bip. (", Some("Wedd."), &["Sch.Bip."])
+        .comb_authors(None, &["Sch.Bip."])
+        .comb_ex_authors(&["Wedd."])
+        .nothing_else();
+    assert_ex_authorship("Plesn¡k ex F.Ritter", Some("Plesnik"), &["F.Ritter"])
+        .comb_authors(None, &["F.Ritter"])
+        .comb_ex_authors(&["Plesnik"])
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
     assert_authorship(
         "Britton, Sterns, & Poggenb.",
         &["Britton", "Sterns", "Poggenb."],
-    );
-    assert_authorship("Van Heurck & Müll. Arg.", &["Van Heurck", "Müll.Arg."]);
-    assert_authorship("Gruber-Vodicka", &["Gruber-Vodicka"]);
-    assert_authorship("Gruber-Vodicka et al.", &["Gruber-Vodicka", "al."]);
-    assert_single_author("L.");
-    assert_single_author("Lin.");
-    assert_single_author("Linné");
-    assert_single_author("DC.");
-    assert_single_author("de Chaudoir");
-    assert_single_author("Hilaire");
-    assert_single_author("G.Don fil.");
-    assert_authorship("St. Hilaire", &["St.Hilaire"]);
-    assert_authorship("Geoffroy St. Hilaire", &["Geoffroy St.Hilaire"]);
-    assert_single_author("Acev.-Rodr.");
+    )
+    .comb_authors(None, &["Britton", "Sterns", "Poggenb."])
+    .nothing_else();
+    assert_authorship("Van Heurck & Müll. Arg.", &["Van Heurck", "Müll.Arg."])
+        .comb_authors(None, &["Van Heurck", "Müll.Arg."])
+        .nothing_else();
+    assert_authorship("Gruber-Vodicka", &["Gruber-Vodicka"])
+        .comb_authors(None, &["Gruber-Vodicka"])
+        .nothing_else();
+    assert_authorship("Gruber-Vodicka et al.", &["Gruber-Vodicka", "al."])
+        .comb_authors(None, &["Gruber-Vodicka", "al."])
+        .nothing_else();
+    assert_single_author("L.")
+        .comb_authors(None, &["L."])
+        .nothing_else();
+    assert_single_author("Lin.")
+        .comb_authors(None, &["Lin."])
+        .nothing_else();
+    assert_single_author("Linné")
+        .comb_authors(None, &["Linné"])
+        .nothing_else();
+    assert_single_author("DC.")
+        .comb_authors(None, &["DC."])
+        .nothing_else();
+    assert_single_author("de Chaudoir")
+        .comb_authors(None, &["de Chaudoir"])
+        .nothing_else();
+    assert_single_author("Hilaire")
+        .comb_authors(None, &["Hilaire"])
+        .nothing_else();
+    assert_single_author("G.Don fil.")
+        .comb_authors(None, &["G.Don fil."])
+        .nothing_else();
+    assert_authorship("St. Hilaire", &["St.Hilaire"])
+        .comb_authors(None, &["St.Hilaire"])
+        .nothing_else();
+    assert_authorship("Geoffroy St. Hilaire", &["Geoffroy St.Hilaire"])
+        .comb_authors(None, &["Geoffroy St.Hilaire"])
+        .nothing_else();
+    assert_single_author("Acev.-Rodr.")
+        .comb_authors(None, &["Acev.-Rodr."])
+        .nothing_else();
     assert_authorship(
         "Steyerm., Aristeg. & Wurdack",
         &["Steyerm.", "Aristeg.", "Wurdack"],
-    );
-    assert_authorship("Du Puy & Labat", &["Du Puy", "Labat"]);
-    assert_single_author("Baum.-Bod.");
-    assert_authorship("Engl. & v. Brehmer", &["Engl.", "v.Brehmer"]);
-    assert_authorship("F. v. Muell.", &["F.v.Muell."]);
-    assert_authorship("W.J.de Wilde & Duyfjes", &["W.J.de Wilde", "Duyfjes"]);
-    assert_single_author("C.E.M.Bicudo");
-    assert_single_author("Alves-da-Silva");
+    )
+    .comb_authors(None, &["Steyerm.", "Aristeg.", "Wurdack"])
+    .nothing_else();
+    assert_authorship("Du Puy & Labat", &["Du Puy", "Labat"])
+        .comb_authors(None, &["Du Puy", "Labat"])
+        .nothing_else();
+    assert_single_author("Baum.-Bod.")
+        .comb_authors(None, &["Baum.-Bod."])
+        .nothing_else();
+    assert_authorship("Engl. & v. Brehmer", &["Engl.", "v.Brehmer"])
+        .comb_authors(None, &["Engl.", "v.Brehmer"])
+        .nothing_else();
+    assert_authorship("F. v. Muell.", &["F.v.Muell."])
+        .comb_authors(None, &["F.v.Muell."])
+        .nothing_else();
+    assert_authorship("W.J.de Wilde & Duyfjes", &["W.J.de Wilde", "Duyfjes"])
+        .comb_authors(None, &["W.J.de Wilde", "Duyfjes"])
+        .nothing_else();
+    assert_single_author("C.E.M.Bicudo")
+        .comb_authors(None, &["C.E.M.Bicudo"])
+        .nothing_else();
+    assert_single_author("Alves-da-Silva")
+        .comb_authors(None, &["Alves-da-Silva"])
+        .nothing_else();
     assert_authorship(
         "Alves-da-Silva & C.E.M.Bicudo",
         &["Alves-da-Silva", "C.E.M.Bicudo"],
-    );
-    assert_single_author("Kingdon-Ward");
-    assert_authorship("Merr. & L.M.Perry", &["Merr.", "L.M.Perry"]);
+    )
+    .comb_authors(None, &["Alves-da-Silva", "C.E.M.Bicudo"])
+    .nothing_else();
+    assert_single_author("Kingdon-Ward")
+        .comb_authors(None, &["Kingdon-Ward"])
+        .nothing_else();
+    assert_authorship("Merr. & L.M.Perry", &["Merr.", "L.M.Perry"])
+        .comb_authors(None, &["Merr.", "L.M.Perry"])
+        .nothing_else();
     assert_authorship(
         "Calat., Nav.-Ros. & Hafellner",
         &["Calat.", "Nav.-Ros.", "Hafellner"],
-    );
-    assert_ex_authorship("Arv.-Touv. ex Dörfl.", Some("Arv.-Touv."), &["Dörfl."]);
-    assert_authorship("Payri & P.W.Gabrielson", &["Payri", "P.W.Gabrielson"]);
+    )
+    .comb_authors(None, &["Calat.", "Nav.-Ros.", "Hafellner"])
+    .nothing_else();
+    assert_ex_authorship("Arv.-Touv. ex Dörfl.", Some("Arv.-Touv."), &["Dörfl."])
+        .comb_authors(None, &["Dörfl."])
+        .comb_ex_authors(&["Arv.-Touv."])
+        .nothing_else();
+    assert_authorship("Payri & P.W.Gabrielson", &["Payri", "P.W.Gabrielson"])
+        .comb_authors(None, &["Payri", "P.W.Gabrielson"])
+        .nothing_else();
     assert_authorship(
         "N'Yeurt, Payri & P.W.Gabrielson",
         &["N'Yeurt", "Payri", "P.W.Gabrielson"],
-    );
-    assert_single_author("VanLand.");
-    assert_single_author("MacLeish");
+    )
+    .comb_authors(None, &["N'Yeurt", "Payri", "P.W.Gabrielson"])
+    .nothing_else();
+    assert_single_author("VanLand.")
+        .comb_authors(None, &["VanLand."])
+        .nothing_else();
+    assert_single_author("MacLeish")
+        .comb_authors(None, &["MacLeish"])
+        .nothing_else();
     // Java kept "ms." in a separate authorship's author; the name string always stripped it as a
     // manuscript marker ("Aus bus Monterosato ms."), and now both do.
-    assert_authorship("Monterosato ms.", &["Monterosato"]).manuscript();
-    assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"]);
-    assert_ex_authorship("Griseb. ex. Wedd.", Some("Griseb."), &["Wedd."]);
+    assert_authorship("Monterosato ms.", &["Monterosato"])
+        .manuscript()
+        .comb_authors(None, &["Monterosato"])
+        .nom_note("ms.")
+        .nothing_else();
+    assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"])
+        .comb_authors(None, &["Arn.ms.", "Grunow"])
+        .nothing_else();
+    assert_ex_authorship("Griseb. ex. Wedd.", Some("Griseb."), &["Wedd."])
+        .comb_authors(None, &["Wedd."])
+        .comb_ex_authors(&["Griseb."])
+        .nothing_else();
     assert_authorship(
         "Castellano, S.L.Mill., L.Singh bis & T.N.Lakh.",
         &["Castellano", "S.L.Mill.", "L.Singh bis", "T.N.Lakh."],
-    );
-    assert_authorship("Blüthgen i.l.", &["Blüthgen i.l."]);
-    assert_authorship("Y.-j. Wang", &["Y.-j.Wang"]);
-    assert_single_author("Z.-q.Liu");
-    assert_single_author("Van den heede");
-    assert_single_author("zur Strassen");
+    )
+    .comb_authors(
+        None,
+        &["Castellano", "S.L.Mill.", "L.Singh bis", "T.N.Lakh."],
+    )
+    .nothing_else();
+    // in litteris: an unpublished name
+    assert_authorship("Blüthgen i.l.", &["Blüthgen"])
+        .comb_authors(None, &["Blüthgen"])
+        .nom_note("i.l.")
+        .manuscript()
+        .nothing_else();
+    assert_authorship("Y.-j. Wang", &["Y.-j.Wang"])
+        .comb_authors(None, &["Y.-j.Wang"])
+        .nothing_else();
+    assert_single_author("Z.-q.Liu")
+        .comb_authors(None, &["Z.-q.Liu"])
+        .nothing_else();
+    assert_single_author("Van den heede")
+        .comb_authors(None, &["Van den heede"])
+        .nothing_else();
+    assert_single_author("zur Strassen")
+        .comb_authors(None, &["zur Strassen"])
+        .nothing_else();
 }

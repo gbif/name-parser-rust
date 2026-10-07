@@ -1390,7 +1390,8 @@ mod tests {
 
     #[test]
     fn is_interesting_true_for_a_partial_state_name() {
-        let outcome = nameparser::parse_name("Foo bar (auct.) Rolfe", None, None, None);
+        let outcome =
+            nameparser::parse_name("Achillea millefolium L. s.s. - junk here", None, None, None);
         let pn = outcome.as_ref().expect("should parse");
         assert_eq!(pn.state, State::Partial);
         assert!(is_interesting(&outcome));
@@ -1536,7 +1537,7 @@ mod tests {
             "Tobacco mosaic virus",
             "Uranotaenia sapphirina NPV",
             "GenusANIC_3",
-            "Foo bar (auct.) Rolfe",
+            "Achillea millefolium L. s.s. - junk here",
             "",
             "Abies alba Mill.",
             "Quercus robur L.",
@@ -1617,7 +1618,7 @@ mod tests {
             "Tobacco mosaic virus",
             "Uranotaenia sapphirina NPV",
             "GenusANIC_3",
-            "Foo bar (auct.) Rolfe",
+            "Achillea millefolium L. s.s. - junk here",
         ] {
             assert!(
                 inputs.contains(expected_interesting),

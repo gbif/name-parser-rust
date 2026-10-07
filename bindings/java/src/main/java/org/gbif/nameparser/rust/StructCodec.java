@@ -79,9 +79,9 @@ final class StructCodec {
   // bytes -- the same post-header region the success path uses for its string table, told apart by
   // status. Lets the binding return the core's (possibly canonicalized) ParseError.name.
   private static final int OFF_UNPARSABLE_NAME_LEN = HEADER_SIZE; // 36
-  private static final int NUM_STRING_SLOTS = 17;
+  private static final int NUM_STRING_SLOTS = 18;
   private static final int STRING_REF_SIZE = 8;
-  private static final int STRING_TABLE_SIZE = 4 + NUM_STRING_SLOTS * STRING_REF_SIZE; // 140
+  private static final int STRING_TABLE_SIZE = 4 + NUM_STRING_SLOTS * STRING_REF_SIZE; // 148
 
   /** {@code u32::MAX} read back as a little-endian signed {@code i32} -- conveniently just
    *  {@code -1}, so the absent-string sentinel needs no unsigned comparison. */
@@ -99,13 +99,15 @@ final class StructCodec {
   private static final int SLOT_PUBLISHED_IN = 9;
   private static final int SLOT_PUBLISHED_IN_PAGE = 10;
   private static final int SLOT_UNPARSED = 11;
-  private static final int SLOT_SANCTIONING_AUTHOR = 12;
+  private static final int SLOT_SANCTIONING_AUTHOR_COMB = 12;
   private static final int SLOT_YEAR_COMB = 13;
   private static final int SLOT_YEAR_BAS = 14;
   private static final int SLOT_IMPRINT_YEAR_COMB = 15;
   private static final int SLOT_IMPRINT_YEAR_BAS = 16;
+  // ABI 6: the basionym's sanctioning author ("(Wulfen : Fr.)"); slot 12 is the combination's
+  private static final int SLOT_SANCTIONING_AUTHOR_BAS = 17;
 
-  private static final int RUN_SLOTS_OFFSET = STRING_TABLE_OFFSET + STRING_TABLE_SIZE; // 176
+  private static final int RUN_SLOTS_OFFSET = STRING_TABLE_OFFSET + STRING_TABLE_SIZE; // 184
   private static final int EPITHET_QUALIFIER_ENTRY_SIZE = 12;
 
   private static final int GROUP_ABSENT = 0;
@@ -129,10 +131,10 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 5) {
+    if (abi != 6) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 5 -- rebuild the cdylib "
+              + ", StructCodec was written against 6 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
@@ -249,9 +251,14 @@ final class StructCodec {
    * {@link ParseResult.Informal} for a supraspecific taxon carrying a provisional designation with
    * no species epithet, else a {@link ParseResult.Parsed}. A name with a species epithet (incl.
    * cf./aff. and infraspecific-indeterminate binomials) stays {@code Parsed} so its
-   * {@code specificAuthorship} — unrepresentable by a flat anchor — is preserved.
+   * {@code specificAuthorship} — unrepresentable by a flat anchor — is preserved. A name whose type
+   * is not parsable (a placeholder with its genus missing, "? alba Smith") is an
+   * {@link ParseResult.Unparsable} echoing {@code name}, as in Rust's {@code parse}.
    */
-  static ParseResult toParseResult(ParsedName pn) {
+  static ParseResult toParseResult(ParsedName pn, String name) {
+    if (!pn.getType().isParsable()) {
+      return new ParseResult.Unparsable(pn.getType(), pn.getCode(), name);
+    }
     if (isInformal(pn)) {
       String taxon;
       Rank taxonRank;
@@ -300,7 +307,7 @@ final class StructCodec {
   static ParsedName decode(MemorySegment seg, int len) {
     // Reject a buffer too small to even hold the fixed header + string-table region before any
     // fixed-offset read below can walk past the reported length. Every legitimate success-path
-    // buffer is >= 208 bytes (RUN_SLOTS_OFFSET is 176), so this only ever fires on a
+    // buffer is >= 216 bytes (RUN_SLOTS_OFFSET is 184), so this only ever fires on a
     // corrupt/truncated buffer -- and makes the fixed-region reads that follow safe by construction.
     if (len < RUN_SLOTS_OFFSET) {
       throw new IllegalStateException("corrupt struct buffer: reported length " + len
@@ -329,7 +336,7 @@ final class StructCodec {
     // The string-table count is a fixed constant, not a length-driving wire value: it must be
     // exactly NUM_STRING_SLOTS (rejected below otherwise), and the array it fills is sized by that
     // compile-time constant, never by the wire count -- so there is no unbounded-allocation risk
-    // here, and the 17 fixed-offset entry reads (ending at RUN_SLOTS_OFFSET) are already covered
+    // here, and the 18 fixed-offset entry reads (ending at RUN_SLOTS_OFFSET) are already covered
     // by the len >= RUN_SLOTS_OFFSET floor check above.
     int stringTableCount = seg.get(LE_INT, STRING_TABLE_OFFSET);
     if (stringTableCount != NUM_STRING_SLOTS) {
@@ -412,7 +419,6 @@ final class StructCodec {
     pn.setPublishedInYear(publishedInYear == ABSENT_ENUM ? null : publishedInYear); // ...pinned exactly here
     pn.setPublishedInPage(strings[SLOT_PUBLISHED_IN_PAGE]);
     pn.setUnparsed(strings[SLOT_UNPARSED]);
-    pn.setSanctioningAuthor(strings[SLOT_SANCTIONING_AUTHOR]);
 
     for (int i = 0; i < NamePart.values().length; i++) {
       if ((nothoBits & (1 << i)) != 0) {
@@ -425,9 +431,11 @@ final class StructCodec {
     }
 
     pn.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, strings[SLOT_YEAR_COMB],
-        strings[SLOT_IMPRINT_YEAR_COMB], (authorshipFlags & ANON_COMBINATION_BIT) != 0));
+        strings[SLOT_IMPRINT_YEAR_COMB], (authorshipFlags & ANON_COMBINATION_BIT) != 0,
+        strings[SLOT_SANCTIONING_AUTHOR_COMB]));
     pn.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, strings[SLOT_YEAR_BAS],
-        strings[SLOT_IMPRINT_YEAR_BAS], (authorshipFlags & ANON_BASIONYM_BIT) != 0));
+        strings[SLOT_IMPRINT_YEAR_BAS], (authorshipFlags & ANON_BASIONYM_BIT) != 0,
+        strings[SLOT_SANCTIONING_AUTHOR_BAS]));
 
     if (genericAuthorship != null) {
       pn.setGenericAuthorship(genericAuthorship);
@@ -526,7 +534,7 @@ final class StructCodec {
 
   /** Reads one nested authorship group ({@code generic_authorship}/{@code specific_authorship})
    *  at {@code cur.pos}, advancing past it: a {@code present} flag, and -- only if present -- the
-   *  anonymous flags, four run-slot tables and five fixed string refs, reconstructed here as a
+   *  anonymous flags, four run-slot tables and six fixed string refs, reconstructed here as a
    *  whole {@link CombinedAuthorship}. Returns {@code null} for an absent group. */
   private static CombinedAuthorship readNestedGroup(MemorySegment seg, Cursor cur, int len) {
     int present = seg.get(LE_INT, cur.pos);
@@ -554,28 +562,30 @@ final class StructCodec {
     cur.pos += STRING_REF_SIZE;
     String imprintYearBas = readOptString(seg, cur.pos);
     cur.pos += STRING_REF_SIZE;
-    String sanctioningAuthor = readOptString(seg, cur.pos);
+    String sanctioningAuthorComb = readOptString(seg, cur.pos);
+    cur.pos += STRING_REF_SIZE;
+    String sanctioningAuthorBas = readOptString(seg, cur.pos);
     cur.pos += STRING_REF_SIZE;
 
     CombinedAuthorship ca = new CombinedAuthorship();
     ca.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, yearComb, imprintYearComb,
-        (flags & ANON_COMBINATION_BIT) != 0));
+        (flags & ANON_COMBINATION_BIT) != 0, sanctioningAuthorComb));
     ca.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, yearBas, imprintYearBas,
-        (flags & ANON_BASIONYM_BIT) != 0));
-    ca.setSanctioningAuthor(sanctioningAuthor);
+        (flags & ANON_BASIONYM_BIT) != 0, sanctioningAuthorBas));
     return ca;
   }
 
   /** Builds an {@link Authorship} via its plain setters -- NOT {@code addAuthor}/{@code
    *  addExAuthor}, which have an inverted-blank-check bug making them no-ops for real authors. */
   private static Authorship authorship(List<String> authors, List<String> exAuthors, String year, String imprintYear,
-                                       boolean anonymous) {
+                                       boolean anonymous, String sanctioningAuthor) {
     Authorship a = new Authorship();
     a.setAuthors(authors);
     a.setExAuthors(exAuthors);
     a.setYear(year);
     a.setImprintYear(imprintYear);
     a.setAnonymous(anonymous);
+    a.setSanctioningAuthor(sanctioningAuthor);
     return a;
   }
 }

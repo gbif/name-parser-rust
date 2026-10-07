@@ -5,6 +5,7 @@
 
 mod common;
 use common::*;
+use nameparser::model::NamePart;
 use nameparser::model::{NameType, NomCode, Rank};
 
 #[test]
@@ -40,7 +41,11 @@ fn informal_and_parsed_variant_helpers_work_end_to_end() {
         .phrase("sp. RE1-2a")
         .nothing_else();
     // assert_name asserts the `Parsed` variant — a species epithet is present, so it is NOT informal.
-    assert_name("Salicornia cf. patula").species("Salicornia", "patula");
+    assert_name("Salicornia cf. patula")
+        .species("Salicornia", "patula")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .nothing_else();
 }
 
 // ---- smoke tests for the parseAuthorship-emulating + viral helpers (used by later waves) ----
@@ -48,13 +53,21 @@ fn informal_and_parsed_variant_helpers_work_end_to_end() {
 #[test]
 fn authorship_helpers_parse_bare_authorship() {
     // Java-authoritative from testAuthorteam.
-    assert_authorship("Petzold & G.Kirchn.", &["Petzold", "G.Kirchn."]);
+    assert_authorship("Petzold & G.Kirchn.", &["Petzold", "G.Kirchn."])
+        .comb_authors(None, &["Petzold", "G.Kirchn."])
+        .nothing_else();
     assert_authorship(
         "Balsamo M Fregni E Tongiorgi MA",
         &["M.Balsamo", "E.Fregni", "M.A.Tongiorgi"],
-    );
-    assert_single_author("L.");
-    assert_single_author("C.E.M.Bicudo");
+    )
+    .comb_authors(None, &["M.Balsamo", "E.Fregni", "M.A.Tongiorgi"])
+    .nothing_else();
+    assert_single_author("L.")
+        .comb_authors(None, &["L."])
+        .nothing_else();
+    assert_single_author("C.E.M.Bicudo")
+        .comb_authors(None, &["C.E.M.Bicudo"])
+        .nothing_else();
 }
 
 #[test]
