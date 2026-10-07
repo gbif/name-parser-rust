@@ -101,6 +101,9 @@ pub(crate) struct ParseContext {
     /// An "(Approved Lists 1980)" citation was stripped: the name is a prokaryote's (see
     /// `code_inference::infer`).
     pub approved_lists: bool,
+    /// The authorship coded its diacritics with a colon and a digit ("C. Mu:2ller"), as only
+    /// bryophyte sources do — botanical evidence for code inference.
+    pub coded_diacritics: bool,
 }
 
 impl ParseContext {
@@ -145,6 +148,7 @@ impl ParseContext {
             preflight_complete: false,
             qualified_genus: false,
             approved_lists: false,
+            coded_diacritics: false,
         }
     }
 

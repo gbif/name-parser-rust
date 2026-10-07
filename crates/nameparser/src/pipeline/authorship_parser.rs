@@ -18,7 +18,8 @@
 //!     skipped over.
 //!   - **Phase B** — the remaining span is the combination. A top-level trailing colon
 //!     splits off a sanctioning author (`"Boletus versicolor L. : Fr."` →
-//!     `sanctioning_author = Some("Fr.")`, combination span truncated before the colon).
+//!     `sanctioning_author = Some("Fr.")`, combination span truncated before the colon); a year
+//!     after it is the combination's.
 //!     Whatever remains (with or without a sanctioning author extracted) is parsed as the
 //!     combination authors; the whole trailing span is consumed (`i` set to `tokens.len()`
 //!     unconditionally) — nothing after the combination span is ever unparsed.
@@ -234,6 +235,25 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
         s.year_range |= yr;
         s.has_filius |= contains_filius_suffix(tokens, comb_from, comb_end);
+        // A year after the sanctioning author (ICN Art. 15: Fries or Persoon) is the name's own, as
+        // the source writes it: "Pers.:Fr., 1801", "Retz.:Fr., 1769" predate Fries' sanctioning
+        // work. Java dropped it. Any other "sanctioning author" is a colon misread ("C. Mu:2ller").
+        if s.sanctioning_author
+            .as_deref()
+            .is_some_and(is_sanctioning_author)
+            && s.combination.year.is_none()
+        {
+            s.combination.year = tokens[comb_end..n]
+                .iter()
+                .find(|t| {
+                    t.kind == TokenKind::Number
+                        && t.text.len() == 4
+                        && t.text
+                            .parse::<u16>()
+                            .is_ok_and(|y| (1700..2100).contains(&y))
+                })
+                .map(|t| t.text.clone());
+        }
         // Whether or not a sanctioning author was extracted, the entire trailing span
         // belongs to combination + sanctioning; nothing is unparsed afterwards.
         i = n;
@@ -1157,6 +1177,14 @@ fn flush(cur: &mut String, authors: &mut Vec<String>) {
         authors.push(cur.trim().to_string());
         cur.clear();
     }
+}
+
+/// Fries or Persoon, the two sanctioning authors (ICN Art. 15) — anything else after a colon is a
+/// misread colon ("C. Mu:2ller").
+pub(crate) fn is_sanctioning_author(author: &str) -> bool {
+    ["Fr.", "Fries", "Pers.", "Persoon"]
+        .iter()
+        .any(|f| author.starts_with(f))
 }
 
 /// Java `AuthorshipParser.appendSpace(StringBuilder)`.

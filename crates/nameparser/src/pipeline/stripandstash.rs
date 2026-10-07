@@ -41,6 +41,7 @@ use crate::model::{warnings, NamePart, NameType, NomCode, ParsedName, Rank};
 use crate::pipeline::ParseContext;
 use crate::token;
 use crate::unicode::java_trim;
+use unicode_normalization::UnicodeNormalization;
 
 /// Java `StripAndStash.run(ParseContext ctx)`. Ordered dispatcher: threads the working
 /// string through all 55 steps in Java's exact order (`StripAndStash.java:568-626`),
@@ -51,6 +52,7 @@ use crate::unicode::java_trim;
 /// doc.
 pub(crate) fn run(ctx: &mut ParseContext) {
     let mut s = ctx.working.clone();
+    s = repair_colon_diacritics(ctx, s);
     s = flag_uncertain_authorship(ctx, s);
     s = extract_generic_author(ctx, s);
     s = strip_quoted_monomial(ctx, s);
@@ -1225,6 +1227,51 @@ fn repair_win1252_artefacts_name(name: &mut ParsedName, s: String) -> String {
 
 fn repair_win1252_artefacts(ctx: &mut ParseContext, s: String) -> String {
     repair_win1252_artefacts_name(&mut ctx.name, s)
+}
+
+/// A letter, a colon and one digit coding its diacritic, as some bryophyte sources write authors
+/// (8.6k ChecklistBank authorships): "C. Mu:2ller" (Müller), "A:1ngstro:2m" (Ångström), "The:4riot"
+/// (Thériot), "Podpe:3ra" (Podpěra), "Mun:6oz" (Muñoz), "Corbie:9re" (Corbière). Java read the
+/// colon as a sanctioning author's. Rust-only.
+static COLON_DIACRITIC: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[A-Za-z]:[123469]").unwrap());
+
+/// Restores the letters [`COLON_DIACRITIC`] codes, flagging `HOMOGLYHPS`. A code followed by
+/// another digit ("DOI:10", "names:864424") or one that makes no precomposed letter stays. The
+/// first step on either string: coded, a lone author looks like a strain code ("A:1ngstro:2m").
+fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
+    if !COLON_DIACRITIC.is_match(&s) {
+        return s;
+    }
+    let mut out = String::with_capacity(s.len());
+    let mut last = 0;
+    for m in COLON_DIACRITIC.find_iter(&s) {
+        if s[m.end()..].starts_with(|c: char| c.is_ascii_digit()) {
+            continue;
+        }
+        let letter = &m.as_str()[..1];
+        let mark = match &m.as_str()[2..] {
+            "1" => '\u{030A}',
+            "2" => '\u{0308}',
+            "3" => '\u{030C}',
+            "4" => '\u{0301}',
+            "6" => '\u{0303}',
+            _ => '\u{0300}',
+        };
+        let composed: String = format!("{letter}{mark}").nfc().collect();
+        if composed.chars().count() == 1 {
+            out.push_str(&s[last..m.start()]);
+            out.push_str(&composed);
+            last = m.end();
+        }
+    }
+    if last == 0 {
+        return s;
+    }
+    out.push_str(&s[last..]);
+    ctx.name.add_warning(warnings::HOMOGLYHPS);
+    ctx.coded_diacritics = true;
+    out
 }
 
 // ---- Step 15: normaliseDoubleUnderscores ----
@@ -2432,6 +2479,19 @@ fn normalise_anon_str(s: &str) -> String {
 static COLON_CONCEPT_REFERENCE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\s*:\s+(\p{Lu}[^:]*,\s*\d{3,4})\s*\.?\s*$").unwrap());
 
+/// "in:" for "in" before a publication — `Henderson & Hodgson in: Hodgson & Henderson, 2000`,
+/// `Mercado-Salas, 2013 In: Gutiérrez-Aguirre …`, `Young {in}: Young & Lu, 1988` — so the in-citation
+/// step reads it, not [`COLON_CONCEPT_REFERENCE`] (~400 ChecklistBank authorships). Rust-only.
+static IN_COLON: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\s)(?:[Ii]n|\{in\}):(\s)").unwrap());
+
+/// The two sanctioning authors (ICN Art. 15): Fries and Persoon.
+static SANCTIONING_AUTHOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:Fr\.|Fries\b|Pers\.|Persoon\b)").unwrap());
+
+/// A year closing the text before a colon: "Linnaeus, 1758: Fabricius, 1793".
+static ENDS_IN_YEAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\d{4}[a-z]?\)?$").unwrap());
+
 /// Java `StripAndStash.stripColonConceptReference` (StripAndStash.java:1276-1290). A
 /// trailing ": Author, YYYY" botanical taxonomic-concept citation (e.g. "Vespa
 /// emarginata Linnaeus, 1758: Fabricius, 1793" — the Linnaeus year is the original
@@ -2440,10 +2500,18 @@ static COLON_CONCEPT_REFERENCE: LazyLock<Regex> =
 /// ": SanctioningAuthor" form (e.g. "Boletus versicolor L. : Fr.", no year) out of this
 /// strip — spot-checked: the Linnaeus/Fabricius example ->
 /// `taxonomicNote="Fabricius, 1793"`, working string reduces to "Vespa emarginata
-/// Linnaeus, 1758".
+/// Linnaeus, 1758". Rust-only: "in:" is first read as "in" ([`IN_COLON`]), and a sanctioning
+/// author after a colon with no year before it ("Bull. : Fr., 1821") is left for the authorship
+/// parser — Java made "Fr., 1821" the taxonomic note.
 fn strip_colon_concept_reference(ctx: &mut ParseContext, s: String) -> String {
+    let s = IN_COLON.replace_all(&s, "${1}in${2}").into_owned();
     if let Some(caps) = COLON_CONCEPT_REFERENCE.captures(&s) {
         let note = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        let before = java_trim(&s[..caps.get(0).unwrap().start()]);
+        // "Bull. : Fr., 1821" is Fries' sanctioning, for the authorship parser
+        if SANCTIONING_AUTHOR.is_match(&note) && !ENDS_IN_YEAR.is_match(before) {
+            return s;
+        }
         ctx.name.add_taxonomic_note(&note);
         let whole = caps.get(0).unwrap();
         return java_trim(&s[..whole.start()]).to_string();
@@ -3976,11 +4044,13 @@ fn on_authorship(
 }
 
 /// [`run`]'s steps that apply to a separately supplied authorship as much as to an authorship on
-/// the name string, and that come before [`strip_authorship_markers`]'s: uncertain authors (`?`,
+/// the name string, and that come before [`strip_authorship_markers`]'s: coded diacritics
+/// (`Mu:2ller`), uncertain authors (`?`,
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 9] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 10] = [
+        repair_colon_diacritics,
         flag_uncertain_authorship,
         strip_imprint_years,
         normalise_hyphens,
@@ -4912,6 +4982,25 @@ mod tests {
         let mut c = ctx("x");
         let out = repair_win1252_artefacts(&mut c, "Abies alba Mill.".to_string());
         assert_eq!(out, "Abies alba Mill.");
+        assert!(c.name.warnings.is_empty());
+    }
+
+    #[test]
+    fn colon_coded_diacritics_are_restored() {
+        let mut c = ctx("x");
+        let out = repair_colon_diacritics(&mut c, "A:1ngstro:2m, Vondra:4c:3ek".to_string());
+        assert_eq!(out, "Ångström, Vondráček");
+        assert!(c.coded_diacritics);
+        assert!(c.name.warnings.contains(&warnings::HOMOGLYHPS.to_string()));
+    }
+
+    #[test]
+    fn a_colon_before_several_digits_or_no_letter_is_no_diacritic() {
+        let mut c = ctx("x");
+        let input = "Smith DOI:10.1234, names:864424, Mus:9";
+        let out = repair_colon_diacritics(&mut c, input.to_string());
+        assert_eq!(out, input);
+        assert!(!c.coded_diacritics);
         assert!(c.name.warnings.is_empty());
     }
 

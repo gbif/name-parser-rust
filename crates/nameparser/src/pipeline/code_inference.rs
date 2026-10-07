@@ -15,7 +15,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::model::{warnings, NomCode};
-use crate::pipeline::authorship_parser::AuthState;
+use crate::pipeline::authorship_parser::{is_sanctioning_author, AuthState};
 use crate::pipeline::ParseContext;
 
 /// Java `CodeInference.ICN_STATUS` (`CodeInference.java:141-142`), compiled with no flags —
@@ -38,17 +38,19 @@ static ICZN_STATUS: LazyLock<Regex> =
 /// not yet set. Called by [`crate::pipeline::assemble::finish`] only when
 /// `ctx.name.code.is_none()`.
 ///
-/// Two decisive signals are checked first and pin the code outright:
+/// Decisive signals are checked first and pin the code outright:
 ///   1. a code-exclusive rank ([`crate::model::Rank::code`] != `None`) — the cultivar, viral
 ///      and bacterial `*-var` ranks, forma specialis, botanical section/series, etc. The
 ///      generic markers subsp./var./f. carry *no* code (they are used across codes, mostly
 ///      on old zoological synonyms) and so are deliberately not a signal.
-///   2. a code-exclusive nomenclatural status ([`code_from_nom_note`]) — several ICN and
+///   2. Rust-only: a hybrid (BOTANICAL), sanctioning by Fries or Persoon (BOTANICAL), an
+///      Approved Lists citation (BACTERIAL).
+///   3. a code-exclusive nomenclatural status ([`code_from_nom_note`]) — several ICN and
 ///      ICZN statuses exist only under their own code.
 ///
 /// Otherwise a **vote tally** over authorship shape decides:
-///   - BOTANICAL — a sanctioning author; a `(Basionym) Recombination` two-author citation; a
-///     filius suffix with no year.
+///   - BOTANICAL — any other "sanctioning author"; a `(Basionym) Recombination` two-author
+///     citation; an ex-author; a filius suffix with no year; coded diacritics.
 ///   - ZOOLOGICAL — a basionym-only `(Author, year)` citation; a year on an authored
 ///     basionym or combination.
 ///   - BACTERIAL — a `Candidatus` name.
@@ -65,6 +67,15 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // its author is no zoological evidence ("×Agropogon P. Fourn. 1934"). A cultivar hybrid's
     // rank already pinned the cultivated-plant code above.
     if ctx.name.notho.as_ref().is_some_and(|n| !n.is_empty()) {
+        ctx.name.code = Some(NomCode::Botanical);
+        return;
+    }
+    // Sanctioning by Fries or Persoon exists under the botanical code only, so a year beside the
+    // author is no zoological evidence ("Link:Fr., 1809").
+    let sanctioning = auth_state
+        .and_then(|st| st.sanctioning_author.as_deref())
+        .or(ctx.name.sanctioning_author.as_deref());
+    if sanctioning.is_some_and(is_sanctioning_author) {
         ctx.name.code = Some(NomCode::Botanical);
         return;
     }
@@ -149,6 +160,14 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         .is_some_and(|n| n.starts_with("emend"))
     {
         votes.remove(&NomCode::Zoological);
+    }
+
+    // Diacritics coded with a colon and a digit ("C. Mu:2ller, 1896") come from bryophyte sources
+    // only: all 3,181 such ChecklistBank authorships that declare a code declare ICN. Their year
+    // follows zoology's style, not its code.
+    if ctx.coded_diacritics {
+        votes.remove(&NomCode::Zoological);
+        votes.insert(NomCode::Botanical);
     }
 
     if votes.len() == 1 {
