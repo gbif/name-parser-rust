@@ -471,9 +471,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     // full word "species" we keep it verbatim in the phrase ("Allium
                     // species 1" -> phrase "species 1") rather than collapsing it to the
                     // synthetic "sp." marker; the formatter then renders the phrase
-                    // as-is. Abbreviated "sp."/"spec." keep the number-only phrase.
+                    // as-is. Abbreviated "sp."/"spec." keep the number-only phrase on a
+                    // genus, where the formatter supplies the marker ("Allium sp. 1"), but not
+                    // after a species epithet, where nothing would: "Dichanthelium
+                    // chrysopsidifolium sp. 12" keeps "sp. 12" (Java rendered "… 12").
                     if i < ts.len() && ts[i].kind == TokenKind::Number {
                         let number = ts[i].text.clone();
+                        let number_end = ts[i].end;
                         i += 1;
                         // Rule: anything after "(sp|spec|species) N" belongs to the phrase — once a
                         // phrase starts it runs to the end of the input. So when tokens follow the
@@ -488,6 +492,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             i = ts.len();
                         } else if w.eq_ignore_ascii_case("species") {
                             ctx.name.phrase = Some(format!("species {number}"));
+                        } else if !lower_epithets.is_empty() {
+                            ctx.name.phrase =
+                                Some(ctx.working[marker_start..number_end].to_string());
                         } else {
                             ctx.name.phrase = Some(number);
                         }

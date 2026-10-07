@@ -811,12 +811,10 @@ fn binomial_with_a_species_n_tag_stays_parsed_keeping_the_phrase() {
         .type_(NameType::Informal)
         .phrase("species 12")
         .nothing_else();
-    // FIXME(review): the "sp." marker is lost from the phrase ("12"), while "species 12" above and
-    // "Allium sp. 1" keep it
     assert_name("Dichanthelium chrysopsidifolium sp. 12")
         .species("Dichanthelium", "chrysopsidifolium")
         .type_(NameType::Informal)
-        .phrase("12")
+        .phrase("sp. 12")
         .nothing_else();
 }
 
