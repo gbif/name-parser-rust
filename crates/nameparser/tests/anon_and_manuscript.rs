@@ -11,32 +11,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NomCode, ParsedName, Rank};
-
-/// The name with its authorship embedded, and the same name with the authorship passed
-/// separately, must agree on every authorship field, the manuscript flag and the
-/// nomenclatural note.
-fn assert_paths_agree(name: &str, authorship: &str) {
-    let full = format!("{name} {authorship}");
-    let embedded = nameparser::parse_name(&full, None, None, None)
-        .unwrap_or_else(|e| panic!("`{full}` should parse: {e:?}"));
-    let separate = nameparser::parse_name(name, Some(authorship), None, None)
-        .unwrap_or_else(|e| panic!("`{name}` + `{authorship}` should parse: {e:?}"));
-    let fields = |p: &ParsedName| {
-        (
-            p.combination_authorship.clone(),
-            p.basionym_authorship.clone(),
-            p.published_in.clone(),
-            p.manuscript,
-            p.nomenclatural_note.clone(),
-        )
-    };
-    assert_eq!(
-        fields(&separate),
-        fields(&embedded),
-        "`{name}` + `{authorship}` (separate) vs `{full}` (embedded)"
-    );
-}
+use nameparser::model::{NomCode, Rank};
 
 #[test]
 fn anon_is_normalised_in_both_paths() {
