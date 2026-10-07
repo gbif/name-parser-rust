@@ -52,8 +52,10 @@
 //!    (`G. B. Sowerby I`) or in a team that also carries a later generation. Deliberate
 //!    divergence too: a generation behind surname-first initials stays behind the surname
 //!    (`Sowerby G.B. II` → `G.B.Sowerby II`, where Java gave `I.I.G.B.Sowerby`).
-//! 4. A bracketed `[YYYY]` is always the *imprint* year (first-wins), never the main year,
-//!    even when it is the only year given. A second *plain* year is the imprint year. A
+//! 4. A bracketed `[YYYY]` is the *imprint* year next to a plain year (`Storr, 1970 [1969]`);
+//!    alone it is the year itself, established from external evidence (ICZN Recommendation
+//!    22A.2.3: `Hübner, [1806]`) — Java made it the imprint year with no year at all. A second
+//!    *plain* year is the imprint year. A
 //!    year range (`NUMBER "-"|"/" NUMBER`) keeps only the first year and sets
 //!    [`AuthState::year_range`].
 //! 5. The surname-first "**M** Balsamo"-style inversion only fires when a real surname
@@ -304,8 +306,8 @@ fn find_close(tokens: &[Token], open_idx: usize) -> Option<usize> {
 ///
 /// Parses the author list within `tokens[from..to)`, populating `into`. Handles `ex`
 /// splitting (ex authors come before main authors). A second 4-digit year encountered after
-/// the first (or a bracketed year) becomes `into`'s imprint year, sitting next to its
-/// publication year on the [`Authorship`]. Returns `true` if a year range was detected
+/// the first, or a bracketed year next to a plain one, becomes `into`'s imprint year, sitting next
+/// to its publication year on the [`Authorship`]; a bracketed year on its own is the year. Returns `true` if a year range was detected
 /// (e.g. "1845-1847", "1987-92").
 fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship) -> bool {
     let mut authors: Vec<String> = Vec::new();
@@ -316,6 +318,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     let mut ex_after_separator: Vec<usize> = Vec::new();
     let mut cur = String::new();
     let mut year_range = false;
+    let mut bracketed_year: Option<String> = None;
     let mut i = from;
     // A later generation in the same team (`Sowerby I & Sowerby II`) tells that a trailing `I`
     // is a generation too (#22).
@@ -352,9 +355,8 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         if t.kind == TokenKind::Number && (3..=4).contains(&t.text.chars().count()) {
             flush(&mut cur, &mut authors);
             let mut year = t.text.clone();
-            // Detect a bracketed year: "[YYYY]" / "[YYYY?]". A year inside square brackets
-            // is by convention the imprint year (the year actually printed on the work),
-            // not the nominal publication year — even when it is the only year given.
+            // Detect a bracketed year: "[YYYY]" / "[YYYY?]": the imprint year next to a plain
+            // year, else the year itself (decided once the whole authorship is read).
             let in_brackets_initial = i > from && tokens[i - 1].kind == TokenKind::OpenBracket;
             i += 1;
             // Uncertain year: a trailing "?" is part of the year ("198?" → year="198?").
@@ -366,11 +368,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             let in_brackets =
                 in_brackets_initial && i < to && tokens[i].kind == TokenKind::CloseBracket;
             if in_brackets {
-                // A bracketed year is the imprint year of THIS authorship (basionym or
-                // combination), sitting next to its publication year; never its main year.
-                if into.imprint_year.is_none() {
-                    into.imprint_year = Some(year);
-                }
+                bracketed_year.get_or_insert(year);
                 i += 1; // skip CLOSE_BRACKET
                 continue;
             }
@@ -786,6 +784,17 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         i += 1;
     }
     flush(&mut cur, &mut authors);
+
+    // A bracketed year is the imprint year printed on the work next to the actual year ("Storr,
+    // 1970 [1969]"); on its own it is the actual year, established from external evidence (ICZN
+    // Recommendation 22A.2.3: "Hübner, [1806]").
+    if let Some(year) = bracketed_year {
+        if into.year.is_none() {
+            into.year = Some(year);
+        } else if into.imprint_year.is_none() {
+            into.imprint_year = Some(year);
+        }
+    }
 
     // An anonymous author alone ("Anon., 1830", "(Fr.) anon.", "Sw. ex Anon.") is the work's
     // anonymity, not an author. In a team ("Anonymous & Bennett") or as the ex author ("Anon. ex
@@ -1398,7 +1407,7 @@ impl BracketedAuthors {
 }
 
 /// Where the author names of `tokens[from..to)` end: at the first year outside brackets or an
-/// imprint year in brackets ("[Hübner], [1806]"), less the commas before it.
+/// bracketed year ("[Hübner], [1806]"), less the commas before it.
 fn author_head_end(tokens: &[Token], from: usize, to: usize) -> usize {
     let mut depth = 0i32;
     let mut end = to;
@@ -1990,11 +1999,12 @@ mod tests {
     }
 
     #[test]
-    fn bracketed_year_wins_as_imprint_even_when_the_only_year_given() {
+    fn a_bracketed_year_on_its_own_is_the_year() {
+        // ICZN Recommendation 22A.2.3: the actual year, established from external evidence
         let s = parse_str("Fruhstorfer, [1912]");
         assert_eq!(s.combination.authors, vec!["Fruhstorfer".to_string()]);
-        assert_eq!(s.combination.year, None);
-        assert_eq!(s.combination.imprint_year, Some("1912".to_string()));
+        assert_eq!(s.combination.year, Some("1912".to_string()));
+        assert_eq!(s.combination.imprint_year, None);
     }
 
     #[test]

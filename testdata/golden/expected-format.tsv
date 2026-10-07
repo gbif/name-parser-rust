@@ -4518,11 +4518,11 @@ Recilia truncatus Dash & Viraktamath, 1998a: 29	true	Recilia truncatus Dash & Vi
 Recilia truncatus Dash & Viraktamath, 1998: 29	true	Recilia truncatus Dash & Viraktamath, 1998	Recilia truncatus	Recilia truncatus	Recilia truncatus Dash & Viraktamath, 1998	Dash & Viraktamath, 1998
 Recilia truncatus Dash & Viraktamath, 1998a:29	true	Recilia truncatus Dash & Viraktamath, 1998	Recilia truncatus	Recilia truncatus	Recilia truncatus Dash & Viraktamath, 1998	Dash & Viraktamath, 1998
 Recilia truncatus Dash & Viraktamath, 1998a : 29	true	Recilia truncatus Dash & Viraktamath, 1998	Recilia truncatus	Recilia truncatus	Recilia truncatus Dash & Viraktamath, 1998	Dash & Viraktamath, 1998
-Anthoscopus Cabanis [1851]	true	Anthoscopus Cabanis [1851]	Anthoscopus	Anthoscopus	Anthoscopus Cabanis [1851]	Cabanis [1851]
-Anthoscopus Cabanis [185?]	true	Anthoscopus Cabanis [185?]	Anthoscopus	Anthoscopus	Anthoscopus Cabanis [185?]	Cabanis [185?]
-Anthoscopus Cabanis [1851?]	true	Anthoscopus Cabanis [1851?]	Anthoscopus	Anthoscopus	Anthoscopus Cabanis [1851?]	Cabanis [1851?]
+Anthoscopus Cabanis [1851]	true	Anthoscopus Cabanis, 1851	Anthoscopus	Anthoscopus	Anthoscopus Cabanis, 1851	Cabanis, 1851
+Anthoscopus Cabanis [185?]	true	Anthoscopus Cabanis, 185?	Anthoscopus	Anthoscopus	Anthoscopus Cabanis, 185?	Cabanis, 185?
+Anthoscopus Cabanis [1851?]	true	Anthoscopus Cabanis, 1851?	Anthoscopus	Anthoscopus	Anthoscopus Cabanis, 1851?	Cabanis, 1851?
 Trismegistia monodii Ando, 1973 [1974]	true	Trismegistia monodii Ando, 1973 [1974]	Trismegistia monodii	Trismegistia monodii	Trismegistia monodii Ando, 1973 [1974]	Ando, 1973 [1974]
-Zygaena witti Wiegel [1973]	true	Zygaena witti Wiegel [1973]	Zygaena witti	Zygaena witti	Zygaena witti Wiegel [1973]	Wiegel [1973]
+Zygaena witti Wiegel [1973]	true	Zygaena witti Wiegel, 1973	Zygaena witti	Zygaena witti	Zygaena witti Wiegel, 1973	Wiegel, 1973
 Deyeuxia coarctata Kunth, 1815 [1816]	true	Deyeuxia coarctata Kunth, 1815 [1816]	Deyeuxia coarctata	Deyeuxia coarctata	Deyeuxia coarctata Kunth, 1815 [1816]	Kunth, 1815 [1816]
 Macrotes cordovaria Guen�e 1857	true	Macrotes cordovaria Guen e, 1857	Macrotes cordovaria	Macrotes cordovaria	Macrotes cordovaria Guen e, 1857	Guen e, 1857
 Fusinus eucos�nius	true	Fusinus eucos nius	Fusinus eucos	Fusinus eucos	Fusinus eucos nius	nius
@@ -5373,7 +5373,7 @@ Stebbinsoseris gen. nov. ined.	true	Stebbinsoseris	Stebbinsoseris	Stebbinsoseris
 Euphorbia rossiana var. nov. Steinmann, 1199	true	Euphorbia rossiana Steinmann, 1199	Euphorbia rossiana	Euphorbia rossiana	Euphorbia rossiana Steinmann, 1199, var. nov.	Steinmann, 1199
 Merulius lacrimans (Wulfen : Fr.) Schum.	true	Merulius lacrimans (Wulfen : Fr.) Schum.	Merulius lacrimans	Merulius lacrimans	Merulius lacrimans (Wulfen : Fr.) Schum.	(Wulfen : Fr.) Schum.
 Merulius lacrimans (Wulfen) Schum. : Fr.	true	Merulius lacrimans (Wulfen) Schum. : Fr.	Merulius lacrimans	Merulius lacrimans	Merulius lacrimans (Wulfen) Schum. : Fr.	(Wulfen) Schum. : Fr.
-Deudorix epijarbas turbo Fruhstorfer, [1912]	true	Deudorix epijarbas turbo Fruhstorfer [1912]	Deudorix epijarbas turbo	Deudorix epijarbas turbo	Deudorix epijarbas turbo Fruhstorfer [1912]	Fruhstorfer [1912]
+Deudorix epijarbas turbo Fruhstorfer, [1912]	true	Deudorix epijarbas turbo Fruhstorfer, 1912	Deudorix epijarbas turbo	Deudorix epijarbas turbo	Deudorix epijarbas turbo Fruhstorfer, 1912	Fruhstorfer, 1912
 Minilimosina v-atrum (Villeneuve, 1917)	true	Minilimosina v-atrum (Villeneuve, 1917)	Minilimosina v-atrum	Minilimosina v-atrum	Minilimosina v-atrum (Villeneuve, 1917)	(Villeneuve, 1917)
 Aelurillus v-insignitus	true	Aelurillus v-insignitus	Aelurillus v-insignitus	Aelurillus v-insignitus	Aelurillus v-insignitus	
 Desmometopa m-nigrum	true	Desmometopa m-nigrum	Desmometopa m-nigrum	Desmometopa m-nigrum	Desmometopa m-nigrum	
@@ -5862,11 +5862,11 @@ Macroplectra unicolor Moore, 1858/59	true	Macroplectra unicolor Moore, 1858	Macr
 Seryda basirei Druce, 1891/901	true	Seryda basirei Druce, 1891	Seryda basirei	Seryda basirei	Seryda basirei Druce, 1891	Druce, 1891
 Recilia truncatus Dash & Viraktamath, 1998: 29	true	Recilia truncatus Dash & Viraktamath, 1998	Recilia truncatus	Recilia truncatus	Recilia truncatus Dash & Viraktamath, 1998	Dash & Viraktamath, 1998
 Recilia truncatus Dash & Viraktamath, 1998:29	true	Recilia truncatus Dash & Viraktamath, 1998	Recilia truncatus	Recilia truncatus	Recilia truncatus Dash & Viraktamath, 1998	Dash & Viraktamath, 1998
-Anthoscopus Cabanis [1851]	true	Anthoscopus Cabanis [1851]	Anthoscopus	Anthoscopus	Anthoscopus Cabanis [1851]	Cabanis [1851]
-Anthoscopus Cabanis [185?]	true	Anthoscopus Cabanis [185?]	Anthoscopus	Anthoscopus	Anthoscopus Cabanis [185?]	Cabanis [185?]
-Anthoscopus Cabanis [1851?]	true	Anthoscopus Cabanis [1851?]	Anthoscopus	Anthoscopus	Anthoscopus Cabanis [1851?]	Cabanis [1851?]
+Anthoscopus Cabanis [1851]	true	Anthoscopus Cabanis, 1851	Anthoscopus	Anthoscopus	Anthoscopus Cabanis, 1851	Cabanis, 1851
+Anthoscopus Cabanis [185?]	true	Anthoscopus Cabanis, 185?	Anthoscopus	Anthoscopus	Anthoscopus Cabanis, 185?	Cabanis, 185?
+Anthoscopus Cabanis [1851?]	true	Anthoscopus Cabanis, 1851?	Anthoscopus	Anthoscopus	Anthoscopus Cabanis, 1851?	Cabanis, 1851?
 Trismegistia monodii Ando, 1973 [1974]	true	Trismegistia monodii Ando, 1973 [1974]	Trismegistia monodii	Trismegistia monodii	Trismegistia monodii Ando, 1973 [1974]	Ando, 1973 [1974]
-Zygaena witti Wiegel [1973]	true	Zygaena witti Wiegel [1973]	Zygaena witti	Zygaena witti	Zygaena witti Wiegel [1973]	Wiegel [1973]
+Zygaena witti Wiegel [1973]	true	Zygaena witti Wiegel, 1973	Zygaena witti	Zygaena witti	Zygaena witti Wiegel, 1973	Wiegel, 1973
 Deyeuxia coarctata Kunth, 1815 [1816]	true	Deyeuxia coarctata Kunth, 1815 [1816]	Deyeuxia coarctata	Deyeuxia coarctata	Deyeuxia coarctata Kunth, 1815 [1816]	Kunth, 1815 [1816]
 Kinosternidae　Agassiz, 1857	true	Kinosternidae Agassiz, 1857	Kinosternidae	Kinosternidae	Kinosternidae Agassiz, 1857	Agassiz, 1857
 Acanthochiton exquisitus	true	Acanthochiton exquisitus	Acanthochiton exquisitus	Acanthochiton exquisitus	Acanthochiton exquisitus	
@@ -7020,7 +7020,7 @@ Nomada concessa Cockerell, 1919	true	Nomada concessa Cockerell, 1919	Nomada conc
 Mordellistena castanea (Boheman)	true	Mordellistena castanea (Boheman)	Mordellistena castanea	Mordellistena castanea	Mordellistena castanea (Boheman)	(Boheman)
 Hecalus concentralis (Matsumura, 1912)	true	Hecalus concentralis (Matsumura, 1912)	Hecalus concentralis	Hecalus concentralis	Hecalus concentralis (Matsumura, 1912)	(Matsumura, 1912)
 Hyalinia (Polita) oropaensis Paulucci, 1886	true	Hyalinia oropaensis Paulucci, 1886	Hyalinia oropaensis	Hyalinia oropaensis	Hyalinia (Polita) oropaensis Paulucci, 1886	Paulucci, 1886
-Hepialus gracilis Grote, [1865]	true	Hepialus gracilis Grote [1865]	Hepialus gracilis	Hepialus gracilis	Hepialus gracilis Grote [1865]	Grote [1865]
+Hepialus gracilis Grote, [1865]	true	Hepialus gracilis Grote, 1865	Hepialus gracilis	Hepialus gracilis	Hepialus gracilis Grote, 1865	Grote, 1865
 Lecidea interponens Nyl.	true	Lecidea interponens Nyl.	Lecidea interponens	Lecidea interponens	Lecidea interponens Nyl.	Nyl.
 Artanthe sororia Miq.	true	Artanthe sororia Miq.	Artanthe sororia	Artanthe sororia	Artanthe sororia Miq.	Miq.
 Occemya pallipes Maqut.	true	Occemya pallipes Maqut.	Occemya pallipes	Occemya pallipes	Occemya pallipes Maqut.	Maqut.
