@@ -56,6 +56,8 @@
 
 use std::collections::HashMap;
 
+mod common;
+use common::{fields_equal, json_eq_unordered};
 use nameparser::model::{NameType, NomCode};
 
 /// Java `Enum.name()` string for a Rust wire enum (e.g. `NameType::Other` -> `"OTHER"`).
@@ -119,14 +121,6 @@ const ALL_FIELD_KEYS: [&str; 30] = [
 /// Cap on how many example mismatches are printed per field.
 const FIELD_EXAMPLE_CAP: usize = 5;
 
-/// Fields Java serialises from a `Set`/`Map`-like collection whose iteration order is not
-/// an insertion-order guarantee: `warnings` (`HashSet<String>`), `notho`
-/// (`EnumSet<NamePart>`), `epithetQualifier` (`EnumMap<NamePart, String>`). Routed through
-/// [`json_eq_unordered`] rather than plain `serde_json::Value` equality — see that
-/// function's own doc comment. Every other field (including the nested authorship
-/// objects, whose `authors`/`exAuthors` arrays ARE genuinely ordered) uses plain equality.
-const UNORDERED_FIELD_KEYS: [&str; 3] = ["warnings", "notho", "epithetQualifier"];
-
 /// A tiny, explicitly documented allowance for a field known to carry a residual count
 /// against the Java oracle for a cause already identified and deferred by design elsewhere
 /// in this port — NOT a general escape hatch. Every entry here must name its root cause.
@@ -164,64 +158,6 @@ fn allowed_mismatches(key: &str) -> usize {
         .unwrap_or(0)
 }
 
-/// Order-insensitive equality for a JSON value Java serialises from a `Set`/`Map`-like
-/// collection: `warnings`'s `HashSet<String>`, `notho`'s `EnumSet<NamePart>` (both -> a JSON
-/// array) and `epithetQualifier`'s `EnumMap<NamePart, String>` (-> a JSON object). Java's
-/// `HashSet`/`EnumSet` iteration order is not guaranteed to match insertion order, and
-/// `serde_json::Value`'s own `PartialEq` for the `Array` variant IS positional — so these
-/// fields need this explicit set-shaped comparison. `epithetQualifier` (a JSON *object*)
-/// would in practice already compare order-insensitively via plain `==` given this crate's
-/// `serde_json` dependency has no `preserve_order` feature enabled (its `Map` is
-/// `BTreeMap`-backed, canonically key-ordered regardless of insertion order) — but it's
-/// routed through here too rather than leaning on that feature-flag default, so the
-/// comparison stays correct even if that default ever changes.
-///
-/// `None`/absent on both sides is equal; one side absent and the other present (even an
-/// empty array/object) is a mismatch, matching plain `Option`/`Value` equality — only the
-/// *internal* ordering of a doubly-present array/object is ignored.
-fn json_eq_unordered(jv: Option<&serde_json::Value>, rv: Option<&serde_json::Value>) -> bool {
-    match (jv, rv) {
-        (None, None) => true,
-        (Some(a), Some(b)) => match (a, b) {
-            (serde_json::Value::Array(a), serde_json::Value::Array(b)) => {
-                if a.len() != b.len() {
-                    return false;
-                }
-                let mut a_sorted: Vec<String> = a.iter().map(|v| v.to_string()).collect();
-                let mut b_sorted: Vec<String> = b.iter().map(|v| v.to_string()).collect();
-                a_sorted.sort();
-                b_sorted.sort();
-                a_sorted == b_sorted
-            }
-            (serde_json::Value::Object(a), serde_json::Value::Object(b)) => {
-                if a.len() != b.len() {
-                    return false;
-                }
-                let mut a_pairs: Vec<(String, String)> =
-                    a.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
-                let mut b_pairs: Vec<(String, String)> =
-                    b.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
-                a_pairs.sort();
-                b_pairs.sort();
-                a_pairs == b_pairs
-            }
-            _ => a == b,
-        },
-        _ => false,
-    }
-}
-
-/// Dispatches to [`json_eq_unordered`] for [`UNORDERED_FIELD_KEYS`], plain
-/// `serde_json::Value` equality for every other field (including the nested authorship
-/// objects — see the module doc for why plain equality is correct there too).
-fn fields_equal(key: &str, jv: Option<&serde_json::Value>, rv: Option<&serde_json::Value>) -> bool {
-    if UNORDERED_FIELD_KEYS.contains(&key) {
-        json_eq_unordered(jv, rv)
-    } else {
-        jv == rv
-    }
-}
-
 #[test]
 fn matches_java_error_classification_over_corpus() {
     let path = concat!(
@@ -230,7 +166,13 @@ fn matches_java_error_classification_over_corpus() {
     );
     let data = match std::fs::read_to_string(path) {
         Ok(d) => d,
-        Err(_) => {
+        Err(e) => {
+            // Only a packaged crate, without the repo's `testdata/`, may skip the gate.
+            let testdata = concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata");
+            assert!(
+                !std::path::Path::new(testdata).is_dir(),
+                "snapshot {path} is missing: {e}"
+            );
             eprintln!("SKIP: oracle {path} not found — run Task 6 Step 1 to generate it");
             return;
         }

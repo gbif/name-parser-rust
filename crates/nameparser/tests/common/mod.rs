@@ -40,12 +40,12 @@
 //! * `assertUnparsable(name, TYPE)` → `assert_unparsable(name, NameType::TYPE)`;
 //!   `assertUnparsable(name, TYPE, CODE)` → `assert_unparsable_code(...)`;
 //!   `assertNoName(name)` → `assert_no_name(name)`.
-//! * **`NameType` is reduced to 5 variants** in the 4.2.0 api (`Scientific`, `Formula`,
-//!   `Informal`, `Placeholder`, `Other`). Java `HYBRID_FORMULA` → `Formula`; `VIRUS`/`OTU`/
-//!   `NO_NAME`/`BLACKLISTED`/`DOUBTFUL`/`OTHER` → `Other` (the `NomCode`/`state`/`doubtful`
-//!   fields carry the finer distinction). When a ported assertion's type is ambiguous, check the
-//!   name's actual output in `testdata/expected-parse.jsonl` (the golden the whole corpus is
-//!   validated against).
+//! * **`NameType` has 6 variants** in the 5.x api (`Scientific`, `Formula`, `Informal`,
+//!   `Placeholder`, `Identifier`, `Other`). Java `HYBRID_FORMULA` → `Formula`; a standalone
+//!   SH/BOLD/MOTU code or culture accession → `Identifier`; `VIRUS`/`OTU`/`NO_NAME`/
+//!   `BLACKLISTED`/`DOUBTFUL`/`OTHER` → `Other` (the `NomCode`/`state`/`doubtful` fields carry the
+//!   finer distinction). When a ported assertion's type is ambiguous, check the name's actual
+//!   output in `testdata/golden/expected-parse.jsonl` (the regression snapshot of the corpus).
 //! * Overloaded builder methods are disambiguated by suffix: `species(g,ig,e)` → `species_ig`,
 //!   `infraGeneric(g,rank,ig)` → `infrageneric_at`, the `cultivar(...)` overloads → `cultivar` /
 //!   `cultivar_rank` / `cultivar_sp` / `cultivar_sp_rank`. Java varargs → a `&[&str]` slice;
@@ -55,7 +55,9 @@
 
 use std::collections::BTreeMap;
 
-use nameparser::model::{Informal, NamePart, NameType, NomCode, ParsedName, Rank, State};
+use nameparser::model::{
+    Authorship, CombinedAuthorship, Informal, NamePart, NameType, NomCode, ParsedName, Rank, State,
+};
 use nameparser::ParseResult;
 
 // ---- entry points -----------------------------------------------------------------------------
@@ -92,7 +94,7 @@ pub fn assert_name_hinted(
     code: Option<NomCode>,
 ) -> NameAssertion {
     match nameparser::parse(input, authorship, rank, code) {
-        ParseResult::Parsed(pn) => NameAssertion::new(pn),
+        ParseResult::Parsed(pn) => NameAssertion::new(pn, input),
         ParseResult::Informal(inf) => {
             panic!("expected `{input}` to be a Parsed name, but it was Informal: {inf:?}")
         }
@@ -120,7 +122,7 @@ pub fn assert_informal_hinted(
     code: Option<NomCode>,
 ) -> InformalAssertion {
     match nameparser::parse(input, authorship, rank, code) {
-        ParseResult::Informal(inf) => InformalAssertion::new(inf),
+        ParseResult::Informal(inf) => InformalAssertion::new(inf, input),
         ParseResult::Parsed(pn) => {
             panic!("expected `{input}` to be an Informal result, but it Parsed: {pn:?}")
         }
@@ -130,9 +132,8 @@ pub fn assert_informal_hinted(
     }
 }
 
-/// `assertNoName(name)` — the input must be unparsable. Java asserts `NameType.NO_NAME`, but the
-/// 4.2.0 `NameType` this port targets has only 5 variants (see the mapping note in the module
-/// doc), so a definitively-not-a-name input classifies as `Other` here.
+/// `assertNoName(name)` — the input must be unparsable. Java asserts `NameType.NO_NAME`, which the
+/// 5.x `NameType` folds into `Other` (see the mapping note in the module doc).
 pub fn assert_no_name(input: &str) {
     assert_unparsable(input, NameType::Other);
 }
@@ -216,7 +217,7 @@ pub fn assert_phrase_name(
         Some(canonical),
         "canonical mismatch for `{sciname}`"
     );
-    let na = NameAssertion::new(n).phrase(phrase);
+    let na = NameAssertion::new(n, sciname).phrase(phrase);
     let na = match rank {
         Some(r) => na.rank(r),
         None => na,
@@ -229,7 +230,7 @@ pub fn assert_phrase_name(
 pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
     let n = nameparser::parse_name(sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
-    NameAssertion::new(n).nom_note(note)
+    NameAssertion::new(n, sciname).nom_note(note)
 }
 
 /// `assertCultivar(note)` — parse `"Abies alba <note>"` and assert its nomenclatural note
@@ -238,7 +239,7 @@ pub fn assert_cultivar(note: &str) -> NameAssertion {
     let sciname = format!("Abies alba {note}");
     let n = nameparser::parse_name(&sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
-    NameAssertion::new(n).nom_note(note)
+    NameAssertion::new(n, &sciname).nom_note(note)
 }
 
 /// `assertAuthorship(rawAuthorship, expectedAuthors...)` — parse a bare authorship string and
@@ -308,7 +309,7 @@ pub fn assert_ex_authorship(
         sanctioning_author: full.sanctioning_author,
         ..Default::default()
     };
-    NameAssertion::new(pn)
+    NameAssertion::new(pn, raw)
 }
 
 /// `isViralName(name)` — Java's test helper: parse `name` and report whether the nomenclatural
@@ -340,15 +341,23 @@ enum Np {
     ExAuth,
     Bas,
     ExBas,
-    Generic,
-    Specific,
+    /// The combination half of `generic_authorship`.
+    GenericComb,
+    /// The basionym half of `generic_authorship`.
+    GenericBas,
+    /// The combination half of `specific_authorship`.
+    SpecificComb,
     Sanct,
     Rank,
     TaxNote,
     NomNote,
     PublishedIn,
+    PublishedInYear,
     PublishedInPage,
+    /// The combination authorship's imprint year.
     ImprintYear,
+    /// The basionym authorship's imprint year.
+    BasImprintYear,
     Doubtful,
     State,
     Code,
@@ -360,13 +369,16 @@ enum Np {
 
 pub struct NameAssertion {
     n: ParsedName,
+    /// The parsed input, named in the failure message of [`Self::nothing_else`].
+    input: String,
     tested: std::collections::HashSet<Np>,
 }
 
 impl NameAssertion {
-    fn new(n: ParsedName) -> Self {
+    fn new(n: ParsedName, input: &str) -> Self {
         NameAssertion {
             n,
+            input: input.to_string(),
             tested: std::collections::HashSet::new(),
         }
     }
@@ -513,7 +525,9 @@ impl NameAssertion {
         self.mark(&[Np::Bas])
     }
 
-    pub fn bas_ex_authors(self, _year: Option<&str>, authors: &[&str]) -> Self {
+    /// Ex-authors of the basionym; `year` is the basionym's year, as in Java `basExAuthors`.
+    pub fn bas_ex_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
+        assert_eq!(Self::author_year(&self.n.basionym_authorship), year);
         assert_eq!(self.n.basionym_authorship.ex_authors, str_vec(authors));
         self.mark(&[Np::ExBas])
     }
@@ -527,7 +541,7 @@ impl NameAssertion {
             .expect("genericAuthorship set");
         assert_eq!(ga.combination_authorship.year.as_deref(), year);
         assert_eq!(ga.combination_authorship.authors, str_vec(authors));
-        self.mark(&[Np::Generic])
+        self.mark(&[Np::GenericComb])
     }
 
     /// Basionym authors of the genus authorship (e.g. Adans. of "(Adans.) Kuntze").
@@ -539,7 +553,7 @@ impl NameAssertion {
             .expect("genericAuthorship set");
         assert_eq!(ga.basionym_authorship.year.as_deref(), year);
         assert_eq!(ga.basionym_authorship.authors, str_vec(authors));
-        self.mark(&[Np::Generic])
+        self.mark(&[Np::GenericBas])
     }
 
     /// Combination authors of the species authorship (below-species names, e.g. L. before a cultivar).
@@ -551,7 +565,7 @@ impl NameAssertion {
             .expect("specificAuthorship set");
         assert_eq!(sa.combination_authorship.year.as_deref(), year);
         assert_eq!(sa.combination_authorship.authors, str_vec(authors));
-        self.mark(&[Np::Specific])
+        self.mark(&[Np::SpecificComb])
     }
 
     pub fn sanct_author(self, author: &str) -> Self {
@@ -682,22 +696,28 @@ impl NameAssertion {
         self.mark(&[Np::PublishedInPage])
     }
 
+    /// The year derived from `publishedIn` (or set by an in-citation).
     pub fn published_in_year(self, year: Option<i32>) -> Self {
         assert_eq!(self.n.published_in_year, year);
-        self
+        self.mark(&[Np::PublishedInYear])
     }
 
+    /// The combination authorship's imprint year ("Storr, 1970 [1969]").
     pub fn imprint_year(self, imprint_year: &str) -> Self {
-        assert_eq!(self.imprint_year_of().as_deref(), Some(imprint_year));
+        assert_eq!(
+            self.n.combination_authorship.imprint_year.as_deref(),
+            Some(imprint_year)
+        );
         self.mark(&[Np::ImprintYear])
     }
 
-    fn imprint_year_of(&self) -> Option<String> {
-        self.n
-            .combination_authorship
-            .imprint_year
-            .clone()
-            .or_else(|| self.n.basionym_authorship.imprint_year.clone())
+    /// The basionym authorship's imprint year ("(Storr, 1970 [1969])").
+    pub fn bas_imprint_year(self, imprint_year: &str) -> Self {
+        assert_eq!(
+            self.n.basionym_authorship.imprint_year.as_deref(),
+            Some(imprint_year)
+        );
+        self.mark(&[Np::BasImprintYear])
     }
 
     pub fn nom_note(self, nom_note: &str) -> Self {
@@ -739,196 +759,266 @@ impl NameAssertion {
     /// Assert that every field NOT covered by a previous method call is at its default value —
     /// so the whole parse is pinned. Mirrors Java `NameAssertion.nothingElse()`.
     pub fn nothing_else(self) {
-        let n = &self.n;
+        let input = self.input.clone();
+        with_input(&input, || self.check_nothing_else());
+    }
+
+    fn check_nothing_else(&self) {
         let untested = |p: Np| !self.tested.contains(&p);
+        // Exhaustive on purpose (no `..`): a new `ParsedName` field fails to compile here until
+        // it is given a default check.
+        let ParsedName {
+            rank,
+            code,
+            uninomial,
+            genus,
+            generic_authorship,
+            infrageneric_epithet,
+            specific_epithet,
+            specific_authorship,
+            infraspecific_epithet,
+            cultivar_epithet,
+            phrase,
+            candidatus,
+            notho,
+            original_spelling,
+            epithet_qualifier,
+            type_,
+            extinct,
+            taxonomic_note,
+            nomenclatural_note,
+            published_in,
+            published_in_year,
+            published_in_page,
+            unparsed,
+            doubtful,
+            manuscript,
+            state,
+            warnings,
+            combination_authorship,
+            basionym_authorship,
+            sanctioning_author,
+        } = &self.n;
 
         if untested(Np::Epithets) {
+            assert!(uninomial.is_none(), "unexpected uninomial: {uninomial:?}");
+            assert!(genus.is_none(), "unexpected genus: {genus:?}");
             assert!(
-                n.uninomial.is_none(),
-                "unexpected uninomial: {:?}",
-                n.uninomial
-            );
-            assert!(n.genus.is_none(), "unexpected genus: {:?}", n.genus);
-            assert!(
-                n.specific_epithet.is_none(),
-                "unexpected specificEpithet: {:?}",
-                n.specific_epithet
+                specific_epithet.is_none(),
+                "unexpected specificEpithet: {specific_epithet:?}"
             );
             assert!(
-                n.infraspecific_epithet.is_none(),
-                "unexpected infraspecificEpithet: {:?}",
-                n.infraspecific_epithet
+                infraspecific_epithet.is_none(),
+                "unexpected infraspecificEpithet: {infraspecific_epithet:?}"
             );
         }
         if untested(Np::Infragen) {
             assert!(
-                n.infrageneric_epithet.is_none(),
-                "unexpected infragenericEpithet: {:?}",
-                n.infrageneric_epithet
+                infrageneric_epithet.is_none(),
+                "unexpected infragenericEpithet: {infrageneric_epithet:?}"
             );
         }
         if untested(Np::Phrase) {
-            assert!(n.phrase.is_none(), "unexpected phrase: {:?}", n.phrase);
+            assert!(phrase.is_none(), "unexpected phrase: {phrase:?}");
         }
         if untested(Np::Cultivar) {
             assert!(
-                n.cultivar_epithet.is_none(),
-                "unexpected cultivarEpithet: {:?}",
-                n.cultivar_epithet
+                cultivar_epithet.is_none(),
+                "unexpected cultivarEpithet: {cultivar_epithet:?}"
             );
         }
         if untested(Np::Candidate) {
-            assert!(!n.candidatus, "unexpected candidatus");
+            assert!(!candidatus, "unexpected candidatus");
         }
         if untested(Np::Extinct) {
-            assert!(!n.extinct, "unexpected extinct");
+            assert!(!extinct, "unexpected extinct");
         }
         if untested(Np::Notho) {
             assert!(
-                n.notho.as_ref().is_none_or(|v| v.is_empty()),
-                "unexpected notho: {:?}",
-                n.notho
+                notho.as_ref().is_none_or(|v| v.is_empty()),
+                "unexpected notho: {notho:?}"
             );
         }
         if untested(Np::Sic) {
             assert!(
-                n.original_spelling.is_none(),
-                "unexpected originalSpelling: {:?}",
-                n.original_spelling
+                original_spelling.is_none(),
+                "unexpected originalSpelling: {original_spelling:?}"
             );
         }
-        if untested(Np::Auth) {
-            assert!(
-                n.combination_authorship.year.is_none(),
-                "unexpected comb year"
-            );
-            assert!(
-                !n.combination_authorship.has_authors_or_anon(),
-                "unexpected comb authors"
-            );
-        }
-        if untested(Np::ExAuth) {
-            assert!(
-                n.combination_authorship.ex_authors.is_empty(),
-                "unexpected comb exAuthors"
-            );
-        }
-        if untested(Np::Bas) {
-            assert!(n.basionym_authorship.year.is_none(), "unexpected bas year");
-            assert!(
-                !n.basionym_authorship.has_authors_or_anon(),
-                "unexpected bas authors"
-            );
-        }
-        if untested(Np::ExBas) {
-            assert!(
-                n.basionym_authorship.ex_authors.is_empty(),
-                "unexpected bas exAuthors"
-            );
-        }
-        if untested(Np::Generic) {
-            assert!(
-                n.generic_authorship
-                    .as_ref()
-                    .is_none_or(|a| !a.has_authorship()),
-                "unexpected genericAuthorship"
-            );
-        }
-        if untested(Np::Specific) {
-            assert!(
-                n.specific_authorship
-                    .as_ref()
-                    .is_none_or(|a| !a.has_authorship()),
-                "unexpected specificAuthorship"
-            );
-        }
+        check_authorship_default(
+            "combinationAuthorship",
+            combination_authorship,
+            untested(Np::Auth),
+            untested(Np::ExAuth),
+            untested(Np::ImprintYear),
+        );
+        check_authorship_default(
+            "basionymAuthorship",
+            basionym_authorship,
+            untested(Np::Bas),
+            untested(Np::ExBas),
+            untested(Np::BasImprintYear),
+        );
+        check_combined_authorship_default(
+            "genericAuthorship",
+            generic_authorship,
+            untested(Np::GenericComb),
+            untested(Np::GenericBas),
+        );
+        check_combined_authorship_default(
+            "specificAuthorship",
+            specific_authorship,
+            untested(Np::SpecificComb),
+            true,
+        );
         if untested(Np::Sanct) {
             assert!(
-                n.sanctioning_author.is_none(),
-                "unexpected sanctioningAuthor: {:?}",
-                n.sanctioning_author
+                sanctioning_author.is_none(),
+                "unexpected sanctioningAuthor: {sanctioning_author:?}"
             );
         }
         if untested(Np::Rank) {
-            assert_eq!(n.rank, Rank::Unranked, "unexpected rank");
+            assert_eq!(*rank, Rank::Unranked, "unexpected rank");
         }
         if untested(Np::TaxNote) {
             assert!(
-                n.taxonomic_note.is_none(),
-                "unexpected taxonomicNote: {:?}",
-                n.taxonomic_note
+                taxonomic_note.is_none(),
+                "unexpected taxonomicNote: {taxonomic_note:?}"
             );
         }
         if untested(Np::NomNote) {
             assert!(
-                n.nomenclatural_note.is_none(),
-                "unexpected nomenclaturalNote: {:?}",
-                n.nomenclatural_note
+                nomenclatural_note.is_none(),
+                "unexpected nomenclaturalNote: {nomenclatural_note:?}"
             );
         }
         if untested(Np::PublishedIn) {
             assert!(
-                n.published_in.is_none(),
-                "unexpected publishedIn: {:?}",
-                n.published_in
+                published_in.is_none(),
+                "unexpected publishedIn: {published_in:?}"
+            );
+        }
+        if untested(Np::PublishedInYear) {
+            assert!(
+                published_in_year.is_none(),
+                "unexpected publishedInYear: {published_in_year:?}"
             );
         }
         if untested(Np::PublishedInPage) {
             assert!(
-                n.published_in_page.is_none(),
-                "unexpected publishedInPage: {:?}",
-                n.published_in_page
+                published_in_page.is_none(),
+                "unexpected publishedInPage: {published_in_page:?}"
             );
-        }
-        if untested(Np::ImprintYear) {
-            assert!(self.imprint_year_of().is_none(), "unexpected imprintYear");
         }
         if untested(Np::Doubtful) {
-            assert!(!n.doubtful, "unexpected doubtful");
+            assert!(!doubtful, "unexpected doubtful");
         }
         if untested(Np::State) {
-            assert_eq!(n.state, State::Complete, "unexpected state");
+            assert_eq!(*state, State::Complete, "unexpected state");
         }
         if untested(Np::Type) {
-            assert_eq!(n.type_, NameType::Scientific, "unexpected type");
+            assert_eq!(*type_, NameType::Scientific, "unexpected type");
         }
         if untested(Np::Code) {
-            assert!(n.code.is_none(), "unexpected code: {:?}", n.code);
+            assert!(code.is_none(), "unexpected code: {code:?}");
         }
         if untested(Np::Remains) {
-            assert!(
-                n.unparsed.is_none(),
-                "unexpected unparsed: {:?}",
-                n.unparsed
-            );
+            assert!(unparsed.is_none(), "unexpected unparsed: {unparsed:?}");
         }
         if untested(Np::Warning) {
-            assert!(
-                n.warnings.is_empty(),
-                "unexpected warnings: {:?}",
-                n.warnings
-            );
+            assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
         }
         if untested(Np::Manuscript) {
-            assert!(!n.manuscript, "unexpected manuscript");
+            assert!(!manuscript, "unexpected manuscript");
         }
         if untested(Np::Qualifiers) {
             assert!(
-                n.epithet_qualifier.as_ref().is_none_or(|m| m.is_empty()),
-                "unexpected epithetQualifier: {:?}",
-                n.epithet_qualifier
+                epithet_qualifier.as_ref().is_none_or(|m| m.is_empty()),
+                "unexpected epithetQualifier: {epithet_qualifier:?}"
             );
         }
     }
 }
 
+/// [`NameAssertion::nothing_else`] for one [`Authorship`]: the authors/year/anonymous flag, the
+/// ex-authors and the imprint year are each at their default unless an assertion covered them.
+fn check_authorship_default(
+    label: &str,
+    a: &Authorship,
+    main_untested: bool,
+    ex_untested: bool,
+    imprint_untested: bool,
+) {
+    let Authorship {
+        authors,
+        ex_authors,
+        year,
+        imprint_year,
+        anonymous,
+    } = a;
+    if main_untested {
+        assert!(
+            authors.is_empty(),
+            "unexpected {label} authors: {authors:?}"
+        );
+        assert!(year.is_none(), "unexpected {label} year: {year:?}");
+        assert!(!anonymous, "unexpected anonymous {label}");
+    }
+    if ex_untested {
+        assert!(
+            ex_authors.is_empty(),
+            "unexpected {label} exAuthors: {ex_authors:?}"
+        );
+    }
+    if imprint_untested {
+        assert!(
+            imprint_year.is_none(),
+            "unexpected {label} imprintYear: {imprint_year:?}"
+        );
+    }
+}
+
+/// [`NameAssertion::nothing_else`] for the genus / species authorship slots: absent, or every part
+/// not covered by an assertion at its default. Their ex-authors, imprint years, anonymous flags and
+/// sanctioning author have no assertion of their own, so they must always be at the default.
+fn check_combined_authorship_default(
+    label: &str,
+    ca: &Option<CombinedAuthorship>,
+    comb_untested: bool,
+    bas_untested: bool,
+) {
+    let Some(CombinedAuthorship {
+        combination_authorship,
+        basionym_authorship,
+        sanctioning_author,
+    }) = ca
+    else {
+        assert!(comb_untested && bas_untested, "{label} asserted but absent");
+        return;
+    };
+    for (half, a, untested) in [
+        ("combination", combination_authorship, comb_untested),
+        ("basionym", basionym_authorship, bas_untested),
+    ] {
+        check_authorship_default(&format!("{label}.{half}"), a, untested, true, true);
+        assert!(!a.anonymous, "unexpected anonymous {label}.{half}");
+    }
+    assert!(
+        sanctioning_author.is_none(),
+        "unexpected {label}.sanctioningAuthor: {sanctioning_author:?}"
+    );
+}
+
 // ---- the Informal assertion builder -----------------------------------------------------------
 
-/// The two OPTIONAL [`Informal`] fields, tracked so [`InformalAssertion::nothing_else`] can check
-/// the untouched ones are absent. `taxon`/`taxon_rank`/`rank` are always populated on a valid
-/// informal result, so they have no "default" to check.
+/// The [`Informal`] fields, tracked so [`InformalAssertion::nothing_else`] can check the result is
+/// pinned in full: `taxon`/`taxon_rank`/`rank` are always populated, so they must have been
+/// asserted; the optional `phrase`/`code` must be asserted or absent.
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 enum InfProp {
+    Taxon,
+    TaxonRank,
+    Rank,
     Phrase,
     Code,
 }
@@ -939,40 +1029,46 @@ enum InfProp {
 /// result, not just the parts it named.
 pub struct InformalAssertion {
     inf: Informal,
+    /// The parsed input, named in the failure message of [`Self::nothing_else`].
+    input: String,
     tested: std::collections::HashSet<InfProp>,
 }
 
 impl InformalAssertion {
-    fn new(inf: Informal) -> Self {
+    fn new(inf: Informal, input: &str) -> Self {
         InformalAssertion {
             inf,
+            input: input.to_string(),
             tested: std::collections::HashSet::new(),
         }
     }
 
     /// Assert the supraspecific taxon anchor (`"Rhizobium"`, `"Ichneumonidae"`).
-    pub fn taxon(self, taxon: &str) -> Self {
+    pub fn taxon(mut self, taxon: &str) -> Self {
         assert_eq!(self.inf.taxon, taxon, "taxon mismatch");
+        self.tested.insert(InfProp::Taxon);
         self
     }
 
     /// Assert the anchor's rank (usually `Genus`, since the anchor sits in the genus slot).
-    pub fn taxon_rank(self, rank: Rank) -> Self {
+    pub fn taxon_rank(mut self, rank: Rank) -> Self {
         assert_eq!(
             self.inf.taxon_rank, rank,
             "taxonRank mismatch for {:?}",
             self.inf.taxon
         );
+        self.tested.insert(InfProp::TaxonRank);
         self
     }
 
     /// Assert the informal name's own purported rank (`Species` for `"sp."`, `Unranked` for a group).
-    pub fn rank(self, rank: Rank) -> Self {
+    pub fn rank(mut self, rank: Rank) -> Self {
         assert_eq!(
             self.inf.rank, rank,
             "rank mismatch for {:?}",
             self.inf.taxon
         );
+        self.tested.insert(InfProp::Rank);
         self
     }
 
@@ -1001,8 +1097,25 @@ impl InformalAssertion {
         self
     }
 
-    /// Close the chain: every optional field not mentioned above (`phrase`, `code`) must be absent.
+    /// Close the chain: `taxon`, `taxon_rank` and `rank` must have been asserted, and every optional
+    /// field not mentioned above (`phrase`, `code`) must be absent.
     pub fn nothing_else(self) {
+        let input = self.input.clone();
+        with_input(&input, || self.check_nothing_else());
+    }
+
+    fn check_nothing_else(&self) {
+        for (prop, name) in [
+            (InfProp::Taxon, "taxon"),
+            (InfProp::TaxonRank, "taxon_rank"),
+            (InfProp::Rank, "rank"),
+        ] {
+            assert!(
+                self.tested.contains(&prop),
+                "{name} not asserted for {:?} — an informal result is only pinned with all three",
+                self.inf
+            );
+        }
         if !self.tested.contains(&InfProp::Phrase) {
             assert!(
                 self.inf.phrase.is_none(),
@@ -1017,6 +1130,111 @@ impl InformalAssertion {
                 self.inf.code
             );
         }
+    }
+}
+
+// ---- whole-parse comparison -------------------------------------------------------------------
+
+/// Fields Java serialises from a `Set`/`Map`-like collection whose iteration order is not
+/// an insertion-order guarantee: `warnings` (`HashSet<String>`), `notho`
+/// (`EnumSet<NamePart>`), `epithetQualifier` (`EnumMap<NamePart, String>`). Routed through
+/// [`json_eq_unordered`] rather than plain `serde_json::Value` equality — see that
+/// function's own doc comment. Every other field (including the nested authorship
+/// objects, whose `authors`/`exAuthors` arrays ARE genuinely ordered) uses plain equality.
+pub const UNORDERED_FIELD_KEYS: [&str; 3] = ["warnings", "notho", "epithetQualifier"];
+
+/// Order-insensitive equality for a JSON value Java serialises from a `Set`/`Map`-like
+/// collection: `warnings`'s `HashSet<String>`, `notho`'s `EnumSet<NamePart>` (both -> a JSON
+/// array) and `epithetQualifier`'s `EnumMap<NamePart, String>` (-> a JSON object). Java's
+/// `HashSet`/`EnumSet` iteration order is not guaranteed to match insertion order, and
+/// `serde_json::Value`'s own `PartialEq` for the `Array` variant IS positional — so these
+/// fields need this explicit set-shaped comparison. `epithetQualifier` (a JSON *object*)
+/// would in practice already compare order-insensitively via plain `==` given this crate's
+/// `serde_json` dependency has no `preserve_order` feature enabled (its `Map` is
+/// `BTreeMap`-backed, canonically key-ordered regardless of insertion order) — but it's
+/// routed through here too rather than leaning on that feature-flag default, so the
+/// comparison stays correct even if that default ever changes.
+///
+/// `None`/absent on both sides is equal; one side absent and the other present (even an
+/// empty array/object) is a mismatch, matching plain `Option`/`Value` equality — only the
+/// *internal* ordering of a doubly-present array/object is ignored.
+pub fn json_eq_unordered(jv: Option<&serde_json::Value>, rv: Option<&serde_json::Value>) -> bool {
+    match (jv, rv) {
+        (None, None) => true,
+        (Some(a), Some(b)) => match (a, b) {
+            (serde_json::Value::Array(a), serde_json::Value::Array(b)) => {
+                if a.len() != b.len() {
+                    return false;
+                }
+                let mut a_sorted: Vec<String> = a.iter().map(|v| v.to_string()).collect();
+                let mut b_sorted: Vec<String> = b.iter().map(|v| v.to_string()).collect();
+                a_sorted.sort();
+                b_sorted.sort();
+                a_sorted == b_sorted
+            }
+            (serde_json::Value::Object(a), serde_json::Value::Object(b)) => {
+                if a.len() != b.len() {
+                    return false;
+                }
+                let mut a_pairs: Vec<(String, String)> =
+                    a.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
+                let mut b_pairs: Vec<(String, String)> =
+                    b.iter().map(|(k, v)| (k.clone(), v.to_string())).collect();
+                a_pairs.sort();
+                b_pairs.sort();
+                a_pairs == b_pairs
+            }
+            _ => a == b,
+        },
+        _ => false,
+    }
+}
+
+/// Dispatches to [`json_eq_unordered`] for [`UNORDERED_FIELD_KEYS`], plain
+/// `serde_json::Value` equality for every other field (including the nested authorship
+/// objects — see the module doc for why plain equality is correct there too).
+pub fn fields_equal(
+    key: &str,
+    jv: Option<&serde_json::Value>,
+    rv: Option<&serde_json::Value>,
+) -> bool {
+    if UNORDERED_FIELD_KEYS.contains(&key) {
+        json_eq_unordered(jv, rv)
+    } else {
+        jv == rv
+    }
+}
+
+/// The `ParsedName` fields on which `a` and `b` differ, one `field: a | b` line each, compared on
+/// the JSON wire shape with [`fields_equal`]. Empty when the two parses are the same.
+pub fn parsed_name_diff(a: &ParsedName, b: &ParsedName) -> Vec<String> {
+    let (ja, jb) = (
+        serde_json::to_value(a).expect("ParsedName serialises"),
+        serde_json::to_value(b).expect("ParsedName serialises"),
+    );
+    let (ma, mb) = (ja.as_object().unwrap(), jb.as_object().unwrap());
+    let mut keys: Vec<&String> = ma.keys().chain(mb.keys()).collect();
+    keys.sort();
+    keys.dedup();
+    keys.into_iter()
+        .filter(|k| !fields_equal(k, ma.get(*k), mb.get(*k)))
+        .map(|k| {
+            let show = |v: Option<&serde_json::Value>| v.map_or("-".to_string(), |v| v.to_string());
+            format!("{k}: {} | {}", show(ma.get(k)), show(mb.get(k)))
+        })
+        .collect()
+}
+
+/// Runs `check`, re-raising any assertion failure prefixed with the input it was about — the
+/// field-level messages alone don't say which of a test's many names failed.
+fn with_input(input: &str, check: impl FnOnce()) {
+    if let Err(e) = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check)) {
+        let msg = e
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_default();
+        panic!("`{input}`: {msg}");
     }
 }
 

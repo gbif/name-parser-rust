@@ -8,8 +8,9 @@ use nameparser::model::{NameType, NomCode, Rank};
 #[test]
 fn misc_annotations() {
     // group: Misc annotations. Trailing data-quality artefacts ("species",
-    // "not found", "MS"), sensu spans, and informal aggregate annotations
-    // ("group" / "species group" / "species complex") are stripped. For binomials
+    // "not found", "MS") and informal aggregate annotations ("group" / "species
+    // group" / "species complex") are stripped; a sensu span becomes the taxonomic
+    // note. For binomials
     // an "agg./group/complex" annotation promotes the rank to SPECIES_AGGREGATE;
     // for trinomials it's stripped silently without touching the rank, so the
     // trinomial's regular code-driven rank (ZOOLOGICAL → SUBSPECIES) is kept.

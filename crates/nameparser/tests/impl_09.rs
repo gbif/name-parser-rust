@@ -8,54 +8,52 @@ use nameparser::model::{NomCode, Rank};
 #[test]
 fn authorship_only_notes() {
     // "(auct.) Author": the parens mark a note, not a basionym → author + taxonomic note
-    assert_authorship_note("(auct.) Rolfe", None, &["Rolfe"], "auct.", None);
+    assert_authorship("(auct.) Rolfe", &["Rolfe"])
+        .comb_authors(None, &["Rolfe"])
+        .sensu("auct.")
+        .nothing_else();
 
-    assert_authorship_note("(auct.) auct.", None, &[], "auct.", None);
+    assert_authorship("(auct.) auct.", &[])
+        .sensu("auct.")
+        .nothing_else();
 
     // taxonomic note + nomenclatural note are split into their own fields
-    assert_authorship_note(
-        "auct., nom. subnud.",
-        None,
-        &[],
-        "auct.",
-        Some("nom. subnud."),
-    );
+    assert_authorship("auct., nom. subnud.", &[])
+        .sensu("auct.")
+        .nom_note("nom. subnud.")
+        .nothing_else();
 
     // a parenthesised "(sensu …)" is the taxonomic note; the trailing name is the author
-    assert_authorship_note(
+    assert_authorship(
         "(sensu Mereschkowsky, 1878) Jankowski, 1992",
-        Some("1992"),
         &["Jankowski"],
-        "sensu Mereschkowsky, 1878",
-        None,
-    );
+    )
+    .comb_authors(Some("1992"), &["Jankowski"])
+    .sensu("sensu Mereschkowsky, 1878")
+    .nothing_else();
 
     // a leading parenthesised homonym citation makes the whole string a taxonomic note
-    assert_authorship_note(
-        "(non Scacchi, 1836) sensu Zibrowius, 1968",
-        None,
-        &[],
-        "(non Scacchi, 1836) sensu Zibrowius, 1968",
-        None,
-    );
+    assert_authorship("(non Scacchi, 1836) sensu Zibrowius, 1968", &[])
+        .sensu("(non Scacchi, 1836) sensu Zibrowius, 1968")
+        .nothing_else();
 
-    assert_authorship_note(
+    assert_authorship(
         "Fischer-Le Saux et al., 1999 emend. Akhurst et al., 2004",
-        Some("1999"),
         &["Fischer-Le Saux", "al."],
-        "emend. Akhurst et al., 2004",
-        None,
-    );
+    )
+    .comb_authors(Some("1999"), &["Fischer-Le Saux", "al."])
+    .sensu("emend. Akhurst et al., 2004")
+    .nothing_else();
 
-    assert_authorship_note(
-        "Trautv. & Meyer sensu lato",
-        None,
-        &["Trautv.", "Meyer"],
-        "sensu lato",
-        None,
-    );
+    assert_authorship("Trautv. & Meyer sensu lato", &["Trautv.", "Meyer"])
+        .comb_authors(None, &["Trautv.", "Meyer"])
+        .sensu("sensu lato")
+        .nothing_else();
 
-    assert_authorship_note("Mill. non Parolly", None, &["Mill."], "non Parolly", None);
+    assert_authorship("Mill. non Parolly", &["Mill."])
+        .comb_authors(None, &["Mill."])
+        .sensu("non Parolly")
+        .nothing_else();
 }
 
 #[test]
@@ -81,31 +79,16 @@ fn authorship_only() {
         .comb_authors(None, &["Freytag", "Ma"])
         .nothing_else();
 
-    // Direct-parse fallback: the shared `assert_ex_authorship` DSL only forwards comb/bas/sanct
-    // authorship onto its returned `NameAssertion`, dropping the nomenclatural note this
-    // authorship string itself carries — checked directly against the full parse.
-    let n = nameparser::parse_name(
-        "Abies alba",
-        Some("(Ristorcelli & Van ty) Wedd. ex Sch. Bip. (nom. nud.)"),
-        Some(Rank::Species),
-        None,
+    assert_ex_authorship(
+        "(Ristorcelli & Van ty) Wedd. ex Sch. Bip. (nom. nud.)",
+        Some("Wedd."),
+        &["Sch.Bip."],
     )
-    .unwrap_or_else(|e| panic!("authorship should parse: {e:?}"));
-    assert_eq!(n.basionym_authorship.year, None);
-    assert_eq!(
-        n.basionym_authorship.authors,
-        vec!["Ristorcelli".to_string(), "Van ty".to_string()]
-    );
-    assert_eq!(n.combination_authorship.year, None);
-    assert_eq!(
-        n.combination_authorship.authors,
-        vec!["Sch.Bip.".to_string()]
-    );
-    assert_eq!(
-        n.combination_authorship.ex_authors,
-        vec!["Wedd.".to_string()]
-    );
-    assert_eq!(n.nomenclatural_note.as_deref(), Some("nom. nud."));
+    .bas_authors(None, &["Ristorcelli", "Van ty"])
+    .comb_authors(None, &["Sch.Bip."])
+    .comb_ex_authors(&["Wedd."])
+    .nom_note("nom. nud.")
+    .nothing_else();
 
     assert_authorship("(Wang & Liu, 1996)", &[])
         .bas_authors(Some("1996"), &["Wang", "Liu"])
@@ -253,25 +236,11 @@ fn authorship_only() {
         .comb_authors(None, &["de la Croix", "le P.J.Cribb"])
         .nothing_else();
 
-    // Direct-parse fallback: `.doubtful()`/`.warning(...)` read fields the shared
-    // `assert_authorship` DSL doesn't forward onto its returned `NameAssertion`.
-    let n = nameparser::parse_name(
-        "Abies alba",
-        Some("Istv?nffi, 1898"),
-        Some(Rank::Species),
-        None,
-    )
-    .unwrap_or_else(|e| panic!("authorship should parse: {e:?}"));
-    assert_eq!(n.combination_authorship.year.as_deref(), Some("1898"));
-    assert_eq!(
-        n.combination_authorship.authors,
-        vec!["Istvnffi".to_string()]
-    );
-    assert!(n.doubtful);
-    assert_eq!(
-        n.warnings,
-        vec![warnings::QUESTION_MARKS_REMOVED.to_string()]
-    );
+    assert_authorship("Istv?nffi, 1898", &["Istvnffi"])
+        .comb_authors(Some("1898"), &["Istvnffi"])
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
 
     assert_authorship("F.S.Castracane degli Antelminelli", &[])
         .comb_authors(None, &["F.S.Castracane degli Antelminelli"])
@@ -619,45 +588,4 @@ fn year_variations() {
         .comb_authors(None, &["Fruhstorfer"])
         .imprint_year("1912")
         .nothing_else();
-}
-
-// ---- local helpers: one DSL gap not covered by `common::` --------------------------------------
-
-/// `assertAuthorship(raw).combAuthors(year, authors...).sensu(sensu)[.nomNote(note)].nothingElse()`
-/// — Java's real `assertAuthorship`/`assertExAuthorship` call `parser.parseAuthorship(...)`,
-/// whose returned `ParsedAuthorship` carries `taxonomicNote`/`nomenclaturalNote` too (copied in
-/// full by `NameAssertion(ParsedAuthorship)`). The shared `common::assert_authorship` DSL parses
-/// the same way (`"Abies alba"` + the separately supplied authorship) but its returned
-/// `NameAssertion` only forwards combination/basionym/sanctioning authorship, dropping notes — so
-/// `authorshipOnlyNotes` (the one Java test whose whole point is a note living inside a bare
-/// authorship string) reads them straight off the full parse here instead.
-fn assert_authorship_note(
-    raw: &str,
-    year: Option<&str>,
-    authors: &[&str],
-    sensu: &str,
-    nom_note: Option<&str>,
-) {
-    let n = nameparser::parse_name("Abies alba", Some(raw), Some(Rank::Species), None)
-        .unwrap_or_else(|e| panic!("authorship `{raw}` should parse: {e:?}"));
-    assert_eq!(
-        n.combination_authorship.year.as_deref(),
-        year,
-        "year mismatch for `{raw}`"
-    );
-    assert_eq!(
-        n.combination_authorship.authors,
-        authors.iter().map(|s| s.to_string()).collect::<Vec<_>>(),
-        "authors mismatch for `{raw}`"
-    );
-    assert_eq!(
-        n.taxonomic_note.as_deref(),
-        Some(sensu),
-        "sensu mismatch for `{raw}`"
-    );
-    assert_eq!(
-        n.nomenclatural_note.as_deref(),
-        nom_note,
-        "nomNote mismatch for `{raw}`"
-    );
 }

@@ -103,6 +103,7 @@ fn no_hybrids() {
         .species("Lepidodens", "similis")
         .comb_authors(Some("2016"), &["F.Zhang", "Z-X.Pan"])
         .published_in("Zhang, F, Pan, Z-X, Wu, J, Ding, Y-H, Yu, D-Y & Wang, B-X, 2016")
+        .published_in_year(Some(2016))
         .nothing_else();
 }
 
@@ -114,6 +115,7 @@ fn nom_refs() {
         .comb_authors(None, &["Feuillet", "Cremers"])
         .published_in("Proceedings of the Koninklijke Nederlandse Akademie van Wetenschappen, Series C: Biological and Medical Sciences 87(3): 381, f. 2. 1984. Fig. 2I, J")
         .warning(&[warnings::NOMENCLATURAL_REFERENCE])
+        .published_in_year(Some(1984))
         .nothing_else();
 
     assert_name("Passiflora jussieui Feuillet, Journal of the Botanical Research Institute of Texas 4(2): 611, f. 1. 2010. Figs 2E, F, 3E, F")
@@ -121,6 +123,7 @@ fn nom_refs() {
         .comb_authors(None, &["Feuillet"])
         .published_in("Journal of the Botanical Research Institute of Texas 4(2): 611, f. 1. 2010. Figs 2E, F, 3E, F")
         .warning(&[warnings::NOMENCLATURAL_REFERENCE])
+        .published_in_year(Some(2010))
         .nothing_else();
 
     assert_name("Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37")
@@ -128,6 +131,7 @@ fn nom_refs() {
         .comb_authors(None, &["J.M.MacDougal"])
         .published_in("Annals of the Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37")
         .warning(&[warnings::NOMENCLATURAL_REFERENCE])
+        .published_in_year(Some(1988))
         .nothing_else();
 
     assert_name("Passiflora eglandulosa J.M. MacDougal. Lingua franca de Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37")
@@ -135,6 +139,7 @@ fn nom_refs() {
         .comb_authors(None, &["J.M.MacDougal"])
         .published_in("Lingua franca de Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37")
         .warning(&[warnings::NOMENCLATURAL_REFERENCE])
+        .published_in_year(Some(1988))
         .nothing_else();
 }
 
@@ -183,6 +188,7 @@ fn author_with_publication() {
         .species("Passiflora", "eglandulosa")
         .comb_authors(Some("1988"), &["J.M.MacDougal"])
         .published_in("Annals of the Missouri Botanical Garden 75. figs 1, 2B, and 3. 1988. Figs 36-37")
+        .published_in_year(Some(1988))
         .nothing_else();
 
     // IPNI botanical style, reference after a comma behind the (abbreviated?) author
@@ -190,18 +196,21 @@ fn author_with_publication() {
         .species("Samyda", "arborea")
         .comb_authors(Some("1792"), &["Rich."])
         .published_in("Actes Soc. Hist. Nat. Paris 1: 109 (1792)")
+        .published_in_year(Some(1792))
         .nothing_else();
 
     assert_name("Casearia arborea Urb., Symb. Antill. (Urban). 4(3): 421 (1910).")
         .species("Casearia", "arborea")
         .comb_authors(Some("1910"), &["Urb."])
         .published_in("Symb. Antill. (Urban). 4(3): 421 (1910)")
+        .published_in_year(Some(1910))
         .nothing_else();
 
     assert_name("Abuta candicans Rich. in DC., Syst. Nat. 1: 543 (1817).")
         .species("Abuta", "candicans")
         .comb_authors(Some("1817"), &["Rich."])
         .published_in("DC., Syst. Nat. 1: 543 (1817)")
+        .published_in_year(Some(1817))
         .nothing_else();
 
     assert_name("Antacanthus Rich. ex DC., Prodr. 4: 484 (1830), pro syn.")
@@ -210,6 +219,7 @@ fn author_with_publication() {
         .comb_ex_authors(&["Rich."])
         .published_in("Prodr. 4: 484 (1830)")
         .nom_note("pro syn.")
+        .published_in_year(Some(1830))
         .nothing_else();
 
     assert_name(
@@ -220,12 +230,14 @@ fn author_with_publication() {
     .comb_ex_authors(&["Rich."])
     .published_in("Phytologia 1: 204, (1937)")
     .nom_note("in obs., pro syn.")
+    .published_in_year(Some(1937))
     .nothing_else();
 
     assert_name("Amplexoididae Wang, Guang-Xu in Wang, He, Tang & Percival, 2018")
         .monomial("Amplexoididae")
         .comb_authors(Some("2018"), &["Wang", "Guang-Xu"])
         .published_in("Wang, He, Tang & Percival, 2018")
+        .published_in_year(Some(2018))
         .nothing_else();
 
     assert_name(
@@ -234,12 +246,14 @@ fn author_with_publication() {
     .monomial("Roelofinae")
     .comb_authors(Some("2020"), &["St Laurent", "Kawahara"])
     .published_in("St Laurent, Mielke, Herbin, Dexter & Kawahara 2020")
+    .published_in_year(Some(2020))
     .nothing_else();
 
     assert_name("Charlottea Whalen & Carter in Carter, Whalen & Guex, 1998")
         .monomial("Charlottea")
         .comb_authors(Some("1998"), &["Whalen", "Carter"])
         .published_in("Carter, Whalen & Guex, 1998")
+        .published_in_year(Some(1998))
         .nothing_else();
 }
 

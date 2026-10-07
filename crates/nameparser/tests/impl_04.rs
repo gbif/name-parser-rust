@@ -36,10 +36,14 @@ fn lineage_labels_rescued_or_other() {
         .phrase("lineage")
         .nothing_else();
     assert_informal("Flamella-lineage")
+        .rank(Rank::Unranked)
         .taxon("Flamella")
+        .taxon_rank(Rank::Genus)
         .phrase("lineage")
         .nothing_else();
     assert_informal("Pessonella-lineage")
+        .rank(Rank::Unranked)
+        .taxon_rank(Rank::Genus)
         .taxon("Pessonella")
         .phrase("lineage")
         .nothing_else();
@@ -228,6 +232,7 @@ fn todo_names() {
     .species("Pseudostenophylax", "clavatus")
     .comb_authors(Some("1993"), &["Tian", "Li"])
     .published_in("Tian, Li, Yang & Sun, in Chen, editor, 1993")
+    .published_in_year(Some(1993))
     .nothing_else();
 
     assert_name("Kanimia nitida (DC:) Baker")
@@ -674,9 +679,10 @@ fn trailing_sp_marker() {
         .nothing_else();
 }
 
-/// "Genus (Word)" alone is a subgenus, not a monomial + parenthesised basionym author (a genus
-/// cannot carry a parenthesised basionym author). A genuine species recombination keeps its
-/// parenthesised basionym and votes ZOOLOGICAL, with or without a year. (A5)
+/// "Genus (Word)" alone is a subgenus, not a monomial + parenthesised basionym author (see
+/// `genus_basionym_versus_subgenus` for when a genus does carry one). A genuine species
+/// recombination keeps its parenthesised basionym and votes ZOOLOGICAL, with or without a year.
+/// (A5)
 #[test]
 fn parenthesised_subgenus_not_basionym() {
     assert_name("Arrhoges (Antarctohoges)")
@@ -755,6 +761,7 @@ fn in_authors_citation() {
         .monomial("Gnatholigota")
         .comb_authors(Some("1908"), &["Sharp"])
         .published_in("Sharp & Scott, 1908")
+        .published_in_year(Some(1908))
         .nothing_else();
 }
 

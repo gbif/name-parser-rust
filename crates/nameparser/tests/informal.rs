@@ -149,7 +149,13 @@ fn underscored_otu_codes_are_captured_as_the_phrase_not_stashed_as_unparsed() {
         ("Decapoda sp. KSA_1761", "sp. KSA_1761"),
         ("Limosilactobacillus sp. 252371_901", "sp. 252371_901"),
     ] {
-        assert_informal(input).phrase(phrase).nothing_else();
+        let genus = input.split(' ').next().unwrap();
+        assert_informal(input)
+            .taxon(genus)
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
     }
 }
 
@@ -187,7 +193,13 @@ fn a_catalogue_numbers_colon_tail_stays_in_the_phrase() {
         ("Ageratum sp. MIB:SASS:0006", "sp. MIB:SASS:0006"),
         ("Opistognathus sp. BSKU:121417", "sp. BSKU:121417"),
     ] {
-        assert_informal(input).phrase(phrase).nothing_else();
+        let genus = input.split(' ').next().unwrap();
+        assert_informal(input)
+            .taxon(genus)
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
     }
 }
 
