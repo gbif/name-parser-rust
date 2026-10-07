@@ -41,6 +41,7 @@ const DOUBLE_QUOTES: &[char] = &[
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::sync::LazyLock;
+use unicode_normalization::UnicodeNormalization;
 
 /// The homoglyph table, embedded at compile time (copied verbatim from
 /// `name-parser-api/src/main/resources/unicode/homoglyphs.txt`, itself sourced from
@@ -236,14 +237,23 @@ pub fn normalize_spaces(x: &str) -> Cow<'_, str> {
 /// U+FF01–U+FF5E folded to ASCII, as East Asian keyboards type them (`（Tubangui，1928）`). The
 /// homoglyph table cannot do the latter: it maps fullwidth `ｌ` and `Ｉ` to the digit `1`. Not the
 /// soft hyphen U+00AD: in the data it is mostly half of the Windows-1252 mojibake `Ã\u{ad}` for
-/// `í`, repaired later, or a stand-in for a real hyphen (`Miranda\u{ad}Ribeiro`). Borrows when
-/// there is nothing to change.
+/// `í`, repaired later, or a stand-in for a real hyphen (`Miranda\u{ad}Ribeiro`). Decomposed
+/// letters are composed (NFC): a combining accent after its letter (`Za\u{301}gors\u{30c}ek`)
+/// otherwise splits the word, and Java read `Za gors ek`. Borrows when there is nothing to change.
 pub fn normalize_input(x: &str) -> Cow<'_, str> {
+    let x: Cow<'_, str> = if x
+        .chars()
+        .any(unicode_normalization::char::is_combining_mark)
+    {
+        Cow::Owned(x.nfc().collect())
+    } else {
+        Cow::Borrowed(x)
+    };
     if !x
         .chars()
         .any(|c| is_unicode_space(c) || is_invisible(c) || is_fullwidth(c))
     {
-        return Cow::Borrowed(x);
+        return x;
     }
     Cow::Owned(
         x.chars()
@@ -414,6 +424,7 @@ mod tests {
         );
         assert_eq!(normalize_input("（Tubangui，1928）"), "(Tubangui,1928)");
         assert_eq!(normalize_input("Ｍｉｌｌ．"), "Mill.");
+        assert_eq!(normalize_input("Za\u{301}gors\u{30c}ek"), "Zágoršek");
         assert!(matches!(normalize_input("Abies alba L."), Cow::Borrowed(_)));
         // the soft hyphen stays: mojibake for `í`, or a stand-in for a hyphen
         assert_eq!(normalize_input("Ort\u{c3}\u{ad}z"), "Ort\u{c3}\u{ad}z");

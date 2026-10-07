@@ -589,10 +589,9 @@ fn test_authorteam() {
     assert_single_author("Brunner von Wattenwyl v.W.")
         .comb_authors(None, &["Brunner von Wattenwyl v.W."])
         .nothing_else();
-    // FIXME(review): "Martinez y Saez" is one person (Martínez y Sáez, a Spanish double surname),
-    // not two; "y" is no "et" here (cf. "Da Silva e Castro" below)
-    assert_authorship("Martinez y Saez", &["Martinez", "Saez"])
-        .comb_authors(None, &["Martinez", "Saez"])
+    // one person: a Spanish double surname (author_teams.rs)
+    assert_single_author("Martinez y Saez")
+        .comb_authors(None, &["Martinez y Saez"])
         .nothing_else();
     // not two separate names — a compound surname (family name), common in Portuguese-speaking cultures like Portugal and Brazil.
     assert_single_author("Da Silva e Castro")

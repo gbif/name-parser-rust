@@ -531,11 +531,22 @@ fn authorship_missing_one_parenthesis() {
         .comb_authors(Some("1831"), &["Dejean"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): junk parsed as a name
-    // skipped: "Ocydromus dalmatinus dalmatinus ( Dejean, 1831 Mill." and
-    //   the variant without leading space — missing-paren reconstruction
-    //   (splitting Dejean,1831 as basionym from Mill. as combination author)
-    //   is not implemented; parser collapses both authors into a single comb.
+    // a missing closing paren is put back after the basionym's year
+    for input in [
+        "Ocydromus dalmatinus dalmatinus ( Dejean, 1831 Mill.",
+        "Ocydromus dalmatinus dalmatinus (Dejean, 1831 Mill.",
+    ] {
+        assert_name(input)
+            .infra_species(
+                "Ocydromus",
+                "dalmatinus",
+                Rank::InfraspecificName,
+                "dalmatinus",
+            )
+            .bas_authors(Some("1831"), &["Dejean"])
+            .comb_authors(None, &["Mill."])
+            .nothing_else();
+    }
 }
 
 #[test]

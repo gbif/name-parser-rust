@@ -12,7 +12,7 @@ Cantharus lineolatus Valenciennes in Cuvier & Valenciennes, 1830	true	Cantharus 
 Clitocybe explanata Velen., 1920	true	Clitocybe explanata Velen., 1920	Clitocybe explanata	Clitocybe explanata	Clitocybe explanata Velen., 1920	Velen., 1920
 Gemmata Franzmann & Skerman, 1985, 1984	true	Gemmata Franzmann & Skerman, 1985 [1984]	Gemmata	Gemmata	Gemmata Franzmann & Skerman, 1985 [1984]	Franzmann & Skerman, 1985 [1984]
 Nitzschia linearis var. subsigmoidea Grunow in Van Heurck, 1880-1885, 1882-1885	true	Nitzschia linearis var. subsigmoidea Grunow, 1885	Nitzschia linearis var. subsigmoidea	Nitzschia linearis subsigmoidea	Nitzschia linearis var. subsigmoidea Grunow, 1885	Grunow, 1885
-Amphora gracilis f. parva Truan y Luard, 1884	true	Amphora gracilis f. parva Truan & Luard, 1884	Amphora gracilis f. parva	Amphora gracilis parva	Amphora gracilis f. parva Truan & Luard, 1884	Truan & Luard, 1884
+Amphora gracilis f. parva Truan y Luard, 1884	true	Amphora gracilis f. parva Truan y Luard, 1884	Amphora gracilis f. parva	Amphora gracilis parva	Amphora gracilis f. parva Truan y Luard, 1884	Truan y Luard, 1884
 Fragilaria maxima O'Meara, 1876, 1875	true	Fragilaria maxima O'Meara, 1876 [1875]	Fragilaria maxima	Fragilaria maxima	Fragilaria maxima O'Meara, 1876 [1875]	O'Meara, 1876 [1875]
 Elassystremma michielsi VandenSpiegel & Golovatch, 2003, 2004	true	Elassystremma michielsi VandenSpiegel & Golovatch, 2003 [2004]	Elassystremma michielsi	Elassystremma michielsi	Elassystremma michielsi VandenSpiegel & Golovatch, 2003 [2004]	VandenSpiegel & Golovatch, 2003 [2004]
 Echinoderes svetlanae Adrianov, 1999 in Adrianov & Malakhov, 1999	true	Echinoderes svetlanae Adrianov, 1999	Echinoderes svetlanae	Echinoderes svetlanae	Echinoderes svetlanae Adrianov, 1999	Adrianov, 1999
@@ -4090,7 +4090,7 @@ Cryptopleura farlowiana (J.Agardh) ver Steeg & Jossly	true	Cryptopleura farlowia
 Pyxilla caput avis J.-J.Brun	true	Pyxilla caput avis J.-J.Brun	Pyxilla caput avis	Pyxilla caput avis	Pyxilla caput avis J.-J.Brun	J.-J.Brun
 Muscicapa randi Amadon & duPont, 1970	true	Muscicapa randi Amadon & duPont, 1970	Muscicapa randi	Muscicapa randi	Muscicapa randi Amadon & duPont, 1970	Amadon & duPont, 1970
 Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena 2017	true	Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena, 2017	Scytalopus alvarezlopezi	Scytalopus alvarezlopezi	Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena, 2017	Stiles, Laverde-R. & Cadena, 2017
-Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado-G 1967	true	Carabus hendrichsi Bolvar, Pieltain, Rotger & Coronado-G, 1967	Carabus hendrichsi	Carabus hendrichsi	Carabus (Tanaocarabus) hendrichsi Bolvar, Pieltain, Rotger & Coronado-G, 1967	Bolvar, Pieltain, Rotger & Coronado-G, 1967
+Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado-G 1967	true	Carabus hendrichsi Bolvar y Pieltain, Rotger & Coronado-G, 1967	Carabus hendrichsi	Carabus hendrichsi	Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado-G, 1967	Bolvar y Pieltain, Rotger & Coronado-G, 1967
 Nemcia epacridoides (Meissner)Crisp	true	Nemcia epacridoides (Meissner) Crisp	Nemcia epacridoides	Nemcia epacridoides	Nemcia epacridoides (Meissner) Crisp	(Meissner) Crisp
 Pseudocercospora dendrobii Goh & W.H. Hsieh 1990	true	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Goh & W.H.Hsieh, 1990
 Pseudocercospora dendrobii Goh and W.H. Hsieh 1990	true	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Goh & W.H.Hsieh, 1990
@@ -4207,9 +4207,9 @@ Yarrowia lipolytica variety lipolytic	true	Yarrowia lipolytica var. lipolytic	Ya
 Prunus armeniaca convar. budae (Pénzes) Soó	true	Prunus armeniaca convar. budae (Pénzes) Soó	Prunus armeniaca convar. budae	Prunus armeniaca budae	Prunus armeniaca convar. budae (Pénzes) Soó	(Pénzes) Soó
 Polypodium pectinatum (L.) f. typica Rosenst.	true	Polypodium pectinatum f. typica Rosenst.	Polypodium pectinatum f. typica	Polypodium pectinatum typica	Polypodium pectinatum (L.) f. typica Rosenst.	Rosenst.
 Polypodium pectinatum L. f. typica Rosenst.	true	Polypodium pectinatum f. typica Rosenst.	Polypodium pectinatum f. typica	Polypodium pectinatum typica	Polypodium pectinatum L. f. typica Rosenst.	Rosenst.
-Rubus fruticosus agamosp. chloocladus (W.C.R. Watson) A. & D. Löve	true	Rubus fruticosus chloocladus (W.C.R.Watson) A. & D.Löve	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus (W.C.R.Watson) A. & D.Löve	(W.C.R.Watson) A. & D.Löve
-Rubus fruticosus L. agamossp. discolor (Weihe & Nees) A. & D. Löve	true	Rubus fruticosus subsp. discolor (Weihe & Nees) A. & D.Löve	Rubus fruticosus subsp. discolor	Rubus fruticosus discolor	Rubus fruticosus L. subsp. discolor (Weihe & Nees) A. & D.Löve	(Weihe & Nees) A. & D.Löve
-Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve	true	Rubus fruticosus var. graecensis (W.Maurer) A. & D.Löve	Rubus fruticosus var. graecensis	Rubus fruticosus graecensis	Rubus fruticosus var. graecensis (W.Maurer) A. & D.Löve	(W.Maurer) A. & D.Löve
+Rubus fruticosus agamosp. chloocladus (W.C.R. Watson) A. & D. Löve	true	Rubus fruticosus chloocladus (W.C.R.Watson) A.Löve & D.Löve	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus (W.C.R.Watson) A.Löve & D.Löve	(W.C.R.Watson) A.Löve & D.Löve
+Rubus fruticosus L. agamossp. discolor (Weihe & Nees) A. & D. Löve	true	Rubus fruticosus subsp. discolor (Weihe & Nees) A.Löve & D.Löve	Rubus fruticosus subsp. discolor	Rubus fruticosus discolor	Rubus fruticosus L. subsp. discolor (Weihe & Nees) A.Löve & D.Löve	(Weihe & Nees) A.Löve & D.Löve
+Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve	true	Rubus fruticosus var. graecensis (W.Maurer) A.Löve & D.Löve	Rubus fruticosus var. graecensis	Rubus fruticosus graecensis	Rubus fruticosus var. graecensis (W.Maurer) A.Löve & D.Löve	(W.Maurer) A.Löve & D.Löve
 Polypodium pectinatum L.f. typica Rosenst.	true	Polypodium pectinatum f. typica Rosenst.	Polypodium pectinatum f. typica	Polypodium pectinatum typica	Polypodium pectinatum L. f. typica Rosenst.	Rosenst.
 Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	true	Polypodium lineare f. caudatoattenuatum Takeda	Polypodium lineare f. caudatoattenuatum	Polypodium lineare caudatoattenuatum	Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	Takeda
 Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	true	Rhododendron weyrichii f. albiflorum T.Yamaz.	Rhododendron weyrichii f. albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	T.Yamaz.
@@ -4325,8 +4325,8 @@ Ocydromus dalmatinus dalmatinus (Dejean, 1831)	true	Ocydromus dalmatinus dalmati
 Rhipidia gracilirama lassula	true	Rhipidia gracilirama lassula	Rhipidia gracilirama lassula	Rhipidia gracilirama lassula	Rhipidia gracilirama lassula	
 Ocydromus dalmatinus dalmatinus Dejean, 1831)	true	Ocydromus dalmatinus dalmatinus Dejean, 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean, 1831	Dejean, 1831
 Ocydromus dalmatinus dalmatinus Dejean, 1831 )	true	Ocydromus dalmatinus dalmatinus Dejean, 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean, 1831	Dejean, 1831
-Ocydromus dalmatinus dalmatinus ( Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Dejean & Mill., 1831
-Ocydromus dalmatinus dalmatinus (Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Dejean & Mill., 1831
+Ocydromus dalmatinus dalmatinus ( Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	(Dejean, 1831) Mill.
+Ocydromus dalmatinus dalmatinus (Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	(Dejean, 1831) Mill.
 Saccharomyces drosophilae anon.	true	Saccharomyces drosophilae Anon.	Saccharomyces drosophilae	Saccharomyces drosophilae	Saccharomyces drosophilae Anon.	Anon.
 Physalospora rubiginosa (Fr.) anon.	true	Physalospora rubiginosa (Fr.) anon.	Physalospora rubiginosa	Physalospora rubiginosa	Physalospora rubiginosa (Fr.) anon.	(Fr.) anon.
 Tragacantha leporina (?) Kuntze	true	Tragacantha leporina Kuntze	Tragacantha leporina	Tragacantha leporina	Tragacantha leporina Kuntze	Kuntze
@@ -4413,7 +4413,7 @@ Serjania meridionalis Cambess. var. o'donelli F.A. Barkley	true	Serjania meridio
 Galega officinalis (L.) L´Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.	true	Galega officinalis var. petiolata (È.Neé) Brüch.	Galega officinalis var. petiolata	Galega officinalis petiolata	Galega officinalis (L.) L'Hèr. var. petiolata (È.Neé) Brüch.	(È.Neé) Brüch.
 Galega officinalis (L.) L`Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.	true	Galega officinalis var. petiolata (È.Neé) Brüch.	Galega officinalis var. petiolata	Galega officinalis petiolata	Galega officinalis (L.) L'Hèr. var. petiolata (È.Neé) Brüch.	(È.Neé) Brüch.
 Galega officinalis (L.) L'Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.	true	Galega officinalis var. petiolata (È.Neé) Brüch.	Galega officinalis var. petiolata	Galega officinalis petiolata	Galega officinalis (L.) L'Hèr. var. petiolata (È.Neé) Brüch.	(È.Neé) Brüch.
-Crisia romanica Zágoršek Silye & Szabó 2008	true	Crisia romanica Za gors ek Silye & Szabó, 2008	Crisia romanica	Crisia romanica	Crisia romanica Za gors ek Silye & Szabó, 2008	Za gors ek Silye & Szabó, 2008
+Crisia romanica Zágoršek Silye & Szabó 2008	true	Crisia romanica Zágoršek Silye & Szabó, 2008	Crisia romanica	Crisia romanica	Crisia romanica Zágoršek Silye & Szabó, 2008	Zágoršek Silye & Szabó, 2008
 Æschopalæa grisella Pascoe, 1864	true	Æschopalæa grisella Pascoe, 1864	Æschopalæa grisella	Aeschopalaea grisella	Aeschopalaea grisella Pascoe, 1864	Pascoe, 1864
 Læptura laetifica Dow, 1913	true	Læptura laetifica Dow, 1913	Læptura laetifica	Laeptura laetifica	Laeptura laetifica Dow, 1913	Dow, 1913
 Leptura lætifica Dow, 1913	true	Leptura lætifica Dow, 1913	Leptura lætifica	Leptura laetifica	Leptura laetifica Dow, 1913	Dow, 1913
@@ -4503,10 +4503,10 @@ Eichornia crassipes ( (Martius) ) Solms-Laub.	true	Eichornia crassipes (Martius)
 Nesomyrmex madecassus_01m	true	Nesomyrmex madecassus_01m	Nesomyrmex madecassus_01m	Nesomyrmex madecassus_01m	Nesomyrmex madecassus_01m	
 Hypochrys0des	false					
 Hypochrys0des Leraut 1981	true	Hypochrys0des Leraut, 1981	Hypochrys0des	Hypochrys0des	Hypochrys0des Leraut, 1981	Leraut, 1981
-Phyllodoce mucosa 0ersted, 1843	true	Phyllodoce mucosa ersted, 1843	Phyllodoce mucosa	Phyllodoce mucosa	Phyllodoce mucosa ersted, 1843	ersted, 1843
-Attelabus 0l.	true	Attelabus l.	Attelabus	Attelabus	Attelabus l.	l.
-Acrobothrium 0lsson 1872	true	Acrobothrium lsson, 1872	Acrobothrium	Acrobothrium	Acrobothrium lsson, 1872	lsson, 1872
-Staphylinus haemrrhoidalis 0l. nec Gmel	true	Staphylinus haemrrhoidalis l.	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis l. nec Gmel	l.
+Phyllodoce mucosa 0ersted, 1843	true	Phyllodoce mucosa Oersted, 1843	Phyllodoce mucosa	Phyllodoce mucosa	Phyllodoce mucosa Oersted, 1843	Oersted, 1843
+Attelabus 0l.	true	Attelabus Ol.	Attelabus	Attelabus	Attelabus Ol.	Ol.
+Acrobothrium 0lsson 1872	true	Acrobothrium Olsson, 1872	Acrobothrium	Acrobothrium	Acrobothrium Olsson, 1872	Olsson, 1872
+Staphylinus haemrrhoidalis 0l. nec Gmel	true	Staphylinus haemrrhoidalis Ol.	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis Ol. nec Gmel	Ol.
 Ea92virus	false					
 Acarospora cratericola 1929	true	Acarospora cratericola 1929	Acarospora cratericola	Acarospora cratericola	Acarospora cratericola 1929	1929
 Goggia gemmula 1996	true	Goggia gemmula 1996	Goggia gemmula	Goggia gemmula	Goggia gemmula 1996	1996
@@ -4536,9 +4536,9 @@ Negalasa fumalis Barnes; something else	true	Negalasa fumalis Barnes & something
 Negaprion brevirostris Negaprion brevirostris, the rest of the sentence	true	Negaprion brevirostris Negaprion brevirostris & the rest of the sentence	Negaprion brevirostris	Negaprion brevirostris	Negaprion brevirostris Negaprion brevirostris & the rest of the sentence	Negaprion brevirostris & the rest of the sentence
 Negaprion fronto (Jordan and Gilbert, 1882):	true	Negaprion fronto (Jordan & Gilbert, 1882)	Negaprion fronto	Negaprion fronto	Negaprion fronto (Jordan & Gilbert, 1882)	(Jordan & Gilbert, 1882)
 Acanthochiton ex quisitus	true	Acanthochiton ex quisitus	Acanthochiton ex quisitus	Acanthochiton ex quisitus	Acanthochiton ex quisitus	
-Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	true	Caloptenopsis crassiusculus (Martínez & Fernández-Castillo, 1896)	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus (Martínez & Fernández-Castillo, 1896)	(Martínez & Fernández-Castillo, 1896)
-Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	true	Dicranum saxatile Lagasca, Segura, García, Clemente & Rubio, 1802	Dicranum saxatile	Dicranum saxatile	Dicranum saxatile Lagasca, Segura, García, Clemente & Rubio, 1802	Lagasca, Segura, García, Clemente & Rubio, 1802
-Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967	true	Carabus hendrichsi Bolvar, Pieltain, Rotger & Coronado, 1967	Carabus hendrichsi	Carabus hendrichsi	Carabus (Tanaocarabus) hendrichsi Bolvar, Pieltain, Rotger & Coronado, 1967	Bolvar, Pieltain, Rotger & Coronado, 1967
+Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	true	Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	(Martínez y Fernández-Castillo, 1896)
+Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	true	Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	Dicranum saxatile	Dicranum saxatile	Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	Lagasca y Segura, García & Clemente y Rubio, 1802
+Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967	true	Carabus hendrichsi Bolvar y Pieltain, Rotger & Coronado, 1967	Carabus hendrichsi	Carabus hendrichsi	Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado, 1967	Bolvar y Pieltain, Rotger & Coronado, 1967
 Passalus (Pertinax) gaboi Jiménez‑Ferbans & Reyes‑Castillo, 2022	true	Passalus gaboi Jiménez-Ferbans & Reyes-Castillo, 2022	Passalus gaboi	Passalus gaboi	Passalus (Pertinax) gaboi Jiménez-Ferbans & Reyes-Castillo, 2022	Jiménez-Ferbans & Reyes-Castillo, 2022
 Labeotropheus trewavasae 'albino	true	Labeotropheus trewavasae 'albino'	Labeotropheus trewavasae 'albino'	Labeotropheus trewavasae	Labeotropheus trewavasae 'albino'	
 Labeotropheus trewavasae albino'	true	Labeotropheus trewavasae albino '	Labeotropheus trewavasae albino	Labeotropheus trewavasae albino	Labeotropheus trewavasae albino '	'
@@ -4547,7 +4547,7 @@ Solanum juzepczukii janck'o-ckaisalla	true	Solanum juzepczukii janck'o-ckaisalla
 Morea (Morea) burtius 2342343242 23424322342 23424234	true	Morea burtius	Morea burtius	Morea burtius	Morea (Morea) burtius	
 Verpericola megasoma ""Dall" Pils.	true	Verpericola megasoma Dall Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall Pils.	Dall Pils.
 Verpericola megasoma "Dall" Pils.	true	Verpericola megasoma 'Dall' Pils.	Verpericola megasoma 'Dall'	Verpericola megasoma	Verpericola megasoma 'Dall' Pils.	Pils.
-Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata L.f.Klatt	Moraea spathulata	Moraea spathulata	Moraea spathulata L.f.Klatt	L.f.Klatt
+Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata (L.f.) Klatt	Moraea spathulata	Moraea spathulata	Moraea spathulata (L.f.) Klatt	(L.f.) Klatt
 Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia micrantha (Chun) Sealy, 1967	Stewartia micrantha	Stewartia micrantha	Stewartia micrantha (Chun) Sealy, 1967	(Chun) Sealy, 1967
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
 Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004	true	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Rana aurora	Rana aurora	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Baird, Girard, H.B.Shaffer et al., 1852 [2004]
@@ -4588,7 +4588,7 @@ Streptococcus pyogenes (serotype M18)	true	Streptococcus pyogenes	Streptococcus 
 Actinobacillus pleuropneumoniae serovar 2 strain S1536	true	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	
 Leptospira interrogans serovar Fugis	true	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	
 Senecio legionensis sensu Samp., non Lange	true	Senecio legionensis	Senecio legionensis	Senecio legionensis	Senecio legionensis sensu Samp., non Lange	
-Pseudomonas methanica (Söhngen 1906) sensu. Dworkin and Foster 1956	true	Pseudomonas methanica (Söhngen, 1906) sensu.Dworkin & Foster, 1956	Pseudomonas methanica	Pseudomonas methanica	Pseudomonas methanica (Söhngen, 1906) sensu.Dworkin & Foster, 1956	(Söhngen, 1906) sensu.Dworkin & Foster, 1956
+Pseudomonas methanica (Söhngen 1906) sensu. Dworkin and Foster 1956	true	Pseudomonas methanica (Söhngen, 1906)	Pseudomonas methanica	Pseudomonas methanica	Pseudomonas methanica (Söhngen, 1906) sensu. Dworkin and Foster 1956	(Söhngen, 1906)
 Abarema scutifera sensu auct., non (Blanco)Kosterm.	true	Abarema scutifera	Abarema scutifera	Abarema scutifera	Abarema scutifera sensu auct., non (Blanco)Kosterm.	
 Puya acris Auct.	true	Puya acris	Puya acris	Puya acris	Puya acris auct.	
 Puya acris Auct non L.	true	Puya acris	Puya acris	Puya acris	Puya acris auct non L.	
@@ -4599,8 +4599,8 @@ Acantholimon ulicinum s.l. (Schultes) Boiss.	true	Acantholimon ulicinum	Acanthol
 Acantholimon ulicinum s. l. (Schultes) Boiss.	true	Acantholimon ulicinum	Acantholimon ulicinum	Acantholimon ulicinum	Acantholimon ulicinum s.l.	
 Acantholimon ulicinum S. L. Schultes	true	Acantholimon ulicinum S.L.Schultes	Acantholimon ulicinum	Acantholimon ulicinum	Acantholimon ulicinum S.L.Schultes	S.L.Schultes
 Amitostigma formosana (S.S.Ying) S.S.Ying	true	Amitostigma formosana (S.S.Ying) S.S.Ying	Amitostigma formosana	Amitostigma formosana	Amitostigma formosana (S.S.Ying) S.S.Ying	(S.S.Ying) S.S.Ying
-Amaurorhinus bewichianus (Wollaston,1860) (s.str.)	true	Amaurorhinus bewichianus (Wollaston, 1860) s.str.	Amaurorhinus bewichianus	Amaurorhinus bewichianus	Amaurorhinus bewichianus (Wollaston, 1860) s.str.	(Wollaston, 1860) s.str.
-Ammodramus caudacutus (s.s.) diversus	true	Ammodramus caudacutus diversus	Ammodramus caudacutus	Ammodramus caudacutus	Ammodramus caudacutus diversus	diversus
+Amaurorhinus bewichianus (Wollaston,1860) (s.str.)	true	Amaurorhinus bewichianus (Wollaston, 1860)	Amaurorhinus bewichianus	Amaurorhinus bewichianus	Amaurorhinus bewichianus (Wollaston, 1860) s.str.	(Wollaston, 1860)
+Ammodramus caudacutus (s.s.) diversus	true	Ammodramus caudacutus diversus	Ammodramus caudacutus diversus	Ammodramus caudacutus diversus	Ammodramus caudacutus diversus s.s.	
 Arenaria serpyllifolia L. s.str.	true	Arenaria serpyllifolia L.	Arenaria serpyllifolia	Arenaria serpyllifolia	Arenaria serpyllifolia L. s.str.	L.
 Asplenium trichomanes L. s.lat. - Asplen trich	true	Asplenium trichomanes L.	Asplenium trichomanes	Asplenium trichomanes	Asplenium trichomanes L. s.lat.	L.
 Asplenium anisophyllum Kunze, s.l.	true	Asplenium anisophyllum Kunze	Asplenium anisophyllum	Asplenium anisophyllum	Asplenium anisophyllum Kunze s.l.	Kunze
@@ -4622,7 +4622,7 @@ Methanosarcina barkeri str. fusaro	true	Methanosarcina barkeri strain fusaro	Met
 Arthopyrenia hyalospora (Nyl.) R.C. Harris comb. nov.	true	Arthopyrenia hyalospora (Nyl.) R.C.Harris	Arthopyrenia hyalospora	Arthopyrenia hyalospora	Arthopyrenia hyalospora (Nyl.) R.C.Harris, comb. nov.	(Nyl.) R.C.Harris
 Acanthophis lancasteri WELLS & WELLINGTON (nomen nudum)	true	Acanthophis lancasteri Wells & Wellington	Acanthophis lancasteri	Acanthophis lancasteri	Acanthophis lancasteri Wells & Wellington, nomen nudum	Wells & Wellington
 Acontias lineatus WAGLER 1830: 196 (nomen nudum)	true	Acontias lineatus Wagler, 1830	Acontias lineatus	Acontias lineatus	Acontias lineatus Wagler, 1830, nomen nudum	Wagler, 1830
-Akeratidae Nomen Nudum	true	Akeratidae Nudum	Akeratidae	Akeratidae	Akeratidae Nudum, Nomen	Nudum
+Akeratidae Nomen Nudum	true	Akeratidae	Akeratidae	Akeratidae	Akeratidae, Nomen Nudum	
 Aster exilis Ell., nomen dubium	true	Aster exilis Ell.	Aster exilis	Aster exilis	Aster exilis Ell., nomen dubium	Ell.
 Abutilon avicennae Gaertn., nom. illeg.	true	Abutilon avicennae Gaertn.	Abutilon avicennae	Abutilon avicennae	Abutilon avicennae Gaertn., nom. illeg.	Gaertn.
 Achillea bonarota nom. in herb.	true	Achillea bonarota	Achillea bonarota	Achillea bonarota	Achillea bonarota, nom. in herb.	
@@ -5130,7 +5130,7 @@ Abies alba Scotto la Massese	true	Abies alba Scotto la Massese	Abies alba	Abies 
 Abies alba An der Lan	true	Abies alba An der Lan	Abies alba	Abies alba	Abies alba An der Lan	An der Lan
 Abies alba Bor & s'Jacob	true	Abies alba Bor & s'Jacob	Abies alba	Abies alba	Abies alba Bor & s'Jacob	Bor & s'Jacob
 Abies alba Brunner von Wattenwyl v.W.	true	Abies alba Brunner von Wattenwyl v.W.	Abies alba	Abies alba	Abies alba Brunner von Wattenwyl v.W.	Brunner von Wattenwyl v.W.
-Abies alba Martinez y Saez	true	Abies alba Martinez & Saez	Abies alba	Abies alba	Abies alba Martinez & Saez	Martinez & Saez
+Abies alba Martinez y Saez	true	Abies alba Martinez y Saez	Abies alba	Abies alba	Abies alba Martinez y Saez	Martinez y Saez
 Abies alba Da Silva e Castro	true	Abies alba Da Silva e Castro	Abies alba	Abies alba	Abies alba Da Silva e Castro	Da Silva e Castro
 Abies alba LafuenteRoca & Carbonell	true	Abies alba LafuenteRoca & Carbonell	Abies alba	Abies alba	Abies alba LafuenteRoca & Carbonell	LafuenteRoca & Carbonell
 Abies alba Mas-ComaBargues & Esteban	true	Abies alba Mas-ComaBargues & Esteban	Abies alba	Abies alba	Abies alba Mas-ComaBargues & Esteban	Mas-ComaBargues & Esteban
@@ -5347,7 +5347,7 @@ Anthoceros agrestis var. agrestis Paton nom. cons. prop.	true	Anthoceros agresti
 Lithothamnion glaciale forma verrucosum (Foslie) Foslie, nom. superfl.	true	Lithothamnion glaciale f. verrucosum (Foslie) Foslie	Lithothamnion glaciale f. verrucosum	Lithothamnion glaciale verrucosum	Lithothamnion glaciale f. verrucosum (Foslie) Foslie, nom. superfl.	(Foslie) Foslie
 Pithecellobium montanum var. subfalcatum (Zoll. & Moritzi)Miq., nom.rejic.	true	Pithecellobium montanum var. subfalcatum (Zoll. & Moritzi) Miq.	Pithecellobium montanum var. subfalcatum	Pithecellobium montanum subfalcatum	Pithecellobium montanum var. subfalcatum (Zoll. & Moritzi) Miq., nom. rejic.	(Zoll. & Moritzi) Miq.
 Fucus vesiculosus forma volubilis (Goodenough & Woodward) H.T. Powell, nom. inval	true	Fucus vesiculosus f. volubilis (Goodenough & Woodward) H.T.Powell	Fucus vesiculosus f. volubilis	Fucus vesiculosus volubilis	Fucus vesiculosus f. volubilis (Goodenough & Woodward) H.T.Powell, nom. inval.	(Goodenough & Woodward) H.T.Powell
-Sao hispanica R. & E. Richter nom. nud. in Sampelayo 1935	true	Sao hispanica R. & E.Richter, 1935	Sao hispanica	Sao hispanica	Sao hispanica R. & E.Richter, 1935, nom. nud.	R. & E.Richter, 1935
+Sao hispanica R. & E. Richter nom. nud. in Sampelayo 1935	true	Sao hispanica R.Richter & E.Richter, 1935	Sao hispanica	Sao hispanica	Sao hispanica R.Richter & E.Richter, 1935, nom. nud.	R.Richter & E.Richter, 1935
 Hallo (nom.illeg.)	true	Hallo	Hallo	Hallo	Hallo, nom. illeg.	
 Calamagrostis cinnoides W. Bart. nom. super.	true	Calamagrostis cinnoides W.Bart.	Calamagrostis cinnoides	Calamagrostis cinnoides	Calamagrostis cinnoides W.Bart., nom. super.	W.Bart.
 Iridaea undulosa var. papillosa Bory de Saint-Vincent, nom. nud.	true	Iridaea undulosa var. papillosa Bory de Saint-Vincent	Iridaea undulosa var. papillosa	Iridaea undulosa papillosa	Iridaea undulosa var. papillosa Bory de Saint-Vincent, nom. nud.	Bory de Saint-Vincent
@@ -5502,7 +5502,7 @@ Cryptopleura farlowiana (J.Agardh) ver Steeg & Jossly	true	Cryptopleura farlowia
 Pyxilla caput avis J.-J.Brun	true	Pyxilla caput avis J.-J.Brun	Pyxilla caput avis	Pyxilla caput avis	Pyxilla caput avis J.-J.Brun	J.-J.Brun
 Muscicapa randi Amadon & duPont, 1970	true	Muscicapa randi Amadon & duPont, 1970	Muscicapa randi	Muscicapa randi	Muscicapa randi Amadon & duPont, 1970	Amadon & duPont, 1970
 Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena 2017	true	Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena, 2017	Scytalopus alvarezlopezi	Scytalopus alvarezlopezi	Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena, 2017	Stiles, Laverde-R. & Cadena, 2017
-Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967	true	Carabus hendrichsi Bolvar, Pieltain, Rotger & Coronado, 1967	Carabus hendrichsi	Carabus hendrichsi	Carabus (Tanaocarabus) hendrichsi Bolvar, Pieltain, Rotger & Coronado, 1967	Bolvar, Pieltain, Rotger & Coronado, 1967
+Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967	true	Carabus hendrichsi Bolvar y Pieltain, Rotger & Coronado, 1967	Carabus hendrichsi	Carabus hendrichsi	Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado, 1967	Bolvar y Pieltain, Rotger & Coronado, 1967
 Nemcia epacridoides (Meissner)Crisp	true	Nemcia epacridoides (Meissner) Crisp	Nemcia epacridoides	Nemcia epacridoides	Nemcia epacridoides (Meissner) Crisp	(Meissner) Crisp
 Pseudocercospora dendrobii Goh & W.H. Hsieh 1990	true	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Goh & W.H.Hsieh, 1990
 Pseudocercospora dendrobii Goh and W.H. Hsieh 1990	true	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii Goh & W.H.Hsieh, 1990	Goh & W.H.Hsieh, 1990
@@ -5617,9 +5617,9 @@ Yarrowia lipolytica variety lipolytic	true	Yarrowia lipolytica var. lipolytic	Ya
 Prunus armeniaca convar. budae (Pénzes) Soó	true	Prunus armeniaca convar. budae (Pénzes) Soó	Prunus armeniaca convar. budae	Prunus armeniaca budae	Prunus armeniaca convar. budae (Pénzes) Soó	(Pénzes) Soó
 Polypodium pectinatum (L.) f. typica Rosenst.	true	Polypodium pectinatum f. typica Rosenst.	Polypodium pectinatum f. typica	Polypodium pectinatum typica	Polypodium pectinatum (L.) f. typica Rosenst.	Rosenst.
 Polypodium pectinatum L. f. typica Rosenst.	true	Polypodium pectinatum f. typica Rosenst.	Polypodium pectinatum f. typica	Polypodium pectinatum typica	Polypodium pectinatum L. f. typica Rosenst.	Rosenst.
-Rubus fruticosus agamosp. chloocladus (W.C.R. Watson) A. & D. Löve	true	Rubus fruticosus chloocladus (W.C.R.Watson) A. & D.Löve	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus (W.C.R.Watson) A. & D.Löve	(W.C.R.Watson) A. & D.Löve
-Rubus fruticosus L. agamossp. discolor (Weihe & Nees) A. & D. Löve	true	Rubus fruticosus subsp. discolor (Weihe & Nees) A. & D.Löve	Rubus fruticosus subsp. discolor	Rubus fruticosus discolor	Rubus fruticosus L. subsp. discolor (Weihe & Nees) A. & D.Löve	(Weihe & Nees) A. & D.Löve
-Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve	true	Rubus fruticosus var. graecensis (W.Maurer) A. & D.Löve	Rubus fruticosus var. graecensis	Rubus fruticosus graecensis	Rubus fruticosus var. graecensis (W.Maurer) A. & D.Löve	(W.Maurer) A. & D.Löve
+Rubus fruticosus agamosp. chloocladus (W.C.R. Watson) A. & D. Löve	true	Rubus fruticosus chloocladus (W.C.R.Watson) A.Löve & D.Löve	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus	Rubus fruticosus chloocladus (W.C.R.Watson) A.Löve & D.Löve	(W.C.R.Watson) A.Löve & D.Löve
+Rubus fruticosus L. agamossp. discolor (Weihe & Nees) A. & D. Löve	true	Rubus fruticosus subsp. discolor (Weihe & Nees) A.Löve & D.Löve	Rubus fruticosus subsp. discolor	Rubus fruticosus discolor	Rubus fruticosus L. subsp. discolor (Weihe & Nees) A.Löve & D.Löve	(Weihe & Nees) A.Löve & D.Löve
+Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve	true	Rubus fruticosus var. graecensis (W.Maurer) A.Löve & D.Löve	Rubus fruticosus var. graecensis	Rubus fruticosus graecensis	Rubus fruticosus var. graecensis (W.Maurer) A.Löve & D.Löve	(W.Maurer) A.Löve & D.Löve
 Polypodium pectinatum L.f. typica Rosenst.	true	Polypodium pectinatum f. typica Rosenst.	Polypodium pectinatum f. typica	Polypodium pectinatum typica	Polypodium pectinatum L. f. typica Rosenst.	Rosenst.
 Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	true	Polypodium lineare f. caudatoattenuatum Takeda	Polypodium lineare f. caudatoattenuatum	Polypodium lineare caudatoattenuatum	Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	Takeda
 Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	true	Rhododendron weyrichii f. albiflorum T.Yamaz.	Rhododendron weyrichii f. albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	T.Yamaz.
@@ -5731,8 +5731,8 @@ Ocydromus dalmatinus dalmatinus (Dejean, 1831)	true	Ocydromus dalmatinus dalmati
 Rhipidia gracilirama lassula	true	Rhipidia gracilirama lassula	Rhipidia gracilirama lassula	Rhipidia gracilirama lassula	Rhipidia gracilirama lassula	
 Ocydromus dalmatinus dalmatinus Dejean, 1831)	true	Ocydromus dalmatinus dalmatinus Dejean, 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean, 1831	Dejean, 1831
 Ocydromus dalmatinus dalmatinus Dejean, 1831 )	true	Ocydromus dalmatinus dalmatinus Dejean, 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean, 1831	Dejean, 1831
-Ocydromus dalmatinus dalmatinus ( Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Dejean & Mill., 1831
-Ocydromus dalmatinus dalmatinus (Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus Dejean & Mill., 1831	Dejean & Mill., 1831
+Ocydromus dalmatinus dalmatinus ( Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	(Dejean, 1831) Mill.
+Ocydromus dalmatinus dalmatinus (Dejean, 1831 Mill.	true	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus	Ocydromus dalmatinus dalmatinus (Dejean, 1831) Mill.	(Dejean, 1831) Mill.
 Saccharomyces drosophilae anon.	true	Saccharomyces drosophilae Anon.	Saccharomyces drosophilae	Saccharomyces drosophilae	Saccharomyces drosophilae Anon.	Anon.
 Physalospora rubiginosa (Fr.) anon.	true	Physalospora rubiginosa (Fr.) anon.	Physalospora rubiginosa	Physalospora rubiginosa	Physalospora rubiginosa (Fr.) anon.	(Fr.) anon.
 Tragacantha leporina (?) Kuntze	true	Tragacantha leporina Kuntze	Tragacantha leporina	Tragacantha leporina	Tragacantha leporina Kuntze	Kuntze
@@ -5810,7 +5810,7 @@ Phrynosoma m’callii	true	Phrynosoma m'callii	Phrynosoma m'callii	Phrynosoma m'
 Galega officinalis (L.) L´Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.	true	Galega officinalis var. petiolata (È.Neé) Brüch.	Galega officinalis var. petiolata	Galega officinalis petiolata	Galega officinalis (L.) L'Hèr. var. petiolata (È.Neé) Brüch.	(È.Neé) Brüch.
 Galega officinalis (L.) L`Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.	true	Galega officinalis var. petiolata (È.Neé) Brüch.	Galega officinalis var. petiolata	Galega officinalis petiolata	Galega officinalis (L.) L'Hèr. var. petiolata (È.Neé) Brüch.	(È.Neé) Brüch.
 Galega officinalis (L.) L'Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.	true	Galega officinalis var. petiolata (È.Neé) Brüch.	Galega officinalis var. petiolata	Galega officinalis petiolata	Galega officinalis (L.) L'Hèr. var. petiolata (È.Neé) Brüch.	(È.Neé) Brüch.
-Crisia romanica Zágoršek Silye & Szabó 2008	true	Crisia romanica Za gors ek Silye & Szabó, 2008	Crisia romanica	Crisia romanica	Crisia romanica Za gors ek Silye & Szabó, 2008	Za gors ek Silye & Szabó, 2008
+Crisia romanica Zágoršek Silye & Szabó 2008	true	Crisia romanica Zágoršek Silye & Szabó, 2008	Crisia romanica	Crisia romanica	Crisia romanica Zágoršek Silye & Szabó, 2008	Zágoršek Silye & Szabó, 2008
 Æschopalæa grisella Pascoe, 1864	true	Æschopalæa grisella Pascoe, 1864	Æschopalæa grisella	Aeschopalaea grisella	Aeschopalaea grisella Pascoe, 1864	Pascoe, 1864
 Læptura laetifica Dow, 1913	true	Læptura laetifica Dow, 1913	Læptura laetifica	Laeptura laetifica	Laeptura laetifica Dow, 1913	Dow, 1913
 Leptura lætifica Dow, 1913	true	Leptura lætifica Dow, 1913	Leptura lætifica	Leptura laetifica	Leptura laetifica Dow, 1913	Dow, 1913
@@ -5850,10 +5850,10 @@ Acastella ex gr. rouaulti	true	Acastella ex gr rouaulti	Acastella ex gr	Acastell
 Lecanora strobilinoides GIRALT & GÓMEZ-BOLEA	true	Lecanora strobilinoides Giralt & Gómez-Bolea	Lecanora strobilinoides	Lecanora strobilinoides	Lecanora strobilinoides Giralt & Gómez-Bolea	Giralt & Gómez-Bolea
 Eichornia crassipes ( (Martius) ) Solms-Laub.	true	Eichornia crassipes (Martius) Solms-Laub.	Eichornia crassipes	Eichornia crassipes	Eichornia crassipes (Martius) Solms-Laub.	(Martius) Solms-Laub.
 Nesomyrmex madecassus_01m	true	Nesomyrmex madecassus_01m	Nesomyrmex madecassus_01m	Nesomyrmex madecassus_01m	Nesomyrmex madecassus_01m	
-Phyllodoce mucosa 0ersted, 1843	true	Phyllodoce mucosa ersted, 1843	Phyllodoce mucosa	Phyllodoce mucosa	Phyllodoce mucosa ersted, 1843	ersted, 1843
-Attelabus 0l.	true	Attelabus l.	Attelabus	Attelabus	Attelabus l.	l.
-Acrobothrium 0lsson 1872	true	Acrobothrium lsson, 1872	Acrobothrium	Acrobothrium	Acrobothrium lsson, 1872	lsson, 1872
-Staphylinus haemrrhoidalis 0l. nec Gmel	true	Staphylinus haemrrhoidalis l.	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis l. nec Gmel	l.
+Phyllodoce mucosa 0ersted, 1843	true	Phyllodoce mucosa Oersted, 1843	Phyllodoce mucosa	Phyllodoce mucosa	Phyllodoce mucosa Oersted, 1843	Oersted, 1843
+Attelabus 0l.	true	Attelabus Ol.	Attelabus	Attelabus	Attelabus Ol.	Ol.
+Acrobothrium 0lsson 1872	true	Acrobothrium Olsson, 1872	Acrobothrium	Acrobothrium	Acrobothrium Olsson, 1872	Olsson, 1872
+Staphylinus haemrrhoidalis 0l. nec Gmel	true	Staphylinus haemrrhoidalis Ol.	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis	Staphylinus haemrrhoidalis Ol. nec Gmel	Ol.
 Acarospora cratericola 1929	true	Acarospora cratericola 1929	Acarospora cratericola	Acarospora cratericola	Acarospora cratericola 1929	1929
 Goggia gemmula 1996	true	Goggia gemmula 1996	Goggia gemmula	Goggia gemmula	Goggia gemmula 1996	1996
 Eurodryas orientalis Herrich-Schäffer 1845-1847	true	Eurodryas orientalis Herrich-Schäffer, 1845	Eurodryas orientalis	Eurodryas orientalis	Eurodryas orientalis Herrich-Schäffer, 1845	Herrich-Schäffer, 1845
@@ -5870,15 +5870,15 @@ Zygaena witti Wiegel [1973]	true	Zygaena witti Wiegel, 1973	Zygaena witti	Zygaen
 Deyeuxia coarctata Kunth, 1815 [1816]	true	Deyeuxia coarctata Kunth, 1815 [1816]	Deyeuxia coarctata	Deyeuxia coarctata	Deyeuxia coarctata Kunth, 1815 [1816]	Kunth, 1815 [1816]
 Kinosternidae　Agassiz, 1857	true	Kinosternidae Agassiz, 1857	Kinosternidae	Kinosternidae	Kinosternidae Agassiz, 1857	Agassiz, 1857
 Acanthochiton exquisitus	true	Acanthochiton exquisitus	Acanthochiton exquisitus	Acanthochiton exquisitus	Acanthochiton exquisitus	
-Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	true	Caloptenopsis crassiusculus (Martínez & Fernández-Castillo, 1896)	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus (Martínez & Fernández-Castillo, 1896)	(Martínez & Fernández-Castillo, 1896)
-Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	true	Dicranum saxatile Lagasca, Segura, García, Clemente & Rubio, 1802	Dicranum saxatile	Dicranum saxatile	Dicranum saxatile Lagasca, Segura, García, Clemente & Rubio, 1802	Lagasca, Segura, García, Clemente & Rubio, 1802
+Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	true	Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus	Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)	(Martínez y Fernández-Castillo, 1896)
+Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	true	Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	Dicranum saxatile	Dicranum saxatile	Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802	Lagasca y Segura, García & Clemente y Rubio, 1802
 Labeotropheus trewavasae 'albino	true	Labeotropheus trewavasae 'albino'	Labeotropheus trewavasae 'albino'	Labeotropheus trewavasae	Labeotropheus trewavasae 'albino'	
 Labeotropheus trewavasae albino'	true	Labeotropheus trewavasae albino '	Labeotropheus trewavasae albino	Labeotropheus trewavasae albino	Labeotropheus trewavasae albino '	'
 Phedimus takesimensis (Nakai) 't Hart	true	Phedimus takesimensis (Nakai) 't Hart	Phedimus takesimensis	Phedimus takesimensis	Phedimus takesimensis (Nakai) 't Hart	(Nakai) 't Hart
 Solanum juzepczukii janck'o-ckaisalla	true	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	
 Morea (Morea) burtius 2342343242 23424322342 23424234	true	Morea burtius	Morea burtius	Morea burtius	Morea (Morea) burtius	
 Verpericola megasoma ""Dall" Pils.	true	Verpericola megasoma Dall Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall Pils.	Dall Pils.
-Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata L.f.Klatt	Moraea spathulata	Moraea spathulata	Moraea spathulata L.f.Klatt	L.f.Klatt
+Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata (L.f.) Klatt	Moraea spathulata	Moraea spathulata	Moraea spathulata (L.f.) Klatt	(L.f.) Klatt
 Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia micrantha (Chun) Sealy, 1967	Stewartia micrantha	Stewartia micrantha	Stewartia micrantha (Chun) Sealy, 1967	(Chun) Sealy, 1967
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
 Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004	true	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Rana aurora	Rana aurora	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Baird, Girard, H.B.Shaffer et al., 1852 [2004]
@@ -5907,7 +5907,7 @@ Streptococcus pyogenes (serotype M18)	true	Streptococcus pyogenes	Streptococcus 
 Actinobacillus pleuropneumoniae serovar 2 strain S1536	true	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	
 Leptospira interrogans serovar Fugis	true	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	
 Senecio legionensis sensu Samp., non Lange	true	Senecio legionensis	Senecio legionensis	Senecio legionensis	Senecio legionensis sensu Samp., non Lange	
-Pseudomonas methanica (Söhngen 1906) sensu. Dworkin and Foster 1956	true	Pseudomonas methanica (Söhngen, 1906) sensu.Dworkin & Foster, 1956	Pseudomonas methanica	Pseudomonas methanica	Pseudomonas methanica (Söhngen, 1906) sensu.Dworkin & Foster, 1956	(Söhngen, 1906) sensu.Dworkin & Foster, 1956
+Pseudomonas methanica (Söhngen 1906) sensu. Dworkin and Foster 1956	true	Pseudomonas methanica (Söhngen, 1906)	Pseudomonas methanica	Pseudomonas methanica	Pseudomonas methanica (Söhngen, 1906) sensu. Dworkin and Foster 1956	(Söhngen, 1906)
 Abarema scutifera sensu auct., non (Blanco)Kosterm.	true	Abarema scutifera	Abarema scutifera	Abarema scutifera	Abarema scutifera sensu auct., non (Blanco)Kosterm.	
 Puya acris Auct.	true	Puya acris	Puya acris	Puya acris	Puya acris auct.	
 Puya acris Auct non L.	true	Puya acris	Puya acris	Puya acris	Puya acris auct non L.	
@@ -5918,8 +5918,8 @@ Acantholimon ulicinum s.l. (Schultes) Boiss.	true	Acantholimon ulicinum	Acanthol
 Acantholimon ulicinum s. l. (Schultes) Boiss.	true	Acantholimon ulicinum	Acantholimon ulicinum	Acantholimon ulicinum	Acantholimon ulicinum s.l.	
 Acantholimon ulicinum S. L. Schultes	true	Acantholimon ulicinum S.L.Schultes	Acantholimon ulicinum	Acantholimon ulicinum	Acantholimon ulicinum S.L.Schultes	S.L.Schultes
 Amitostigma formosana (S.S.Ying) S.S.Ying	true	Amitostigma formosana (S.S.Ying) S.S.Ying	Amitostigma formosana	Amitostigma formosana	Amitostigma formosana (S.S.Ying) S.S.Ying	(S.S.Ying) S.S.Ying
-Amaurorhinus bewichianus (Wollaston,1860) (s.str.)	true	Amaurorhinus bewichianus (Wollaston, 1860) s.str.	Amaurorhinus bewichianus	Amaurorhinus bewichianus	Amaurorhinus bewichianus (Wollaston, 1860) s.str.	(Wollaston, 1860) s.str.
-Ammodramus caudacutus (s.s.) diversus	true	Ammodramus caudacutus diversus	Ammodramus caudacutus	Ammodramus caudacutus	Ammodramus caudacutus diversus	diversus
+Amaurorhinus bewichianus (Wollaston,1860) (s.str.)	true	Amaurorhinus bewichianus (Wollaston, 1860)	Amaurorhinus bewichianus	Amaurorhinus bewichianus	Amaurorhinus bewichianus (Wollaston, 1860) s.str.	(Wollaston, 1860)
+Ammodramus caudacutus (s.s.) diversus	true	Ammodramus caudacutus diversus	Ammodramus caudacutus diversus	Ammodramus caudacutus diversus	Ammodramus caudacutus diversus s.s.	
 Arenaria serpyllifolia L. s.str.	true	Arenaria serpyllifolia L.	Arenaria serpyllifolia	Arenaria serpyllifolia	Arenaria serpyllifolia L. s.str.	L.
 Asplenium trichomanes L. s.lat. - Asplen trich	true	Asplenium trichomanes L.	Asplenium trichomanes	Asplenium trichomanes	Asplenium trichomanes L. s.lat.	L.
 Asplenium anisophyllum Kunze, s.l.	true	Asplenium anisophyllum Kunze	Asplenium anisophyllum	Asplenium anisophyllum	Asplenium anisophyllum Kunze s.l.	Kunze
@@ -5941,7 +5941,7 @@ Methanosarcina barkeri str. fusaro	true	Methanosarcina barkeri strain fusaro	Met
 Arthopyrenia hyalospora (Nyl.) R.C. Harris comb. nov.	true	Arthopyrenia hyalospora (Nyl.) R.C.Harris	Arthopyrenia hyalospora	Arthopyrenia hyalospora	Arthopyrenia hyalospora (Nyl.) R.C.Harris, comb. nov.	(Nyl.) R.C.Harris
 Acanthophis lancasteri WELLS & WELLINGTON (nomen nudum)	true	Acanthophis lancasteri Wells & Wellington	Acanthophis lancasteri	Acanthophis lancasteri	Acanthophis lancasteri Wells & Wellington, nomen nudum	Wells & Wellington
 Acontias lineatus WAGLER 1830: 196 (nomen nudum)	true	Acontias lineatus Wagler, 1830	Acontias lineatus	Acontias lineatus	Acontias lineatus Wagler, 1830, nomen nudum	Wagler, 1830
-Akeratidae Nomen Nudum	true	Akeratidae Nudum	Akeratidae	Akeratidae	Akeratidae Nudum, Nomen	Nudum
+Akeratidae Nomen Nudum	true	Akeratidae	Akeratidae	Akeratidae	Akeratidae, Nomen Nudum	
 Aster exilis Ell., nomen dubium	true	Aster exilis Ell.	Aster exilis	Aster exilis	Aster exilis Ell., nomen dubium	Ell.
 Abutilon avicennae Gaertn., nom. illeg.	true	Abutilon avicennae Gaertn.	Abutilon avicennae	Abutilon avicennae	Abutilon avicennae Gaertn., nom. illeg.	Gaertn.
 Achillea bonarota nom. in herb.	true	Achillea bonarota	Achillea bonarota	Achillea bonarota	Achillea bonarota, nom. in herb.	
@@ -7280,7 +7280,7 @@ Sigmatostalix pichinchensis Dodson	true	Sigmatostalix pichinchensis Dodson	Sigma
 Hypocrea minutispora B.S. Lu, Fallah & Samuels	true	Hypocrea minutispora B.S.Lu, Fallah & Samuels	Hypocrea minutispora	Hypocrea minutispora	Hypocrea minutispora B.S.Lu, Fallah & Samuels	B.S.Lu, Fallah & Samuels
 Asparagus mozambicus Kunth	true	Asparagus mozambicus Kunth	Asparagus mozambicus	Asparagus mozambicus	Asparagus mozambicus Kunth	Kunth
 Baetisca obesa (Say, 1839)	true	Baetisca obesa (Say, 1839)	Baetisca obesa	Baetisca obesa	Baetisca obesa (Say, 1839)	(Say, 1839)
-Asterocheres unicus Johnsson, In	true	Asterocheres unicus Johnsson & In	Asterocheres unicus	Asterocheres unicus	Asterocheres unicus Johnsson & In	Johnsson & In
+Asterocheres unicus Johnsson, In	true	Asterocheres unicus Johnsson	Asterocheres unicus	Asterocheres unicus	Asterocheres unicus Johnsson	Johnsson
 Beddomeia launcestonensis (R. M. Johnston, 1879)	true	Beddomeia launcestonensis (R.M.Johnston, 1879)	Beddomeia launcestonensis	Beddomeia launcestonensis	Beddomeia launcestonensis (R.M.Johnston, 1879)	(R.M.Johnston, 1879)
 Roeslerstammia vesperella Zeller, 1850	true	Roeslerstammia vesperella Zeller, 1850	Roeslerstammia vesperella	Roeslerstammia vesperella	Roeslerstammia vesperella Zeller, 1850	Zeller, 1850
 Hieracium delicatulum Loennr. ex Dahlst.	true	Hieracium delicatulum Loennr. ex Dahlst.	Hieracium delicatulum	Hieracium delicatulum	Hieracium delicatulum Loennr. ex Dahlst.	Loennr. ex Dahlst.
@@ -7647,7 +7647,7 @@ Allotraeus (Nysina) rufescens (Pic, 1923)	true	Allotraeus rufescens (Pic, 1923)	
 Maltagorea fumosa Sonthonnax, 1901	true	Maltagorea fumosa Sonthonnax, 1901	Maltagorea fumosa	Maltagorea fumosa	Maltagorea fumosa Sonthonnax, 1901	Sonthonnax, 1901
 Senectus permundus Iredale, 1929	true	Senectus permundus Iredale, 1929	Senectus permundus	Senectus permundus	Senectus permundus Iredale, 1929	Iredale, 1929
 Laphria (Lamprozona) auricincta Loew, 1851	true	Laphria auricincta Loew, 1851	Laphria auricincta	Laphria auricincta	Laphria (Lamprozona) auricincta Loew, 1851	Loew, 1851
-Zornia diphylla var. leptophylla Benth. In Mart. Fl. Bras.	true	Zornia diphylla var. leptophylla Benth.In Mart.Fl.Bras.	Zornia diphylla var. leptophylla	Zornia diphylla leptophylla	Zornia diphylla var. leptophylla Benth.In Mart.Fl.Bras.	Benth.In Mart.Fl.Bras.
+Zornia diphylla var. leptophylla Benth. In Mart. Fl. Bras.	true	Zornia diphylla var. leptophylla Benth.	Zornia diphylla var. leptophylla	Zornia diphylla leptophylla	Zornia diphylla var. leptophylla Benth.	Benth.
 Grammanthes sebaeoides Eckl. & Zeyh.	true	Grammanthes sebaeoides Eckl. & Zeyh.	Grammanthes sebaeoides	Grammanthes sebaeoides	Grammanthes sebaeoides Eckl. & Zeyh.	Eckl. & Zeyh.
 Protaenasius Fullaway	true	Protaenasius Fullaway	Protaenasius	Protaenasius	Protaenasius Fullaway	Fullaway
 Parapleurus Fischer, 1853	true	Parapleurus Fischer, 1853	Parapleurus	Parapleurus	Parapleurus Fischer, 1853	Fischer, 1853

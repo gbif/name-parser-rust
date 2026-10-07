@@ -147,6 +147,10 @@ fn generation_i_after_leading_initials_stays_behind_the_surname() {
     assert_authorship("G.B.Sowerby I", &["G.B.Sowerby I"])
         .comb_authors(None, &["G.B.Sowerby I"])
         .nothing_else();
+    // after leading initials a dotted "I." ending the author is the generation as well
+    assert_authorship("G.B. Sowerby I.", &["G.B.Sowerby I"])
+        .comb_authors(None, &["G.B.Sowerby I"])
+        .nothing_else();
     // II and III always were kept.
     assert_authorship("G. B. Sowerby II, 1842", &["G.B.Sowerby II"])
         .comb_authors(Some("1842"), &["G.B.Sowerby II"])
@@ -186,11 +190,6 @@ fn a_trailing_i_without_that_evidence_stays_an_initial() {
     // A dotted `I.` is an initial (`Kim I.` = I. Kim), even after leading initials.
     assert_authorship("Kim I.", &["I.Kim"])
         .comb_authors(None, &["I.Kim"])
-        .nothing_else();
-    // FIXME(review): contradicts the rule above (leading initials, so none behind the surname):
-    // "I." is the generation, G.B.Sowerby I
-    assert_authorship("G.B. Sowerby I.", &["I.G.B.Sowerby"])
-        .comb_authors(None, &["I.G.B.Sowerby"])
         .nothing_else();
     // V and X are left alone.
     assert_authorship("Smith V", &["V.Smith"])

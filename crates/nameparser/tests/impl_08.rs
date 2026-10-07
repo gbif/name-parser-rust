@@ -409,7 +409,7 @@ fn null_name_parts() {
 #[test]
 fn r_na_names() {
     assert_name("Calathus (Lindrothius) KURNAKOV 1961")
-        .infrageneric_at("Calathus", Rank::InfragenericName, "Lindrothius")
+        .infrageneric_at("Calathus", Rank::Subgenus, "Lindrothius")
         .comb_authors(Some("1961"), &["Kurnakov"])
         .code(NomCode::Zoological)
         .nothing_else();
