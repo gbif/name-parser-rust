@@ -221,7 +221,8 @@ fn authorship_only() {
         .nothing_else();
 
     assert_authorship("Cushman Em. Sellier de Civrieux, 1976", &[])
-        .comb_authors(Some("1976"), &["Cushman Em.Sellier de Civrieux"])
+        .comb_authors(None, &["Cushman"])
+        .sensu("Em. Sellier de Civrieux, 1976")
         .nothing_else();
 
     // http://dev.gbif.org/issues/browse/POR-101
@@ -637,16 +638,14 @@ fn test_nomenclatural_notes_pattern() {
         .comb_authors(Some("1792"), &["Clarisia Abat"])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "Approved Lists" is no author, and the bacterium is coded BOTANICAL
     assert_nom_note(
         "nom. cons.",
         "Yersinia pestis (Lehmann and Neumann, 1896) van Loghem, 1944 (Approved Lists, 1980) , nom. cons",
     )
         .species("Yersinia", "pestis")
-        .comb_authors(Some("1944"), &["van Loghem", "Approved Lists"])
-        .imprint_year("1980")
+        .comb_authors(Some("1944"), &["van Loghem"])
         .bas_authors(Some("1896"), &["Lehmann", "Neumann"])
-        .code(NomCode::Botanical)
+        .code(NomCode::Bacterial)
         .nothing_else();
     // FIXME(review): garbage: the quoted name ends up as an author
     assert_nom_note(

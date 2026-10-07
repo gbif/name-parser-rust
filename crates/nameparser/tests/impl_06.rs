@@ -764,8 +764,11 @@ fn test_authorteam() {
         &["Castellano", "S.L.Mill.", "L.Singh bis", "T.N.Lakh."],
     )
     .nothing_else();
-    assert_authorship("Blüthgen i.l.", &["Blüthgen i.l."])
-        .comb_authors(None, &["Blüthgen i.l."])
+    // in litteris: an unpublished name
+    assert_authorship("Blüthgen i.l.", &["Blüthgen"])
+        .comb_authors(None, &["Blüthgen"])
+        .nom_note("i.l.")
+        .manuscript()
         .nothing_else();
     assert_authorship("Y.-j. Wang", &["Y.-j.Wang"])
         .comb_authors(None, &["Y.-j.Wang"])

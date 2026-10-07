@@ -594,10 +594,11 @@ fn author_variations() {
         .comb_authors(None, &["M.Balsamo", "M.A.Todaro"])
         .nothing_else();
 
+    // "Em." between two authors: Cushman emend. Sellier de Civrieux
     assert_name("Bolivina albatrossi Cushman Em. Sellier de Civrieux, 1976")
         .species("Bolivina", "albatrossi")
-        .comb_authors(Some("1976"), &["Cushman Em.Sellier de Civrieux"])
-        .code(NomCode::Zoological)
+        .comb_authors(None, &["Cushman"])
+        .sensu("Em. Sellier de Civrieux, 1976")
         .nothing_else();
 
     // http://dev.gbif.org/issues/browse/POR-101

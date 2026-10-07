@@ -151,9 +151,10 @@ fn names_with_an_unparsed_tail() {
         .infrageneric_at("Morea", Rank::InfragenericName, "Morea")
         .comb_authors(None, &["Burt"])
         .nothing_else();
+    // a lone particle is an author's name cut short
     assert_name("Nautilus asterizans von")
         .species("Nautilus", "asterizans")
-        .comb_authors(None, &["von"])
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
         .nothing_else();
     assert_name("Dryopteris X separabilis Small (pro sp.)")
         .species("Dryopteris", "separabilis")
@@ -186,15 +187,14 @@ fn names_with_an_unparsed_tail() {
         .sensu("non d'Orbigny, 1853")
         .code(NomCode::Zoological)
         .nothing_else();
-    // "Author in Source, YYYY vide Other (YYYY)": the "in" tail goes into
-    // publishedIn, and the trailing parenthesised year overrides as the
-    // combination year.
-    // FIXME(review): "vide …" is a secondary reference: year 1885, publishedIn "De Amicis, 1885"
+    // "Author in Source, YYYY vide Other (YYYY)": the "in" tail goes into publishedIn; "vide …"
+    // (see) is where the name was found, the taxonomic note.
     assert_name("Porina reussi Meneghini in De Amicis, 1885 vide Neviani (1900)")
         .species("Porina", "reussi")
-        .comb_authors(Some("1900"), &["Meneghini"])
-        .published_in("De Amicis, 1885 vide Neviani (1900)")
-        .published_in_year(Some(1900))
+        .comb_authors(Some("1885"), &["Meneghini"])
+        .published_in("De Amicis, 1885")
+        .published_in_year(Some(1885))
+        .sensu("vide Neviani (1900)")
         .nothing_else();
 }
 

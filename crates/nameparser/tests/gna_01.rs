@@ -67,11 +67,11 @@ fn uninomials_with_authorship() {
         .monomial("Pseudocercospora")
         .comb_authors(None, &["Speg."])
         .nothing_else();
-    // "(synonym)" tail is currently parsed as an extra author, not stripped.
-    // FIXME(review): "(synonym)" is no author: comb_authors(Some("1929"), &["Ihering"])
+    // the "(synonym)" remark is the taxonomic note
     assert_name("Döringina Ihering 1929 (synonym)")
         .monomial("Döringina")
-        .comb_authors(Some("1929"), &["Ihering", "synonym"])
+        .comb_authors(Some("1929"), &["Ihering"])
+        .sensu("synonym")
         .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Pseudocercospora Speg., Francis Jack.-Drake.")

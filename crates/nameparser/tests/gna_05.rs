@@ -520,11 +520,15 @@ fn removing_nomenclatural_annotations() {
         .nom_note("comb. nov.")
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "(nomen nudum)" lands in sanctioningAuthor; it is the nomenclatural note,
-    // ":196" the page and the code zoological. Left open until fixed.
+    // "(nomen nudum)" is the nomenclatural note (it used to land in sanctioningAuthor), ": 196"
+    // the page
     assert_name("Acontias lineatus WAGLER 1830: 196 (nomen nudum)")
         .species("Acontias", "lineatus")
-        .comb_authors(Some("1830"), &["Wagler"]);
+        .comb_authors(Some("1830"), &["Wagler"])
+        .nom_note("nomen nudum")
+        .published_in_page("196")
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Aster exilis Ell., nomen dubium")
         .species("Aster", "exilis")
         .comb_authors(None, &["Ell."])
