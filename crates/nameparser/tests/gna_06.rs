@@ -232,19 +232,27 @@ fn icvcn_binomial_names_and_exceptions() {
 }
 
 #[test]
+#[ignore = "desired: not parsed as a name, not yet supported"]
 fn not_parsed_ocr_errors_to_get_better_precision_recall_ratio() {
     // group: Not parsed OCR errors to get better precision/recall ratio
-    // FIXME(review): an OCR artefact ("Mom." for "Momordica") parsed as genus "Mom."
-    // skipped: Mom.alpium (Osbeck, 1778)
+    // currently an OCR artefact ("Mom." for "Momordica") parsed as genus "Mom."
+    assert_unparsable("Mom.alpium (Osbeck, 1778)", NameType::Other);
 }
 
 #[test]
+#[ignore = "desired: not parsed as a name, not yet supported"]
 fn no_parsing_genera_abbreviated_to3_letters_too_rare() {
     // group: No parsing -- Genera abbreviated to 3 letters (too rare)
-    // FIXME(review): "Gen. et n. sp." + a locality parsed as genus "Gen." and epithets
-    // skipped: Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma
-    // FIXME(review): "Genn. et n. sp." + a locality parsed as genus "Genn." and epithets
-    // skipped: Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma
+    // currently "Gen. et n. sp." + a locality parsed as genus "Gen." and epithets
+    assert_unparsable(
+        "Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma",
+        NameType::Other,
+    );
+    // currently "Genn. et n. sp." + a locality parsed as genus "Genn." and epithets
+    assert_unparsable(
+        "Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma",
+        NameType::Other,
+    );
 }
 
 #[test]
@@ -321,29 +329,31 @@ fn no_parsing_not_none_unidentified_phrases() {
 }
 
 #[test]
+#[ignore = "desired: not parsed as a name, not yet supported"]
 fn no_parsing_genus_with_apostrophe() {
     // group: No parsing -- genus with apostrophe
-    // FIXME(review): a vernacular name parsed as a trinomial
-    // skipped: Abbott's moray eel
-    // FIXME(review): a vernacular name parsed as a uninomial
-    // skipped: Chambers' twinpod
-    // FIXME(review): a cultivar-like vernacular parsed as a uninomial
-    // skipped: Columnea × Alladin's
-    // FIXME(review): a vernacular name parsed as a binomial
-    // skipped: Hawai'i silversword
+    // currently a vernacular name parsed as a trinomial
+    assert_unparsable("Abbott's moray eel", NameType::Other);
+    // currently a vernacular name parsed as a uninomial
+    assert_unparsable("Chambers' twinpod", NameType::Other);
+    // currently a cultivar-like vernacular parsed as a uninomial
+    assert_unparsable("Columnea × Alladin's", NameType::Other);
+    // currently a vernacular name parsed as a binomial
+    assert_unparsable("Hawai'i silversword", NameType::Other);
 }
 
 #[test]
+#[ignore = "desired: not parsed as a name, not yet supported"]
 fn no_parsing_camelcase_genus_word() {
     // group: No parsing -- CamelCase 'genus' word
-    // FIXME(review): an OCR artefact (mixed case) parsed as a uninomial
-    // skipped: PomaTomus
-    // FIXME(review): an OCR artefact (mixed case) parsed as a binomial
-    // skipped: DizygopUwa stosei
-    // FIXME(review): the bracketed suffix is dropped: uninomial "Oxytox"
-    // skipped: Oxytox[idae] Lindermann
-    // FIXME(review): a glued label parsed as a uninomial
-    // skipped: ScarabaeinGCsp.
+    // currently an OCR artefact (mixed case) parsed as a uninomial
+    assert_unparsable("PomaTomus", NameType::Other);
+    // currently an OCR artefact (mixed case) parsed as a binomial
+    assert_unparsable("DizygopUwa stosei", NameType::Other);
+    // currently the bracketed suffix is dropped: uninomial "Oxytox"
+    assert_unparsable("Oxytox[idae] Lindermann", NameType::Other);
+    // currently a glued label parsed as a uninomial
+    assert_unparsable("ScarabaeinGCsp.", NameType::Other);
 }
 
 #[test]

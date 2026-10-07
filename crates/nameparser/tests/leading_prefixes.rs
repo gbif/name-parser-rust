@@ -82,14 +82,13 @@ fn organism_word_as_a_missing_genus_epithet_is_untouched() {
 
 #[test]
 fn named_symbiont_with_a_genus_is_untouched() {
-    if let nameparser::ParseResult::Unparsable(e) = nameparser::parse(
-        "Wolbachia endosymbiont of Drosophila simulans",
-        None,
-        None,
-        None,
-    ) {
-        assert_ne!(e.type_, NameType::Identifier);
-    }
+    // not an identifier: the genus anchors it
+    // FIXME(review): "of Drosophila simulans" is no author — an informal Wolbachia with the phrase
+    // "endosymbiont of Drosophila simulans"
+    assert_name("Wolbachia endosymbiont of Drosophila simulans")
+        .species("Wolbachia", "endosymbiont")
+        .comb_authors(None, &["of Drosophila simulans"])
+        .nothing_else();
 }
 
 #[test]

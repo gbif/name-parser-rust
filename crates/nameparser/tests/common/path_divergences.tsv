@@ -25,12 +25,14 @@ auth-embedded	(sensu Mereschkowsky, 1878) Jankowski, 1992				basionymAuthorship,
 auth-embedded	(auct.) auct.				state,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
 auth-embedded	(auct.) Rolfe				state,taxonomicNote,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
 auth-embedded	sensu Turcz., p.p.				doubtful,taxonomicNote	embedded: the name string drops p.p. from the sensu note
+auth-embedded	ex DC.				doubtful,infraspecificEpithet,rank,warnings	embedded: the name string reads a leading "ex" as an epithet (gbif/name-parser#49)
 auth-embedded	van-der Land				combinationAuthorship,infraspecificEpithet,rank,warnings	embedded: the name string reads the hyphenated particle as an epithet
 auth-redundant	(non Scacchi, 1836) sensu Zibrowius, 1968				basionymAuthorship,code,taxonomicNote	embedded: a parenthesised note before the author becomes a basionym on the name string
 auth-redundant	(sensu Mereschkowsky, 1878) Jankowski, 1992				basionymAuthorship,code,taxonomicNote	embedded: a parenthesised note before the author becomes a basionym on the name string
 auth-redundant	(auct.) auct.				state,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
 auth-redundant	(auct.) Rolfe				state,taxonomicNote,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
 auth-redundant	sensu Turcz., p.p.				doubtful	embedded: the name string drops p.p. from the sensu note
+auth-redundant	ex DC.				doubtful,infraspecificEpithet,rank,warnings	embedded: the name string reads a leading "ex" as an epithet (gbif/name-parser#49)
 auth-redundant	van-der Land				combinationAuthorship,infraspecificEpithet,rank,warnings	embedded: the name string reads the hyphenated particle as an epithet
 nosplit	"Accipiter bicolor (Vieillot, 1817)"				-	structural
 nosplit	"Pseudomonas denitrificans" (Christensen, 1903) Bergey et al., 1923, nom. rejic.				-	structural

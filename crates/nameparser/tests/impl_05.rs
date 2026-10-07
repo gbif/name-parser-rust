@@ -470,12 +470,11 @@ fn hybrid_names() {
 
 #[test]
 fn author_variations() {
-    // Van den heede works only if given as separate authorship
-
-    // assertName("Asplenium cyprium Viane & Van den heede", "Asplenium cyprium")
-    //     .species("Asplenium", "cyprium")
-    //     .combAuthors(null, "Viane", "Van den heede")
-    //     .nothingElse();
+    // Van den heede: once only parsed when given as a separate authorship
+    assert_name("Asplenium cyprium Viane & Van den heede")
+        .species("Asplenium", "cyprium")
+        .comb_authors(None, &["Viane", "Van den heede"])
+        .nothing_else();
 
     // bis and ter as author suffix
     // https://github.com/Sp2000/colplus-backend/issues/591

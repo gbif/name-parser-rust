@@ -453,9 +453,7 @@ fn viral_names() {
         .code(NomCode::Virus)
         .nothing_else();
 
-    // SKIPPED: the trailing viruses.txt loop (`resourceReader("viruses.txt")`, asserting
-    // `isViralName(line)` for every non-comment/non-blank line) — reads a resource corpus
-    // file, covered by the golden/cross-val harness.
+    // the trailing viruses.txt loop: see corpus_files.rs
 }
 
 #[test]

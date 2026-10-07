@@ -780,7 +780,14 @@ fn fungus_names() {
     //
     //assertParsedParts("Mycosphaerella eryngii (Fr. Duby) ex Oudem., 1897", null, "Mycosphaerella", "eryngii", null, null, "ex Oudem.", "1897", "Fr. Duby", null);
     //assertParsedParts("Mycosphaerella eryngii (Fr.ex Duby) ex Oudem. 1897", null, "Mycosphaerella", "eryngii", null, null, "ex Oudem.", "1897", "Fr.ex Duby", null);
-    //assertParsedParts("Mycosphaerella eryngii (Fr. ex Duby) Johanson ex Oudem. 1897", null, "Mycosphaerella", "eryngii", null, null, "Johanson ex Oudem.", "1897", "Fr. ex Duby", null);
+    // ex-authors in both the basionym and the combination
+    assert_name("Mycosphaerella eryngii (Fr. ex Duby) Johanson ex Oudem. 1897")
+        .species("Mycosphaerella", "eryngii")
+        .comb_authors(Some("1897"), &["Oudem."])
+        .comb_ex_authors(&["Johanson"])
+        .bas_authors(None, &["Duby"])
+        .bas_ex_authors(None, &["Fr."])
+        .nothing_else();
 }
 
 #[test]

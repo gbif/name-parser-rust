@@ -11,11 +11,11 @@ fn unparsable_authors() {
     assert_authorship("Allemão", &[])
         .comb_authors(None, &["Allemão"])
         .nothing_else();
-    //assertAuthorship("ex DC.")
-    //    .combAuthors(null, "DC.")
-    //    .nothingElse();
-
-    //TODO: https://github.com/gbif/name-parser/issues/49
+    // FIXME(review): https://github.com/gbif/name-parser/issues/49 — right as a separate
+    // authorship, but on the name string ("Abies alba ex DC.") "ex" becomes an epithet
+    assert_authorship("ex DC.", &["DC."])
+        .comb_authors(None, &["DC."])
+        .nothing_else();
 }
 
 #[test]
@@ -45,10 +45,7 @@ fn extinct_names() {
         .nothing_else();
 }
 
-// SKIPPED: namesWithAuthorFile — reads a resource corpus file, covered by the golden/cross-val harness.
-// SKIPPED: otherFile — reads a resource corpus file, covered by the golden/cross-val harness.
-// SKIPPED: hybridsFile — reads a resource corpus file, covered by the golden/cross-val harness.
-// SKIPPED: placeholderFile — reads a resource corpus file, covered by the golden/cross-val harness.
+// namesWithAuthorFile, otherFile, hybridsFile, placeholderFile: see corpus_files.rs.
 
 /// Expect empty unparsable results for nothing or whitespace
 #[test]
