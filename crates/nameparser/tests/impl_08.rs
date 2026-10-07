@@ -25,7 +25,7 @@ fn botanical_code_from_separate_recombination_authorship() {
 #[test]
 fn standalone_manuscript_authorship() {
     // a standalone "ined." / "ms." supplied as the whole authorship is a manuscript marker,
-    // not an author (whereas "Author ms." glues the suffix onto the author).
+    // not an author (after an author, "Monterosato ms.", it is stripped off the author too).
     assert_name_hinted("Eucnidoideae", Some("ined."), Some(Rank::Superfamily), None)
         .monomial_rank("Eucnidoideae", Rank::Superfamily)
         .manuscript()
@@ -186,7 +186,7 @@ fn virus_caller_code_override() {
     assert_name_code("Tobamovirus tabaci", NomCode::Zoological)
         .species("Tobamovirus", "tabaci")
         .code(NomCode::Zoological);
-    // caller forces VIRUS on a legacy bare-virus binomial → unparsable OTHER + VIRUS
+    // without a hint, a legacy bare-virus binomial is still recognised → unparsable OTHER + VIRUS
     assert_unparsable_code("Acara virus", NameType::Other, NomCode::Virus);
 }
 

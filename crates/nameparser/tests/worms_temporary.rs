@@ -197,6 +197,7 @@ fn separate_of_citation_of_a_designation_lands_in_the_phrase() {
         None,
     )
     .taxon("Accacladocoelium")
+    .taxon_rank(Rank::Genus)
     .rank(Rank::Species)
     .phrase("sp. [of Sokolov et al., 2025]")
     .nothing_else();

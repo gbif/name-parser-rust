@@ -114,7 +114,7 @@ fn iczn_imprint() {
     assert_name("Anomalopus truncatus (Peters, 1876 [\"1877\"])")
         .species("Anomalopus", "truncatus")
         .bas_authors(Some("1876"), &["Peters"])
-        .imprint_year("1877")
+        .bas_imprint_year("1877")
         .code(NomCode::Zoological)
         .nothing_else();
 }
@@ -423,7 +423,6 @@ fn test_nom_status_remarks() {
     assert_name("Aster Gen.nov.")
         .monomial_rank("Aster", Rank::Genus)
         .nom_note("Gen. nov.");
-    // our test only catches the first match, real parsing both!
     assert_name("Perugia gruela Gen. nov. sp. nov")
         .species("Perugia", "gruela")
         .nom_note("Gen. nov. sp. nov.");

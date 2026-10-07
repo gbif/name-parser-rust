@@ -136,7 +136,13 @@ fn matches_java_name_formatter_over_corpus() {
     let path = GOLDEN_PATH;
     let data = match std::fs::read_to_string(path) {
         Ok(d) => d,
-        Err(_) => {
+        Err(e) => {
+            // Only a packaged crate, without the repo's `testdata/`, may skip the gate.
+            let testdata = concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata");
+            assert!(
+                !std::path::Path::new(testdata).is_dir(),
+                "snapshot {path} is missing: {e}"
+            );
             eprintln!(
                 "SKIP: formatter oracle {path} not found — regenerate it with FormatOracle \
                  (see this test's module doc)"

@@ -147,7 +147,6 @@ fn nom_notes() {
         .code(NomCode::Botanical)
         .nothing_else();
 
-    //TODO: pro syn.
     assert_name("Combretum Loefl. (1758), nom. cons. [= Grislea L. 1753].")
         .monomial("Combretum")
         .comb_authors(Some("1758"), &["Loefl."])

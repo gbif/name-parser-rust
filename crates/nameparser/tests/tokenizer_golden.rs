@@ -47,7 +47,13 @@ fn matches_java_tokenizer_over_corpus() {
     );
     let data = match std::fs::read_to_string(path) {
         Ok(d) => d,
-        Err(_) => {
+        Err(e) => {
+            // Only a packaged crate, without the repo's `testdata/`, may skip the gate.
+            let testdata = concat!(env!("CARGO_MANIFEST_DIR"), "/../../testdata");
+            assert!(
+                !std::path::Path::new(testdata).is_dir(),
+                "snapshot {path} is missing: {e}"
+            );
             eprintln!("SKIP: oracle {path} not found — run Task 3 Step 3 to generate it");
             return;
         }

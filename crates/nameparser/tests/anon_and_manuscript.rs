@@ -118,5 +118,6 @@ fn an_in_citation_of_an_anonymous_work() {
         .species("Solen", "truncatus")
         .comb_authors(Some("1837"), &["Swainson"])
         .published_in("anon. 1837")
+        .published_in_year(Some(1837))
         .nothing_else();
 }

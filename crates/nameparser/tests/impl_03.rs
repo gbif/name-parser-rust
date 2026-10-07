@@ -207,6 +207,7 @@ fn in_references() {
         .published_in("Chimonides, 1987")
         .nom_note("ms")
         .manuscript()
+        .published_in_year(Some(1987))
         .nothing_else();
 
     assert_name("Xolisma turquini Small apud Britton & Wilson")
@@ -225,12 +226,14 @@ fn in_references() {
         .species("Abies", "denheyeri")
         .comb_authors(Some("2017"), &["Eghbalian", "Khanjani", "Ueckermann"])
         .published_in("Eghbalian, Khanjani & Ueckermann, 2017")
+        .published_in_year(Some(2017))
         .nothing_else();
 
     assert_name("Mica Budde-Lund in Voeltzkow, 1908")
         .monomial("Mica")
         .comb_authors(Some("1908"), &["Budde-Lund"])
         .published_in("Voeltzkow, 1908")
+        .published_in_year(Some(1908))
         .nothing_else();
 }
 
@@ -535,6 +538,7 @@ fn placeholder() {
     .type_(NameType::Placeholder)
     .published_in("Eghbalian, Khanjani & Ueckermann, 2017")
     .warning(&[warnings::MISSING_GENUS])
+    .published_in_year(Some(2017))
     .nothing_else();
 
     assert_name("\"? gryphoidis")
@@ -565,8 +569,7 @@ fn placeholder() {
 
 #[test]
 fn sanctioned() {
-    // sanctioning authors not supported
-    // https://github.com/GlobalNamesArchitecture/gnparser/issues/409
+    // the fungal sanctioning author after a colon (gnparser#409)
     assert_name("Boletus versicolor L. : Fr.")
         .species("Boletus", "versicolor")
         .comb_authors(None, &["L."])
@@ -649,23 +652,4 @@ fn aggregates() {
     assert_name("Monomorium monomorium group")
         .binomial("Monomorium", None, "monomorium", Rank::SpeciesAggregate)
         .nothing_else();
-}
-
-// ---- local helpers: one DSL gap not covered by `common::` --------------------------------------
-
-/// `assertUnparsable(name, rank, type)` — Java's rank-hinted overload (`NameParserImplTest.java`
-/// private helper, distinct from the `(name, type, code)` overload). The shared DSL only exposes
-/// the no-hint `assert_unparsable` and the type+code `assert_unparsable_code`, so this one is
-/// reproduced locally rather than added to the shared `common` module.
-fn assert_unparsable_rank(input: &str, rank: Rank, type_: NameType) {
-    match nameparser::parse_name(input, None, Some(rank), None) {
-        Err(e) => assert_eq!(
-            e.type_, type_,
-            "`{input}` (rank {rank:?}) unparsable as expected but with type {:?}, expected {type_:?}",
-            e.type_
-        ),
-        Ok(pn) => panic!(
-            "expected `{input}` (rank {rank:?}) to be unparsable ({type_:?}) but it parsed: {pn:?}"
-        ),
-    }
 }

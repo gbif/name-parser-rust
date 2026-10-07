@@ -221,9 +221,10 @@ pub fn run(
         autonym_state = Some(st);
     }
 
-    // Separately-supplied authorship: run the same annotation strippers (sic / corrig /
-    // extinct dagger / brackets etc.) on the auxiliary string via `strip_authorship_markers`
-    // so its tokens are clean before parsing, then re-tokenise and parse it independently.
+    // Separately-supplied authorship: run a subset of the name string's annotation strippers
+    // (sic / corrig / notes / brackets etc.) on the auxiliary string via
+    // `strip_authorship_markers` so its tokens are clean before parsing, then re-tokenise and
+    // parse it independently.
     // An `in` / `apud` citation is split off exactly as on the name string (#20): the host
     // goes to `publishedIn` and its year becomes the pending, code-neutral publication year.
     // A reference the name string already gave is kept as it is: sources often repeat the
