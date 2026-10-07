@@ -101,10 +101,11 @@ fn raw(name: &str, authorship: Option<&str>, rank: Option<Rank>, code: Option<No
 /// True if the parse carries anything a source could have put in its authorship column instead:
 /// authors, a year, ex-authors, a sanctioning author, a note, a reference or a manuscript flag.
 fn carries_authorship(p: &ParsedName) -> bool {
-    let a = |x: &nameparser::model::Authorship| x.exists() || !x.ex_authors.is_empty();
+    let a = |x: &nameparser::model::Authorship| {
+        x.exists() || !x.ex_authors.is_empty() || x.sanctioning_author.is_some()
+    };
     a(&p.combination_authorship)
         || a(&p.basionym_authorship)
-        || p.sanctioning_author.is_some()
         || p.taxonomic_note.is_some()
         || p.nomenclatural_note.is_some()
         || p.published_in.is_some()

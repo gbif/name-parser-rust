@@ -352,7 +352,6 @@ pub fn assert_ex_authorship(
         warnings: full.warnings,
         combination_authorship: full.combination_authorship,
         basionym_authorship: full.basionym_authorship,
-        sanctioning_author: full.sanctioning_author,
         ..Default::default()
     };
     NameAssertion::new(pn, &format!("authorship `{raw}`"))
@@ -408,6 +407,8 @@ enum Np {
     /// The basionym half of `specific_authorship`.
     SpecificBas,
     Sanct,
+    /// The basionym authorship's sanctioning author.
+    BasSanct,
     Rank,
     TaxNote,
     NomNote,
@@ -669,9 +670,28 @@ impl NameAssertion {
     }
 
     pub fn sanct_author(self, author: &str) -> Self {
-        assert_eq!(self.n.sanctioning_author.as_deref(), Some(author));
+        assert_eq!(
+            self.n.combination_authorship.sanctioning_author.as_deref(),
+            Some(author),
+            "{} {}: combination sanctioning author",
+            self.location,
+            self.input
+        );
         assert_eq!(self.n.code, Some(NomCode::Botanical));
         self.mark(&[Np::Sanct, Np::Code])
+    }
+
+    /// The basionym's sanctioning author: `(Wulfen : Fr.)`.
+    pub fn bas_sanct_author(self, author: &str) -> Self {
+        assert_eq!(
+            self.n.basionym_authorship.sanctioning_author.as_deref(),
+            Some(author),
+            "{} {}: basionym sanctioning author",
+            self.location,
+            self.input
+        );
+        assert_eq!(self.n.code, Some(NomCode::Botanical));
+        self.mark(&[Np::BasSanct, Np::Code])
     }
 
     // ---- flags / notes / misc ----
@@ -914,7 +934,6 @@ impl NameAssertion {
             warnings,
             combination_authorship,
             basionym_authorship,
-            sanctioning_author,
         } = &self.n;
 
         if untested(Np::Epithets) {
@@ -968,6 +987,7 @@ impl NameAssertion {
             untested(Np::Auth),
             untested(Np::ExAuth),
             untested(Np::ImprintYear),
+            untested(Np::Sanct),
         );
         check_authorship_default(
             "basionymAuthorship",
@@ -975,7 +995,9 @@ impl NameAssertion {
             untested(Np::Bas),
             untested(Np::ExBas),
             untested(Np::BasImprintYear),
+            untested(Np::BasSanct),
         );
+
         check_combined_authorship_default(
             "genericAuthorship",
             generic_authorship,
@@ -988,12 +1010,6 @@ impl NameAssertion {
             untested(Np::SpecificComb),
             untested(Np::SpecificBas),
         );
-        if untested(Np::Sanct) {
-            assert!(
-                sanctioning_author.is_none(),
-                "unexpected sanctioningAuthor: {sanctioning_author:?}"
-            );
-        }
         if untested(Np::Rank) {
             assert_eq!(*rank, Rank::Unranked, "unexpected rank");
         }
@@ -1058,13 +1074,15 @@ impl NameAssertion {
 }
 
 /// [`NameAssertion::nothing_else`] for one [`Authorship`]: the authors/year/anonymous flag, the
-/// ex-authors and the imprint year are each at their default unless an assertion covered them.
+/// ex-authors, the imprint year and the sanctioning author are each at their default unless an
+/// assertion covered them.
 fn check_authorship_default(
     label: &str,
     a: &Authorship,
     main_untested: bool,
     ex_untested: bool,
     imprint_untested: bool,
+    sanct_untested: bool,
 ) {
     let Authorship {
         authors,
@@ -1072,7 +1090,14 @@ fn check_authorship_default(
         year,
         imprint_year,
         anonymous,
+        sanctioning_author,
     } = a;
+    if sanct_untested {
+        assert!(
+            sanctioning_author.is_none(),
+            "unexpected {label} sanctioningAuthor: {sanctioning_author:?}"
+        );
+    }
     if main_untested {
         assert!(
             authors.is_empty(),
@@ -1107,7 +1132,6 @@ fn check_combined_authorship_default(
     let Some(CombinedAuthorship {
         combination_authorship,
         basionym_authorship,
-        sanctioning_author,
     }) = ca
     else {
         assert!(comb_untested && bas_untested, "{label} asserted but absent");
@@ -1117,13 +1141,9 @@ fn check_combined_authorship_default(
         ("combination", combination_authorship, comb_untested),
         ("basionym", basionym_authorship, bas_untested),
     ] {
-        check_authorship_default(&format!("{label}.{half}"), a, untested, true, true);
+        check_authorship_default(&format!("{label}.{half}"), a, untested, true, true, true);
         assert!(!a.anonymous, "unexpected anonymous {label}.{half}");
     }
-    assert!(
-        sanctioning_author.is_none(),
-        "unexpected {label}.sanctioningAuthor: {sanctioning_author:?}"
-    );
 }
 
 // ---- the Informal assertion builder -----------------------------------------------------------
@@ -1575,16 +1595,26 @@ impl NameAssertion {
                 }
             }
         }
-        if untested(Np::Sanct) {
-            if let Some(s) = &n.sanctioning_author {
-                if n.code == Some(NomCode::Botanical) {
-                    out.push(format!(".sanct_author({})", lit(s)));
-                    code_done = true;
-                } else {
-                    out.push(format!(
-                        "// TODO sanctioningAuthor {s:?} with code {:?}",
-                        n.code
-                    ));
+        for (np, method, sanct) in [
+            (
+                Np::Sanct,
+                "sanct_author",
+                &n.combination_authorship.sanctioning_author,
+            ),
+            (
+                Np::BasSanct,
+                "bas_sanct_author",
+                &n.basionym_authorship.sanctioning_author,
+            ),
+        ] {
+            if untested(np) {
+                if let Some(s) = sanct {
+                    if n.code == Some(NomCode::Botanical) {
+                        out.push(format!(".{method}({})", lit(s)));
+                        code_done = true;
+                    } else {
+                        out.push(format!("// TODO {method} {s:?} with code {:?}", n.code));
+                    }
                 }
             }
         }

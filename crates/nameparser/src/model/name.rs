@@ -44,6 +44,11 @@ pub struct Authorship {
     /// evidence, cited in square brackets: `[Denis & Schiffermüller], 1775` (ICZN Recommendation
     /// 51D). Always serialized, like Java's primitive boolean.
     pub anonymous: bool,
+    /// Java `Authorship.sanctioningAuthor` (name-parser-api 5.2): the sanctioning author of a
+    /// sanctioned fungal name (ICN Art. 15), Fries or Persoon, cited after a colon — for a basionym
+    /// inside its brackets: `Merulius lacrimans (Wulfen : Fr.) Schum.`.
+    #[serde(rename = "sanctioningAuthor", skip_serializing_if = "Option::is_none")]
+    pub sanctioning_author: Option<String>,
 }
 
 impl Authorship {
@@ -73,7 +78,7 @@ impl Authorship {
 /// authorship, the basionym authorship, and the (fungal) sanctioning author.
 ///
 /// Used standalone as the type of [`ParsedName::generic_authorship`] /
-/// [`ParsedName::specific_authorship`]. Its own three fields are, in addition,
+/// [`ParsedName::specific_authorship`]. Its own two fields are, in addition,
 /// flattened directly onto `ParsedName` (see the module doc) to reproduce Java's Gson
 /// class-hierarchy field order for the outermost `ParsedName` object itself.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -84,8 +89,6 @@ pub struct CombinedAuthorship {
     /// Eagerly-initialized `Authorship` in Java — never omitted.
     #[serde(rename = "basionymAuthorship")]
     pub basionym_authorship: Authorship,
-    #[serde(rename = "sanctioningAuthor", skip_serializing_if = "Option::is_none")]
-    pub sanctioning_author: Option<String>,
 }
 
 impl CombinedAuthorship {
@@ -103,8 +106,10 @@ impl CombinedAuthorship {
 /// declaration order, most-derived class first:
 ///   1. `ParsedName`'s own 16 fields: `rank` .. `type_` (JSON `type`).
 ///   2. `ParsedAuthorship`'s own 11 fields: `extinct` .. `warnings`.
-///   3. `CombinedAuthorship`'s own 3 fields: `combination_authorship` (JSON
-///      `combinationAuthorship`) .. `sanctioning_author` (JSON `sanctioningAuthor`).
+///   3. `CombinedAuthorship`'s own 2 fields: `combination_authorship` (JSON
+///      `combinationAuthorship`) and `basionym_authorship` (JSON `basionymAuthorship`), each
+///      with its own sanctioning author (name-parser-api 5.2 removed the combination's from
+///      `CombinedAuthorship`).
 ///
 /// Do not reorder these fields without re-checking the plan's Reference section.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
@@ -190,15 +195,13 @@ pub struct ParsedName {
     /// order; diff this field as a set (sort both sides), never positionally.
     pub warnings: Vec<String>,
 
-    // ---- CombinedAuthorship's own 3 fields, flattened ----
+    // ---- CombinedAuthorship's own 2 fields, flattened ----
     /// Eagerly-initialized `Authorship` in Java (`= new Authorship()`) — never omitted.
     #[serde(rename = "combinationAuthorship")]
     pub combination_authorship: Authorship,
     /// Eagerly-initialized `Authorship` in Java — never omitted.
     #[serde(rename = "basionymAuthorship")]
     pub basionym_authorship: Authorship,
-    #[serde(rename = "sanctioningAuthor", skip_serializing_if = "Option::is_none")]
-    pub sanctioning_author: Option<String>,
 }
 
 /// Java `ParsedAuthorship`'s private `PUBLISHED_IN_YEAR` pattern (`ParsedAuthorship.java`):
@@ -384,7 +387,6 @@ impl Default for ParsedName {
             warnings: Vec::new(),
             combination_authorship: Authorship::default(),
             basionym_authorship: Authorship::default(),
-            sanctioning_author: None,
         }
     }
 }
@@ -625,6 +627,7 @@ mod tests {
             year: None,
             imprint_year: None,
             anonymous: false,
+            sanctioning_author: None,
         };
         assert!(
             !a.exists(),

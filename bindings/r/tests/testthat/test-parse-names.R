@@ -105,7 +105,16 @@ test_that("ex-author, basionym-year, and sanctioning-author columns are populate
   expect_equal(out$basionymYear[3], "1996")
   # row 4: fungal sanctioning colon
   expect_equal(out$combinationAuthors[4], "L.")
-  expect_equal(out$sanctioningAuthor[4], "Fr.")
+  expect_equal(out$combinationSanctioningAuthor[4], "Fr.")
+  expect_true(is.na(out$basionymSanctioningAuthor[4]))
+})
+
+test_that("a sanctioned basionym keeps its sanctioning author", {
+  out <- parse_names("Merulius lacrimans (Wulfen : Fr.) Schum.")
+  expect_equal(out$basionymAuthors, "Wulfen")
+  expect_equal(out$basionymSanctioningAuthor, "Fr.")
+  expect_true(is.na(out$combinationSanctioningAuthor))
+  expect_equal(out$authorshipComplete, "(Wulfen : Fr.) Schum.")
 })
 
 test_that("warnings column carries a real (non-empty) warning, not just NA", {

@@ -95,8 +95,8 @@
 //!
 //! # String table (fixed slots, offset [`STRING_TABLE_OFFSET`])
 //!
-//! `u32 count` (always [`NUM_STRING_SLOTS`] = 17, written as data — not just implied — so a
-//! reader can sanity-check it), then 17 × `(u32 offset, u32 len)` string refs in this fixed
+//! `u32 count` (always [`NUM_STRING_SLOTS`] = 18, written as data — not just implied — so a
+//! reader can sanity-check it), then 18 × `(u32 offset, u32 len)` string refs in this fixed
 //! slot order:
 //!
 //! | Slot | Index | `ParsedName` field |
@@ -113,11 +113,12 @@
 //! | `SLOT_PUBLISHED_IN` | 9 | `published_in` |
 //! | `SLOT_PUBLISHED_IN_PAGE` | 10 | `published_in_page` |
 //! | `SLOT_UNPARSED` | 11 | `unparsed` |
-//! | `SLOT_SANCTIONING_AUTHOR` | 12 | `sanctioning_author` |
+//! | `SLOT_SANCTIONING_AUTHOR_COMB` | 12 | `combination_authorship.sanctioning_author` |
 //! | `SLOT_YEAR_COMB` | 13 | `combination_authorship.year` |
 //! | `SLOT_YEAR_BAS` | 14 | `basionym_authorship.year` |
 //! | `SLOT_IMPRINT_YEAR_COMB` | 15 | `combination_authorship.imprint_year` |
 //! | `SLOT_IMPRINT_YEAR_BAS` | 16 | `basionym_authorship.imprint_year` |
+//! | `SLOT_SANCTIONING_AUTHOR_BAS` | 17 | `basionym_authorship.sanctioning_author` (ABI 6) |
 //!
 //! # Run-slots (fixed sequential order, starting at offset [`RUN_SLOTS_OFFSET`])
 //!
@@ -136,7 +137,7 @@
 //!
 //! Each run-slot's entries are always "present" in the string-ref sense (a run entry IS a real
 //! list element, e.g. one actual author string) — the absent-sentinel only ever applies to the
-//! 17 fixed string-table slots above (and to the 5 nested-group string refs below).
+//! 18 fixed string-table slots above (and to the 6 nested-group string refs below).
 //!
 //! # Nested authorship groups (fixed sequential order, right after the run-slots)
 //!
@@ -158,18 +159,19 @@
 //! - four run-slot tables (each a `u32 count` then `count` × 8-byte string refs), in this order:
 //!   its `combination_authorship.authors`, `combination_authorship.ex_authors`,
 //!   `basionym_authorship.authors`, `basionym_authorship.ex_authors`;
-//! - then five fixed 8-byte string refs, in this order: `combination_authorship.year`,
+//! - then six fixed 8-byte string refs, in this order: `combination_authorship.year`,
 //!   `combination_authorship.imprint_year`, `basionym_authorship.year`,
-//!   `basionym_authorship.imprint_year`, `sanctioning_author` — each honoring the same
-//!   absent-string sentinel ([`ABSENT_STRING_OFFSET`]) as the string table.
+//!   `basionym_authorship.imprint_year`, `combination_authorship.sanctioning_author`,
+//!   `basionym_authorship.sanctioning_author` (ABI 6) — each honoring the same absent-string
+//!   sentinel ([`ABSENT_STRING_OFFSET`]) as the string table.
 //!
 //! This mirrors the base `CombinedAuthorship`'s own encoding (the base one is spread across the
-//! four author/ex-author run-slots + the `YEAR_*`/`IMPRINT_YEAR_*`/`SANCTIONING_AUTHOR` string
+//! four author/ex-author run-slots + the `YEAR_*`/`IMPRINT_YEAR_*`/`SANCTIONING_AUTHOR_*` string
 //! slots) — the base authorship gets first-class flat slots because it's on every name; the two
 //! nested groups are rare (38 of 11,302 corpus names) so they get a compact
 //! present-flag-gated block instead. A `CombinedAuthorship` is a complete unit here: all four
-//! of each inner `Authorship`'s fields (authors, ex-authors, year, imprint-year) plus the
-//! group's `sanctioning_author` are carried, so a reader reconstructs the whole nested object.
+//! of each inner `Authorship`'s string fields (authors, ex-authors, year, imprint-year, sanctioning
+//! author) are carried, so a reader reconstructs the whole nested object.
 //!
 //! # Return convention (mirrored on [`crate::np_parse_struct`])
 //!
@@ -294,14 +296,15 @@ pub const SLOT_NOMENCLATURAL_NOTE: usize = 8;
 pub const SLOT_PUBLISHED_IN: usize = 9;
 pub const SLOT_PUBLISHED_IN_PAGE: usize = 10;
 pub const SLOT_UNPARSED: usize = 11;
-pub const SLOT_SANCTIONING_AUTHOR: usize = 12;
+pub const SLOT_SANCTIONING_AUTHOR_COMB: usize = 12;
 pub const SLOT_YEAR_COMB: usize = 13;
 pub const SLOT_YEAR_BAS: usize = 14;
 pub const SLOT_IMPRINT_YEAR_COMB: usize = 15;
 pub const SLOT_IMPRINT_YEAR_BAS: usize = 16;
+pub const SLOT_SANCTIONING_AUTHOR_BAS: usize = 17;
 
-/// Number of fixed string-table slots (`SLOT_UNINOMIAL`..`SLOT_IMPRINT_YEAR_BAS`).
-pub const NUM_STRING_SLOTS: usize = 17;
+/// Number of fixed string-table slots (`SLOT_UNINOMIAL`..`SLOT_SANCTIONING_AUTHOR_BAS`).
+pub const NUM_STRING_SLOTS: usize = 18;
 
 /// Byte size of a single string ref: `u32 offset` + `u32 len`.
 pub const STRING_REF_SIZE: usize = 8;
@@ -347,16 +350,16 @@ pub const RUN_SLOTS_OFFSET: usize = STRING_TABLE_OFFSET + STRING_TABLE_SIZE;
 /// 4-byte flag). See the module doc's "Nested authorship groups" section.
 pub const GROUP_ABSENT: u32 = 0;
 /// `present` flag value for a PRESENT nested authorship group (followed by its 4 run tables and
-/// 5 string refs).
+/// 6 string refs).
 pub const GROUP_PRESENT: u32 = 1;
 
 /// Number of nested authorship groups (`generic_authorship`, then `specific_authorship`).
 pub const NUM_NESTED_AUTHORSHIP_GROUPS: usize = 2;
 
-/// The 5 fixed 8-byte string refs a PRESENT nested group carries after its 4 run tables:
+/// The 6 fixed 8-byte string refs a PRESENT nested group carries after its 4 run tables:
 /// `combination.year`, `combination.imprint_year`, `basionym.year`, `basionym.imprint_year`,
-/// `sanctioning_author`.
-pub const NESTED_GROUP_STRING_REFS: usize = 5;
+/// `combination.sanctioning_author`, `basionym.sanctioning_author`.
+pub const NESTED_GROUP_STRING_REFS: usize = 6;
 
 // ================================================================================================
 // Enum ordinal mapping — see the module doc's "Enum ordinal mapping" section for how each of
@@ -568,7 +571,8 @@ struct NestedAuthorshipRefs {
     imprint_year_comb: (u32, u32),
     year_bas: (u32, u32),
     imprint_year_bas: (u32, u32),
-    sanctioning_author: (u32, u32),
+    sanctioning_author_comb: (u32, u32),
+    sanctioning_author_bas: (u32, u32),
 }
 
 /// The byte size a nested authorship group occupies (count-driven, so computable before any
@@ -589,7 +593,7 @@ fn nested_group_size(ca: &Option<CombinedAuthorship>) -> usize {
 }
 
 /// Places every string of a nested `CombinedAuthorship` into the blob (in the fixed encode
-/// order: comb authors, comb ex-authors, bas authors, bas ex-authors, then the 5 opt strings),
+/// order: comb authors, comb ex-authors, bas authors, bas ex-authors, then the 6 opt strings),
 /// returning their refs. The years/imprint-years/sanctioning-author use the absent sentinel.
 fn place_nested(placer: &mut StringPlacer, ca: &CombinedAuthorship) -> NestedAuthorshipRefs {
     let place_run = |placer: &mut StringPlacer, a: &Authorship| {
@@ -610,7 +614,12 @@ fn place_nested(placer: &mut StringPlacer, ca: &CombinedAuthorship) -> NestedAut
     let imprint_year_comb = place_opt(placer, ca.combination_authorship.imprint_year.as_deref());
     let year_bas = place_opt(placer, ca.basionym_authorship.year.as_deref());
     let imprint_year_bas = place_opt(placer, ca.basionym_authorship.imprint_year.as_deref());
-    let sanctioning_author = place_opt(placer, ca.sanctioning_author.as_deref());
+    let sanctioning_author_comb = place_opt(
+        placer,
+        ca.combination_authorship.sanctioning_author.as_deref(),
+    );
+    let sanctioning_author_bas =
+        place_opt(placer, ca.basionym_authorship.sanctioning_author.as_deref());
     NestedAuthorshipRefs {
         flags: authorship_flags(&ca.combination_authorship, &ca.basionym_authorship) as u32,
         authors_comb,
@@ -621,12 +630,13 @@ fn place_nested(placer: &mut StringPlacer, ca: &CombinedAuthorship) -> NestedAut
         imprint_year_comb,
         year_bas,
         imprint_year_bas,
-        sanctioning_author,
+        sanctioning_author_comb,
+        sanctioning_author_bas,
     }
 }
 
 /// Appends a nested authorship group to `buf`: just the [`GROUP_ABSENT`] flag when `refs` is
-/// `None`, else the [`GROUP_PRESENT`] flag, its `flags` word, four run tables and five fixed
+/// `None`, else the [`GROUP_PRESENT`] flag, its `flags` word, four run tables and six fixed
 /// string refs.
 fn write_nested_group(buf: &mut Vec<u8>, refs: &Option<NestedAuthorshipRefs>) {
     match refs {
@@ -642,7 +652,8 @@ fn write_nested_group(buf: &mut Vec<u8>, refs: &Option<NestedAuthorshipRefs>) {
             write_string_ref(buf, refs.imprint_year_comb);
             write_string_ref(buf, refs.year_bas);
             write_string_ref(buf, refs.imprint_year_bas);
-            write_string_ref(buf, refs.sanctioning_author);
+            write_string_ref(buf, refs.sanctioning_author_comb);
+            write_string_ref(buf, refs.sanctioning_author_bas);
         }
     }
 }
@@ -659,7 +670,7 @@ fn write_nested_group(buf: &mut Vec<u8>, refs: &Option<NestedAuthorshipRefs>) {
 /// call — so (see this module's "Field coverage" doc section) this format carries every field
 /// the core parser produces.
 pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
-    // ---- gather the 17 fixed string-slot values, in slot order ----
+    // ---- gather the 18 fixed string-slot values, in slot order ----
     let plain_slots: [Option<&str>; NUM_STRING_SLOTS] = [
         pn.uninomial.as_deref(),
         pn.genus.as_deref(),
@@ -673,11 +684,12 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
         pn.published_in.as_deref(),
         pn.published_in_page.as_deref(),
         pn.unparsed.as_deref(),
-        pn.sanctioning_author.as_deref(),
+        pn.combination_authorship.sanctioning_author.as_deref(),
         pn.combination_authorship.year.as_deref(),
         pn.basionym_authorship.year.as_deref(),
         pn.combination_authorship.imprint_year.as_deref(),
         pn.basionym_authorship.imprint_year.as_deref(),
+        pn.basionym_authorship.sanctioning_author.as_deref(),
     ];
 
     // ---- gather the 6 run-slots' source data, in fixed run order ----
@@ -843,12 +855,12 @@ mod tests {
 
     #[test]
     fn string_table_size_and_offset_are_internally_consistent() {
-        assert_eq!(NUM_STRING_SLOTS, 17);
+        assert_eq!(NUM_STRING_SLOTS, 18);
         assert_eq!(STRING_TABLE_OFFSET, HEADER_SIZE);
-        assert_eq!(STRING_TABLE_SIZE, 4 + 17 * 8);
+        assert_eq!(STRING_TABLE_SIZE, 4 + 18 * 8);
         assert_eq!(RUN_SLOTS_OFFSET, HEADER_SIZE + STRING_TABLE_SIZE);
-        // 36 header + (4 + 17*8) string table = 176.
-        assert_eq!(RUN_SLOTS_OFFSET, 176);
+        // 36 header + (4 + 18*8) string table = 184.
+        assert_eq!(RUN_SLOTS_OFFSET, 184);
     }
 
     #[test]
@@ -904,7 +916,7 @@ mod tests {
         // (4 bytes each), no blob.
         let expected_len = RUN_SLOTS_OFFSET + NUM_RUN_SLOTS * 4 + NUM_NESTED_AUTHORSHIP_GROUPS * 4;
         assert_eq!(buf.len(), expected_len);
-        assert_eq!(expected_len, 176 + 24 + 8); // 208
+        assert_eq!(expected_len, 184 + 24 + 8); // 216
         assert_eq!(
             i32::from_le_bytes(buf[OFF_STATUS..OFF_STATUS + 4].try_into().unwrap()),
             STATUS_SUCCESS
@@ -1017,10 +1029,10 @@ mod tests {
     }
 
     #[test]
-    fn present_nested_group_size_counts_flag_four_run_tables_and_five_string_refs() {
+    fn present_nested_group_size_counts_flag_four_run_tables_and_six_string_refs() {
         // combination has 1 author, basionym has 1 author, everything else empty:
         // 4 (present) + 4 (flags) + [4+8] comb authors + [4+0] comb ex + [4+8] bas authors
-        // + [4+0] bas ex + 5*8 fixed refs = 4 + 4 + 12 + 4 + 12 + 4 + 40 = 80.
+        // + [4+0] bas ex + 6*8 fixed refs = 4 + 4 + 12 + 4 + 12 + 4 + 48 = 88.
         let ca = CombinedAuthorship {
             combination_authorship: Authorship {
                 authors: vec!["Kuntze".to_string()],
@@ -1030,9 +1042,8 @@ mod tests {
                 authors: vec!["Adans.".to_string()],
                 ..Default::default()
             },
-            sanctioning_author: None,
         };
-        assert_eq!(nested_group_size(&Some(ca)), 80);
+        assert_eq!(nested_group_size(&Some(ca)), 88);
     }
 
     #[test]

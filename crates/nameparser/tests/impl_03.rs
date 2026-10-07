@@ -601,6 +601,7 @@ fn sanctioned() {
         .sanct_author("Fr.")
         .nothing_else();
 
+    // a sanctioned basionym keeps its sanctioning author inside the brackets
     assert_name("Agaricus compactus sarcocephalus (Fr. : Fr.) Fr. ")
         .infra_species(
             "Agaricus",
@@ -610,19 +611,7 @@ fn sanctioned() {
         )
         .comb_authors(None, &["Fr."])
         .bas_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
-        .nothing_else();
-
-    assert_name("Agaricus compactus sarcocephalus (Fr. : Fr.) Fr. ")
-        .infra_species(
-            "Agaricus",
-            "compactus",
-            Rank::InfraspecificName,
-            "sarcocephalus",
-        )
-        .comb_authors(None, &["Fr."])
-        .bas_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
+        .bas_sanct_author("Fr.")
         .nothing_else();
 
     assert_name("Agaricus ericetorum Pers. : Fr.")

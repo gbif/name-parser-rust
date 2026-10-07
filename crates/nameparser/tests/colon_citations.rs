@@ -65,6 +65,32 @@ fn a_year_after_the_sanctioning_author_is_the_names() {
 }
 
 #[test]
+fn a_sanctioned_basionym_keeps_its_sanctioning_author() {
+    // 9.9k ChecklistBank authorships; Java dropped the basionym's sanctioning author
+    assert_name_auth("Merulius lacrimans", "(Wulfen : Fr.) Schum.")
+        .species("Merulius", "lacrimans")
+        .comb_authors(None, &["Schum."])
+        .bas_authors(None, &["Wulfen"])
+        .bas_sanct_author("Fr.")
+        .nothing_else();
+    // sanctioned twice, by Persoon and then Fries
+    assert_name_auth("Russula sanguinea", "(Bull. : Pers.) Fr. : Fr.")
+        .species("Russula", "sanguinea")
+        .comb_authors(None, &["Fr."])
+        .bas_authors(None, &["Bull."])
+        .sanct_author("Fr.")
+        .bas_sanct_author("Pers.")
+        .nothing_else();
+    // a year after Fries' or Persoon's name is the basionym's own
+    assert_name_auth("Agaricus compactus", "(Pers.:Fr., 1801) Fr.")
+        .species("Agaricus", "compactus")
+        .comb_authors(None, &["Fr."])
+        .bas_authors(Some("1801"), &["Pers."])
+        .bas_sanct_author("Fr.")
+        .nothing_else();
+}
+
+#[test]
 fn a_colon_after_a_year_is_still_a_concept_reference() {
     assert_name("Vespa emarginata Linnaeus, 1758: Fabricius, 1793")
         .species("Vespa", "emarginata")

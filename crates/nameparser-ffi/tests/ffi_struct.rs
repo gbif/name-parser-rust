@@ -86,7 +86,7 @@ fn read_opt_string_ref(buf: &[u8], cursor: &mut usize) -> Option<String> {
 }
 
 /// Reads one nested authorship group at `*cursor` (advancing past it), reconstructing the whole
-/// `CombinedAuthorship` from its present-flag + 4 run tables + 5 string refs so it can be
+/// `CombinedAuthorship` from its present-flag + 4 run tables + 6 string refs so it can be
 /// compared with `==` against the real `ParsedName`'s own `Option<CombinedAuthorship>`.
 fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorship> {
     let present = read_u32(buf, *cursor);
@@ -109,7 +109,8 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
     let imprint_year_comb = read_opt_string_ref(buf, cursor);
     let year_bas = read_opt_string_ref(buf, cursor);
     let imprint_year_bas = read_opt_string_ref(buf, cursor);
-    let sanctioning_author = read_opt_string_ref(buf, cursor);
+    let sanctioning_author_comb = read_opt_string_ref(buf, cursor);
+    let sanctioning_author_bas = read_opt_string_ref(buf, cursor);
     Some(CombinedAuthorship {
         combination_authorship: Authorship {
             authors: authors_comb,
@@ -117,6 +118,7 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
             year: year_comb,
             imprint_year: imprint_year_comb,
             anonymous: flags & layout::ANON_COMBINATION_BIT != 0,
+            sanctioning_author: sanctioning_author_comb,
         },
         basionym_authorship: Authorship {
             authors: authors_bas,
@@ -124,8 +126,8 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
             year: year_bas,
             imprint_year: imprint_year_bas,
             anonymous: flags & layout::ANON_BASIONYM_BIT != 0,
+            sanctioning_author: sanctioning_author_bas,
         },
-        sanctioning_author,
     })
 }
 
@@ -389,9 +391,14 @@ fn assert_decoded_matches(name: &str, decoded: &Decoded, pn: &ParsedName) {
         "{name}: unparsed"
     );
     assert_eq!(
-        decoded.strings[layout::SLOT_SANCTIONING_AUTHOR],
-        pn.sanctioning_author,
-        "{name}: sanctioning_author"
+        decoded.strings[layout::SLOT_SANCTIONING_AUTHOR_COMB],
+        pn.combination_authorship.sanctioning_author,
+        "{name}: combination sanctioning_author"
+    );
+    assert_eq!(
+        decoded.strings[layout::SLOT_SANCTIONING_AUTHOR_BAS],
+        pn.basionym_authorship.sanctioning_author,
+        "{name}: basionym sanctioning_author"
     );
     assert_eq!(
         decoded.strings[layout::SLOT_YEAR_COMB],
@@ -720,6 +727,34 @@ fn anonymous_authorships_round_trip() {
     }
 }
 
+// ---- sanctioning authors (ABI 6) ----
+
+#[test]
+fn sanctioning_authors_round_trip() {
+    for name in [
+        "Boletus versicolor L. : Fr.",
+        "Merulius lacrimans (Wulfen : Fr.) Schum.",
+        "Russula sanguinea (Bull. : Pers.) Fr. : Fr.",
+        // the species author of a cultivar, in the nested specific-authorship group
+        "Acer campestre L. : Fr. cv. 'nanum'",
+    ] {
+        let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
+        let sanctioned = |a: &nameparser::model::Authorship| a.sanctioning_author.is_some();
+        assert!(
+            sanctioned(&pn.combination_authorship)
+                || sanctioned(&pn.basionym_authorship)
+                || pn
+                    .specific_authorship
+                    .as_ref()
+                    .is_some_and(|ca| sanctioned(&ca.combination_authorship)),
+            "{name}: test name must carry a sanctioning author"
+        );
+        let buf = parse_struct_success(name);
+        assert_abi_version_header(&buf);
+        assert_decoded_matches(name, &decode(&buf), &pn);
+    }
+}
+
 // ---- imprint years on the base authorship (real corpus examples) ----
 
 #[test]
@@ -889,5 +924,5 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
 
 #[test]
 fn np_abi_version_is_5() {
-    assert_eq!(nameparser_ffi::np_abi_version(), 5);
+    assert_eq!(nameparser_ffi::np_abi_version(), 6);
 }

@@ -760,11 +760,12 @@ fn test_nomenclatural_notes_pattern() {
 /// http://dev.gbif.org/issues/browse/POR-2454
 #[test]
 fn fungus_names() {
+    // the basionym's sanctioning author stays inside its brackets (Java dropped it)
     assert_name("Merulius lacrimans (Wulfen : Fr.) Schum.")
         .species("Merulius", "lacrimans")
         .comb_authors(None, &["Schum."])
         .bas_authors(None, &["Wulfen"])
-        .code(NomCode::Botanical)
+        .bas_sanct_author("Fr.")
         .nothing_else();
 
     assert_name("Merulius lacrimans (Wulfen) Schum. : Fr.")
@@ -775,7 +776,6 @@ fn fungus_names() {
         .code(NomCode::Botanical)
         .nothing_else();
 
-    //assertParsedParts("", null, "Merulius", "lacrimans", null, null, "Schum.", null, "Wulfen : Fr.", null);
     //assertParsedParts("Aecidium berberidis Pers. ex J.F. Gmel.", null, "Aecidium", "berberidis", null, null, "Pers. ex J.F. Gmel.", null, null, null);
     //assertParsedParts("Roestelia penicillata (O.F. Müll.) Fr.", null, "Roestelia", "penicillata", null, null, "Fr.", null, "O.F. Müll.", null);
     //

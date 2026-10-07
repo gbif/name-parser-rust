@@ -71,11 +71,17 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         return;
     }
     // Sanctioning by Fries or Persoon exists under the botanical code only, so a year beside the
-    // author is no zoological evidence ("Link:Fr., 1809").
-    let sanctioning = auth_state
-        .and_then(|st| st.sanctioning_author.as_deref())
-        .or(ctx.name.sanctioning_author.as_deref());
-    if sanctioning.is_some_and(is_sanctioning_author) {
+    // author is no zoological evidence ("Link:Fr., 1809"), the basionym's too ("(Wulfen : Fr.)").
+    let sanctioned = [
+        auth_state.and_then(|st| st.combination.sanctioning_author.as_deref()),
+        auth_state.and_then(|st| st.basionym.sanctioning_author.as_deref()),
+        ctx.name
+            .combination_authorship
+            .sanctioning_author
+            .as_deref(),
+        ctx.name.basionym_authorship.sanctioning_author.as_deref(),
+    ];
+    if sanctioned.into_iter().flatten().any(is_sanctioning_author) {
         ctx.name.code = Some(NomCode::Botanical);
         return;
     }
@@ -116,7 +122,9 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
 
         // --- botanical votes ---
         // Sanctioning author (": Fr." / ": Pers.").
-        if auth_state.sanctioning_author.is_some() || ctx.name.sanctioning_author.is_some() {
+        if auth_state.combination.sanctioning_author.is_some()
+            || ctx.name.combination_authorship.sanctioning_author.is_some()
+        {
             votes.insert(NomCode::Botanical);
         }
         // "(Basionym) Recombination" — a parenthesised basionym plus a recombination author.

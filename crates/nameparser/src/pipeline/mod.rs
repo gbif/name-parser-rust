@@ -245,7 +245,6 @@ pub fn run(
             ctx.name.specific_authorship = Some(CombinedAuthorship {
                 combination_authorship: st.combination,
                 basionym_authorship: st.basionym,
-                sanctioning_author: st.sanctioning_author,
             });
         }
     }
@@ -271,7 +270,6 @@ pub fn run(
         ctx.name.specific_authorship = Some(CombinedAuthorship {
             combination_authorship: std::mem::take(&mut ctx.name.combination_authorship),
             basionym_authorship: std::mem::take(&mut ctx.name.basionym_authorship),
-            sanctioning_author: None,
         });
     }
     // A name string ending in its cultivar epithet ("Acer campestre L. cv. 'nanum'") can only
@@ -290,7 +288,6 @@ pub fn run(
         ctx.name.specific_authorship = Some(CombinedAuthorship {
             combination_authorship: std::mem::take(&mut ctx.name.combination_authorship),
             basionym_authorship: std::mem::take(&mut ctx.name.basionym_authorship),
-            sanctioning_author: None,
         });
     }
 
@@ -343,11 +340,6 @@ pub fn run(
                 drop_repeated_note(&mut ctx.name.nomenclatural_note, notes.0);
                 drop_repeated_note(&mut ctx.name.taxonomic_note, notes.1);
             }
-        }
-    }
-    if let Some(st) = auth_state.as_ref() {
-        if st.sanctioning_author.is_some() {
-            ctx.name.sanctioning_author = st.sanctioning_author.clone();
         }
     }
 
@@ -464,9 +456,6 @@ fn parse_separate_authorship(ctx: &mut ParseContext, authorship: String) -> Opti
         if st.unparsed_from >= 0 {
             ctx.name.state = State::Partial;
             ctx.name.unparsed = st.unparsed_text.clone();
-        }
-        if st.sanctioning_author.is_some() {
-            ctx.name.sanctioning_author = st.sanctioning_author.clone();
         }
         return Some(st);
     }
@@ -779,14 +768,16 @@ mod tests {
     }
 
     #[test]
-    fn sanctioning_author_is_last_write_wins_embedded_over_separately_supplied() {
-        // Global Constraint 2 / the codeState-selection doc comment: the aux authorship's
-        // sanctioning author is applied first, the embedded name's own sanctioning author
-        // applied after (and so wins) — both present here to prove the ORDER, not just
-        // that either one alone works.
+    fn sanctioning_author_goes_with_the_authorship_that_wins() {
+        // The sanctioning author is part of its authorship: the separately supplied one, applied
+        // last, wins with it.
         let pn =
             run("Boletus versicolor L. : Fr.", Some("X. : Y."), None, None).expect("should parse");
-        assert_eq!(pn.sanctioning_author, Some("Fr.".to_string()));
+        assert_eq!(pn.combination_authorship.authors, vec!["X.".to_string()]);
+        assert_eq!(
+            pn.combination_authorship.sanctioning_author,
+            Some("Y.".to_string())
+        );
     }
 
     #[test]
