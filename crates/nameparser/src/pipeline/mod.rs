@@ -233,6 +233,66 @@ pub fn run(
         apply_authorship(&mut ctx.name, &st);
         autonym_state = Some(st);
     }
+    // Any other name keeps that mid-name span as the species' authorship ("Festuca ovina L. subsp.
+    // guestfalica …" — it used to be dropped). The authorship after the infraspecific epithet is
+    // the name's own.
+    if ctx.mid_author_from >= 0 && !ctx.name.is_autonym() && ctx.name.specific_authorship.is_none()
+    {
+        let from = ctx.mid_author_from as usize;
+        let to = ctx.mid_author_to as usize;
+        let st = authorship_parser::parse(&ctx.tokens[from..to], 0);
+        if st.combination.exists() || st.basionym.exists() {
+            ctx.name.specific_authorship = Some(CombinedAuthorship {
+                combination_authorship: st.combination,
+                basionym_authorship: st.basionym,
+                sanctioning_author: st.sanctioning_author,
+            });
+        }
+    }
+    // So does a provisional infraspecific designation whose author stands before it ("Acacia
+    // mutabilis Maslin subsp. Young River (G.F. Craig 2052)"): the phrase has no author of its own.
+    let phrase_after_author = ctx.name.rank.is_infraspecific()
+        && ctx.name.specific_epithet.is_some()
+        && ctx.name.infraspecific_epithet.is_none()
+        && ctx
+            .name
+            .combination_authorship
+            .authors
+            .first()
+            .is_some_and(|author| {
+                let phrase = ctx.name.phrase.as_deref().unwrap_or_default();
+                let text = letters(&trimmed);
+                match (text.find(&letters(author)), text.find(&letters(phrase))) {
+                    (Some(a), Some(p)) => !phrase.is_empty() && a < p,
+                    _ => false,
+                }
+            });
+    if phrase_after_author && ctx.name.specific_authorship.is_none() {
+        ctx.name.specific_authorship = Some(CombinedAuthorship {
+            combination_authorship: std::mem::take(&mut ctx.name.combination_authorship),
+            basionym_authorship: std::mem::take(&mut ctx.name.basionym_authorship),
+            sanctioning_author: None,
+        });
+    }
+    // A name string ending in its cultivar epithet ("Acer campestre L. cv. 'nanum'") can only
+    // carry the species author, so it is the specific authorship too — the cultivar has none of
+    // its own; given one ("… L. cv. 'Elsrijk' Broerse", or separately), that is the name's.
+    let ends_in_cultivar = ctx
+        .name
+        .cultivar_epithet
+        .as_deref()
+        .is_some_and(|cv| letters(&trimmed).ends_with(&letters(cv)));
+    if ends_in_cultivar
+        && ctx.name.has_authorship()
+        && ctx.name.specific_authorship.is_none()
+        && ctx.pending_specific_author.is_none()
+    {
+        ctx.name.specific_authorship = Some(CombinedAuthorship {
+            combination_authorship: std::mem::take(&mut ctx.name.combination_authorship),
+            basionym_authorship: std::mem::take(&mut ctx.name.basionym_authorship),
+            sanctioning_author: None,
+        });
+    }
 
     // Separately-supplied authorship: run the name string's annotation steps that apply to an
     // authorship on it too (uncertainty, imprint years, homoglyphs, HTML, the dagger, sic /
@@ -265,7 +325,7 @@ pub fn run(
             // (`Mill` + `Mill.`), so nothing it carries is recorded twice.
             Some(own) => {
                 let mut column = ctx.clone();
-                if let Some(st) = parse_separate_authorship(&mut column, authorship, &trimmed) {
+                if let Some(st) = parse_separate_authorship(&mut column, authorship) {
                     if same_authorship(own, &st) {
                         apply_authorship(&mut ctx.name, &st);
                         extra_state = Some(st);
@@ -279,7 +339,7 @@ pub fn run(
                     ctx.name.nomenclatural_note.clone(),
                     ctx.name.taxonomic_note.clone(),
                 );
-                extra_state = parse_separate_authorship(&mut ctx, authorship, &trimmed);
+                extra_state = parse_separate_authorship(&mut ctx, authorship);
                 drop_repeated_note(&mut ctx.name.nomenclatural_note, notes.0);
                 drop_repeated_note(&mut ctx.name.taxonomic_note, notes.1);
             }
@@ -373,11 +433,7 @@ pub fn run(
 /// authorship parser onto `ctx` (see the comment at the call site in [`run`]). Returns its parsed
 /// state, or `None` when nothing was left to parse as an authorship: a placeholder, a bracketed
 /// family-group authorship, or one an informal name's phrase took.
-fn parse_separate_authorship(
-    ctx: &mut ParseContext,
-    authorship: String,
-    trimmed: &str,
-) -> Option<AuthState> {
+fn parse_separate_authorship(ctx: &mut ParseContext, authorship: String) -> Option<AuthState> {
     // a placeholder ("Missing", "Not specified") is dropped first, so it never reaches the
     // phrase of a provisional name or the authorship parser
     let authorship = stripandstash::strip_authorship_placeholder(&authorship, &mut ctx.name);
@@ -404,25 +460,6 @@ fn parse_separate_authorship(
         }
         let aux = tokenize(&auth_clean);
         let st = authorship_parser::parse(&aux, 0);
-        // A name string ending in its cultivar epithet can only carry the species author
-        // ("Acer campestre L. cv. 'Elsrijk'"), so the separate authorship is the cultivar's —
-        // as on the name string, "… L. cv. 'Elsrijk' Broerse".
-        let ends_in_cultivar = ctx
-            .name
-            .cultivar_epithet
-            .as_deref()
-            .is_some_and(|cv| letters(trimmed).ends_with(&letters(cv)));
-        if ends_in_cultivar
-            && ctx.name.has_authorship()
-            && ctx.pending_specific_author.is_none()
-            && (st.combination.exists() || st.basionym.exists())
-        {
-            ctx.name.specific_authorship = Some(CombinedAuthorship {
-                combination_authorship: std::mem::take(&mut ctx.name.combination_authorship),
-                basionym_authorship: std::mem::take(&mut ctx.name.basionym_authorship),
-                sanctioning_author: None,
-            });
-        }
         apply_authorship(&mut ctx.name, &st);
         if st.unparsed_from >= 0 {
             ctx.name.state = State::Partial;

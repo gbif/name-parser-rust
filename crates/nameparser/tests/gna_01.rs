@@ -597,6 +597,8 @@ fn binomials_with_authorship() {
     assert_name("Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje")
         .infra_species("Stylosanthes", "guianensis", Rank::Variety, "robusta")
         .comb_authors(None, &["L.'t Mannetje"])
+        .specific_authors(None, &["Sw."])
+        .specific_bas_authors(None, &["Aubl."])
         .nothing_else();
 
     assert_name("Doxander vittatus entropi (Man in 't Veld & Visser, 1993)")
@@ -608,6 +610,7 @@ fn binomials_with_authorship() {
     assert_name("Elaeagnus triflora Roxb. var. brevilimbatus E.'t Hart")
         .infra_species("Elaeagnus", "triflora", Rank::Variety, "brevilimbatus")
         .comb_authors(None, &["E.'t Hart"])
+        .specific_authors(None, &["Roxb."])
         .nothing_else();
 
     assert_name("Laevistrombus guidoi (Man in't Veld & De Turck, 1998)")

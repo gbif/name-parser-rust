@@ -310,6 +310,7 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(None, &["Sarg."])
         .bas_authors(None, &["Sarg."])
         .code(NomCode::Botanical)
+        .specific_authors(None, &["S.Watson"])
         .nothing_else();
     assert_name("Potamogeton iilinoensis var. ventanicola")
         .infra_species("Potamogeton", "iilinoensis", Rank::Variety, "ventanicola")
@@ -331,6 +332,8 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Agalinis", "purpurea", Rank::Variety, "borealis")
         .comb_authors(Some("1987"), &["Peterson"])
         .bas_authors(None, &["Berg."])
+        .specific_authors(None, &["Briton"])
+        .specific_bas_authors(None, &["L."])
         .nothing_else();
     assert_name("Callideriphus flavicollis morph. reductus Fuchs 1961")
         .infra_species("Callideriphus", "flavicollis", Rank::Morph, "reductus")
@@ -375,10 +378,12 @@ fn infraspecies_with_rank_icn() {
     assert_name("Polypodium pectinatum (L.) f. typica Rosenst.")
         .infra_species("Polypodium", "pectinatum", Rank::Form, "typica")
         .comb_authors(None, &["Rosenst."])
+        .specific_bas_authors(None, &["L."])
         .nothing_else();
     assert_name("Polypodium pectinatum L. f. typica Rosenst.")
         .infra_species("Polypodium", "pectinatum", Rank::Form, "typica")
         .comb_authors(None, &["Rosenst."])
+        .specific_authors(None, &["L."])
         .nothing_else();
     // "agamosp." marker — parser captures the chloocladus token as infrasp epithet
     // but the rank stays SPECIES (per RankMarkers.put("agamosp", Rank.SPECIES)).
@@ -393,6 +398,7 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(None, &["A.", "D.Löve"])
         .bas_authors(None, &["Weihe", "Nees"])
         .code(NomCode::Botanical)
+        .specific_authors(None, &["L."])
         .nothing_else();
     assert_name("Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Variety, "graecensis")
@@ -403,18 +409,23 @@ fn infraspecies_with_rank_icn() {
     assert_name("Polypodium pectinatum L.f. typica Rosenst.")
         .infra_species("Polypodium", "pectinatum", Rank::Form, "typica")
         .comb_authors(None, &["Rosenst."])
+        .specific_authors(None, &["L."])
         .nothing_else();
     assert_name("Polypodium lineare C.Chr. f. caudatoattenuatum Takeda")
         .infra_species("Polypodium", "lineare", Rank::Form, "caudatoattenuatum")
         .comb_authors(None, &["Takeda"])
+        .specific_authors(None, &["C.Chr."])
         .nothing_else();
     assert_name("Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.")
         .infra_species("Rhododendron", "weyrichii", Rank::Form, "albiflorum")
         .comb_authors(None, &["T.Yamaz."])
+        .specific_authors(None, &["Maxim."])
         .nothing_else();
     assert_name("Armeria maaritima (Mill.) Willd. fma. originaria Bern.")
         .infra_species("Armeria", "maaritima", Rank::Form, "originaria")
         .comb_authors(None, &["Bern."])
+        .specific_authors(None, &["Willd."])
+        .specific_bas_authors(None, &["Mill."])
         .nothing_else();
     assert_name("Cotoneaster (Pyracantha) rogersiana var.aurantiaca")
         .infra_species("Cotoneaster", "rogersiana", Rank::Variety, "aurantiaca")
@@ -481,6 +492,7 @@ fn infraspecies_multiple_icn() {
         .bas_authors(None, &["Boiss.", "Heldr."])
         .code(NomCode::Botanical)
         .warning(&["Removed: subsp. fuchsii", warnings::QUADRINOMIAL])
+        .specific_authors(None, &["C.C.Gmel."])
         .nothing_else();
     assert_name("Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii")
         .infra_species("Senecio", "fuchsii", Rank::Variety, "fuchsii")

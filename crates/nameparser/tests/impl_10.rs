@@ -286,7 +286,7 @@ fn phrase_names() {
         .nothing_else();
 
     assert_name("Acacia mutabilis Maslin subsp. Young River (G.F. Craig 2052)")
-        .comb_authors(None, &["Maslin"])
+        .specific_authors(None, &["Maslin"])
         .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
         .phrase("Young River (G.F. Craig 2052)")
         .type_(NameType::Informal)
@@ -417,12 +417,12 @@ fn test_cultivar_pattern() {
         .nothing_else();
     assert_name("Sorbus hupehensis C.K.Schneid. cv. 'November pink'")
         .cultivar_sp("Sorbus", "hupehensis", "November pink")
-        .comb_authors(None, &["C.K.Schneid."])
+        .specific_authors(None, &["C.K.Schneid."])
         .nothing_else();
     assert_name("Symphoricarpos albus (L.) S.F.Blake cv. 'Turesson'")
         .cultivar_sp("Symphoricarpos", "albus", "Turesson")
-        .bas_authors(None, &["L."])
-        .comb_authors(None, &["S.F.Blake"])
+        .specific_bas_authors(None, &["L."])
+        .specific_authors(None, &["S.F.Blake"])
         .nothing_else();
     assert_name("Symphoricarpos sp. cv. 'mother of pearl'")
         .cultivar("Symphoricarpos", "mother of pearl")
@@ -593,9 +593,11 @@ fn bracketed_auct_note() {
 fn letter_subdivision_rank() {
     assert_name("Graphis scripta L. a.b pulverulenta")
         .infra_species("Graphis", "scripta", Rank::Other, "pulverulenta")
+        .specific_authors(None, &["L."])
         .nothing_else();
     assert_name("Graphis scripta L. a.b. pulverulenta")
         .infra_species("Graphis", "scripta", Rank::Other, "pulverulenta")
+        .specific_authors(None, &["L."])
         .nothing_else();
     assert_name("Graphis scripta a.b pulverulenta")
         .infra_species("Graphis", "scripta", Rank::Other, "pulverulenta")

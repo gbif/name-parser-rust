@@ -77,6 +77,7 @@ fn hybrids_with_notho_ranks() {
         .comb_authors(None, &["Bañares"])
         .notho(&[NamePart::Infraspecific])
         .code(NomCode::Botanical)
+        .specific_authors(None, &["Bañares"])
         .nothing_else();
     assert_name("Biscogniauxia nothofagi Whalley, Læssøe & Kile 1990")
         .species("Biscogniauxia", "nothofagi")

@@ -131,7 +131,7 @@ fn cultivars() {
 
     assert_name("Acer campestre L. cv. 'nanum'")
         .cultivar_sp("Acer", "campestre", "nanum")
-        .comb_authors(None, &["L."])
+        .specific_authors(None, &["L."])
         .nothing_else();
 
     assert_name("Verpericola megasoma \"Dall\" Pils.")
@@ -149,18 +149,18 @@ fn cultivars() {
 
     assert_name("Sorbus americana Marshall cv. 'Belmonte'")
         .cultivar_sp("Sorbus", "americana", "Belmonte")
-        .comb_authors(None, &["Marshall"])
+        .specific_authors(None, &["Marshall"])
         .nothing_else();
 
     assert_name("Sorbus hupehensis C.K.Schneid. cv. 'November pink'")
         .cultivar_sp("Sorbus", "hupehensis", "November pink")
-        .comb_authors(None, &["C.K.Schneid."])
+        .specific_authors(None, &["C.K.Schneid."])
         .nothing_else();
 
     assert_name("Symphoricarpos albus (L.) S.F.Blake cv. 'Turesson'")
         .cultivar_sp_rank("Symphoricarpos", "albus", Rank::Cultivar, "Turesson")
-        .bas_authors(None, &["L."])
-        .comb_authors(None, &["S.F.Blake"])
+        .specific_bas_authors(None, &["L."])
+        .specific_authors(None, &["S.F.Blake"])
         .nothing_else();
 
     assert_name("Symphoricarpos sp. cv. 'mother of pearl'")

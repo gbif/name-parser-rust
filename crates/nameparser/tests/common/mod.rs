@@ -405,6 +405,8 @@ enum Np {
     GenericBas,
     /// The combination half of `specific_authorship`.
     SpecificComb,
+    /// The basionym half of `specific_authorship`.
+    SpecificBas,
     Sanct,
     Rank,
     TaxNote,
@@ -556,8 +558,17 @@ impl NameAssertion {
     // ---- authorship ----
 
     pub fn comb_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
-        assert_eq!(Self::author_year(&self.n.combination_authorship), year);
-        assert_eq!(self.n.combination_authorship.authors, str_vec(authors));
+        let at = format!("{} {}", self.location, self.input);
+        assert_eq!(
+            Self::author_year(&self.n.combination_authorship),
+            year,
+            "{at}: combination year"
+        );
+        assert_eq!(
+            self.n.combination_authorship.authors,
+            str_vec(authors),
+            "{at}: combination authors"
+        );
         assert!(
             !self.n.combination_authorship.anonymous,
             "unexpected anonymous combination"
@@ -643,6 +654,18 @@ impl NameAssertion {
         assert_eq!(sa.combination_authorship.year.as_deref(), year);
         assert_eq!(sa.combination_authorship.authors, str_vec(authors));
         self.mark(&[Np::SpecificComb])
+    }
+
+    /// Basionym authors of the species authorship ("(Aubl.)" of "… (Aubl.) Sw. var. robusta …").
+    pub fn specific_bas_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
+        let sa = self
+            .n
+            .specific_authorship
+            .as_ref()
+            .expect("specificAuthorship set");
+        assert_eq!(sa.basionym_authorship.year.as_deref(), year);
+        assert_eq!(sa.basionym_authorship.authors, str_vec(authors));
+        self.mark(&[Np::SpecificBas])
     }
 
     pub fn sanct_author(self, author: &str) -> Self {
@@ -844,6 +867,15 @@ impl NameAssertion {
     /// so the whole parse is pinned. Mirrors Java `NameAssertion.nothingElse()`.
     pub fn nothing_else(mut self) {
         self.closed = true;
+        // Under NAMEPARSER_DUMP_OPEN_CHAINS a failing closed chain reports what it misses instead
+        // of failing, so one run collects every chain an engine change touches.
+        if std::env::var_os("NAMEPARSER_DUMP_OPEN_CHAINS").is_some()
+            && std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.check_nothing_else()))
+                .is_err()
+        {
+            dump_open_chain(self.location, self.missing_assertions());
+            return;
+        }
         let input = format!("{} {}", self.location, self.input);
         with_input(&input, || self.check_nothing_else());
     }
@@ -954,7 +986,7 @@ impl NameAssertion {
             "specificAuthorship",
             specific_authorship,
             untested(Np::SpecificComb),
-            true,
+            untested(Np::SpecificBas),
         );
         if untested(Np::Sanct) {
             assert!(
@@ -1516,9 +1548,9 @@ impl NameAssertion {
                 "specific",
                 &n.specific_authorship,
                 "specific_authors",
-                None,
+                Some("specific_bas_authors"),
                 Np::SpecificComb,
-                None,
+                Some(Np::SpecificBas),
             ),
         ] {
             let Some(ca) = ca else { continue };

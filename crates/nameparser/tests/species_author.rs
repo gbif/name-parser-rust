@@ -1,0 +1,60 @@
+// SPDX-License-Identifier: Apache-2.0
+//! The species author written inside an infraspecific or cultivar name — between the species
+//! epithet and the rank marker, or before a cultivar epithet — is the species' authorship, kept in
+//! `specific_authorship`. Only an autonym, which has no author of its own (ICN Art. 26.1), takes it
+//! as its authorship.
+
+mod common;
+use common::*;
+use nameparser::model::{NameType, NomCode, Rank};
+
+#[test]
+fn a_species_author_before_the_rank_marker_is_kept() {
+    // it used to be dropped
+    assert_name("Festuca ovina L. subsp. guestfalica (Boenn. ex Rchb.) K.Richt.")
+        .infra_species("Festuca", "ovina", Rank::Subspecies, "guestfalica")
+        .specific_authors(None, &["L."])
+        .bas_authors(None, &["Rchb."])
+        .bas_ex_authors(None, &["Boenn."])
+        .comb_authors(None, &["K.Richt."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Serjania meridionalis Cambess. var. paucidentata Radlk.")
+        .infra_species("Serjania", "meridionalis", Rank::Variety, "paucidentata")
+        .specific_authors(None, &["Cambess."])
+        .comb_authors(None, &["Radlk."])
+        .nothing_else();
+}
+
+#[test]
+fn an_autonym_takes_the_species_author_as_its_own() {
+    assert_name("Abies alba Mill. var. alba")
+        .infra_species("Abies", "alba", Rank::Variety, "alba")
+        .comb_authors(None, &["Mill."])
+        .nothing_else();
+}
+
+#[test]
+fn a_cultivar_without_its_own_author_keeps_the_species_author_apart() {
+    assert_name("Acer campestre L. cv. 'nanum'")
+        .cultivar_sp("Acer", "campestre", "nanum")
+        .specific_authors(None, &["L."])
+        .nothing_else();
+    // with its own author the cultivar author is the name's authorship, as before
+    assert_name("Acer campestre L. cv. 'Elsrijk' Broerse")
+        .cultivar_sp("Acer", "campestre", "Elsrijk")
+        .specific_authors(None, &["L."])
+        .comb_authors(None, &["Broerse"])
+        .nothing_else();
+}
+
+#[test]
+fn a_provisional_infraspecific_designation_keeps_the_species_author_apart() {
+    // the phrase has no author of its own
+    assert_name("Acacia mutabilis Maslin subsp. Young River (G.F. Craig 2052)")
+        .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
+        .phrase("Young River (G.F. Craig 2052)")
+        .specific_authors(None, &["Maslin"])
+        .type_(NameType::Informal)
+        .nothing_else();
+}

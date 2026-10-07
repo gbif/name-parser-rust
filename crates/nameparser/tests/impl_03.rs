@@ -35,6 +35,7 @@ fn infra_species() {
     assert_name("Festuca ovina L. subvar. gracilis Hackel")
         .infra_species("Festuca", "ovina", Rank::Subvariety, "gracilis")
         .comb_authors(None, &["Hackel"])
+        .specific_authors(None, &["L."])
         .nothing_else();
 
     assert_name("Pseudomonas syringae pv. aceris (Ark, 1939) Young, Dye & Wilkie, 1978")
@@ -62,6 +63,7 @@ fn infra_species() {
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
         .code(NomCode::Botanical)
+        .specific_authors(None, &["Kunth"])
         .nothing_else();
 
     // Warnings.REMOVED_PREFIX + "subsp. pallidotegula B.Boivin"
@@ -116,6 +118,7 @@ fn ex_authors() {
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
         .code(NomCode::Botanical)
+        .specific_authors(None, &["Kunth"])
         .nothing_else();
 
     // hort. = from hortulanorum (“of gardens”), the name was used in cultivation (nurseries, gardens, horticultural trade)

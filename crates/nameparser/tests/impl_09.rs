@@ -461,7 +461,7 @@ fn test_phrase_names() {
         Some(Rank::Subspecies),
         "Young River (G.F.Craig 2052)",
     )
-    .comb_authors(None, &["Maslin"])
+    .specific_authors(None, &["Maslin"])
     .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
     .nothing_else();
     assert_phrase_name(

@@ -27,6 +27,7 @@ fn rechf() {
         .comb_ex_authors(&["Neumann"])
         .comb_authors(None, &["Rech.f."])
         .code(NomCode::Botanical)
+        .specific_authors(None, &["L."])
         .nothing_else();
 }
 

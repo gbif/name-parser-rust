@@ -148,10 +148,12 @@ fn treating_al_as_et_al() {
     assert_name("Adonis cyllenea Boiss. & al. var. paryadrica Boiss.")
         .infra_species("Adonis", "cyllenea", Rank::Variety, "paryadrica")
         .comb_authors(None, &["Boiss."])
+        .specific_authors(None, &["Boiss.", "al."])
         .nothing_else();
     assert_name("Adonis cyllenea Boiss. & al var. paryadrica Boiss.")
         .infra_species("Adonis", "cyllenea", Rank::Variety, "paryadrica")
         .comb_authors(None, &["Boiss."])
+        .specific_authors(None, &["Boiss.", "al"])
         .nothing_else();
 }
 

@@ -285,6 +285,7 @@ fn epithets_with_an_apostrophe() {
     assert_name("Serjania meridionalis Cambess. var. o'donelli F.A. Barkley")
         .infra_species("Serjania", "meridionalis", Rank::Variety, "o'donelli")
         .comb_authors(None, &["F.A.Barkley"])
+        .specific_authors(None, &["Cambess."])
         .nothing_else();
 }
 
@@ -299,6 +300,8 @@ fn authors_with_an_apostrophe() {
         .bas_authors(None, &["È.Neé"])
         .warning(&["Removed: subsp. mackayana", warnings::QUADRINOMIAL])
         .code(NomCode::Botanical)
+        .specific_authors(None, &["L'Hèr."])
+        .specific_bas_authors(None, &["L."])
         .nothing_else();
     assert_name("Galega officinalis (L.) L`Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.")
         .infra_species("Galega", "officinalis", Rank::Variety, "petiolata")
@@ -306,6 +309,8 @@ fn authors_with_an_apostrophe() {
         .bas_authors(None, &["È.Neé"])
         .warning(&["Removed: subsp. mackayana", warnings::QUADRINOMIAL])
         .code(NomCode::Botanical)
+        .specific_authors(None, &["L'Hèr."])
+        .specific_bas_authors(None, &["L."])
         .nothing_else();
     assert_name("Galega officinalis (L.) L'Hèr. subsp. mackayana (O'Flannagan) Mc Inley var. petiolata (È. Neé) Brüch.")
         .infra_species("Galega", "officinalis", Rank::Variety, "petiolata")
@@ -313,6 +318,8 @@ fn authors_with_an_apostrophe() {
         .bas_authors(None, &["È.Neé"])
         .warning(&["Removed: subsp. mackayana", warnings::QUADRINOMIAL])
         .code(NomCode::Botanical)
+        .specific_authors(None, &["L'Hèr."])
+        .specific_bas_authors(None, &["L."])
         .nothing_else();
 }
 

@@ -233,6 +233,7 @@ fn apostrophe_epithets() {
     assert_name("Serjania meridionalis Cambess. var. o'donelli F.A. Barkley")
         .infra_species("Serjania", "meridionalis", Rank::Variety, "o'donelli")
         .comb_authors(None, &["F.A.Barkley"])
+        .specific_authors(None, &["Cambess."])
         .nothing_else();
 }
 
@@ -553,6 +554,7 @@ fn indet_names() {
         .binomial("Melastoma", None, "vacillans", Rank::Variety)
         .type_(NameType::Informal)
         .warning(&[warnings::INDETERMINED])
+        .specific_authors(None, &["Blume"])
         .nothing_else();
 
     let n = nameparser::parse_name("Lepidoptera Hooker", None, Some(Rank::Species), None)
