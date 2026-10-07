@@ -143,7 +143,6 @@ fn taxonomic_notes() {
         .monomial("Achromobacter")
         .comb_authors(Some("1981"), &["Yabuuchi", "Yano"])
         .sensu("emend. Yabuuchi et al., 1998")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // FishBase https://github.com/CatalogueOfLife/backend/issues/1067
@@ -178,7 +177,6 @@ fn taxonomic_notes() {
         .monomial("Dyadobacter")
         .bas_authors(Some("2000"), &["Chelius", "Triplett"])
         .sensu("emend. Reddy & Garcia-Pichel, 2005")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Thalassiosira praeconvexa Burckle emend Gersonde & Schrader, 1984")

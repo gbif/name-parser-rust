@@ -67,6 +67,7 @@ fn a_lone_anonymous_word_is_the_flag() {
         .species("Aus", "bus")
         .comb_anon(None, &[])
         .comb_ex_authors(&["Sw."])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -118,16 +119,19 @@ fn a_bracketed_pre_starting_point_author_is_an_ex_author() {
         .monomial("Lupinus")
         .comb_authors(None, &["L."])
         .comb_ex_authors(&["Tourn."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Cuphea lanceolata", "[Dryand.] Ait.")
         .species("Cuphea", "lanceolata")
         .comb_authors(None, &["Ait."])
         .comb_ex_authors(&["Dryand."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Aus bus", "[Kar. & Kir.] Regel")
         .species("Aus", "bus")
         .comb_authors(None, &["Regel"])
         .comb_ex_authors(&["Kar.", "Kir."])
+        .code(NomCode::Botanical)
         .nothing_else();
     // the bracket may already carry its "ex"
     assert_name_auth(
@@ -137,6 +141,7 @@ fn a_bracketed_pre_starting_point_author_is_an_ex_author() {
     .species("Pseudocercospora", "dendrobii")
     .comb_authors(None, &["Goh", "W.H.Hsieh"])
     .comb_ex_authors(&["Sawada"])
+    .code(NomCode::Botanical)
     .nothing_else();
 }
 
@@ -171,6 +176,7 @@ fn an_anonymous_ex_author_or_team_member_stays_a_string() {
         .monomial("Depierrea")
         .comb_authors(None, &["Schltdl."])
         .comb_ex_authors(&["anon."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Serranus confertus", "Anonymous & Bennett, 1830")
         .species("Serranus", "confertus")

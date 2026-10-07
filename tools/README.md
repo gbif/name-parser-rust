@@ -42,3 +42,15 @@ crates/nameparser-py/.venv/bin/python -I tools/path_divergence.py --diff before.
 ```
 
 The sample is seeded (`--seed`, default 42), so two runs over the same file compare the same rows.
+
+## `code_inference_eval.py`
+
+Measures code inference against the nomenclatural code ChecklistBank datasets declare: samples
+`testdata/clb-verbatim-names.tsv` rows that carry an authorship and a code, parses them without the
+code hint and reports correct / wrong / no inference, overall, per declared code and per authorship
+shape (year with or without a comma, ex-author, hybrid, in-citation, …), with `--examples N` wrong
+inferences per shape. Run it before and after changing `pipeline/code_inference.rs`:
+
+```sh
+crates/nameparser-py/.venv/bin/python -I tools/code_inference_eval.py --sample 200000 --examples 10
+```

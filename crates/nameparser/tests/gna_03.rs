@@ -44,10 +44,12 @@ fn hybrids_with_notho_ranks() {
         .infra_species("Crataegus", "curvisepala", Rank::Variety, "naviculiformis")
         .comb_authors(None, &["T.Petauer"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Abies masjoannis nothof. mesoides")
         .infra_species("Abies", "masjoannis", Rank::Form, "mesoides")
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Aconitum berdaui nothosubsp. walasii (Mitka) Mitka")
         .infra_species("Aconitum", "berdaui", Rank::Subspecies, "walasii")
@@ -74,6 +76,7 @@ fn hybrids_with_notho_ranks() {
         .infra_species("Aeonium", "proliferum", Rank::Variety, "glabrifolium")
         .comb_authors(None, &["Bañares"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Biscogniauxia nothofagi Whalley, Læssøe & Kile 1990")
         .species("Biscogniauxia", "nothofagi")
@@ -90,50 +93,58 @@ fn hybrids_with_notho_ranks() {
 #[test]
 fn named_hybrids() {
     // group: Named hybrids
-    // FIXME(review): a hybrid (×) is botanical, never zoological
     assert_name("×Agropogon P. Fourn. 1934")
         .monomial("Agropogon")
         .notho(&[NamePart::Generic])
         .comb_authors(Some("1934"), &["P.Fourn."])
-        .code(NomCode::Zoological)
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("xAgropogon P. Fourn.")
         .monomial("Agropogon")
         .notho(&[NamePart::Generic])
         .comb_authors(None, &["P.Fourn."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("XAgropogon P.Fourn.")
         .monomial("Agropogon")
         .notho(&[NamePart::Generic])
         .comb_authors(None, &["P.Fourn."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("× Agropogon")
         .notho(&[NamePart::Generic])
         .monomial("Agropogon")
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("x Agropogon")
         .notho(&[NamePart::Generic])
         .monomial("Agropogon")
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("X Agropogon")
         .notho(&[NamePart::Generic])
         .monomial("Agropogon")
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("X Cupressocyparis leylandii")
         .notho(&[NamePart::Generic])
         .species("Cupressocyparis", "leylandii")
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("×Heucherella tiarelloides")
         .notho(&[NamePart::Generic])
         .species("Heucherella", "tiarelloides")
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("xHeucherella tiarelloides")
         .notho(&[NamePart::Generic])
         .species("Heucherella", "tiarelloides")
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("x Heucherella tiarelloides")
         .notho(&[NamePart::Generic])
         .species("Heucherella", "tiarelloides")
+        .code(NomCode::Botanical)
         .nothing_else();
     // GNA reduces this to a bare monomial; GBIF retains the genus+infrageneric structure
     assert_name("XAgroelymus Lapage sect. Agroelinelymus")
@@ -146,12 +157,14 @@ fn named_hybrids() {
         .notho(&[NamePart::Generic])
         .comb_authors(Some("1946"), &["C.E.Hubb."])
         .bas_authors(None, &["Sm."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Asplenium X inexpectatum (E.L. Braun 1940) Morton (1956)")
         .species("Asplenium", "inexpectatum")
         .notho(&[NamePart::Specific])
         .comb_authors(Some("1956"), &["Morton"])
         .bas_authors(Some("1940"), &["E.L.Braun"])
+        .code(NomCode::Botanical)
         .nothing_else();
     // GNA drops × from the canonical for species-level hybrids; GBIF includes it
     assert_name("Androrchis × fallax (De Not.) W.Foelsche & Jakely")
@@ -161,12 +174,11 @@ fn named_hybrids() {
         .bas_authors(None, &["De Not."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): a hybrid (×) is botanical, never zoological
     assert_name("Salix ×capreola Andersson (1867)")
         .species("Salix", "capreola")
         .notho(&[NamePart::Specific])
         .comb_authors(Some("1867"), &["Andersson"])
-        .code(NomCode::Zoological)
+        .code(NomCode::Botanical)
         .nothing_else();
     // x before the specific epithet + nothosubsp. rank marker: the rank marker wins for notho
     assert_name("Polypodium  x vulgare nothosubsp. mantoniae (Rothm.) Schidlay")
@@ -180,11 +192,13 @@ fn named_hybrids() {
         .species("Salix", "capreola")
         .notho(&[NamePart::Specific])
         .comb_authors(None, &["Andersson"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("x Abacopterella x altifrons T.E.Almeida & A.R.Field")
         .species("Abacopterella", "altifrons")
         .notho(&[NamePart::Generic, NamePart::Specific])
         .comb_authors(None, &["T.E.Almeida", "A.R.Field"])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -317,6 +331,7 @@ fn genus_with_hyphen_allowed_by_icn() {
     assert_name("Tsugo-piceo-piceo-picea × crassifolia")
         .species("Tsugo-piceo-piceo-picea", "crassifolia")
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
     // The × before crassifolia marks it as a nothotaxon: canonical includes "×"
     assert_name("De-Filippii Gortani & Merla 1934")
@@ -368,6 +383,7 @@ fn genus_with_hyphen_allowed_by_icn() {
     assert_name("Tsugo-piceo-piceo-picea × crassifolia")
         .species("Tsugo-piceo-piceo-picea", "crassifolia")
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -630,25 +646,23 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .species("Arthopyrenia", "hyalospora")
         .comb_authors(None, &["Banker"])
         .comb_ex_authors(&["Nyl."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Arthopyrenia hyalospora Nyl. ex. Banker")
         .species("Arthopyrenia", "hyalospora")
         .comb_authors(None, &["Banker"])
         .comb_ex_authors(&["Nyl."])
+        .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): an ex-author is botanical usage, no zoological name
     assert_name("Glomopsis lonicerae Peck ex C.J. Gould 1945")
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
-        .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): an ex-author is botanical usage, no zoological name
     assert_name("Glomopsis lonicerae Peck ex. C.J. Gould 1945")
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Acanthobasidium delicatum (Wakef.) Oberw. ex Jülich 1979")
         .species("Acanthobasidium", "delicatum")
@@ -668,6 +682,7 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .comb_ex_authors(&["Johanson"])
         .bas_authors(None, &["Duby"])
         .bas_ex_authors(None, &["Fr."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Mycosphaerella eryngii (Fr. ex. Duby) Johanson ex. Oudem. 1897")
         .species("Mycosphaerella", "eryngii")
@@ -675,10 +690,12 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .comb_ex_authors(&["Johanson"])
         .bas_authors(None, &["Duby"])
         .bas_ex_authors(None, &["Fr."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Mycosphaerella eryngii (Fr. Duby) ex Oudem. 1897")
         .species("Mycosphaerella", "eryngii")
         .comb_authors(Some("1897"), &["Oudem."])
         .bas_authors(None, &["Fr.Duby"])
+        .code(NomCode::Botanical)
         .nothing_else();
 }

@@ -85,6 +85,7 @@ fn wfo_authors() {
         .species("Taraxacum", "vulgaris")
         .comb_authors(None, &["K.Heyne"])
         .comb_ex_authors(&["Backer"])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     // unpublished = manuscript name
@@ -220,6 +221,7 @@ fn author_with_publication() {
         .published_in("Prodr. 4: 484 (1830)")
         .nom_note("pro syn.")
         .published_in_year(Some(1830))
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(
@@ -231,6 +233,7 @@ fn author_with_publication() {
     .published_in("Phytologia 1: 204, (1937)")
     .nom_note("in obs., pro syn.")
     .published_in_year(Some(1937))
+    .code(NomCode::Botanical)
     .nothing_else();
 
     assert_name("Amplexoididae Wang, Guang-Xu in Wang, He, Tang & Percival, 2018")

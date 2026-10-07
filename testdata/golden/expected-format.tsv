@@ -612,7 +612,7 @@ Pseudoblepharis glischrocalix Mildbr. ms.	true	Pseudoblepharis glischrocalix Mil
 Pseudocalyx schliebenii var. macranthus Mildbr. ms.	true	Pseudocalyx schliebenii var. macranthus Mildbr.	Pseudocalyx schliebenii var. macranthus	Pseudocalyx schliebenii macranthus	Pseudocalyx schliebenii var. macranthus Mildbr., ms.	Mildbr.
 Psilactis brevilingulata Sch.Bip. ex Hemsl.	true	Psilactis brevilingulata Sch.Bip. ex Hemsl.	Psilactis brevilingulata	Psilactis brevilingulata	Psilactis brevilingulata Sch.Bip. ex Hemsl.	Sch.Bip. ex Hemsl.
 Psychotria amplithyrsa Valeton var. fluminis augustea Valeton	true	Psychotria amplithyrsa var. fluminis Valeton	Psychotria amplithyrsa var. fluminis	Psychotria amplithyrsa fluminis	Psychotria amplithyrsa var. fluminis Valeton	Valeton
-Psychotria colorata (Willd. ex Roem. & Schult.) Müll.Arg. subsp. colorata (Willd. ex Roem. & Schult.	true	Psychotria colorata subsp. colorata Willd. ex Roem. & Schult.	Psychotria colorata subsp. colorata	Psychotria colorata colorata	Psychotria colorata subsp. colorata Willd. ex Roem. & Schult.	Willd. ex Roem. & Schult.
+Psychotria colorata (Willd. ex Roem. & Schult.) Müll.Arg. subsp. colorata (Willd. ex Roem. & Schult.	true	Psychotria colorata Willd. ex Roem. & Schult. subsp. colorata	Psychotria colorata subsp. colorata	Psychotria colorata colorata	Psychotria colorata Willd. ex Roem. & Schult. subsp. colorata	Willd. ex Roem. & Schult.
 Psychotria cupularis (Müll.Arg.) Standl.	true	Psychotria cupularis (Müll.Arg.) Standl.	Psychotria cupularis	Psychotria cupularis	Psychotria cupularis (Müll.Arg.) Standl.	(Müll.Arg.) Standl.
 Psychotria flavicans Müll.Arg.	true	Psychotria flavicans Müll.Arg.	Psychotria flavicans	Psychotria flavicans	Psychotria flavicans Müll.Arg.	Müll.Arg.
 Psychotria kappleri (Miq.) Müll.Arg. ex Benoist	true	Psychotria kappleri (Miq.) Müll.Arg. ex Benoist	Psychotria kappleri	Psychotria kappleri	Psychotria kappleri (Miq.) Müll.Arg. ex Benoist	(Miq.) Müll.Arg. ex Benoist
@@ -4059,7 +4059,7 @@ Poaceae supertrib. Arundinarodae L.Liu	true	Arundinarodae L.Liu	Arundinarodae	Ar
 Alchemilla subsect. Sericeae A.Plocek	true	Alchemilla subsect. Sericeae A.Plocek	Alchemilla subsect. Sericeae	Sericeae	Alchemilla subsect. Sericeae A.Plocek	A.Plocek
 subgen. Psammophrynopsis Koch, 1953	true	subgen. Psammophrynopsis Koch, 1953	subgen. Psammophrynopsis	Psammophrynopsis	subgen. Psammophrynopsis Koch, 1953	Koch, 1953
 Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	true	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	Hymenophyllum subgen. Hymenoglossum	Hymenoglossum	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	(Presl) R.M.Tryon & A.Tryon
-Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia (Maihuenia) Philippi ex F.A.C.Weber, 1898	Pereskia (Maihuenia)	Maihuenia	Pereskia (Maihuenia) Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
+Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Pereskia subgen. Maihuenia	Maihuenia	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
 Aconitum ser. Tangutica W.T. Wang	true	Aconitum ser. Tangutica W.T.Wang	Aconitum ser. Tangutica	Tangutica	Aconitum ser. Tangutica W.T.Wang	W.T.Wang
 Calathus (Lindrothius) KURNAKOV 1961	true	Calathus (Lindrothius) Kurnakov, 1961	Calathus (Lindrothius)	Lindrothius	Calathus (Lindrothius) Kurnakov, 1961	Kurnakov, 1961
 Eucalyptus subser. Regulares Brooker	true	Eucalyptus subser. Regulares Brooker	Eucalyptus subser. Regulares	Regulares	Eucalyptus subser. Regulares Brooker	Brooker
@@ -4220,7 +4220,7 @@ Cotoneaster (Pyracantha) rogersiana var.aurantiaca	true	Cotoneaster rogersiana v
 Poa annua fo varia	true	Poa annua f. varia	Poa annua f. varia	Poa annua varia	Poa annua f. varia	
 Physarum globuliferum forma. flavum Leontyev & Dudka	true	Physarum globuliferum f. flavum Leontyev & Dudka	Physarum globuliferum f. flavum	Physarum globuliferum flavum	Physarum globuliferum f. flavum Leontyev & Dudka	Leontyev & Dudka
 Homalanthus nutans (Mull.Arg.) Benth. & Hook. f. ex Drake	true	Homalanthus nutans (Mull.Arg.) Benth. & Hook.f. ex Drake	Homalanthus nutans	Homalanthus nutans	Homalanthus nutans (Mull.Arg.) Benth. & Hook.f. ex Drake	(Mull.Arg.) Benth. & Hook.f. ex Drake
-Calicium furfuraceum * furfuraceum (L.) Pers. 1797	true	Calicium furfuraceum furfuraceum (L.) Pers., 1797	Calicium furfuraceum furfuraceum	Calicium furfuraceum furfuraceum	Calicium furfuraceum furfuraceum (L.) Pers., 1797	(L.) Pers., 1797
+Calicium furfuraceum * furfuraceum (L.) Pers. 1797	true	Calicium furfuraceum (L.) Pers., 1797 furfuraceum	Calicium furfuraceum furfuraceum	Calicium furfuraceum furfuraceum	Calicium furfuraceum (L.) Pers., 1797 furfuraceum	(L.) Pers., 1797
 Polyrhachis orsyllus nat musculus Forel 1901	true	Polyrhachis orsyllus natio musculus Forel, 1901	Polyrhachis orsyllus natio musculus	Polyrhachis orsyllus musculus	Polyrhachis orsyllus natio musculus Forel, 1901	Forel, 1901
 Acidalia remutaria ab. n. undularia	true	Acidalia remutaria ab. n undularia	Acidalia remutaria ab. n	Acidalia remutaria n	Acidalia remutaria ab. n undularia	undularia
 Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	true	Acmaeops bivittata ab. fusciceps Aurivillius, 1912	Acmaeops bivittata ab. fusciceps	Acmaeops bivittata fusciceps	Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	Aurivillius, 1912
@@ -4552,7 +4552,7 @@ Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia mi
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
 Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004	true	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Rana aurora	Rana aurora	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Baird, Girard, H.B.Shaffer et al., 1852 [2004]
 Agropyron pectiniforme var. karabaljikji ined.?	true	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme karabaljikji	Agropyron pectiniforme var. karabaljikji	
-Staphylococcus hyicus chromogenes Devriese et al. 1978 (Approved Lists 1980).	true	Staphylococcus hyicus chromogenes Devriese et al., 1978	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes Devriese et al., 1978	Devriese et al., 1978
+Staphylococcus hyicus chromogenes Devriese et al. 1978 (Approved Lists 1980).	true	Staphylococcus hyicus chromogenes Devriese et al. 1978	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes Devriese et al. 1978	Devriese et al. 1978
 Adonis cyllenea Boiss. & al.	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
 Adonis cyllenea Boiss. & al	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
 Adonis cyllenea Boiss. & al. var. paryadrica Boiss.	true	Adonis cyllenea var. paryadrica Boiss.	Adonis cyllenea var. paryadrica	Adonis cyllenea paryadrica	Adonis cyllenea var. paryadrica Boiss.	Boiss.
@@ -5472,7 +5472,7 @@ Poaceae supertrib. Arundinarodae L.Liu	true	Arundinarodae L.Liu	Arundinarodae	Ar
 Alchemilla subsect. Sericeae A.Plocek	true	Alchemilla subsect. Sericeae A.Plocek	Alchemilla subsect. Sericeae	Sericeae	Alchemilla subsect. Sericeae A.Plocek	A.Plocek
 subgen. Psammophrynopsis Koch, 1953	true	subgen. Psammophrynopsis Koch, 1953	subgen. Psammophrynopsis	Psammophrynopsis	subgen. Psammophrynopsis Koch, 1953	Koch, 1953
 Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	true	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	Hymenophyllum subgen. Hymenoglossum	Hymenoglossum	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	(Presl) R.M.Tryon & A.Tryon
-Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia (Maihuenia) Philippi ex F.A.C.Weber, 1898	Pereskia (Maihuenia)	Maihuenia	Pereskia (Maihuenia) Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
+Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Pereskia subgen. Maihuenia	Maihuenia	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
 Aconitum ser. Tangutica W.T. Wang	true	Aconitum ser. Tangutica W.T.Wang	Aconitum ser. Tangutica	Tangutica	Aconitum ser. Tangutica W.T.Wang	W.T.Wang
 Eucalyptus subser. Regulares Brooker	true	Eucalyptus subser. Regulares Brooker	Eucalyptus subser. Regulares	Regulares	Eucalyptus subser. Regulares Brooker	Brooker
 Rosa div. Caninae Lindl.	true	Rosa div. Caninae Lindl.	Rosa div. Caninae	Caninae	Rosa div. Caninae Lindl.	Lindl.
@@ -5630,7 +5630,7 @@ Cotoneaster (Pyracantha) rogersiana var.aurantiaca	true	Cotoneaster rogersiana v
 Poa annua fo varia	true	Poa annua f. varia	Poa annua f. varia	Poa annua varia	Poa annua f. varia	
 Physarum globuliferum forma. flavum Leontyev & Dudka	true	Physarum globuliferum f. flavum Leontyev & Dudka	Physarum globuliferum f. flavum	Physarum globuliferum flavum	Physarum globuliferum f. flavum Leontyev & Dudka	Leontyev & Dudka
 Homalanthus nutans (Mull.Arg.) Benth. & Hook. f. ex Drake	true	Homalanthus nutans (Mull.Arg.) Benth. & Hook.f. ex Drake	Homalanthus nutans	Homalanthus nutans	Homalanthus nutans (Mull.Arg.) Benth. & Hook.f. ex Drake	(Mull.Arg.) Benth. & Hook.f. ex Drake
-Calicium furfuraceum * furfuraceum (L.) Pers. 1797	true	Calicium furfuraceum furfuraceum (L.) Pers., 1797	Calicium furfuraceum furfuraceum	Calicium furfuraceum furfuraceum	Calicium furfuraceum furfuraceum (L.) Pers., 1797	(L.) Pers., 1797
+Calicium furfuraceum * furfuraceum (L.) Pers. 1797	true	Calicium furfuraceum (L.) Pers., 1797 furfuraceum	Calicium furfuraceum furfuraceum	Calicium furfuraceum furfuraceum	Calicium furfuraceum (L.) Pers., 1797 furfuraceum	(L.) Pers., 1797
 Polyrhachis orsyllus nat musculus Forel 1901	true	Polyrhachis orsyllus natio musculus Forel, 1901	Polyrhachis orsyllus natio musculus	Polyrhachis orsyllus musculus	Polyrhachis orsyllus natio musculus Forel, 1901	Forel, 1901
 Acidalia remutaria ab. n. undularia	true	Acidalia remutaria ab. n undularia	Acidalia remutaria ab. n	Acidalia remutaria n	Acidalia remutaria ab. n undularia	undularia
 Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	true	Acmaeops bivittata ab. fusciceps Aurivillius, 1912	Acmaeops bivittata ab. fusciceps	Acmaeops bivittata fusciceps	Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	Aurivillius, 1912
@@ -5883,7 +5883,7 @@ Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia mi
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
 Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004	true	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Rana aurora	Rana aurora	Rana aurora Baird, Girard, H.B.Shaffer et al., 1852 [2004]	Baird, Girard, H.B.Shaffer et al., 1852 [2004]
 Agropyron pectiniforme var. karabaljikji ined.?	true	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme karabaljikji	Agropyron pectiniforme var. karabaljikji	
-Staphylococcus hyicus chromogenes Devriese et al. 1978 (Approved Lists 1980).	true	Staphylococcus hyicus chromogenes Devriese et al., 1978	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes Devriese et al., 1978	Devriese et al., 1978
+Staphylococcus hyicus chromogenes Devriese et al. 1978 (Approved Lists 1980).	true	Staphylococcus hyicus chromogenes Devriese et al. 1978	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes Devriese et al. 1978	Devriese et al. 1978
 Adonis cyllenea Boiss. & al.	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
 Adonis cyllenea Boiss. & al	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
 Adonis cyllenea Boiss. & al. var. paryadrica Boiss.	true	Adonis cyllenea var. paryadrica Boiss.	Adonis cyllenea var. paryadrica	Adonis cyllenea paryadrica	Adonis cyllenea var. paryadrica Boiss.	Boiss.
@@ -6330,7 +6330,7 @@ Aphodius (Mendidaphodius) palaestinensis Petrovitz, 1963	true	Aphodius palaestin
 Metazygia loque Levi, 1995	true	Metazygia loque Levi, 1995	Metazygia loque	Metazygia loque	Metazygia loque Levi, 1995	Levi, 1995
 Marilynessa starena (Iredale, 1937)	true	Marilynessa starena (Iredale, 1937)	Marilynessa starena	Marilynessa starena	Marilynessa starena (Iredale, 1937)	(Iredale, 1937)
 Geyria zavattarina (Navás, 1932)	true	Geyria zavattarina (Navás, 1932)	Geyria zavattarina	Geyria zavattarina	Geyria zavattarina (Navás, 1932)	(Navás, 1932)
-Neorickettsia Philip et al., 1953 (Approved Lists 1980)	true	Neorickettsia Philip et al., 1953	Neorickettsia	Neorickettsia	Neorickettsia Philip et al., 1953	Philip et al., 1953
+Neorickettsia Philip et al., 1953 (Approved Lists 1980)	true	Neorickettsia Philip et al. 1953	Neorickettsia	Neorickettsia	Neorickettsia Philip et al. 1953	Philip et al. 1953
 Ganessa Kobelt, 1884	true	Ganessa Kobelt, 1884	Ganessa	Ganessa	Ganessa Kobelt, 1884	Kobelt, 1884
 Psittacobrosus mitratae Price & Beer, 1968	true	Psittacobrosus mitratae Price & Beer, 1968	Psittacobrosus mitratae	Psittacobrosus mitratae	Psittacobrosus mitratae Price & Beer, 1968	Price & Beer, 1968
 Nemoria pellucidula Turner, 1906	true	Nemoria pellucidula Turner, 1906	Nemoria pellucidula	Nemoria pellucidula	Nemoria pellucidula Turner, 1906	Turner, 1906

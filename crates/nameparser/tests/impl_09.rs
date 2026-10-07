@@ -597,6 +597,7 @@ fn test_nomenclatural_notes_pattern() {
         .species("Solanum", "bifidum")
         .comb_authors(None, &["Dunal"])
         .comb_ex_authors(&["Vell."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_nom_note(
         "nomen invalid",
@@ -672,6 +673,7 @@ fn test_nomenclatural_notes_pattern() {
     .species("Amanita", "pruittii")
     .comb_authors(None, &["Tulloss", "J.Lindgr."])
     .comb_ex_authors(&["A.H.Sm."])
+    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note("nom. cons.", "Ramonda Rich., nom. cons.")
         .monomial_rank("Ramonda", Rank::Unranked)
@@ -787,6 +789,7 @@ fn fungus_names() {
         .comb_ex_authors(&["Johanson"])
         .bas_authors(None, &["Duby"])
         .bas_ex_authors(None, &["Fr."])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 

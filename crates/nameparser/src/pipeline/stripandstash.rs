@@ -2299,8 +2299,9 @@ static APPROVED_LISTS: LazyLock<Regex> = LazyLock::new(|| {
 /// (Approved Lists YYYY)" bacterial-code annotation is stripped silently, working-string
 /// only — spot-checked: "Aus bus Smith (Approved Lists 1980)" -> authors=["Smith"], no
 /// other side effect.
-fn strip_approved_lists(_ctx: &mut ParseContext, s: String) -> String {
+fn strip_approved_lists(ctx: &mut ParseContext, s: String) -> String {
     if let Some(m) = APPROVED_LISTS.find(&s) {
+        ctx.approved_lists = true;
         return java_trim(&s[..m.start()]).to_string();
     }
     s

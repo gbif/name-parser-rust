@@ -405,66 +405,77 @@ fn hybrid_names() {
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("×Pyrocrataegus willei L.L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(" × Pyrocrataegus willei  L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(" X Pyrocrataegus willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus ×willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus × willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus x willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus X willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus willei ×libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::InfraspecificName, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::Subspecies, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("+ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::Subspecies, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -645,18 +656,21 @@ fn author_variations() {
         .species("Calycostylis", "aurantiaca")
         .comb_authors(None, &["Vilmorin"])
         .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pourretia magnispatha hortusa ex K. Koch")
         .species("Pourretia", "magnispatha")
         .comb_authors(None, &["K.Koch"])
         .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pitcairnia pruinosa hortus ex K. Koch")
         .species("Pitcairnia", "pruinosa")
         .comb_authors(None, &["K.Koch"])
         .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Platycarpha glomerata (Thunberg) A.P.de Candolle")

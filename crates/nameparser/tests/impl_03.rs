@@ -24,6 +24,7 @@ fn infra_species() {
     .bas_authors(None, &["Gaudin"])
     .comb_authors(Some("1824"), &["Dumort."])
     .warning(&[warnings::SUBSPECIES_ASSIGNED])
+    .code(NomCode::Botanical)
     .nothing_else();
 
     assert_name("Abies alba ssp. alpina Mill.")
@@ -60,6 +61,7 @@ fn infra_species() {
         .comb_authors(None, &["Sch.Bip."])
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
+        .code(NomCode::Botanical)
         .nothing_else();
 
     // Warnings.REMOVED_PREFIX + "subsp. pallidotegula B.Boivin"
@@ -98,12 +100,14 @@ fn ex_authors() {
         .comb_authors(None, &["F.Ritter"])
         .comb_ex_authors(&["Plesnik"])
         .warning(&[warnings::HOMOGLYHPS]) // the ¡ in Plesn¡k is not a regular i
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abutilon bastardioides Baker f. ex Rose")
         .species("Abutilon", "bastardioides")
         .comb_authors(None, &["Rose"])
         .comb_ex_authors(&["Baker f."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Baccharis microphylla Kunth var. rhomboidea Wedd. ex Sch. Bip. (nom. nud.)")
@@ -111,6 +115,7 @@ fn ex_authors() {
         .comb_authors(None, &["Sch.Bip."])
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
+        .code(NomCode::Botanical)
         .nothing_else();
 
     // hort. = from hortulanorum (“of gardens”), the name was used in cultivation (nurseries, gardens, horticultural trade)
@@ -120,12 +125,14 @@ fn ex_authors() {
         .species("Abies", "brevifolia")
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Dallim."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abies brevifolia cv. ex Dallim.")
         .species("Abies", "brevifolia")
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Dallim."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abutilon ×hybridum cv. ex Voss")
@@ -133,6 +140,7 @@ fn ex_authors() {
         .notho(&[NamePart::Specific])
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Voss"])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     // "Abutilon bastardioides Baker f. ex Rose"
@@ -310,6 +318,7 @@ fn infra_generic() {
     assert_name("Rubus nothosubgen. Cylarubus")
         .infrageneric_at("Rubus", Rank::Subgenus, "Cylarubus")
         .notho(&[NamePart::Infrageneric])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name_rank("Arrhoges (Antarctohoges)", Rank::Subgenus)
@@ -627,12 +636,14 @@ fn nothotaxa() {
     assert_name("Iris germanica nothovar. florentina")
         .infra_species("Iris", "germanica", Rank::Variety, "florentina")
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abies alba var. ×alpina L.")
         .infra_species("Abies", "alba", Rank::Variety, "alpina")
         .notho(&[NamePart::Infraspecific])
         .comb_authors(None, &["L."])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 

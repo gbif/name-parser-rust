@@ -98,11 +98,9 @@ fn uninomials_with_authorship() {
         .comb_authors(Some("1906"), &["v Linstow"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora Speg. 1910")
         .monomial("Pseudocercospora")
         .comb_authors(Some("1910"), &["Speg."])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Pseudocercospora Spegazzini, 1910")
         .monomial("Pseudocercospora")
@@ -594,7 +592,6 @@ fn binomials_with_authorship() {
     assert_name("Rotalina cultrata d'Orb. 1840")
         .species("Rotalina", "cultrata")
         .comb_authors(Some("1840"), &["d'Orb."])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje")

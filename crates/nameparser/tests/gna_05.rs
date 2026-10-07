@@ -549,10 +549,12 @@ fn removing_nomenclatural_annotations() {
         .species("Aesculus", "canadensis")
         .comb_authors(None, &["Lavallée"])
         .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("× Dialaeliopsis hort.")
         .monomial("Dialaeliopsis")
         .notho(&[NamePart::Generic])
         .comb_authors(None, &["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
 }

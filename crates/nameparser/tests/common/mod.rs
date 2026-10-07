@@ -736,7 +736,14 @@ impl NameAssertion {
     }
 
     pub fn code(self, code: NomCode) -> Self {
-        assert_eq!(self.n.code, Some(code));
+        assert_eq!(
+            self.n.code,
+            Some(code),
+            "{} {}: code {:?}, expected {code:?}",
+            self.location,
+            self.input,
+            self.n.code
+        );
         self.mark(&[Np::Code])
     }
 
@@ -837,7 +844,7 @@ impl NameAssertion {
     /// so the whole parse is pinned. Mirrors Java `NameAssertion.nothingElse()`.
     pub fn nothing_else(mut self) {
         self.closed = true;
-        let input = self.input.clone();
+        let input = format!("{} {}", self.location, self.input);
         with_input(&input, || self.check_nothing_else());
     }
 
@@ -1186,7 +1193,7 @@ impl InformalAssertion {
     /// field not mentioned above (`phrase`, `code`) must be absent.
     pub fn nothing_else(mut self) {
         self.closed = true;
-        let input = self.input.clone();
+        let input = format!("{} {}", self.location, self.input);
         with_input(&input, || self.check_nothing_else());
     }
 

@@ -237,6 +237,7 @@ fn infraspecies_without_rank_iczn() {
         )
         .comb_authors(None, &["Weber-van Bosse"])
         .comb_ex_authors(&["P.L.Crouan", "H.M.Crouan"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Rhinanthus glacialis simplex(Sterneck) J.Dostál")
         .infra_species(
@@ -274,6 +275,7 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Cantharellus", "sinuosus", Rank::Variety, "multiplex")
         .comb_authors(Some("1995"), &["Romagn."])
         .bas_authors(None, &["A.H.Sm."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Crematogaster impressa st. brazzai Santschi 1937")
         .infra_species("Crematogaster", "impressa", Rank::Subspecies, "brazzai")
@@ -357,7 +359,6 @@ fn infraspecies_with_rank_icn() {
     assert_name("Sphaerotheca    fuliginea    f.     dahliae    Movss.     1967")
         .infra_species("Sphaerotheca", "fuliginea", Rank::Form, "dahliae")
         .comb_authors(Some("1967"), &["Movss."])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Allophylus amazonicus var amazonicus")
         .infra_species("Allophylus", "amazonicus", Rank::Variety, "amazonicus")
@@ -442,6 +443,7 @@ fn infraspecies_with_rank_icn() {
         )
         .comb_authors(Some("1797"), &["Pers."])
         .bas_authors(None, &["L."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Polyrhachis orsyllus nat musculus Forel 1901")
         .infra_species("Polyrhachis", "orsyllus", Rank::Natio, "musculus")

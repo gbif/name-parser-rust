@@ -98,6 +98,9 @@ pub(crate) struct ParseContext {
     /// (`?Sydonia alba`, `cf. Platypeltis croftii`);
     /// `Pipeline::run` types the name INFORMAL once it knows a species epithet follows.
     pub qualified_genus: bool,
+    /// An "(Approved Lists 1980)" citation was stripped: the name is a prokaryote's (see
+    /// `code_inference::infer`).
+    pub approved_lists: bool,
 }
 
 impl ParseContext {
@@ -141,6 +144,7 @@ impl ParseContext {
             pending_generic_author: None,
             preflight_complete: false,
             qualified_genus: false,
+            approved_lists: false,
         }
     }
 

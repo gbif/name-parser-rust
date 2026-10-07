@@ -130,13 +130,11 @@ fn names_with_emend_rectified_by_authorship() {
     assert_name("Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003")
         .species("Chlorobium", "phaeobacteroides")
         .comb_authors(Some("1968"), &["Pfennig"])
-        .code(NomCode::Zoological)
         .sensu("emend. Imhoff, 2003")
         .nothing_else();
     assert_name("Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003")
         .species("Chlorobium", "phaeobacteroides")
         .comb_authors(Some("1968"), &["Pfennig"])
-        .code(NomCode::Zoological)
         .sensu("emend Imhoff, 2003")
         .nothing_else();
 }
@@ -161,6 +159,7 @@ fn names_with_an_unparsed_tail() {
         .species("Dryopteris", "separabilis")
         .comb_authors(None, &["Small"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Eulima excellens Verkrüzen fide Paetel, 1887")
         .species("Eulima", "excellens")
@@ -211,6 +210,7 @@ fn non_ascii_utf8_characters_in_a_name() {
         .species("Pleurotus", "ëous")
         .comb_authors(Some("1887"), &["Sacc."])
         .bas_authors(None, &["Berk."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Sténométope laevissimus Bibron 1855")
         .species("Sténométope", "laevissimus")
@@ -234,12 +234,10 @@ fn non_ascii_utf8_characters_in_a_name() {
             "fülleborni",
         )
         .nothing_else();
-    // FIXME(review): an ex-author is botanical usage (a diatom), no zoological name
     assert_name("Östrupia Heiden ex Hustedt, 1935")
         .monomial("Östrupia")
         .comb_authors(Some("1935"), &["Hustedt"])
         .comb_ex_authors(&["Heiden"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -453,6 +451,7 @@ fn open_nomenclature_approximate_names() {
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
         .phrase("sp.")
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_informal("Liopropoma sp.2 Not applicable")
         .taxon("Liopropoma")

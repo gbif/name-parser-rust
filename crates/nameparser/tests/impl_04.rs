@@ -88,6 +88,7 @@ fn todo_names() {
         .comb_ex_authors(&["Kotschy"])
         .comb_authors(None, &["A.DC."])
         .nom_note("nom. subnud.")
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Spermacoce lanceolata Frank ex C.Presl, pro syn.")
@@ -95,6 +96,7 @@ fn todo_names() {
         .comb_ex_authors(&["Frank"])
         .comb_authors(None, &["C.Presl"])
         .nom_note("pro syn.")
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Cavendishia polyantha H?rold, pro syn.")
@@ -828,6 +830,7 @@ fn genus_basionym_versus_subgenus() {
         .monomial("Foa")
         .bas_authors(None, &["Grev."])
         .comb_authors(Some("1849"), &["Kutz."])
+        .code(NomCode::Botanical)
         .nothing_else();
     // (2) zoological genus basionym — year inside the brackets, no combination author
     assert_name("Heptacyclus (Vasileyev, 1939)")
