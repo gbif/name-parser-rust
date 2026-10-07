@@ -28,6 +28,7 @@ fn names_with_the_dagger_char() {
         .bas_authors(Some("1837"), &["Gould"])
         .extinct()
         .nothing_else();
+    // FIXME(review): junk with a vernacular name, parsed as a name
     // skipped: "Oncorhynchus nerka (Walbaum, 1792) Sockeye salmon F A †?" —
     //   "Sockeye salmon" is a vernacular name embedded in the authorship slot;
     //   parser can't separate it from real authors without a vernacular list.
@@ -313,7 +314,10 @@ fn genus_with_hyphen_allowed_by_icn() {
         .bas_authors(None, &["Flous"])
         .code(NomCode::Botanical)
         .nothing_else();
-    // skipped: Tsugo-piceo-piceo-picea × crassifolia
+    assert_name("Tsugo-piceo-piceo-picea × crassifolia")
+        .species("Tsugo-piceo-piceo-picea", "crassifolia")
+        .notho(&[NamePart::Specific])
+        .nothing_else();
     // The × before crassifolia marks it as a nothotaxon: canonical includes "×"
     assert_name("De-Filippii Gortani & Merla 1934")
         .monomial("De-filippii")
@@ -346,6 +350,7 @@ fn genus_with_hyphen_allowed_by_icn() {
         .bas_authors(None, &["Rchb.f."])
         .code(NomCode::Botanical)
         .nothing_else();
+    // FIXME(review): an OCR artefact parsed as a uninomial
     // skipped: Ph-echinodermata
     assert_name("Prunus-lauro-cerasus")
         .monomial("Prunus-lauro-cerasus")
@@ -360,7 +365,10 @@ fn genus_with_hyphen_allowed_by_icn() {
         .bas_authors(None, &["Flous"])
         .code(NomCode::Botanical)
         .nothing_else();
-    // skipped: Tsugo-piceo-piceo-picea × crassifolia
+    assert_name("Tsugo-piceo-piceo-picea × crassifolia")
+        .species("Tsugo-piceo-piceo-picea", "crassifolia")
+        .notho(&[NamePart::Specific])
+        .nothing_else();
 }
 
 #[test]
@@ -503,6 +511,7 @@ fn authorship_missing_one_parenthesis() {
         .comb_authors(Some("1831"), &["Dejean"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): junk parsed as a name
     // skipped: "Ocydromus dalmatinus dalmatinus ( Dejean, 1831 Mill." and
     //   the variant without leading space — missing-paren reconstruction
     //   (splitting Dejean,1831 as basionym from Mill. as combination author)

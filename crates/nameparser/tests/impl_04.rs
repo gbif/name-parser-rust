@@ -53,7 +53,7 @@ fn lineage_labels_rescued_or_other() {
 
 /// Regression tests graduated from TODO-names.txt: names that the parser now handles
 /// correctly. The still-unsupported entries from that file are documented (with their
-/// desired parse) in `todo_names_unsupported()` below.
+/// desired parse) in the ignored `todo_*` tests below.
 #[test]
 fn todo_names() {
     assert_name("Pseudoleptomesochrella incerta (Chap. and Delam. -deb., 1956)")
@@ -243,106 +243,182 @@ fn todo_names() {
         .nothing_else();
 }
 
-/// Names from TODO-names.txt that the parser still gets wrong. Each assertion encodes the
-/// desired parse; the inline comment describes the current bug. The method is @Ignore'd so
-/// the build stays green — remove the annotation once these are fixed (and graduate the
-/// fixed cases into `todo_names()`). nothingElse() is intentionally omitted: only the
-/// specific corrected fields are pinned, since the full target state of some fields (note
-/// disposition, publishedIn cleanup) is still open.
 #[test]
-#[ignore = "desired parse for still-unsupported TODO-names.txt entries — not yet implemented"]
-fn todo_names_unsupported() {
+fn not_validly_published_after_the_author_is_a_nomenclatural_note() {
+    // graduated from the TODO-names.txt entries
+    assert_name("Basanacantha spinosa var. typica K.Schum., not validly publ.")
+        .infra_species("Basanacantha", "spinosa", Rank::Variety, "typica")
+        .comb_authors(None, &["K.Schum."])
+        .nom_note("not validly publ.")
+        .nothing_else();
+    assert_name("Euclea rufescens E.Mey., not validly publ.")
+        .species("Euclea", "rufescens")
+        .comb_authors(None, &["E.Mey."])
+        .nom_note("not validly publ.")
+        .nothing_else();
+}
+
+// ---- TODO-names.txt entries the parser still gets wrong ---------------------------------------
+//
+// One ignored test per name, each encoding the desired parse, with a comment on the current bug —
+// so each graduates on its own once fixed (run them with `cargo test -- --ignored`). Most pin only
+// the corrected fields, since the full target state of some (note disposition, publishedIn
+// cleanup) is still open.
+
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_pitcairnia_cinnagarina() {
     // "ex <Author>" with nothing before "ex": currently "ex" becomes an infraspecific epithet.
     assert_name("Pitcairnia cinnagarina ex D. Dietr.")
         .species("Pitcairnia", "cinnagarina")
         .comb_authors(None, &["D.Dietr."]);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_grielum_obtusifolium() {
+    // "ex <Author>" with nothing before "ex": currently "ex" becomes an infraspecific epithet.
     assert_name("Grielum obtusifolium ex Harv.")
         .species("Grielum", "obtusifolium")
         .comb_authors(None, &["Harv."]);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_quercus_ovalis() {
     // Latin nomenclatural notes are currently absorbed as a second author.
     assert_name("Quercus ovalis Gand., opus utique oppr.")
         .species("Quercus", "ovalis")
         .comb_authors(None, &["Gand."])
         .nom_note("opus utique oppr.");
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_quercus_meridionalis() {
+    // Latin nomenclatural notes are currently absorbed as a second author.
     assert_name("Quercus meridionalis Gand., opus utique oppr.")
         .species("Quercus", "meridionalis")
         .comb_authors(None, &["Gand."])
         .nom_note("opus utique oppr.");
+}
 
-    assert_name("Basanacantha spinosa var. typica K.Schum., not validly publ.")
-        .infra_species("Basanacantha", "spinosa", Rank::Variety, "typica")
-        .comb_authors(None, &["K.Schum."])
-        .nom_note("not validly publ.");
-
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_fraxinus_humilior() {
+    // Latin nomenclatural notes are currently absorbed as a second author.
     assert_name("Fraxinus humilior Garsault, opus utique oppr.")
         .species("Fraxinus", "humilior")
         .comb_authors(None, &["Garsault"])
         .nom_note("opus utique oppr.");
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_diospyros_oblongifolia() {
     // "Later homonym of a fossil name." should be stripped, not appended as a comb author.
     assert_name("Diospyros oblongifolia (Thwaites) Kosterm., Later homonym of a fossil name.")
         .species("Diospyros", "oblongifolia")
         .bas_authors(None, &["Thwaites"])
         .comb_authors(None, &["Kosterm."])
         .code(NomCode::Botanical);
+}
 
-    assert_name("Euclea rufescens E.Mey., not validly publ.")
-        .species("Euclea", "rufescens")
-        .comb_authors(None, &["E.Mey."])
-        .nom_note("not validly publ.");
-
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_lecythis_subbiflora() {
+    // "Later homonym of a fossil name." should be stripped, not appended as a comb author.
     assert_name("Lecythis subbiflora Ruiz & Pav., no type indicated.")
         .species("Lecythis", "subbiflora")
         .comb_authors(None, &["Ruiz", "Pav."])
         .nom_note("no type indicated.");
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_menestoria_tocoyenae() {
     // Trailing editorial remark should be stripped, not absorbed as an author.
     assert_name("Menestoria tocoyenae DC., provisionally listed as a synonym.")
         .species("Menestoria", "tocoyenae")
         .comb_authors(None, &["DC."]);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_begonia_hatacoa() {
+    // Trailing editorial remark should be stripped, not absorbed as an author.
     assert_name("Begonia hatacoa var. viridifolia Golding & Rekha Morris, without type.")
         .infra_species("Begonia", "hatacoa", Rank::Variety, "viridifolia")
         .comb_authors(None, &["Golding", "Rekha Morris"])
         .nom_note("without type.");
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_spilogona_acuticornis() {
     // Unclosed "(" should still yield a basionym, not a plain combination author.
     assert_name("Spilogona acuticornis (Malloch, 1920")
         .species("Spilogona", "acuticornis")
         .bas_authors(Some("1920"), &["Malloch"])
         .code(NomCode::Zoological);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_cerodontha_lonicerae() {
+    // Unclosed "(" should still yield a basionym, not a plain combination author.
     assert_name("Cerodontha lonicerae (Robineau-desvoidy, 1851")
         .species("Cerodontha", "lonicerae")
         .bas_authors(Some("1851"), &["Robineau-desvoidy"])
         .code(NomCode::Zoological);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_caecognathia_regalis() {
     // Trailing edition letter must not become a forename initial ("A.Monod" / "D.Nunomura").
     assert_name("Caecognathia regalis (Monod, 1926A)")
         .species("Caecognathia", "regalis")
         .bas_authors(Some("1926"), &["Monod"])
         .code(NomCode::Zoological);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_caecognathia_saikaiensis() {
+    // Trailing edition letter must not become a forename initial ("A.Monod" / "D.Nunomura").
     assert_name("Caecognathia saikaiensis (Nunomura, 1992D)")
         .species("Caecognathia", "saikaiensis")
         .bas_authors(Some("1992"), &["Nunomura"])
         .code(NomCode::Zoological);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_geranium_sanguineum() {
     // "ap. Syr." (apud) is a publication pointer and must not be glued onto "Maxim.".
     assert_name("Geranium sanguineum var. majus Maxim. ap. Syr. & Petunn. in Syr.")
         .infra_species("Geranium", "sanguineum", Rank::Variety, "majus")
         .comb_authors(None, &["Maxim.", "Petunn."])
         .published_in("Syr.");
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_fidicina_aldegondae() {
     // Should be a basionym with year 1902; the stray ")" and date suffix must be cleaned off.
     assert_name("Fidicina aldegondae (Kuhlgatz in Kuhlgatz and Melichar, 1902), 1902-01-01")
         .species("Fidicina", "aldegondae")
         .bas_authors(Some("1902"), &["Kuhlgatz"])
-        .code(NomCode::Zoological);
+        .published_in("Kuhlgatz and Melichar, 1902")
+        .published_in_year(Some(1902))
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_primula_chamaejasme() {
     // "ins Econ. Taxon. Bot. …" is the publication ref, not part of the "Anand Kumar" author.
     assert_name("Primula chamaejasme (Wulfen) K.K. Khanna & Anand Kumar ins Econ. Taxon. Bot., 22(1): 237 (1998), isonym")
         .species("Primula", "chamaejasme")
@@ -350,35 +426,55 @@ fn todo_names_unsupported() {
         .comb_authors(None, &["K.K.Khanna", "Anand Kumar"])
         .nom_note("isonym")
         .code(NomCode::Botanical);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_ilex_montana() {
     // "Fl. Brit. W. I. 147. 1859" is the publication ref, not a second author with year 147.
     assert_name("Ilex montana var. lanceolata (Macfad.) Griseb., Fl. Brit. W. I. 147. 1859")
         .infra_species("Ilex", "montana", Rank::Variety, "lanceolata")
         .bas_authors(None, &["Macfad."])
         .comb_authors(None, &["Griseb."])
         .code(NomCode::Botanical);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_tryblionella_marginulata() {
     // basionym Grunow (publ. in Cleve & Müller), combination D.G. Mann (in Round et al., 1990).
     assert_name(
         "Tryblionella marginulata (Grunow in Cleve & M?ller) D.G. Mann in Round et al., 1990",
     )
     .species("Tryblionella", "marginulata")
     .bas_authors(None, &["Grunow"])
-    .comb_authors(None, &["D.G.Mann"]);
+    .comb_authors(Some("1990"), &["D.G.Mann"]);
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_psilopteryx_psorosa() {
     // The trailing "?" must not survive inside the year ("1978?").
     assert_name("Psilopteryx psorosa subsp. retezatica Botosaneanu & ?Schneider, 1978?")
         .infra_species("Psilopteryx", "psorosa", Rank::Subspecies, "retezatica")
         .comb_authors(Some("1978"), &["Botosaneanu", "Schneider"])
         .code(NomCode::Zoological)
         .doubtful();
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_osmanthus_ilicifolius() {
     // "(auct.)" should become the taxonomic note, not be left unparsed (state PARTIAL).
     assert_name("Osmanthus ilicifolius f. variegatus (auct.) Rehder")
         .infra_species("Osmanthus", "ilicifolius", Rank::Form, "variegatus")
         .comb_authors(None, &["Rehder"])
         .sensu("auct.");
+}
 
+#[test]
+#[ignore = "desired parse, not yet supported"]
+fn todo_magnolia_soulangeana() {
     // "?" is a homoglyph for the hybrid sign "×" → nothospecies, not an INFORMAL "?" placeholder.
     assert_name("Magnolia ?soulangeana Hamel (pro sp.)")
         .species("Magnolia", "soulangeana")
@@ -529,6 +625,7 @@ fn odd_fungi_ranks_unsupported() {
             Rank::InfraspecificName,
             "carpophora",
         )
+        .comb_authors(None, &["Floerke"])
         .nothing_else();
 }
 

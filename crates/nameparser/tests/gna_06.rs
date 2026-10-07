@@ -51,10 +51,13 @@ fn misc_annotations() {
     assert_name("Parus caeruleus species complex")
         .binomial("Parus", None, "caeruleus", Rank::SpeciesAggregate)
         .nothing_else();
+    // FIXME(review): an environmental sample label parsed as a trinomial
     // skipped: Crenarchaeote enrichment culture clone OREC-B1022
     //   — env-sample annotation pattern not implemented (parses as messy trinomial)
+    // FIXME(review): the upper-case "CF" (cf.) is dropped without a qualifier
     // skipped: Diodora dorsata  CF
     //   — trailing 2-letter all-caps token parses as a short author surname
+    // FIXME(review): a BOLD sample id becomes the infraspecific epithet
     // skipped: Dasysyrphus intrudens complex sp. BBDCQ003-10
     //   — multi-annotation strip (`complex` mid-string + trailing strain code)
     //     not implemented
@@ -212,36 +215,55 @@ fn exceptions_from_author_suffixes_suffix_like_epithets() {
 #[test]
 fn icvcn_binomial_names_and_exceptions() {
     // group: ICVCN binomial names and exceptions
-    // skipped: Tokiviricetes
-    // skipped: Usarudivirus nymphense
-    // skipped: Ictavirus ictaluridallo1
-    // skipped: Aghbyvirus ISAO8
+    assert_name("Tokiviricetes")
+        .monomial_rank("Tokiviricetes", Rank::Class)
+        .code(NomCode::Virus)
+        .nothing_else();
+    assert_name("Usarudivirus nymphense")
+        .species("Usarudivirus", "nymphense")
+        .code(NomCode::Virus)
+        .nothing_else();
+    assert_name("Ictavirus ictaluridallo1")
+        .species("Ictavirus", "ictaluridallo1")
+        .code(NomCode::Virus)
+        .nothing_else();
+    assert_unparsable_code("Aghbyvirus ISAO8", NameType::Other, NomCode::Virus);
     assert_name("Mahavira").monomial("Mahavira").nothing_else();
 }
 
 #[test]
 fn not_parsed_ocr_errors_to_get_better_precision_recall_ratio() {
     // group: Not parsed OCR errors to get better precision/recall ratio
+    // FIXME(review): an OCR artefact ("Mom." for "Momordica") parsed as genus "Mom."
     // skipped: Mom.alpium (Osbeck, 1778)
 }
 
 #[test]
 fn no_parsing_genera_abbreviated_to3_letters_too_rare() {
     // group: No parsing -- Genera abbreviated to 3 letters (too rare)
+    // FIXME(review): "Gen. et n. sp." + a locality parsed as genus "Gen." and epithets
     // skipped: Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma
+    // FIXME(review): "Genn. et n. sp." + a locality parsed as genus "Genn." and epithets
     // skipped: Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma
 }
 
 #[test]
 fn no_parsing_incertae_sedis() {
     // group: No parsing -- incertae sedis
-    // skipped: Incertae sedis
-    // skipped: </i>Hipponicidae<i> incertae sedis</i>
-    // skipped: incertae sedis
-    // skipped: Inc.   sed.
-    // skipped: inc.sed.
-    // skipped: inc.   sed.
-    // skipped: Incertaesedis obscuricornis Fairmaire LMH 1893
+    assert_unparsable("Incertae sedis", NameType::Placeholder);
+    assert_unparsable(
+        "</i>Hipponicidae<i> incertae sedis</i>",
+        NameType::Placeholder,
+    );
+    assert_unparsable("incertae sedis", NameType::Placeholder);
+    assert_unparsable("Inc.   sed.", NameType::Placeholder);
+    assert_unparsable("inc.sed.", NameType::Placeholder);
+    assert_unparsable("inc.   sed.", NameType::Placeholder);
+    assert_unparsable(
+        "Incertaesedis obscuricornis Fairmaire LMH 1893",
+        NameType::Placeholder,
+    );
+    // FIXME(review): a glued "incertae sedis" placeholder parsed as a uninomial
     // skipped: Uropodoideaincertaesedis
 }
 
@@ -274,47 +296,69 @@ fn no_parsing_bacterium_candidatus() {
 #[test]
 fn no_parsing_not_none_unidentified_phrases() {
     // group: No parsing -- 'Not', 'None', 'Unidentified'  phrases
+    // FIXME(review): a no-name placeholder parsed as genus "None"
     // skipped: None recorded
+    // FIXME(review): a no-name placeholder parsed as genus "None"
     // skipped: NONE recorded
+    // FIXME(review): a no-name placeholder parsed as genus "NoNe"
     // skipped: NoNe recorded
+    // FIXME(review): a no-name placeholder parsed as a uninomial
     // skipped: None
-    // skipped: unidentified recorded
-    // skipped: UniDentiFied recorded
+    assert_unparsable("unidentified recorded", NameType::Placeholder);
+    assert_unparsable("UniDentiFied recorded", NameType::Placeholder);
+    // FIXME(review): a no-name placeholder parsed as genus "Not"
     // skipped: not recorded
+    // FIXME(review): a no-name placeholder parsed as genus "Not"
     // skipped: NOT recorded
+    // FIXME(review): a no-name placeholder parsed as genus "Not"
     // skipped: Not recorded
-    // skipped: Not assigned
+    assert_unparsable("Not assigned", NameType::Placeholder);
     assert_name("Notassigned")
         .monomial("Notassigned")
         .nothing_else();
-    // skipped: Unnamed clade
-    // skipped: Unamed clade
+    assert_unparsable("Unnamed clade", NameType::Other);
+    assert_unparsable("Unamed clade", NameType::Other);
 }
 
 #[test]
 fn no_parsing_genus_with_apostrophe() {
     // group: No parsing -- genus with apostrophe
+    // FIXME(review): a vernacular name parsed as a trinomial
     // skipped: Abbott's moray eel
+    // FIXME(review): a vernacular name parsed as a uninomial
     // skipped: Chambers' twinpod
+    // FIXME(review): a cultivar-like vernacular parsed as a uninomial
     // skipped: Columnea × Alladin's
+    // FIXME(review): a vernacular name parsed as a binomial
     // skipped: Hawai'i silversword
 }
 
 #[test]
 fn no_parsing_camelcase_genus_word() {
     // group: No parsing -- CamelCase 'genus' word
+    // FIXME(review): an OCR artefact (mixed case) parsed as a uninomial
     // skipped: PomaTomus
+    // FIXME(review): an OCR artefact (mixed case) parsed as a binomial
     // skipped: DizygopUwa stosei
+    // FIXME(review): the bracketed suffix is dropped: uninomial "Oxytox"
     // skipped: Oxytox[idae] Lindermann
+    // FIXME(review): a glued label parsed as a uninomial
     // skipped: ScarabaeinGCsp.
 }
 
 #[test]
 fn no_parsing_phytoplasma() {
     // group: No parsing -- phytoplasma
+    // FIXME(review): a phytoplasma label parsed as genus "Alfalfa"
     // skipped: Alfalfa witches'-broom phytoplasma
+    // FIXME(review): a glued phytoplasma label parsed as a binomial
     // skipped: Allium ampeloprasumphytoplasma
-    // skipped: Alstroemeria sp. phytoplasma
+    assert_informal("Alstroemeria sp. phytoplasma")
+        .taxon("Alstroemeria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. phytoplasma")
+        .nothing_else();
 }
 
 #[test]

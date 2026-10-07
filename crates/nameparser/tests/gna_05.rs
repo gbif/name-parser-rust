@@ -271,16 +271,60 @@ fn open_taxonomy_with_ranks_unfinished() {
         .type_(NameType::Informal)
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
+    // FIXME(review): "spp" is read as the species epithet (an informal "Alaria spp.")
     // skipped: Alaria spp
+    // FIXME(review): "spp." is read as the species epithet (an informal "Alaria spp.")
     // skipped: Alaria spp.
-    // skipped: Xenodon sp
-    // skipped: Xenodon sp.
-    // skipped: Formicidae cf.
-    // skipped: Formicidae cf
-    // skipped: Arctostaphylos preglauca cf.
-    // skipped: Albinaria brevicollis cf. sica Fuchs & Kaufel 1936
-    // skipped: Albinaria cf brevicollis sica Fuchs & Kaufel 1936
-    // skipped: Albinaria brevicollis cf
+    assert_informal("Xenodon sp")
+        .taxon("Xenodon")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp")
+        .nothing_else();
+    assert_informal("Xenodon sp.")
+        .taxon("Xenodon")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp.")
+        .nothing_else();
+    // FIXME(review): the "cf." is lost, and Formicidae is a family
+    assert_informal("Formicidae cf.")
+        .taxon("Formicidae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .nothing_else();
+    // FIXME(review): the "cf" is lost, and Formicidae is a family
+    assert_informal("Formicidae cf")
+        .taxon("Formicidae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .nothing_else();
+    assert_name("Arctostaphylos preglauca cf.")
+        .species("Arctostaphylos", "preglauca")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Albinaria brevicollis cf. sica Fuchs & Kaufel 1936")
+        .infra_species("Albinaria", "brevicollis", Rank::Subspecies, "sica")
+        .comb_authors(Some("1936"), &["Fuchs", "Kaufel"])
+        .qualifiers(&[(NamePart::Infraspecific, "cf.")])
+        .type_(NameType::Informal)
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // FIXME(review): the qualifier precedes the species epithet, so it is NamePart::Specific
+    assert_name("Albinaria cf brevicollis sica Fuchs & Kaufel 1936")
+        .infra_species("Albinaria", "brevicollis", Rank::Subspecies, "sica")
+        .comb_authors(Some("1936"), &["Fuchs", "Kaufel"])
+        .qualifiers(&[(NamePart::Infraspecific, "cf.")])
+        .type_(NameType::Informal)
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Albinaria brevicollis cf")
+        .species("Albinaria", "brevicollis")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // FIXME(review): "spp." is read as the species epithet (an informal "Acastoides spp.")
     // skipped: Acastoides spp.
 }
 
