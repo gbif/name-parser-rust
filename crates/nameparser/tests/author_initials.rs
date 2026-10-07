@@ -187,6 +187,8 @@ fn a_trailing_i_without_that_evidence_stays_an_initial() {
     assert_authorship("Kim I.", &["I.Kim"])
         .comb_authors(None, &["I.Kim"])
         .nothing_else();
+    // FIXME(review): contradicts the rule above (leading initials, so none behind the surname):
+    // "I." is the generation, G.B.Sowerby I
     assert_authorship("G.B. Sowerby I.", &["I.G.B.Sowerby"])
         .comb_authors(None, &["I.G.B.Sowerby"])
         .nothing_else();

@@ -93,6 +93,8 @@ fn authorship_with_filius_son_of() {
         .comb_authors(None, &["Hook.f."])
         .code(NomCode::Botanical)
         .nothing_else();
+    // FIXME(review): the same author as "Hook. f." above, which is BOTANICAL: the code must not
+    // depend on the space
     assert_name("Cerastium arvense var. fuegianum Hook.f.")
         .infra_species("Cerastium", "arvense", Rank::Variety, "fuegianum")
         .comb_authors(None, &["Hook.f."])
@@ -493,6 +495,7 @@ fn open_nomenclature_approximate_names() {
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
+    // FIXME(review): named nothospecies (Daphnia ×krausi Flößner, 1993) are rejected as FORMULA
     // "Aesculus cf. × hybrida" and "Daphnia (Daphnia) x krausi Flossner 1993" are
     // currently classified as FORMULA hybrids — the cf./subgenus + × combination
     // trips the hybrid-formula heuristic. Left as a known limitation.
@@ -800,6 +803,7 @@ fn stray_ex_is_not_parsed_as_species() {
         .bas_authors(None, &["L."])
         .code(NomCode::Botanical)
         .nothing_else();
+    // FIXME(review): "ex gr." is read as two epithets and "rouaulti" as the author
     // "Acastella ex gr. rouaulti" — ex grege ("of the species-group of") is a
     // paleontological qualifier that the parser doesn't recognise. The trailing
     // "rouaulti" survives as authorship; the test is left as a TODO.

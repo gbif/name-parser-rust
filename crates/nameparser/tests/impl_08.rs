@@ -499,6 +499,8 @@ fn indet_names() {
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
 
+    // FIXME(review): a capitalised old epithet collapses these: the epithets vanish, the rank
+    // marker ends up in the authors, the ant is coded BOTANICAL (see the golden)
     //    assertName("Aphaenogaster (Ichnomyrmex) Schwammerdami var. spinipes", "Aphaenogaster var. spinipes")
     //        .infraSpecies("Aphaenogaster", null, Rank.VARIETY, "spinipes")
     //        .infraGeneric("Ichnomyrmex")
@@ -658,12 +660,15 @@ fn chinese_authors() {
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
+    // Y.-j." already is
     assert_name("Abaxisotima acuminata (Wang, Yuwen & Xian-wei Liu, 1996)")
         .species("Abaxisotima", "acuminata")
         .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xian-wei Liu"])
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): "Liu, Xian-wei" is one person written surname-first (Xian-wei Liu), not two
     assert_name("Abaxisotima bicolor (Liu, Xian-wei, Z. Zheng & G. Xi, 1991)")
         .species("Abaxisotima", "bicolor")
         .bas_authors(Some("1991"), &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"])

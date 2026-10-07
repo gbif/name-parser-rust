@@ -514,6 +514,8 @@ fn leading_question_mark_before_an_indet_marker_keeps_the_genus() {
 
 #[test]
 fn leading_question_mark_before_an_epithet_is_still_a_missing_genus() {
+    // FIXME(review): a missing genus is no SCIENTIFIC name: unparsable PLACEHOLDER like "fungi
+    // Meigen, 1830" (leading_prefixes.rs), as the assert_raw_name doc says
     assert_name("? alba Smith")
         .species("?", "alba")
         .comb_authors(None, &["Smith"])

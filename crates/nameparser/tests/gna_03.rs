@@ -84,6 +84,7 @@ fn hybrids_with_notho_ranks() {
         .comb_authors(Some("1990"), &["Whalley", "Læssøe", "Kile"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): a notho rank marker after an author span is swallowed into the authorship
     // Skipped — nothosect./nothoser. after an author span (Aconitum W. Mucher
     // nothosect. Acopellus), and notho-marker-after-author-span variants
     // (Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii;
@@ -148,6 +149,7 @@ fn named_hybrids() {
         .code(NomCode::Botanical)
         .nothing_else();
     // GNA reduces this to a bare monomial; GBIF retains the genus+infrageneric structure
+    // FIXME(review): the author "Lapage" vanishes without a trace (no authorship, not PARTIAL)
     assert_name("XAgroelymus Lapage sect. Agroelinelymus")
         .infrageneric_at("Agroelymus", Rank::SectionBotany, "Agroelinelymus")
         .notho(&[NamePart::Generic])
@@ -393,6 +395,8 @@ fn misspelled_name() {
     // group: Misspelled name — the trailing "Stål, 1862" is read as part of the
     // hyphenated uninomial because the "-Stål" form looks like a single hyphenated
     // genus token; case is preserved verbatim.
+    // FIXME(review): the author is glued into the genus and the year left authorless: Ambrysus
+    // Stål, 1862
     assert_name("Ambrysus-Stål, 1862")
         .monomial("Ambrysus-Stål")
         .comb_authors(Some("1862"), &[])
@@ -427,9 +431,8 @@ fn infrageneric_epithets_iczn() {
         .species_ig("Acanthoderes", "Abramov", "satanas")
         .comb_authors(None, &["Aurivillius"])
         .nothing_else();
-    // The lowercase "(acanthoderes)" is not recognised as a subgenus token (subgenus
-    // requires a Title-cased word) so the parser bails out at the parens — left as
-    // an unparsed tail on the bare uninomial. Skipped here.
+    // The lowercase "(acanthoderes)" subgenus is pinned in impl_10.rs (`lowercase_subgenus`):
+    // it is capitalised and the name flagged doubtful. Skipped here.
 }
 
 #[test]
@@ -538,7 +541,7 @@ fn authorship_missing_one_parenthesis() {
 #[test]
 fn unknown_authorship() {
     // group: Unknown authorship — "anon." (any case) is the anonymous flag, not an author;
-    // "(?)" / "(auct.)" parens before a real author are stripped as unparsed (PARTIAL state).
+    // "(?)" before a real author is stripped as unparsed (PARTIAL); "(auct.)" is the sensu note.
     // Unlike Java, "(anon.)" is an anonymous basionym rather than unparsed.
     assert_name("Saccharomyces drosophilae anon.")
         .species("Saccharomyces", "drosophilae")

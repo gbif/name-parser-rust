@@ -65,6 +65,8 @@ fn names_with_ex_as_sp_epithet() {
 #[test]
 fn names_with_spanish_y_instead_of() {
     // group: Names with Spanish 'y' instead of '&'
+    // FIXME(review): "Martínez y Fernández-Castillo" is one person (a Spanish double surname), not
+    // two
     assert_name("Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)")
         .species("Caloptenopsis", "crassiusculus")
         .bas_authors(Some("1896"), &["Martínez", "Fernández-Castillo"])
@@ -79,6 +81,7 @@ fn names_with_spanish_y_instead_of() {
         )
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): "Bolvar y Pieltain" is one person (a Spanish double surname), not two
     assert_name("Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967")
         .species_ig("Carabus", "Tanaocarabus", "hendrichsi")
         .comb_authors(Some("1967"), &["Bolvar", "Pieltain", "Rotger", "Coronado"])
@@ -107,10 +110,13 @@ fn possible_canonical() {
     assert_name("Morea (Morea) burtius 2342343242 23424322342 23424234")
         .species_ig("Morea", "Morea", "burtius")
         .nothing_else();
+    // FIXME(review): Dall and Pilsbry are merged into one author "Dall Pils."
     assert_name("Verpericola megasoma \"\"Dall\" Pils.")
         .species("Verpericola", "megasoma")
         .comb_authors(None, &["Dall Pils."])
         .nothing_else();
+    // FIXME(review): basionym author "L. f." and combination author "Klatt" are merged into one
+    // person
     assert_name("Moraea spathulata ( (L. f. Klatt")
         .species("Moraea", "spathulata")
         .comb_authors(None, &["L.f.Klatt"])
@@ -125,10 +131,11 @@ fn possible_canonical() {
         .comb_authors(Some("1978"), &["Devriese", "al."])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): "Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004" merges both
+    // author teams and makes 2004 an imprint year
     // skipped:
     //   "Verpericola megasoma \"Dall\" Pils." — the quoted "Dall" is parsed as
-    //     a cultivar epithet (correct behavior given quoted-string convention);
-    //     can't recover as bare species without losing cultivar parsing.
+    //     a cultivar epithet; pinned (with a FIXME: a snail, no cultivar) in impl_05.rs.
     //   "Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967." —
     //     IPNI-style publication ref with page-and-plate; the page/plate span
     //     bleeds into the author span.
@@ -196,6 +203,8 @@ fn epithets_do_not_start_or_end_with_a_dash() {
     // group: Epithets do not start or end with a dash. A leading-dash epithet is not
     // recognised as the species, so the rest of the line collapses into authorship.
     // A trailing-dash epithet has the dash stripped and parses as a normal binomial.
+    // FIXME(review): the epithet "petri" is swallowed into an author "petri Paiva"; the "petri-"
+    // twin below parses
     assert_name("Abryna -petri Paiva, 1860")
         .monomial("Abryna")
         .comb_authors(Some("1860"), &["petri Paiva"])
@@ -221,14 +230,17 @@ fn names_that_contain_of() {
         )
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): an English phrase, not a binomial with the author "of uncertain affinities"
     assert_name("Nassellarid genera of uncertain affinities")
         .species("Nassellarid", "genera")
         .comb_authors(None, &["of uncertain affinities"])
         .nothing_else();
+    // FIXME(review): "of nidus" is no author
     assert_name("Natica of nidus")
         .monomial("Natica")
         .comb_authors(None, &["of nidus"])
         .nothing_else();
+    // FIXME(review): "var of cornea Linn" (a variety of N. cornea L.) is no part of the author
     assert_name("Neritina chemmoi Reeve var of cornea Linn")
         .species("Neritina", "chemmoi")
         .comb_authors(None, &["Reeve var of cornea Linn"])
@@ -442,6 +454,8 @@ fn ignoring_sensu_sec() {
         .comb_authors(None, &["R.Vig."])
         .doubtful()
         .nothing_else();
+    // FIXME(review): the notes become authors: "sensu.Dworkin", "s.str.", and "diversus" in
+    // "Ammodramus caudacutus (s.s.) diversus"
     // The remaining inputs ("Pseudomonas methanica (...) sensu. Dworkin and Foster
     // 1956", "Acantholimon ulicinum s.l. (Schultes) Boiss.", "Amaurorhinus
     // bewichianus (Wollaston,1860) (s.str.)", "Ammodramus caudacutus (s.s.)

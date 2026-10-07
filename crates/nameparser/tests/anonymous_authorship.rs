@@ -158,6 +158,8 @@ fn other_brackets_are_left_alone() {
         .comb_authors(Some("1806"), &["Hübner"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): "in" introduces the publication: the basionym author is Péron, published in
+    // Lamarck, not "Péron in Lamarck"
     assert_name_auth("Notochlamys hexactes", "([Péron in] Lamarck, 1819)")
         .species("Notochlamys", "hexactes")
         .bas_authors(Some("1819"), &["Péron in Lamarck"])

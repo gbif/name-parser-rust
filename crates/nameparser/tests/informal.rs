@@ -351,6 +351,8 @@ fn a_numbered_indeterminate_infraspecific_keeps_its_designation() {
 /// with nothing after it, and a marker followed by an author, are both untouched too.
 #[test]
 fn the_designation_capture_leaves_epithets_and_authors_alone() {
+    // FIXME(review): "4-lineata" is a real epithet (docs/non-scientific-names.md): type SCIENTIFIC,
+    // not INFORMAL
     assert_name("Benthogone rosea var. 4-lineata R. Perrier, 1896")
         .infra_species("Benthogone", "rosea", Rank::Variety, "4-lineata")
         .comb_authors(Some("1896"), &["R.Perrier"])
@@ -604,12 +606,16 @@ fn molecular_provisional_species_keep_the_whole_biological_annotation_tail() {
     // NCBI / genetic-database style: everything after "sp." is a strain / pathovar / biovar /
     // serotype / host-association annotation, NOT nomenclature — so the whole verbatim tail
     // (marker included) becomes the phrase and the anchor stays the bare genus.
+    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
+    // species of the plant genus
     assert_informal("Solanum sp. phytoplasma")
         .taxon("Solanum")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
         .phrase("sp. phytoplasma")
         .nothing_else();
+    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
+    // species of the plant genus
     assert_informal("Citrus sp. phytoplasma")
         .taxon("Citrus")
         .taxon_rank(Rank::Genus)
@@ -619,6 +625,8 @@ fn molecular_provisional_species_keep_the_whole_biological_annotation_tail() {
     // "Alstroemeria sp. phytoplasma" is really a phytoplasma named by its host plant (host =
     // Alstroemeria sp., organism = the phytoplasma), not a species of Alstroemeria — semantically
     // distinct, but for now it parses as an Informal like the rest.
+    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
+    // species of the plant genus
     assert_informal("Alstroemeria sp. phytoplasma")
         .taxon("Alstroemeria")
         .taxon_rank(Rank::Genus)
@@ -779,6 +787,8 @@ fn binomial_with_a_trailing_annotation_currently_stays_parsed() {
     // "phytoplasma" as an infraspecific epithet, so it stays SCIENTIFIC. DEFERRED: capturing a
     // trailing annotation on a bare binomial needs annotation-term recognition; this locks the
     // CURRENT behavior so the eventual change is visible in the diff.
+    // FIXME(review): a phytoplasma named after its host plant, not a trinomial with the epithet
+    // "phytoplasma"
     assert_name("Persea americana phytoplasma")
         .infra_species(
             "Persea",
@@ -801,6 +811,8 @@ fn binomial_with_a_species_n_tag_stays_parsed_keeping_the_phrase() {
         .type_(NameType::Informal)
         .phrase("species 12")
         .nothing_else();
+    // FIXME(review): the "sp." marker is lost from the phrase ("12"), while "species 12" above and
+    // "Allium sp. 1" keep it
     assert_name("Dichanthelium chrysopsidifolium sp. 12")
         .species("Dichanthelium", "chrysopsidifolium")
         .type_(NameType::Informal)

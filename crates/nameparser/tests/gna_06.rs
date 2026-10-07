@@ -133,6 +133,8 @@ fn exceptions_from_ranks_rank_line_epithets() {
         .comb_authors(Some("1908"), &["Zaitzev"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): the snail epithets "ser"/"subser" become botanical series ranks with the
+    // infrageneric epithet "Gredler"
     // "Serina subser Gredler, 1898" and "Serina ser Gredler, 1898" — the parser
     // takes "subser"/"ser" as infrageneric rank markers (SUBSERIES_BOTANY /
     // SERIES_BOTANY) and folds "Gredler" into the infrageneric epithet. Left
@@ -363,6 +365,8 @@ fn no_parsing_phytoplasma() {
     // skipped: Alfalfa witches'-broom phytoplasma
     // FIXME(review): a glued phytoplasma label parsed as a binomial
     // skipped: Allium ampeloprasumphytoplasma
+    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
+    // species of the plant genus
     assert_informal("Alstroemeria sp. phytoplasma")
         .taxon("Alstroemeria")
         .taxon_rank(Rank::Genus)

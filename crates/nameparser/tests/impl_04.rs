@@ -77,6 +77,7 @@ fn todo_names() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 
+    // FIXME(review): the trailing dot is lost ("Dsgl", while "Cr?p." above keeps "Crp.")
     assert_name("Rosa alpestris D?s?gl.")
         .species("Rosa", "alpestris")
         .comb_authors(None, &["Dsgl"])
@@ -114,6 +115,8 @@ fn todo_names() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 
+    // FIXME(review): "comb. ined." explains the missing combination author: no zoological evidence
+    // (a plant)
     assert_name("Leucopogon veillonii (Virot) comb. ined.")
         .species("Leucopogon", "veillonii")
         .bas_authors(None, &["Virot"])
@@ -122,6 +125,8 @@ fn todo_names() {
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): "comb. ined." explains the missing combination author: no zoological evidence
+    // (a plant)
     assert_name("Vernoniastrum musofense var. miamensis (S. Moore) comb. ined.")
         .infra_species("Vernoniastrum", "musofense", Rank::Variety, "miamensis")
         .bas_authors(None, &["S.Moore"])
@@ -336,7 +341,7 @@ fn todo_diospyros_oblongifolia() {
 #[test]
 #[ignore = "desired parse, not yet supported"]
 fn todo_lecythis_subbiflora() {
-    // "Later homonym of a fossil name." should be stripped, not appended as a comb author.
+    // "no type indicated." should be a nomenclatural note, not appended as a comb author.
     assert_name("Lecythis subbiflora Ruiz & Pav., no type indicated.")
         .species("Lecythis", "subbiflora")
         .comb_authors(None, &["Ruiz", "Pav."])

@@ -134,6 +134,8 @@ fn cultivars() {
         .specific_authors(None, &["L."])
         .nothing_else();
 
+    // FIXME(review): a land snail authored by Pilsbry: the quoted "Dall" is the attributed
+    // (manuscript) author, no cultivar
     assert_name("Verpericola megasoma \"Dall\" Pils.")
         .cultivar_sp("Verpericola", "megasoma", "Dall")
         .comb_authors(None, &["Pils."])
