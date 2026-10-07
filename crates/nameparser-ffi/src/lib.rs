@@ -38,10 +38,14 @@ use nameparser::model::{NameType, NomCode, ParseError, Rank};
 /// misdecode — so the bump forces lockstep. **Version 5** carries `Authorship.anonymous`: the
 /// header's former padding byte 30 becomes [`layout::OFF_AUTHORSHIP_FLAGS`], and a present nested
 /// authorship group gains a `u32 flags` word after its `present` flag, shifting the rest of the
-/// group — an older decoder would misread both.
+/// group — an older decoder would misread both. **Version 6** moves the sanctioning author onto
+/// `Authorship` (name-parser-api 5.2): string slot 12 becomes
+/// [`layout::SLOT_SANCTIONING_AUTHOR_COMB`], a new slot 17 ([`layout::SLOT_SANCTIONING_AUTHOR_BAS`])
+/// carries the basionym's, and a present nested group gains a sixth string ref — an older decoder
+/// would misread the string table's size and every offset after it.
 #[no_mangle]
 pub extern "C" fn np_abi_version() -> u32 {
-    std::panic::catch_unwind(|| 5u32).unwrap_or(0)
+    std::panic::catch_unwind(|| 6u32).unwrap_or(0)
 }
 
 /// SAFETY: `p` must be either null or a valid, NUL-terminated C string for the duration of
@@ -187,7 +191,7 @@ mod tests {
 
     #[test]
     fn np_abi_version_is_5() {
-        assert_eq!(np_abi_version(), 5);
+        assert_eq!(np_abi_version(), 6);
     }
 
     #[test]

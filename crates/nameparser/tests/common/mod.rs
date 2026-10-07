@@ -70,26 +70,31 @@ use nameparser::ParseResult;
 /// back `Informal` or `Unparsable` — so a determined-name test that wrongly reclassifies as informal
 /// fails here, not silently. (The informal band is [`assert_informal`]; the junk band is
 /// [`assert_unparsable`].)
+#[track_caller]
 pub fn assert_name(input: &str) -> NameAssertion {
     assert_name_hinted(input, None, None, None)
 }
 
 /// `assertName(name, rawAuthorship, canonical)` — parse with a separately supplied authorship.
+#[track_caller]
 pub fn assert_name_auth(input: &str, authorship: &str) -> NameAssertion {
     assert_name_hinted(input, Some(authorship), None, None)
 }
 
 /// `assertName(name, rank, canonical)` — parse with a rank hint.
+#[track_caller]
 pub fn assert_name_rank(input: &str, rank: Rank) -> NameAssertion {
     assert_name_hinted(input, None, Some(rank), None)
 }
 
 /// `assertName(name, code, canonical)` — parse with a nomenclatural-code hint.
+#[track_caller]
 pub fn assert_name_code(input: &str, code: NomCode) -> NameAssertion {
     assert_name_hinted(input, None, None, Some(code))
 }
 
 /// The full `assertName(name, [authorship,] [rank,] [code], canonical)` variant.
+#[track_caller]
 pub fn assert_name_hinted(
     input: &str,
     authorship: Option<&str>,
@@ -104,7 +109,7 @@ pub fn assert_name_hinted(
     };
     check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
-        ParseResult::Parsed(pn) => NameAssertion::new(pn, input),
+        ParseResult::Parsed(pn) => NameAssertion::new(pn, &call.label()),
         ParseResult::Informal(inf) => {
             panic!("expected `{input}` to be a Parsed name, but it was Informal: {inf:?}")
         }
@@ -120,11 +125,13 @@ pub fn assert_name_hinted(
 /// [`ParseResult::Informal`], starting a fluent [`InformalAssertion`] chain. Panics (loudly) if the
 /// name comes back `Parsed` or `Unparsable` instead. Use for the informal / semistructured band —
 /// a supraspecific taxon carrying a provisional designation with no species epithet.
+#[track_caller]
 pub fn assert_informal(input: &str) -> InformalAssertion {
     assert_informal_hinted(input, None, None, None)
 }
 
 /// [`assert_informal`] with the optional authorship / rank / code hints.
+#[track_caller]
 pub fn assert_informal_hinted(
     input: &str,
     authorship: Option<&str>,
@@ -139,7 +146,7 @@ pub fn assert_informal_hinted(
     };
     check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
-        ParseResult::Informal(inf) => InformalAssertion::new(inf, input),
+        ParseResult::Informal(inf) => InformalAssertion::new(inf, &call.label()),
         ParseResult::Parsed(pn) => {
             panic!("expected `{input}` to be an Informal result, but it Parsed: {pn:?}")
         }
@@ -222,6 +229,7 @@ pub fn assert_sensu(raw: &str, sensu: &str) {
 /// `assertPhraseName(sciname, canonicalName, rank, phrase)` — parse, assert the `phrase`, the
 /// full canonical rendering (`NameFormatter.canonical`), the optional rank, and `type=INFORMAL`.
 /// Returns the assertion for further chaining.
+#[track_caller]
 pub fn assert_phrase_name(
     sciname: &str,
     canonical: &str,
@@ -236,7 +244,7 @@ pub fn assert_phrase_name(
         Some(canonical),
         "canonical mismatch for `{sciname}`"
     );
-    let na = NameAssertion::new(n, sciname).phrase(phrase);
+    let na = NameAssertion::new(n, &format!("`{sciname}`")).phrase(phrase);
     let na = match rank {
         Some(r) => na.rank(r),
         None => na,
@@ -246,37 +254,53 @@ pub fn assert_phrase_name(
 
 /// `assertNomNote(note, sciname)` — parse `sciname` and assert its nomenclatural note. Returns
 /// the assertion for further chaining.
+#[track_caller]
 pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
     check_paths(Call::name(sciname), Shape::Name);
     let n = nameparser::parse_name(sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
-    NameAssertion::new(n, sciname).nom_note(note)
+    NameAssertion::new(n, &format!("`{sciname}`")).nom_note(note)
+}
+
+/// The raw [`nameparser::parse_name`] result, for a name [`nameparser::parse`] does not report as
+/// `Parsed`: a placeholder with its genus missing ("? alba Smith") is unparsable there, but keeps its
+/// parts here.
+#[track_caller]
+pub fn assert_raw_name(input: &str) -> NameAssertion {
+    check_paths(Call::name(input), Shape::Name);
+    let n = nameparser::parse_name(input, None, None, None)
+        .unwrap_or_else(|e| panic!("expected `{input}` to parse: {e:?}"));
+    NameAssertion::new(n, &format!("`{input}`"))
 }
 
 /// `assertCultivar(note)` — parse `"Abies alba <note>"` and assert its nomenclatural note
 /// equals `note` (Java's helper is misnamed; it checks the nom-note). Returns the assertion.
+#[track_caller]
 pub fn assert_cultivar(note: &str) -> NameAssertion {
     let sciname = format!("Abies alba {note}");
     check_paths(Call::name(&sciname), Shape::Name);
     let n = nameparser::parse_name(&sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
-    NameAssertion::new(n, &sciname).nom_note(note)
+    NameAssertion::new(n, &format!("`{sciname}`")).nom_note(note)
 }
 
 /// `assertAuthorship(rawAuthorship, expectedAuthors...)` — parse a bare authorship string and
 /// assert the combination authors. Java's `parseAuthorship(auth, code)` is
 /// `parse("Abies alba", auth, SPECIES, code)` reading `combinationAuthorship`, reproduced here.
+#[track_caller]
 pub fn assert_authorship(raw: &str, expected_authors: &[&str]) -> NameAssertion {
     assert_ex_authorship(raw, None, expected_authors)
 }
 
 /// `assertSingleAuthor(raw)` — a bare authorship parsing to exactly the single author `raw`.
+#[track_caller]
 pub fn assert_single_author(raw: &str) -> NameAssertion {
     assert_ex_authorship(raw, None, &[raw])
 }
 
 /// `assertExAuthorship(rawAuthorship, exAuthor, expectedAuthors...)` — parse a bare authorship
 /// and assert its ex-author (or none) and combination authors.
+#[track_caller]
 pub fn assert_ex_authorship(
     raw: &str,
     ex_author: Option<&str>,
@@ -328,10 +352,9 @@ pub fn assert_ex_authorship(
         warnings: full.warnings,
         combination_authorship: full.combination_authorship,
         basionym_authorship: full.basionym_authorship,
-        sanctioning_author: full.sanctioning_author,
         ..Default::default()
     };
-    NameAssertion::new(pn, raw)
+    NameAssertion::new(pn, &format!("authorship `{raw}`"))
 }
 
 /// The name with its authorship embedded, the name with the authorship passed separately, and the
@@ -381,7 +404,11 @@ enum Np {
     GenericBas,
     /// The combination half of `specific_authorship`.
     SpecificComb,
+    /// The basionym half of `specific_authorship`.
+    SpecificBas,
     Sanct,
+    /// The basionym authorship's sanctioning author.
+    BasSanct,
     Rank,
     TaxNote,
     NomNote,
@@ -403,17 +430,24 @@ enum Np {
 
 pub struct NameAssertion {
     n: ParsedName,
-    /// The parsed input, named in the failure message of [`Self::nothing_else`].
+    /// The parsed call, named in the failure message of [`Self::nothing_else`].
     input: String,
     tested: std::collections::HashSet<Np>,
+    /// Where the chain starts in the test, and whether it ended in `nothing_else()` — an open
+    /// chain reports what it leaves unpinned under `NAMEPARSER_DUMP_OPEN_CHAINS`.
+    location: &'static std::panic::Location<'static>,
+    closed: bool,
 }
 
 impl NameAssertion {
+    #[track_caller]
     fn new(n: ParsedName, input: &str) -> Self {
         NameAssertion {
             n,
             input: input.to_string(),
             tested: std::collections::HashSet::new(),
+            location: std::panic::Location::caller(),
+            closed: false,
         }
     }
 
@@ -443,6 +477,18 @@ impl NameAssertion {
         assert!(self.n.infraspecific_epithet.is_none());
         assert!(self.n.cultivar_epithet.is_none());
         self.mark(&[Np::Epithets, Np::Rank, Np::Cultivar])
+    }
+
+    /// A genus with no epithet — the name of a provisional designation (`Pultenaea sp. Olinda (R.Coveny
+    /// 6616)`), with the rank it stands for.
+    pub fn genus_rank(self, genus: &str, rank: Rank) -> Self {
+        assert!(self.n.uninomial.is_none());
+        assert_eq!(self.n.genus.as_deref(), Some(genus));
+        assert!(self.n.infrageneric_epithet.is_none());
+        assert!(self.n.specific_epithet.is_none());
+        assert!(self.n.infraspecific_epithet.is_none());
+        assert_eq!(self.n.rank, rank);
+        self.mark(&[Np::Epithets, Np::Infragen, Np::Rank])
     }
 
     pub fn infrageneric_at(self, genus: &str, rank: Rank, infrageneric: &str) -> Self {
@@ -513,8 +559,17 @@ impl NameAssertion {
     // ---- authorship ----
 
     pub fn comb_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
-        assert_eq!(Self::author_year(&self.n.combination_authorship), year);
-        assert_eq!(self.n.combination_authorship.authors, str_vec(authors));
+        let at = format!("{} {}", self.location, self.input);
+        assert_eq!(
+            Self::author_year(&self.n.combination_authorship),
+            year,
+            "{at}: combination year"
+        );
+        assert_eq!(
+            self.n.combination_authorship.authors,
+            str_vec(authors),
+            "{at}: combination authors"
+        );
         assert!(
             !self.n.combination_authorship.anonymous,
             "unexpected anonymous combination"
@@ -602,10 +657,41 @@ impl NameAssertion {
         self.mark(&[Np::SpecificComb])
     }
 
+    /// Basionym authors of the species authorship ("(Aubl.)" of "… (Aubl.) Sw. var. robusta …").
+    pub fn specific_bas_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
+        let sa = self
+            .n
+            .specific_authorship
+            .as_ref()
+            .expect("specificAuthorship set");
+        assert_eq!(sa.basionym_authorship.year.as_deref(), year);
+        assert_eq!(sa.basionym_authorship.authors, str_vec(authors));
+        self.mark(&[Np::SpecificBas])
+    }
+
     pub fn sanct_author(self, author: &str) -> Self {
-        assert_eq!(self.n.sanctioning_author.as_deref(), Some(author));
+        assert_eq!(
+            self.n.combination_authorship.sanctioning_author.as_deref(),
+            Some(author),
+            "{} {}: combination sanctioning author",
+            self.location,
+            self.input
+        );
         assert_eq!(self.n.code, Some(NomCode::Botanical));
         self.mark(&[Np::Sanct, Np::Code])
+    }
+
+    /// The basionym's sanctioning author: `(Wulfen : Fr.)`.
+    pub fn bas_sanct_author(self, author: &str) -> Self {
+        assert_eq!(
+            self.n.basionym_authorship.sanctioning_author.as_deref(),
+            Some(author),
+            "{} {}: basionym sanctioning author",
+            self.location,
+            self.input
+        );
+        assert_eq!(self.n.code, Some(NomCode::Botanical));
+        self.mark(&[Np::BasSanct, Np::Code])
     }
 
     // ---- flags / notes / misc ----
@@ -693,7 +779,14 @@ impl NameAssertion {
     }
 
     pub fn code(self, code: NomCode) -> Self {
-        assert_eq!(self.n.code, Some(code));
+        assert_eq!(
+            self.n.code,
+            Some(code),
+            "{} {}: code {:?}, expected {code:?}",
+            self.location,
+            self.input,
+            self.n.code
+        );
         self.mark(&[Np::Code])
     }
 
@@ -792,8 +885,18 @@ impl NameAssertion {
 
     /// Assert that every field NOT covered by a previous method call is at its default value —
     /// so the whole parse is pinned. Mirrors Java `NameAssertion.nothingElse()`.
-    pub fn nothing_else(self) {
-        let input = self.input.clone();
+    pub fn nothing_else(mut self) {
+        self.closed = true;
+        // Under NAMEPARSER_DUMP_OPEN_CHAINS a failing closed chain reports what it misses instead
+        // of failing, so one run collects every chain an engine change touches.
+        if std::env::var_os("NAMEPARSER_DUMP_OPEN_CHAINS").is_some()
+            && std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.check_nothing_else()))
+                .is_err()
+        {
+            dump_open_chain(self.location, self.missing_assertions());
+            return;
+        }
+        let input = format!("{} {}", self.location, self.input);
         with_input(&input, || self.check_nothing_else());
     }
 
@@ -831,7 +934,6 @@ impl NameAssertion {
             warnings,
             combination_authorship,
             basionym_authorship,
-            sanctioning_author,
         } = &self.n;
 
         if untested(Np::Epithets) {
@@ -885,6 +987,7 @@ impl NameAssertion {
             untested(Np::Auth),
             untested(Np::ExAuth),
             untested(Np::ImprintYear),
+            untested(Np::Sanct),
         );
         check_authorship_default(
             "basionymAuthorship",
@@ -892,7 +995,9 @@ impl NameAssertion {
             untested(Np::Bas),
             untested(Np::ExBas),
             untested(Np::BasImprintYear),
+            untested(Np::BasSanct),
         );
+
         check_combined_authorship_default(
             "genericAuthorship",
             generic_authorship,
@@ -903,14 +1008,8 @@ impl NameAssertion {
             "specificAuthorship",
             specific_authorship,
             untested(Np::SpecificComb),
-            true,
+            untested(Np::SpecificBas),
         );
-        if untested(Np::Sanct) {
-            assert!(
-                sanctioning_author.is_none(),
-                "unexpected sanctioningAuthor: {sanctioning_author:?}"
-            );
-        }
         if untested(Np::Rank) {
             assert_eq!(*rank, Rank::Unranked, "unexpected rank");
         }
@@ -975,13 +1074,15 @@ impl NameAssertion {
 }
 
 /// [`NameAssertion::nothing_else`] for one [`Authorship`]: the authors/year/anonymous flag, the
-/// ex-authors and the imprint year are each at their default unless an assertion covered them.
+/// ex-authors, the imprint year and the sanctioning author are each at their default unless an
+/// assertion covered them.
 fn check_authorship_default(
     label: &str,
     a: &Authorship,
     main_untested: bool,
     ex_untested: bool,
     imprint_untested: bool,
+    sanct_untested: bool,
 ) {
     let Authorship {
         authors,
@@ -989,7 +1090,14 @@ fn check_authorship_default(
         year,
         imprint_year,
         anonymous,
+        sanctioning_author,
     } = a;
+    if sanct_untested {
+        assert!(
+            sanctioning_author.is_none(),
+            "unexpected {label} sanctioningAuthor: {sanctioning_author:?}"
+        );
+    }
     if main_untested {
         assert!(
             authors.is_empty(),
@@ -1024,7 +1132,6 @@ fn check_combined_authorship_default(
     let Some(CombinedAuthorship {
         combination_authorship,
         basionym_authorship,
-        sanctioning_author,
     }) = ca
     else {
         assert!(comb_untested && bas_untested, "{label} asserted but absent");
@@ -1034,13 +1141,9 @@ fn check_combined_authorship_default(
         ("combination", combination_authorship, comb_untested),
         ("basionym", basionym_authorship, bas_untested),
     ] {
-        check_authorship_default(&format!("{label}.{half}"), a, untested, true, true);
+        check_authorship_default(&format!("{label}.{half}"), a, untested, true, true, true);
         assert!(!a.anonymous, "unexpected anonymous {label}.{half}");
     }
-    assert!(
-        sanctioning_author.is_none(),
-        "unexpected {label}.sanctioningAuthor: {sanctioning_author:?}"
-    );
 }
 
 // ---- the Informal assertion builder -----------------------------------------------------------
@@ -1063,17 +1166,24 @@ enum InfProp {
 /// result, not just the parts it named.
 pub struct InformalAssertion {
     inf: Informal,
-    /// The parsed input, named in the failure message of [`Self::nothing_else`].
+    /// The parsed call, named in the failure message of [`Self::nothing_else`].
     input: String,
     tested: std::collections::HashSet<InfProp>,
+    /// Where the chain starts in the test, and whether it ended in `nothing_else()` — an open
+    /// chain reports what it leaves unpinned under `NAMEPARSER_DUMP_OPEN_CHAINS`.
+    location: &'static std::panic::Location<'static>,
+    closed: bool,
 }
 
 impl InformalAssertion {
+    #[track_caller]
     fn new(inf: Informal, input: &str) -> Self {
         InformalAssertion {
             inf,
             input: input.to_string(),
             tested: std::collections::HashSet::new(),
+            location: std::panic::Location::caller(),
+            closed: false,
         }
     }
 
@@ -1133,8 +1243,9 @@ impl InformalAssertion {
 
     /// Close the chain: `taxon`, `taxon_rank` and `rank` must have been asserted, and every optional
     /// field not mentioned above (`phrase`, `code`) must be absent.
-    pub fn nothing_else(self) {
-        let input = self.input.clone();
+    pub fn nothing_else(mut self) {
+        self.closed = true;
+        let input = format!("{} {}", self.location, self.input);
         with_input(&input, || self.check_nothing_else());
     }
 
@@ -1258,6 +1369,369 @@ pub fn parsed_name_diff(a: &ParsedName, b: &ParsedName) -> Vec<(String, String, 
         .collect()
 }
 
+// ---- open chains ------------------------------------------------------------------------------
+
+/// Appends one `file<TAB>line<TAB>column<TAB>call<US>call…` line per open chain to the file named
+/// by `NAMEPARSER_DUMP_OPEN_CHAINS`: the DSL calls that would pin every field the chain left
+/// unchecked, generated from the actual parse (a `// TODO` call marks a field no single DSL call
+/// can pin). A tool for closing chains — every generated call still needs a review before it is
+/// taken as the expectation.
+fn dump_open_chain(location: &std::panic::Location<'static>, calls: Vec<String>) {
+    if std::thread::panicking() {
+        return;
+    }
+    let Ok(path) = std::env::var("NAMEPARSER_DUMP_OPEN_CHAINS") else {
+        return;
+    };
+    use std::io::Write;
+    let line = format!(
+        "{}\t{}\t{}\t{}\n",
+        location.file(),
+        location.line(),
+        location.column(),
+        calls.join("\u{1f}")
+    );
+    std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+        .and_then(|mut f| f.write_all(line.as_bytes()))
+        .unwrap_or_else(|e| panic!("cannot write {path}: {e}"));
+}
+
+impl Drop for NameAssertion {
+    fn drop(&mut self) {
+        if !self.closed {
+            dump_open_chain(self.location, self.missing_assertions());
+        }
+    }
+}
+
+impl Drop for InformalAssertion {
+    fn drop(&mut self) {
+        if !self.closed {
+            dump_open_chain(self.location, self.missing_assertions());
+        }
+    }
+}
+
+/// A Rust string literal for `s`.
+fn lit(s: &str) -> String {
+    format!("{s:?}")
+}
+
+/// A Rust `&[…]` literal of string literals.
+fn lits(v: &[String]) -> String {
+    let items: Vec<String> = v.iter().map(|s| lit(s)).collect();
+    format!("&[{}]", items.join(", "))
+}
+
+/// `Some("…")` / `None` for an optional year.
+fn opt_lit(y: &Option<String>) -> String {
+    y.as_deref()
+        .map_or("None".to_string(), |y| format!("Some({})", lit(y)))
+}
+
+impl NameAssertion {
+    /// The DSL calls pinning every field no assertion of this chain covered — see
+    /// [`dump_open_chain`].
+    fn missing_assertions(&self) -> Vec<String> {
+        let n = &self.n;
+        let mut out = Vec::new();
+        let mut code_done = false;
+        // the name parts first: their calls also pin the rank (and some the infrageneric epithet
+        // and cultivar)
+        let mut covered = self.tested.clone();
+        if !covered.contains(&Np::Epithets) {
+            let r = n.rank;
+            let call = match (
+                &n.uninomial,
+                &n.genus,
+                &n.infrageneric_epithet,
+                &n.specific_epithet,
+                &n.infraspecific_epithet,
+                &n.cultivar_epithet,
+            ) {
+                (None, None, None, None, None, None) => None,
+                (Some(u), None, None, None, None, None) => Some((
+                    format!(".monomial_rank({}, Rank::{r:?})", lit(u)),
+                    vec![Np::Epithets, Np::Rank, Np::Cultivar],
+                )),
+                (None, Some(g), None, Some(e), None, None) if r == Rank::Species => Some((
+                    format!(".species({}, {})", lit(g), lit(e)),
+                    vec![Np::Epithets, Np::Infragen, Np::Rank],
+                )),
+                (None, Some(g), ig, Some(e), None, None) => Some((
+                    format!(
+                        ".binomial({}, {}, {}, Rank::{r:?})",
+                        lit(g),
+                        ig.as_deref()
+                            .map_or("None".to_string(), |ig| format!("Some({})", lit(ig))),
+                        lit(e)
+                    ),
+                    vec![Np::Epithets, Np::Infragen, Np::Rank],
+                )),
+                (None, Some(g), None, Some(e), Some(i), None) => Some((
+                    format!(
+                        ".infra_species({}, {}, Rank::{r:?}, {})",
+                        lit(g),
+                        lit(e),
+                        lit(i)
+                    ),
+                    vec![Np::Epithets, Np::Rank],
+                )),
+                (None, Some(g), None, None, None, None) => Some((
+                    format!(".genus_rank({}, Rank::{r:?})", lit(g)),
+                    vec![Np::Epithets, Np::Infragen, Np::Rank],
+                )),
+                (None, Some(g), Some(ig), None, None, None) => Some((
+                    format!(".infrageneric_at({}, Rank::{r:?}, {})", lit(g), lit(ig)),
+                    vec![Np::Epithets, Np::Infragen, Np::Rank, Np::Cultivar],
+                )),
+                (u, g, ig, e, i, cv) => {
+                    out.push(format!(
+                        "// TODO name parts: {u:?} {g:?} {ig:?} {e:?} {i:?} {cv:?}"
+                    ));
+                    None
+                }
+            };
+            if let Some((call, marks)) = call {
+                out.push(call);
+                covered.extend(marks);
+            }
+        }
+        let untested = |p: Np| !covered.contains(&p);
+        if untested(Np::Infragen) {
+            if let Some(x) = &n.infrageneric_epithet {
+                out.push(format!(".infrageneric({})", lit(x)));
+            }
+        }
+        if untested(Np::Cultivar) && n.cultivar_epithet.is_some() {
+            out.push(format!("// TODO cultivar {:?}", n.cultivar_epithet));
+        }
+        if untested(Np::Phrase) {
+            if let Some(x) = &n.phrase {
+                out.push(format!(".phrase({})", lit(x)));
+            }
+        }
+        if untested(Np::Rank) && n.rank != Rank::Unranked {
+            out.push(format!(".rank(Rank::{:?})", n.rank));
+        }
+        let a = &n.combination_authorship;
+        if untested(Np::Auth) && (a.anonymous || !a.authors.is_empty() || a.year.is_some()) {
+            let m = if a.anonymous {
+                "comb_anon"
+            } else {
+                "comb_authors"
+            };
+            out.push(format!(".{m}({}, {})", opt_lit(&a.year), lits(&a.authors)));
+        }
+        if untested(Np::ExAuth) && !a.ex_authors.is_empty() {
+            out.push(format!(".comb_ex_authors({})", lits(&a.ex_authors)));
+        }
+        if untested(Np::ImprintYear) {
+            if let Some(y) = &a.imprint_year {
+                out.push(format!(".imprint_year({})", lit(y)));
+            }
+        }
+        let b = &n.basionym_authorship;
+        if untested(Np::Bas) && (b.anonymous || !b.authors.is_empty() || b.year.is_some()) {
+            let m = if b.anonymous {
+                "bas_anon"
+            } else {
+                "bas_authors"
+            };
+            out.push(format!(".{m}({}, {})", opt_lit(&b.year), lits(&b.authors)));
+        }
+        if untested(Np::ExBas) && !b.ex_authors.is_empty() {
+            out.push(format!(
+                ".bas_ex_authors({}, {})",
+                opt_lit(&b.year),
+                lits(&b.ex_authors)
+            ));
+        }
+        if untested(Np::BasImprintYear) {
+            if let Some(y) = &b.imprint_year {
+                out.push(format!(".bas_imprint_year({})", lit(y)));
+            }
+        }
+        for (slot, ca, comb_m, bas_m, comb_np, bas_np) in [
+            (
+                "generic",
+                &n.generic_authorship,
+                "generic_authors",
+                Some("generic_bas_authors"),
+                Np::GenericComb,
+                Some(Np::GenericBas),
+            ),
+            (
+                "specific",
+                &n.specific_authorship,
+                "specific_authors",
+                Some("specific_bas_authors"),
+                Np::SpecificComb,
+                Some(Np::SpecificBas),
+            ),
+        ] {
+            let Some(ca) = ca else { continue };
+            let c = &ca.combination_authorship;
+            if untested(comb_np) && (!c.authors.is_empty() || c.year.is_some()) {
+                out.push(format!(
+                    ".{comb_m}({}, {})",
+                    opt_lit(&c.year),
+                    lits(&c.authors)
+                ));
+            }
+            let bb = &ca.basionym_authorship;
+            if !bb.authors.is_empty() || bb.year.is_some() {
+                match (bas_m, bas_np) {
+                    (Some(m), Some(np)) if untested(np) => out.push(format!(
+                        ".{m}({}, {})",
+                        opt_lit(&bb.year),
+                        lits(&bb.authors)
+                    )),
+                    (Some(_), _) => {}
+                    _ => out.push(format!("// TODO {slot} basionym {bb:?}")),
+                }
+            }
+        }
+        for (np, method, sanct) in [
+            (
+                Np::Sanct,
+                "sanct_author",
+                &n.combination_authorship.sanctioning_author,
+            ),
+            (
+                Np::BasSanct,
+                "bas_sanct_author",
+                &n.basionym_authorship.sanctioning_author,
+            ),
+        ] {
+            if untested(np) {
+                if let Some(s) = sanct {
+                    if n.code == Some(NomCode::Botanical) {
+                        out.push(format!(".{method}({})", lit(s)));
+                        code_done = true;
+                    } else {
+                        out.push(format!("// TODO {method} {s:?} with code {:?}", n.code));
+                    }
+                }
+            }
+        }
+        for (np, v, m) in [
+            (Np::TaxNote, &n.taxonomic_note, "sensu"),
+            (Np::NomNote, &n.nomenclatural_note, "nom_note"),
+            (Np::PublishedIn, &n.published_in, "published_in"),
+            (
+                Np::PublishedInPage,
+                &n.published_in_page,
+                "published_in_page",
+            ),
+        ] {
+            if let (true, Some(x)) = (untested(np), v) {
+                out.push(format!(".{m}({})", lit(x)));
+            }
+        }
+        if untested(Np::PublishedInYear) {
+            if let Some(y) = n.published_in_year {
+                out.push(format!(".published_in_year(Some({y}))"));
+            }
+        }
+        for (np, set, m) in [
+            (Np::Doubtful, n.doubtful, "doubtful"),
+            (Np::Manuscript, n.manuscript, "manuscript"),
+            (Np::Extinct, n.extinct, "extinct"),
+        ] {
+            if untested(np) && set {
+                out.push(format!(".{m}()"));
+            }
+        }
+        if untested(Np::Candidate) && n.candidatus {
+            if n.code == Some(NomCode::Bacterial) {
+                out.push(".candidatus()".to_string());
+                code_done = true;
+            } else {
+                out.push(format!("// TODO candidatus with code {:?}", n.code));
+            }
+        }
+        if untested(Np::Notho) {
+            if let Some(parts) = n.notho.as_ref().filter(|v| !v.is_empty()) {
+                let parts: Vec<String> = parts.iter().map(|p| format!("NamePart::{p:?}")).collect();
+                out.push(format!(".notho(&[{}])", parts.join(", ")));
+            }
+        }
+        if untested(Np::Sic) {
+            match n.original_spelling {
+                Some(true) => out.push(".sic()".to_string()),
+                Some(false) => out.push(".corrig()".to_string()),
+                None => {}
+            }
+        }
+        if untested(Np::Qualifiers) {
+            if let Some(map) = n.epithet_qualifier.as_ref().filter(|m| !m.is_empty()) {
+                let pairs: Vec<String> = map
+                    .iter()
+                    .map(|(p, q)| format!("(NamePart::{p:?}, {})", lit(q)))
+                    .collect();
+                out.push(format!(".qualifiers(&[{}])", pairs.join(", ")));
+            }
+        }
+        if untested(Np::Remains) || untested(Np::State) {
+            match (&n.state, &n.unparsed) {
+                (State::Partial, Some(u)) if untested(Np::Remains) && untested(Np::State) => {
+                    out.push(format!(".partial({})", lit(u)))
+                }
+                (State::Complete, None) => {}
+                (state, unparsed) => {
+                    out.push(format!("// TODO state {state:?}, unparsed {unparsed:?}"))
+                }
+            }
+        }
+        if untested(Np::Warning) && !n.warnings.is_empty() {
+            out.push(format!(".warning({})", lits(&n.warnings)));
+        }
+        if untested(Np::Type) && n.type_ != NameType::Scientific {
+            out.push(format!(".type_(NameType::{:?})", n.type_));
+        }
+        if untested(Np::Code) && !code_done {
+            if let Some(c) = n.code {
+                out.push(format!(".code(NomCode::{c:?})"));
+            }
+        }
+        out
+    }
+}
+
+impl InformalAssertion {
+    /// The DSL calls pinning every field no assertion of this chain covered — see
+    /// [`dump_open_chain`].
+    fn missing_assertions(&self) -> Vec<String> {
+        let i = &self.inf;
+        let untested = |p: InfProp| !self.tested.contains(&p);
+        let mut out = Vec::new();
+        if untested(InfProp::Taxon) {
+            out.push(format!(".taxon({})", lit(&i.taxon)));
+        }
+        if untested(InfProp::TaxonRank) {
+            out.push(format!(".taxon_rank(Rank::{:?})", i.taxon_rank));
+        }
+        if untested(InfProp::Rank) {
+            out.push(format!(".rank(Rank::{:?})", i.rank));
+        }
+        if untested(InfProp::Phrase) {
+            if let Some(p) = &i.phrase {
+                out.push(format!(".phrase({})", lit(p)));
+            }
+        }
+        if untested(InfProp::Code) {
+            if let Some(c) = i.code {
+                out.push(format!(".code(NomCode::{c:?})"));
+            }
+        }
+        out
+    }
+}
+
 /// Runs `check`, re-raising any assertion failure prefixed with the input it was about — the
 /// field-level messages alone don't say which of a test's many names failed.
 fn with_input(input: &str, check: impl FnOnce()) {
@@ -1267,7 +1741,7 @@ fn with_input(input: &str, check: impl FnOnce()) {
             .cloned()
             .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
-        panic!("`{input}`: {msg}");
+        panic!("{input}: {msg}");
     }
 }
 

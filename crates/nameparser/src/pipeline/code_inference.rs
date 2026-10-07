@@ -15,7 +15,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::model::{warnings, NomCode};
-use crate::pipeline::authorship_parser::AuthState;
+use crate::pipeline::authorship_parser::{is_sanctioning_author, AuthState};
 use crate::pipeline::ParseContext;
 
 /// Java `CodeInference.ICN_STATUS` (`CodeInference.java:141-142`), compiled with no flags —
@@ -38,17 +38,19 @@ static ICZN_STATUS: LazyLock<Regex> =
 /// not yet set. Called by [`crate::pipeline::assemble::finish`] only when
 /// `ctx.name.code.is_none()`.
 ///
-/// Two decisive signals are checked first and pin the code outright:
+/// Decisive signals are checked first and pin the code outright:
 ///   1. a code-exclusive rank ([`crate::model::Rank::code`] != `None`) — the cultivar, viral
 ///      and bacterial `*-var` ranks, forma specialis, botanical section/series, etc. The
 ///      generic markers subsp./var./f. carry *no* code (they are used across codes, mostly
 ///      on old zoological synonyms) and so are deliberately not a signal.
-///   2. a code-exclusive nomenclatural status ([`code_from_nom_note`]) — several ICN and
+///   2. Rust-only: a hybrid (BOTANICAL), sanctioning by Fries or Persoon (BOTANICAL), an
+///      Approved Lists citation (BACTERIAL).
+///   3. a code-exclusive nomenclatural status ([`code_from_nom_note`]) — several ICN and
 ///      ICZN statuses exist only under their own code.
 ///
 /// Otherwise a **vote tally** over authorship shape decides:
-///   - BOTANICAL — a sanctioning author; a `(Basionym) Recombination` two-author citation; a
-///     filius suffix with no year.
+///   - BOTANICAL — any other "sanctioning author"; a `(Basionym) Recombination` two-author
+///     citation; an ex-author; a filius suffix with no year; coded diacritics.
 ///   - ZOOLOGICAL — a basionym-only `(Author, year)` citation; a year on an authored
 ///     basionym or combination.
 ///   - BACTERIAL — a `Candidatus` name.
@@ -58,6 +60,34 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // 1. A code-exclusive rank pins the code outright — no vote needed.
     if let Some(rank_code) = ctx.name.rank.code() {
         ctx.name.code = Some(rank_code);
+        return;
+    }
+
+    // A hybrid is named under the botanical code — zoology names no hybrids — so a year beside
+    // its author is no zoological evidence ("×Agropogon P. Fourn. 1934"). A cultivar hybrid's
+    // rank already pinned the cultivated-plant code above.
+    if ctx.name.notho.as_ref().is_some_and(|n| !n.is_empty()) {
+        ctx.name.code = Some(NomCode::Botanical);
+        return;
+    }
+    // Sanctioning by Fries or Persoon exists under the botanical code only, so a year beside the
+    // author is no zoological evidence ("Link:Fr., 1809"), the basionym's too ("(Wulfen : Fr.)").
+    let sanctioned = [
+        auth_state.and_then(|st| st.combination.sanctioning_author.as_deref()),
+        auth_state.and_then(|st| st.basionym.sanctioning_author.as_deref()),
+        ctx.name
+            .combination_authorship
+            .sanctioning_author
+            .as_deref(),
+        ctx.name.basionym_authorship.sanctioning_author.as_deref(),
+    ];
+    if sanctioned.into_iter().flatten().any(is_sanctioning_author) {
+        ctx.name.code = Some(NomCode::Botanical);
+        return;
+    }
+    // The 1980 Approved Lists of Bacterial Names exist under the prokaryote code only.
+    if ctx.approved_lists {
+        ctx.name.code = Some(NomCode::Bacterial);
         return;
     }
 
@@ -84,14 +114,28 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         let comb_year =
             auth_state.combination.year.is_some() && auth_state.combination.has_authors_or_anon();
         let any_author_year = bas_year || comb_year;
+        // Authors who are all abbreviated with a dot ("Müll. Arg. 1887", "Henn. 1908") are
+        // botanical citation style: zoology spells its authors out, so their year is no zoological
+        // evidence. A filius suffix is no abbreviation ("Linnaeus f., 1789").
+        let zoological_year =
+            bas_year || (comb_year && !all_abbreviated(&auth_state.combination.authors));
 
         // --- botanical votes ---
         // Sanctioning author (": Fr." / ": Pers.").
-        if auth_state.sanctioning_author.is_some() || ctx.name.sanctioning_author.is_some() {
+        if auth_state.combination.sanctioning_author.is_some()
+            || ctx.name.combination_authorship.sanctioning_author.is_some()
+        {
             votes.insert(NomCode::Botanical);
         }
         // "(Basionym) Recombination" — a parenthesised basionym plus a recombination author.
         if auth_state.basionym_present && auth_state.combination.has_authors_or_anon() {
+            votes.insert(NomCode::Botanical);
+        }
+        // An ex-author ("Mart. ex DC.", "(Fr. ex Duby) Johanson"): the formal ex citation is
+        // botanical usage.
+        if !auth_state.combination.ex_authors.is_empty()
+            || !auth_state.basionym.ex_authors.is_empty()
+        {
             votes.insert(NomCode::Botanical);
         }
         // Filius ("f." / "fil.") without any year.
@@ -109,15 +153,51 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         if auth_state.basionym_present && !auth_state.combination.has_authors_or_anon() {
             votes.insert(NomCode::Zoological);
         }
-        // A year on an authored basionym or combination.
-        if any_author_year {
+        // A year on an authored basionym or combination, unless every author is abbreviated.
+        if zoological_year {
             votes.insert(NomCode::Zoological);
         }
+    }
+
+    // An emendation ("Lee et al. 2011 emend. Yoon et al. 2014") is prokaryote and botanical usage,
+    // so the year beside it is no zoological evidence.
+    if ctx
+        .name
+        .taxonomic_note
+        .as_deref()
+        .is_some_and(|n| n.starts_with("emend"))
+    {
+        votes.remove(&NomCode::Zoological);
+    }
+
+    // Diacritics coded with a colon and a digit ("C. Mu:2ller, 1896") come from bryophyte sources
+    // only: all 3,181 such ChecklistBank authorships that declare a code declare ICN. Their year
+    // follows zoology's style, not its code.
+    if ctx.coded_diacritics {
+        votes.remove(&NomCode::Zoological);
+        votes.insert(NomCode::Botanical);
     }
 
     if votes.len() == 1 {
         ctx.name.code = votes.into_iter().next();
     }
+}
+
+/// Every author abbreviated with a dot ("Müll. Arg.", "Henn.", "L.f."), after any filius suffix is
+/// set aside ("Linnaeus f." is spelled out).
+fn all_abbreviated(authors: &[String]) -> bool {
+    let base = |a: &str| {
+        let a = a.trim_end();
+        [".f.", " f.", ".fil.", " fil.", " filius"]
+            .iter()
+            .find_map(|suffix| {
+                a.strip_suffix(suffix)
+                    .map(|b| format!("{b}{}", &suffix[..1]))
+            })
+            .map(|b| b.trim_end().to_string())
+            .unwrap_or_else(|| a.to_string())
+    };
+    !authors.is_empty() && authors.iter().all(|a| base(a).ends_with('.'))
 }
 
 /// Java `CodeInference.codeFromNomNote(String)` (`CodeInference.java:125-139`). Maps a
@@ -133,11 +213,12 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
 ///
 /// Word-boundary matching (not bare substring search) so a status token is only recognised
 /// as a whole word — "cons" matches "nom. cons." but not an unrelated word that merely
-/// contains the letters (e.g. "reconsider").
+/// contains the letters (e.g. "reconsider"). A spelled-out "illegitimum" is zoologists' usage,
+/// botanists abbreviate (7 of the 9 ChecklistBank rows declare ICZN): no botanical vote.
 pub(crate) fn code_from_nom_note(note: Option<&str>) -> Option<NomCode> {
     let note = note?;
     let s = note.to_lowercase();
-    if ICN_STATUS.is_match(&s) {
+    if ICN_STATUS.is_match(&s) && !s.contains("illegitimum") {
         return Some(NomCode::Botanical);
     }
     if ICZN_STATUS.is_match(&s) {
@@ -257,10 +338,11 @@ mod tests {
     #[test]
     fn contradicting_votes_leave_code_unset() {
         let mut ctx = ctx_with_rank(Rank::Unranked);
-        // "(DC.) L., 1901": basionym + authored combination (BOTANICAL "(Basionym)
+        // "(DC.) Linnaeus, 1901": basionym + authored combination (BOTANICAL "(Basionym)
         // Recombination" vote) AND a year on that same authored combination (ZOOLOGICAL "a
-        // year on an authored … combination" vote) — two distinct votes, no winner.
-        let auth = auth_state("(DC.) L., 1901");
+        // year on an authored … combination" vote) — two distinct votes, no winner. (With an
+        // abbreviated "L." the year casts no zoological vote at all.)
+        let auth = auth_state("(DC.) Linnaeus, 1901");
         infer(&mut ctx, Some(&auth));
         assert_eq!(ctx.name.code, None);
     }

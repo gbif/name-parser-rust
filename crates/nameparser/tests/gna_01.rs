@@ -7,7 +7,9 @@ use nameparser::model::{NomCode, Rank};
 #[test]
 fn uninomials_without_authorship() {
     // group: Uninomials without authorship
-    assert_name("Pseudocercospora").monomial("Pseudocercospora");
+    assert_name("Pseudocercospora")
+        .monomial("Pseudocercospora")
+        .nothing_else();
 }
 
 #[test]
@@ -17,82 +19,129 @@ fn uninomials_with_authorship() {
     // trinomials become SUBSPECIES (clearly zoological).
     assert_name("Tremoctopus violaceus Delle Chiaje, 1830")
         .species("Tremoctopus", "violaceus")
-        .comb_authors(Some("1830"), &["Delle Chiaje"]);
+        .comb_authors(Some("1830"), &["Delle Chiaje"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Protis hydrothermica ten Hove & Zibrowius, 1986")
         .species("Protis", "hydrothermica")
-        .comb_authors(Some("1986"), &["ten Hove", "Zibrowius"]);
+        .comb_authors(Some("1986"), &["ten Hove", "Zibrowius"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Cladoniicola staurospora Diederich, van den Boom & Aptroot 2001")
         .species("Cladoniicola", "staurospora")
-        .comb_authors(Some("2001"), &["Diederich", "van den Boom", "Aptroot"]);
+        .comb_authors(Some("2001"), &["Diederich", "van den Boom", "Aptroot"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Stagonospora polyspora M.T. Lucas & Sousa da Câmara 1934")
         .species("Stagonospora", "polyspora")
-        .comb_authors(Some("1934"), &["M.T.Lucas", "Sousa da Câmara"]);
+        .comb_authors(Some("1934"), &["M.T.Lucas", "Sousa da Câmara"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Stagonospora polyspora M.T. Lucas et Sousa da Câmara 1934")
         .species("Stagonospora", "polyspora")
-        .comb_authors(Some("1934"), &["M.T.Lucas", "Sousa da Câmara"]);
+        .comb_authors(Some("1934"), &["M.T.Lucas", "Sousa da Câmara"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii U. Braun & Crous 2003")
         .species("Pseudocercospora", "dendrobii")
-        .comb_authors(Some("2003"), &["U.Braun", "Crous"]);
+        .comb_authors(Some("2003"), &["U.Braun", "Crous"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Abaxisotima acuminata (Wang, Yuwen & Xiangwei Liu 1996)")
         .species("Abaxisotima", "acuminata")
-        .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xiangwei Liu"]);
+        .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xiangwei Liu"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Aboilomimus sichuanensis ornatus Liu, Xiang-wei, M. Zhou, W Bi & L. Tang, 2009")
         .infra_species("Aboilomimus", "sichuanensis", Rank::Subspecies, "ornatus")
         .comb_authors(
             Some("2009"),
             &["Liu", "Xiang-wei", "M.Zhou", "W.Bi", "L.Tang"],
         )
-        .code(NomCode::Zoological);
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Pseudocercospora Speg.")
         .monomial("Pseudocercospora")
-        .comb_authors(None, &["Speg."]);
-    // "(synonym)" tail is currently parsed as an extra author, not stripped.
+        .comb_authors(None, &["Speg."])
+        .nothing_else();
+    // the "(synonym)" remark is the taxonomic note
     assert_name("Döringina Ihering 1929 (synonym)")
         .monomial("Döringina")
-        .comb_authors(Some("1929"), &["Ihering", "synonym"]);
+        .comb_authors(Some("1929"), &["Ihering"])
+        .sensu("synonym")
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Pseudocercospora Speg., Francis Jack.-Drake.")
         .monomial("Pseudocercospora")
-        .comb_authors(None, &["Speg.", "Francis Jack.-Drake."]);
+        .comb_authors(None, &["Speg.", "Francis Jack.-Drake."])
+        .nothing_else();
     assert_name("Aaaba de Laubenfels, 1936")
         .monomial("Aaaba")
-        .comb_authors(Some("1936"), &["de Laubenfels"]);
+        .comb_authors(Some("1936"), &["de Laubenfels"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Abbottia F. von Mueller, 1875")
         .monomial("Abbottia")
-        .comb_authors(Some("1875"), &["F.von Mueller"]);
+        .comb_authors(Some("1875"), &["F.von Mueller"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Abella von Heyden, 1826")
         .monomial("Abella")
-        .comb_authors(Some("1826"), &["von Heyden"]);
+        .comb_authors(Some("1826"), &["von Heyden"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Micropleura v Linstow 1906")
         .monomial("Micropleura")
-        .comb_authors(Some("1906"), &["v Linstow"]);
+        .comb_authors(Some("1906"), &["v Linstow"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Pseudocercospora Speg. 1910")
         .monomial("Pseudocercospora")
-        .comb_authors(Some("1910"), &["Speg."]);
+        .comb_authors(Some("1910"), &["Speg."])
+        .nothing_else();
     assert_name("Pseudocercospora Spegazzini, 1910")
         .monomial("Pseudocercospora")
-        .comb_authors(Some("1910"), &["Spegazzini"]);
+        .comb_authors(Some("1910"), &["Spegazzini"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Rhynchonellidae d'Orbigny 1847")
         .monomial("Rhynchonellidae")
-        .comb_authors(Some("1847"), &["d'Orbigny"]);
+        .comb_authors(Some("1847"), &["d'Orbigny"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Rhynchonellidae d‘Orbigny 1847")
         .monomial("Rhynchonellidae")
-        .comb_authors(Some("1847"), &["d'Orbigny"]);
+        .comb_authors(Some("1847"), &["d'Orbigny"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Rhynchonellidae d’Orbigny 1847")
         .monomial("Rhynchonellidae")
-        .comb_authors(Some("1847"), &["d'Orbigny"]);
+        .comb_authors(Some("1847"), &["d'Orbigny"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ataladoris Iredale & O'Donoghue 1923")
         .monomial("Ataladoris")
-        .comb_authors(Some("1923"), &["Iredale", "O'Donoghue"]);
+        .comb_authors(Some("1923"), &["Iredale", "O'Donoghue"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Anteplana le Renard 1995")
         .monomial("Anteplana")
-        .comb_authors(Some("1995"), &["le Renard"]);
+        .comb_authors(Some("1995"), &["le Renard"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Candinia le Renard, Sabelli & Taviani 1996")
         .monomial("Candinia")
-        .comb_authors(Some("1996"), &["le Renard", "Sabelli", "Taviani"]);
+        .comb_authors(Some("1996"), &["le Renard", "Sabelli", "Taviani"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     // "le-sourdianum" is parsed as the species epithet, "Fourn." as the comb author.
     assert_name("Polypodium le-sourdianum Fourn.")
         .species("Polypodium", "le-sourdianum")
-        .comb_authors(None, &["Fourn."]);
+        .comb_authors(None, &["Fourn."])
+        .nothing_else();
 }
 
 #[test]
@@ -100,76 +149,127 @@ fn two_letter_genus_names_legacy_genera_not_allowed_anymore() {
     // group: Two-letter genus names (legacy genera, not allowed anymore)
     assert_name("Ca Dyar 1914")
         .monomial("Ca")
-        .comb_authors(Some("1914"), &["Dyar"]);
+        .comb_authors(Some("1914"), &["Dyar"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ea Distant 1911")
         .monomial("Ea")
-        .comb_authors(Some("1911"), &["Distant"]);
-    assert_name("Do").monomial("Do");
+        .comb_authors(Some("1911"), &["Distant"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Do").monomial("Do").nothing_else();
     assert_name("Ge Nicéville 1895")
         .monomial("Ge")
-        .comb_authors(Some("1895"), &["Nicéville"]);
+        .comb_authors(Some("1895"), &["Nicéville"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ia Thomas 1902")
         .monomial("Ia")
-        .comb_authors(Some("1902"), &["Thomas"]);
+        .comb_authors(Some("1902"), &["Thomas"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Io Lea 1831")
         .monomial("Io")
-        .comb_authors(Some("1831"), &["Lea"]);
+        .comb_authors(Some("1831"), &["Lea"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Io Blanchard 1852")
         .monomial("Io")
-        .comb_authors(Some("1852"), &["Blanchard"]);
+        .comb_authors(Some("1852"), &["Blanchard"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ix Bergroth 1916")
         .monomial("Ix")
-        .comb_authors(Some("1916"), &["Bergroth"]);
+        .comb_authors(Some("1916"), &["Bergroth"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Lo Seale 1906")
         .monomial("Lo")
-        .comb_authors(Some("1906"), &["Seale"]);
+        .comb_authors(Some("1906"), &["Seale"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Oa Girault 1929")
         .monomial("Oa")
-        .comb_authors(Some("1929"), &["Girault"]);
-    assert_name("Oo").monomial("Oo");
-    assert_name("Nu").monomial("Nu");
+        .comb_authors(Some("1929"), &["Girault"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Oo").monomial("Oo").nothing_else();
+    assert_name("Nu").monomial("Nu").nothing_else();
     assert_name("Ra Whitley 1931")
         .monomial("Ra")
-        .comb_authors(Some("1931"), &["Whitley"]);
+        .comb_authors(Some("1931"), &["Whitley"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ty Bory de St. Vincent 1827")
         .monomial("Ty")
-        .comb_authors(Some("1827"), &["Bory de St.Vincent"]);
+        .comb_authors(Some("1827"), &["Bory de St.Vincent"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ua Girault 1929")
         .monomial("Ua")
-        .comb_authors(Some("1929"), &["Girault"]);
+        .comb_authors(Some("1929"), &["Girault"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Aa Baker 1940")
         .monomial("Aa")
-        .comb_authors(Some("1940"), &["Baker"]);
+        .comb_authors(Some("1940"), &["Baker"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ja Uéno 1955")
         .monomial("Ja")
-        .comb_authors(Some("1955"), &["Uéno"]);
+        .comb_authors(Some("1955"), &["Uéno"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Zu Walters & Fitch 1960")
         .monomial("Zu")
-        .comb_authors(Some("1960"), &["Walters", "Fitch"]);
+        .comb_authors(Some("1960"), &["Walters", "Fitch"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("La Bleszynski 1966")
         .monomial("La")
-        .comb_authors(Some("1966"), &["Bleszynski"]);
+        .comb_authors(Some("1966"), &["Bleszynski"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Qu Durkoop")
         .monomial("Qu")
-        .comb_authors(None, &["Durkoop"]);
+        .comb_authors(None, &["Durkoop"])
+        .nothing_else();
     assert_name("As Slipinski 1982")
         .monomial("As")
-        .comb_authors(Some("1982"), &["Slipinski"]);
+        .comb_authors(Some("1982"), &["Slipinski"])
+        .code(NomCode::Zoological)
+        .nothing_else();
     assert_name("Ba Solem 1983")
         .monomial("Ba")
-        .comb_authors(Some("1983"), &["Solem"]);
+        .comb_authors(Some("1983"), &["Solem"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]
 fn binomials_without_authorship() {
     // group: Binomials without authorship
-    assert_name("Notopholia corrusca").species("Notopholia", "corrusca");
-    assert_name("Cyathicula scelobelonium").species("Cyathicula", "scelobelonium");
-    assert_name("Pseudocercospora     dendrobii").species("Pseudocercospora", "dendrobii");
-    assert_name("Cucurbita pepo").species("Cucurbita", "pepo");
-    assert_name("Hirsutëlla male").species("Hirsutëlla", "male");
-    assert_name("Aëtosaurus ferratus").species("Aëtosaurus", "ferratus");
-    assert_name("Remera cvancarai").species("Remera", "cvancarai");
+    assert_name("Notopholia corrusca")
+        .species("Notopholia", "corrusca")
+        .nothing_else();
+    assert_name("Cyathicula scelobelonium")
+        .species("Cyathicula", "scelobelonium")
+        .nothing_else();
+    assert_name("Pseudocercospora     dendrobii")
+        .species("Pseudocercospora", "dendrobii")
+        .nothing_else();
+    assert_name("Cucurbita pepo")
+        .species("Cucurbita", "pepo")
+        .nothing_else();
+    assert_name("Hirsutëlla male")
+        .species("Hirsutëlla", "male")
+        .nothing_else();
+    assert_name("Aëtosaurus ferratus")
+        .species("Aëtosaurus", "ferratus")
+        .nothing_else();
+    assert_name("Remera cvancarai")
+        .species("Remera", "cvancarai")
+        .nothing_else();
 }
 
 #[test]
@@ -492,12 +592,13 @@ fn binomials_with_authorship() {
     assert_name("Rotalina cultrata d'Orb. 1840")
         .species("Rotalina", "cultrata")
         .comb_authors(Some("1840"), &["d'Orb."])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje")
         .infra_species("Stylosanthes", "guianensis", Rank::Variety, "robusta")
         .comb_authors(None, &["L.'t Mannetje"])
+        .specific_authors(None, &["Sw."])
+        .specific_bas_authors(None, &["Aubl."])
         .nothing_else();
 
     assert_name("Doxander vittatus entropi (Man in 't Veld & Visser, 1993)")
@@ -509,6 +610,7 @@ fn binomials_with_authorship() {
     assert_name("Elaeagnus triflora Roxb. var. brevilimbatus E.'t Hart")
         .infra_species("Elaeagnus", "triflora", Rank::Variety, "brevilimbatus")
         .comb_authors(None, &["E.'t Hart"])
+        .specific_authors(None, &["Roxb."])
         .nothing_else();
 
     assert_name("Laevistrombus guidoi (Man in't Veld & De Turck, 1998)")

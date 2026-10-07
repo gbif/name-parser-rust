@@ -52,7 +52,6 @@ SIMPLE_GETTERS: dict[str, str] = {
     "manuscript": "manuscript",
     "state": "state",
     "warnings": "warnings",
-    "sanctioning_author": "sanctioningAuthor",
 }
 
 # The two plain-Authorship-typed getters (always present, never None) -> wire key, each
@@ -72,8 +71,8 @@ COMBINED_AUTHORSHIP_GETTERS: dict[str, str] = {
 }
 
 assert (
-    len(SIMPLE_GETTERS) + len(AUTHORSHIP_GETTERS) + len(COMBINED_AUTHORSHIP_GETTERS) == 30
-), "expected exactly the 30 ParsedName getters the Phase 4a plan's core surface documents"
+    len(SIMPLE_GETTERS) + len(AUTHORSHIP_GETTERS) + len(COMBINED_AUTHORSHIP_GETTERS) == 29
+), "expected exactly the 29 ParsedName getters (the sanctioning author moved onto Authorship)"
 
 
 def _assert_getters_match_to_dict(name: str, pn: "nameparser.ParsedName", d: dict) -> None:
@@ -107,6 +106,10 @@ def _assert_getters_match_to_dict(name: str, pn: "nameparser.ParsedName", d: dic
         assert authorship.anonymous == sub.get("anonymous", False), (
             f"{name!r}: pn.{attr}.anonymous = {authorship.anonymous!r} but "
             f"to_dict()[{wire_key!r}]['anonymous'] = {sub.get('anonymous')!r}"
+        )
+        assert authorship.sanctioning_author == sub.get("sanctioningAuthor"), (
+            f"{name!r}: pn.{attr}.sanctioning_author = {authorship.sanctioning_author!r} but "
+            f"to_dict()[{wire_key!r}]['sanctioningAuthor'] = {sub.get('sanctioningAuthor')!r}"
         )
 
     for attr, wire_key in COMBINED_AUTHORSHIP_GETTERS.items():

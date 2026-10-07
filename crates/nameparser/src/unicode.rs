@@ -230,6 +230,46 @@ pub fn normalize_spaces(x: &str) -> Cow<'_, str> {
     }
 }
 
+/// The input clean-up every parse starts with: [`normalize_spaces`], invisible format characters
+/// removed — zero-width space and joiners U+200B–U+200D, the word joiner U+2060 and the byte order
+/// mark U+FEFF (the first cell of a UTF-8 file with a BOM) — and the fullwidth ASCII forms
+/// U+FF01–U+FF5E folded to ASCII, as East Asian keyboards type them (`（Tubangui，1928）`). The
+/// homoglyph table cannot do the latter: it maps fullwidth `ｌ` and `Ｉ` to the digit `1`. Not the
+/// soft hyphen U+00AD: in the data it is mostly half of the Windows-1252 mojibake `Ã\u{ad}` for
+/// `í`, repaired later, or a stand-in for a real hyphen (`Miranda\u{ad}Ribeiro`). Borrows when
+/// there is nothing to change.
+pub fn normalize_input(x: &str) -> Cow<'_, str> {
+    if !x
+        .chars()
+        .any(|c| is_unicode_space(c) || is_invisible(c) || is_fullwidth(c))
+    {
+        return Cow::Borrowed(x);
+    }
+    Cow::Owned(
+        x.chars()
+            .filter(|&c| !is_invisible(c))
+            .map(|c| {
+                if is_unicode_space(c) {
+                    ' '
+                } else if is_fullwidth(c) {
+                    char::from_u32(c as u32 - 0xFEE0).unwrap_or(c)
+                } else {
+                    c
+                }
+            })
+            .collect(),
+    )
+}
+
+/// A fullwidth ASCII form, U+FF01–U+FF5E: `！` … `～`.
+pub fn is_fullwidth(c: char) -> bool {
+    matches!(c, '\u{FF01}'..='\u{FF5E}')
+}
+
+fn is_invisible(c: char) -> bool {
+    matches!(c, '\u{200B}'..='\u{200D}' | '\u{2060}' | '\u{FEFF}')
+}
+
 fn is_unicode_space(c: char) -> bool {
     matches!(
         c,
@@ -364,6 +404,19 @@ mod tests {
     fn folds_curly_single_quotes_to_ascii_apostrophe() {
         assert_eq!(normalize_quotes("d\u{2019}Urville"), "d'Urville");
         assert_eq!(normalize_quotes("\u{2018}Aus\u{2019}"), "'Aus'");
+    }
+
+    #[test]
+    fn normalize_input_drops_invisibles_and_folds_spaces_and_fullwidth_forms() {
+        assert_eq!(
+            normalize_input("\u{feff}Abies\u{a0}alba Mi\u{200d}ll.\u{200b}"),
+            "Abies alba Mill."
+        );
+        assert_eq!(normalize_input("（Tubangui，1928）"), "(Tubangui,1928)");
+        assert_eq!(normalize_input("Ｍｉｌｌ．"), "Mill.");
+        assert!(matches!(normalize_input("Abies alba L."), Cow::Borrowed(_)));
+        // the soft hyphen stays: mojibake for `í`, or a stand-in for a hyphen
+        assert_eq!(normalize_input("Ort\u{c3}\u{ad}z"), "Ort\u{c3}\u{ad}z");
     }
 
     #[test]

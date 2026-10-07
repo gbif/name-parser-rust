@@ -175,7 +175,9 @@ fn manuscript_names() {
         "Verticordia sp.1",
         Some(Rank::Species),
         "sp.1",
-    );
+    )
+    .genus_rank("Verticordia", Rank::Species)
+    .nothing_else();
     let n = nameparser::parse_name("Verticordia sp.1", None, None, None)
         .expect("`Verticordia sp.1` should parse");
     assert!(n.uninomial.is_none());
@@ -191,7 +193,9 @@ fn manuscript_names() {
         "Allium species 1",
         Some(Rank::Species),
         "species 1",
-    );
+    )
+    .genus_rank("Allium", Rank::Species)
+    .nothing_else();
     let n = nameparser::parse_name("Allium species 1", None, None, None)
         .expect("`Allium species 1` should parse");
     assert!(n.uninomial.is_none());
@@ -205,7 +209,9 @@ fn manuscript_names() {
         "Bryozoan sp. E",
         Some(Rank::Species),
         "sp. E",
-    );
+    )
+    .genus_rank("Bryozoan", Rank::Species)
+    .nothing_else();
     let n = nameparser::parse_name("Bryozoan sp. E", None, None, None)
         .expect("`Bryozoan sp. E` should parse");
     assert!(n.uninomial.is_none());
@@ -280,7 +286,11 @@ fn phrase_names() {
         .nothing_else();
 
     assert_name("Acacia mutabilis Maslin subsp. Young River (G.F. Craig 2052)")
-        .comb_authors(None, &["Maslin"]);
+        .specific_authors(None, &["Maslin"])
+        .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
+        .phrase("Young River (G.F. Craig 2052)")
+        .type_(NameType::Informal)
+        .nothing_else();
     let n4 = nameparser::parse_name(
         "Acacia mutabilis Maslin subsp. Young River (G.F. Craig 2052)",
         None,
@@ -393,19 +403,30 @@ fn all_caps_authors_with_page() {
 
 #[test]
 fn test_cultivar_pattern() {
-    assert_name("Abutilon 'Kentish Belle'").cultivar("Abutilon", "Kentish Belle");
-    assert_name("Abutilon 'Nabob'").cultivar("Abutilon", "Nabob");
-    assert_name("Abutilon \"Dall\"").cultivar("Abutilon", "Dall");
-    assert_name("Arachis pintoi cv. 'Belmonte'").cultivar_sp("Arachis", "pintoi", "Belmonte");
+    assert_name("Abutilon 'Kentish Belle'")
+        .cultivar("Abutilon", "Kentish Belle")
+        .nothing_else();
+    assert_name("Abutilon 'Nabob'")
+        .cultivar("Abutilon", "Nabob")
+        .nothing_else();
+    assert_name("Abutilon \"Dall\"")
+        .cultivar("Abutilon", "Dall")
+        .nothing_else();
+    assert_name("Arachis pintoi cv. 'Belmonte'")
+        .cultivar_sp("Arachis", "pintoi", "Belmonte")
+        .nothing_else();
     assert_name("Sorbus hupehensis C.K.Schneid. cv. 'November pink'")
         .cultivar_sp("Sorbus", "hupehensis", "November pink")
-        .comb_authors(None, &["C.K.Schneid."]);
+        .specific_authors(None, &["C.K.Schneid."])
+        .nothing_else();
     assert_name("Symphoricarpos albus (L.) S.F.Blake cv. 'Turesson'")
         .cultivar_sp("Symphoricarpos", "albus", "Turesson")
-        .bas_authors(None, &["L."])
-        .comb_authors(None, &["S.F.Blake"]);
+        .specific_bas_authors(None, &["L."])
+        .specific_authors(None, &["S.F.Blake"])
+        .nothing_else();
     assert_name("Symphoricarpos sp. cv. 'mother of pearl'")
-        .cultivar("Symphoricarpos", "mother of pearl");
+        .cultivar("Symphoricarpos", "mother of pearl")
+        .nothing_else();
 }
 
 #[test]
@@ -413,22 +434,28 @@ fn test_nom_status_remarks() {
     // parser expects a dot or a space as done by the string normalizer
     assert_name("Aster megaformis sp.nov.")
         .species("Aster", "megaformis")
-        .nom_note("sp. nov.");
+        .nom_note("sp. nov.")
+        .nothing_else();
     assert_name("Aster vulgaris Spec nov")
         .species("Aster", "vulgaris")
-        .nom_note("Spec nov.");
+        .nom_note("Spec nov.")
+        .nothing_else();
     assert_name("Asteraceae Fam.nov.")
         .monomial_rank("Asteraceae", Rank::Family)
-        .nom_note("Fam. nov.");
+        .nom_note("Fam. nov.")
+        .nothing_else();
     assert_name("Aster Gen.nov.")
         .monomial_rank("Aster", Rank::Genus)
-        .nom_note("Gen. nov.");
+        .nom_note("Gen. nov.")
+        .nothing_else();
     assert_name("Perugia gruela Gen. nov. sp. nov")
         .species("Perugia", "gruela")
-        .nom_note("Gen. nov. sp. nov.");
+        .nom_note("Gen. nov. sp. nov.")
+        .nothing_else();
     assert_name("Abies keralia spec. nov.")
         .species("Abies", "keralia")
-        .nom_note("spec. nov.");
+        .nom_note("spec. nov.")
+        .nothing_else();
 
     // Java: `.species("Abies", null)` — a null specific epithet; `species()` requires a real
     // epithet `&str`, so this one is asserted directly against the parsed fields, the same
@@ -566,9 +593,11 @@ fn bracketed_auct_note() {
 fn letter_subdivision_rank() {
     assert_name("Graphis scripta L. a.b pulverulenta")
         .infra_species("Graphis", "scripta", Rank::Other, "pulverulenta")
+        .specific_authors(None, &["L."])
         .nothing_else();
     assert_name("Graphis scripta L. a.b. pulverulenta")
         .infra_species("Graphis", "scripta", Rank::Other, "pulverulenta")
+        .specific_authors(None, &["L."])
         .nothing_else();
     assert_name("Graphis scripta a.b pulverulenta")
         .infra_species("Graphis", "scripta", Rank::Other, "pulverulenta")

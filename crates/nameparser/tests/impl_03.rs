@@ -24,6 +24,7 @@ fn infra_species() {
     .bas_authors(None, &["Gaudin"])
     .comb_authors(Some("1824"), &["Dumort."])
     .warning(&[warnings::SUBSPECIES_ASSIGNED])
+    .code(NomCode::Botanical)
     .nothing_else();
 
     assert_name("Abies alba ssp. alpina Mill.")
@@ -34,6 +35,7 @@ fn infra_species() {
     assert_name("Festuca ovina L. subvar. gracilis Hackel")
         .infra_species("Festuca", "ovina", Rank::Subvariety, "gracilis")
         .comb_authors(None, &["Hackel"])
+        .specific_authors(None, &["L."])
         .nothing_else();
 
     assert_name("Pseudomonas syringae pv. aceris (Ark, 1939) Young, Dye & Wilkie, 1978")
@@ -60,6 +62,8 @@ fn infra_species() {
         .comb_authors(None, &["Sch.Bip."])
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
+        .code(NomCode::Botanical)
+        .specific_authors(None, &["Kunth"])
         .nothing_else();
 
     // Warnings.REMOVED_PREFIX + "subsp. pallidotegula B.Boivin"
@@ -98,12 +102,14 @@ fn ex_authors() {
         .comb_authors(None, &["F.Ritter"])
         .comb_ex_authors(&["Plesnik"])
         .warning(&[warnings::HOMOGLYHPS]) // the ¡ in Plesn¡k is not a regular i
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abutilon bastardioides Baker f. ex Rose")
         .species("Abutilon", "bastardioides")
         .comb_authors(None, &["Rose"])
         .comb_ex_authors(&["Baker f."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Baccharis microphylla Kunth var. rhomboidea Wedd. ex Sch. Bip. (nom. nud.)")
@@ -111,6 +117,8 @@ fn ex_authors() {
         .comb_authors(None, &["Sch.Bip."])
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
+        .code(NomCode::Botanical)
+        .specific_authors(None, &["Kunth"])
         .nothing_else();
 
     // hort. = from hortulanorum (“of gardens”), the name was used in cultivation (nurseries, gardens, horticultural trade)
@@ -120,12 +128,14 @@ fn ex_authors() {
         .species("Abies", "brevifolia")
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Dallim."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abies brevifolia cv. ex Dallim.")
         .species("Abies", "brevifolia")
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Dallim."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abutilon ×hybridum cv. ex Voss")
@@ -133,6 +143,7 @@ fn ex_authors() {
         .notho(&[NamePart::Specific])
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Voss"])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     // "Abutilon bastardioides Baker f. ex Rose"
@@ -310,6 +321,7 @@ fn infra_generic() {
     assert_name("Rubus nothosubgen. Cylarubus")
         .infrageneric_at("Rubus", Rank::Subgenus, "Cylarubus")
         .notho(&[NamePart::Infrageneric])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name_rank("Arrhoges (Antarctohoges)", Rank::Subgenus)
@@ -530,34 +542,47 @@ fn unparsable_placeholder() {
 
 #[test]
 fn placeholder() {
-    assert_name(
+    assert_unparsable(
+        "denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017",
+        NameType::Placeholder,
+    );
+    assert_raw_name(
         "denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017",
     )
     .species("?", "denheyeri")
     .comb_authors(Some("2017"), &["Eghbalian", "Khanjani", "Ueckermann"])
-    .type_(NameType::Placeholder)
     .published_in("Eghbalian, Khanjani & Ueckermann, 2017")
     .warning(&[warnings::MISSING_GENUS])
     .published_in_year(Some(2017))
+    .type_(NameType::Placeholder)
     .nothing_else();
 
-    assert_name("\"? gryphoidis")
+    assert_unparsable("\"? gryphoidis", NameType::Placeholder);
+    assert_raw_name("\"? gryphoidis")
         .species("?", "gryphoidis")
         .type_(NameType::Placeholder)
         .nothing_else();
 
-    assert_name("\"? gryphoidis (Bourguignat 1870) Schoepf. 1909")
+    assert_unparsable(
+        "\"? gryphoidis (Bourguignat 1870) Schoepf. 1909",
+        NameType::Placeholder,
+    );
+    assert_raw_name("\"? gryphoidis (Bourguignat 1870) Schoepf. 1909")
         .species("?", "gryphoidis")
         .bas_authors(Some("1870"), &["Bourguignat"])
         .comb_authors(Some("1909"), &["Schoepf."])
         .type_(NameType::Placeholder)
         .nothing_else();
 
-    assert_name("Missing penchinati Bourguignat, 1870")
+    assert_unparsable(
+        "Missing penchinati Bourguignat, 1870",
+        NameType::Placeholder,
+    );
+    assert_raw_name("Missing penchinati Bourguignat, 1870")
         .species("?", "penchinati")
         .comb_authors(Some("1870"), &["Bourguignat"])
-        .type_(NameType::Placeholder)
         .code(NomCode::Zoological)
+        .type_(NameType::Placeholder)
         .nothing_else();
 
     // A leading double question mark is not a "? epithet" missing-genus placeholder — the
@@ -576,6 +601,7 @@ fn sanctioned() {
         .sanct_author("Fr.")
         .nothing_else();
 
+    // a sanctioned basionym keeps its sanctioning author inside the brackets
     assert_name("Agaricus compactus sarcocephalus (Fr. : Fr.) Fr. ")
         .infra_species(
             "Agaricus",
@@ -585,19 +611,7 @@ fn sanctioned() {
         )
         .comb_authors(None, &["Fr."])
         .bas_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
-        .nothing_else();
-
-    assert_name("Agaricus compactus sarcocephalus (Fr. : Fr.) Fr. ")
-        .infra_species(
-            "Agaricus",
-            "compactus",
-            Rank::InfraspecificName,
-            "sarcocephalus",
-        )
-        .comb_authors(None, &["Fr."])
-        .bas_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
+        .bas_sanct_author("Fr.")
         .nothing_else();
 
     assert_name("Agaricus ericetorum Pers. : Fr.")
@@ -614,12 +628,14 @@ fn nothotaxa() {
     assert_name("Iris germanica nothovar. florentina")
         .infra_species("Iris", "germanica", Rank::Variety, "florentina")
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abies alba var. ×alpina L.")
         .infra_species("Abies", "alba", Rank::Variety, "alpina")
         .notho(&[NamePart::Infraspecific])
         .comb_authors(None, &["L."])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 

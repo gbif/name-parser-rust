@@ -298,6 +298,19 @@ def test_parse_all_mixes_parsed_and_informal_and_none():
     assert results[2] is None  # unparsable → None (never raises mid-batch)
 
 
+def test_sanctioning_author_on_each_authorship():
+    # the basionym's, inside its brackets (ICN Art. 15)
+    pn = nameparser.parse("Merulius lacrimans (Wulfen : Fr.) Schum.")
+    assert pn.basionym_authorship.sanctioning_author == "Fr."
+    assert pn.combination_authorship.sanctioning_author is None
+    assert pn.code == "BOTANICAL"
+    assert pn.authorship_complete() == "(Wulfen : Fr.) Schum."
+    comb = nameparser.parse("Boletus versicolor L. : Fr.").combination_authorship
+    assert comb.sanctioning_author == "Fr."
+    assert comb.to_dict()["sanctioningAuthor"] == "Fr."
+    assert not hasattr(pn, "sanctioning_author")
+
+
 def test_anonymous_authorship():
     # attributed author of an anonymous work, in square brackets (ICZN Recommendation 51D)
     bas = nameparser.parse("Rhinobatos typus (Anonymous [Bennett], 1830)").basionym_authorship

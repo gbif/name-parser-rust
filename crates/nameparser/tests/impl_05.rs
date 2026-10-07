@@ -131,7 +131,7 @@ fn cultivars() {
 
     assert_name("Acer campestre L. cv. 'nanum'")
         .cultivar_sp("Acer", "campestre", "nanum")
-        .comb_authors(None, &["L."])
+        .specific_authors(None, &["L."])
         .nothing_else();
 
     assert_name("Verpericola megasoma \"Dall\" Pils.")
@@ -149,18 +149,18 @@ fn cultivars() {
 
     assert_name("Sorbus americana Marshall cv. 'Belmonte'")
         .cultivar_sp("Sorbus", "americana", "Belmonte")
-        .comb_authors(None, &["Marshall"])
+        .specific_authors(None, &["Marshall"])
         .nothing_else();
 
     assert_name("Sorbus hupehensis C.K.Schneid. cv. 'November pink'")
         .cultivar_sp("Sorbus", "hupehensis", "November pink")
-        .comb_authors(None, &["C.K.Schneid."])
+        .specific_authors(None, &["C.K.Schneid."])
         .nothing_else();
 
     assert_name("Symphoricarpos albus (L.) S.F.Blake cv. 'Turesson'")
         .cultivar_sp_rank("Symphoricarpos", "albus", Rank::Cultivar, "Turesson")
-        .bas_authors(None, &["L."])
-        .comb_authors(None, &["S.F.Blake"])
+        .specific_bas_authors(None, &["L."])
+        .specific_authors(None, &["S.F.Blake"])
         .nothing_else();
 
     assert_name("Symphoricarpos sp. cv. 'mother of pearl'")
@@ -405,77 +405,87 @@ fn hybrid_names() {
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("×Pyrocrataegus willei L.L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(" × Pyrocrataegus willei  L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(" X Pyrocrataegus willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus ×willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus × willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus x willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus X willei L. L. Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus willei ×libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::InfraspecificName, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::Subspecies, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("+ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::Subspecies, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
         .notho(&[NamePart::Infraspecific])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
 #[test]
 fn author_variations() {
-    // Van den heede works only if given as separate authorship
-
-    // assertName("Asplenium cyprium Viane & Van den heede", "Asplenium cyprium")
-    //     .species("Asplenium", "cyprium")
-    //     .combAuthors(null, "Viane", "Van den heede")
-    //     .nothingElse();
+    // Van den heede: once only parsed when given as a separate authorship
+    assert_name("Asplenium cyprium Viane & Van den heede")
+        .species("Asplenium", "cyprium")
+        .comb_authors(None, &["Viane", "Van den heede"])
+        .nothing_else();
 
     // bis and ter as author suffix
     // https://github.com/Sp2000/colplus-backend/issues/591
@@ -584,10 +594,11 @@ fn author_variations() {
         .comb_authors(None, &["M.Balsamo", "M.A.Todaro"])
         .nothing_else();
 
+    // "Em." between two authors: Cushman emend. Sellier de Civrieux
     assert_name("Bolivina albatrossi Cushman Em. Sellier de Civrieux, 1976")
         .species("Bolivina", "albatrossi")
-        .comb_authors(Some("1976"), &["Cushman Em.Sellier de Civrieux"])
-        .code(NomCode::Zoological)
+        .comb_authors(None, &["Cushman"])
+        .sensu("Em. Sellier de Civrieux, 1976")
         .nothing_else();
 
     // http://dev.gbif.org/issues/browse/POR-101
@@ -646,18 +657,21 @@ fn author_variations() {
         .species("Calycostylis", "aurantiaca")
         .comb_authors(None, &["Vilmorin"])
         .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pourretia magnispatha hortusa ex K. Koch")
         .species("Pourretia", "magnispatha")
         .comb_authors(None, &["K.Koch"])
         .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pitcairnia pruinosa hortus ex K. Koch")
         .species("Pitcairnia", "pruinosa")
         .comb_authors(None, &["K.Koch"])
         .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Platycarpha glomerata (Thunberg) A.P.de Candolle")

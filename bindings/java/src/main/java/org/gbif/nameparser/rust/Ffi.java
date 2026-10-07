@@ -48,7 +48,7 @@ final class Ffi {
    * {@code nameparser-ffi}'s own {@code np_abi_version()} on any change to the extern "C"
    * surface itself.
    */
-  private static final int EXPECTED_ABI_VERSION = 5;
+  private static final int EXPECTED_ABI_VERSION = 6;
 
   private static final Linker LINKER = Linker.nativeLinker();
   private static final MethodHandle ABI_VERSION;
@@ -280,7 +280,7 @@ final class Ffi {
       if (ret == -1) {
         return StructCodec.unparsableResult(out, name);
       }
-      return StructCodec.toParseResult(StructCodec.decode(out, (int) ret));
+      return StructCodec.toParseResult(StructCodec.decode(out, (int) ret), name);
     }
   }
 

@@ -110,6 +110,12 @@ pub fn parse(
 ) -> ParseResult {
     match pipeline::run(name, authorship, rank, code) {
         Ok(pn) if is_informal(&pn) => ParseResult::Informal(to_informal(pn)),
+        // `Parsed` may only carry a parsable type: a placeholder with its genus missing ("? alba
+        // Smith", "Missing penchinati Bourguignat, 1870") is reported unparsable, like any other
+        // placeholder; `parse_name` still returns its parts.
+        Ok(pn) if !pn.type_.is_parsable() => {
+            ParseResult::Unparsable(ParseError::new(pn.type_, pn.code, name))
+        }
         Ok(pn) => ParseResult::Parsed(pn),
         // `Unparsable` may only carry a non-parsable type (mirrors Java); the core's error path
         // can still tag an informal-but-unrepresentable grouping as INFORMAL — clamp it to OTHER.

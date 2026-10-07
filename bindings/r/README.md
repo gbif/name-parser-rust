@@ -61,13 +61,17 @@ All 45 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`,
 `epithetQualifier`, `extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`,
 `publishedInYear`, `publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`,
 `combinationAuthors`, `combinationExAuthors`, `combinationYear`, `combinationAnonymous`,
-`basionymAuthors`, `basionymExAuthors`, `basionymYear`, `basionymAnonymous`, `sanctioningAuthor`,
-`warnings`, `canonical`, `canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`,
+`combinationSanctioningAuthor`, `basionymAuthors`, `basionymExAuthors`, `basionymYear`,
+`basionymAnonymous`, `basionymSanctioningAuthor`, `warnings`, `canonical`, `canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`,
 `authorshipComplete`.
 
 `combinationAnonymous` / `basionymAnonymous` are `TRUE` when the work was published anonymously
 ("Anon.", "Anonymous"); the authors, if any, are then attributed from external evidence and
 rendered in square brackets (`[Denis & Schiffermüller], 1775`, ICZN Recommendation 51D).
+
+`combinationSanctioningAuthor` / `basionymSanctioningAuthor` hold the sanctioning author of a
+sanctioned fungal name (Fries or Persoon, ICN Art. 15): `L. : Fr.`, and inside a basionym's
+brackets `(Wulfen : Fr.) Schum.` (a single `sanctioningAuthor` column before engine 0.3).
 
 `result` is the 5.0.0 three-way outcome (`"parsed"` / `"informal"` / `"unparsable"`); `taxon`
 and `taxonRank` carry an informal name's supraspecific anchor; the last five are `NameFormatter`

@@ -59,7 +59,7 @@ create_exception!(nameparser, UnparsableNameError, PyException);
 ///
 /// NOT used for `generic_authorship`/`specific_authorship` (`Option<CombinedAuthorship>`
 /// — a *different*, bundling type in the core, holding its own combination + basionym
-/// authorship plus a sanctioning author): those two are surfaced instead as a plain
+/// authorship): those two are surfaced instead as a plain
 /// `Optional[dict]` via `pythonize`, one level less structured — see
 /// [`PyParsedName::generic_authorship`]'s doc comment for the rationale.
 #[pyclass(name = "Authorship", module = "nameparser")]
@@ -96,8 +96,16 @@ impl PyAuthorship {
         self.inner.anonymous
     }
 
+    /// The sanctioning author of a sanctioned fungal name (ICN Art. 15), Fries or Persoon — for a
+    /// basionym the one inside its brackets: `(Wulfen : Fr.) Schum.`.
+    #[getter]
+    fn sanctioning_author(&self) -> Option<String> {
+        self.inner.sanctioning_author.clone()
+    }
+
     /// The complete structure straight from the core's own `serde::Serialize` impl —
-    /// `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ..., "anonymous": ...}`
+    /// `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ..., "anonymous": ...,
+    /// "sanctioningAuthor": ...}`
     /// — the same escape hatch [`PyParsedName::to_dict`] provides at the top level.
     fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         Ok(pythonize::pythonize(py, &self.inner)?.unbind())
@@ -105,7 +113,8 @@ impl PyAuthorship {
 
     fn __repr__(&self) -> String {
         format!(
-            "Authorship(authors={:?}, ex_authors={:?}, year={:?}, imprint_year={:?}, anonymous={})",
+            "Authorship(authors={:?}, ex_authors={:?}, year={:?}, imprint_year={:?}, anonymous={}, \
+             sanctioning_author={:?})",
             self.inner.authors,
             self.inner.ex_authors,
             self.inner.year,
@@ -114,7 +123,8 @@ impl PyAuthorship {
                 "True"
             } else {
                 "False"
-            }
+            },
+            self.inner.sanctioning_author,
         )
     }
 }
@@ -163,7 +173,7 @@ impl PyParsedName {
 
     /// `Optional[dict]` via `pythonize`, NOT the [`PyAuthorship`] pyclass —
     /// `generic_authorship` is a `CombinedAuthorship` (itself bundling a combination
-    /// authorship, a basionym authorship, and a sanctioning author), unlike
+    /// authorship and a basionym authorship), unlike
     /// `combination_authorship`/`basionym_authorship` below, which are plain
     /// [`::nameparser::model::Authorship`] and so get the richer pyclass wrapper. See
     /// this crate's module doc / [`PyAuthorship`]'s doc comment for the same split.
@@ -312,11 +322,6 @@ impl PyParsedName {
         PyAuthorship {
             inner: self.inner.basionym_authorship.clone(),
         }
-    }
-
-    #[getter]
-    fn sanctioning_author(&self) -> Option<String> {
-        self.inner.sanctioning_author.clone()
     }
 
     // ---- name formatter (Java `org.gbif.nameparser.util.NameFormatter`) ----

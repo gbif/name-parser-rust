@@ -11,14 +11,16 @@
 //!   - **Phase A** — a leading `(...)` is a basionym candidate. [`find_close`] finds the
 //!     matching close paren (a plain depth counter). Inside the parens, a top-level colon
 //!     ([`find_last_colon`], paren/bracket-depth-aware) separates a basionym sanctioning
-//!     author, which is dropped (canonical names attribute sanctioning to the species
-//!     level, never the basionym). [`has_upper_word`] then gates whether this is really a
+//!     author, kept on the basionym authorship when it is Fries or Persoon (`"(Wulfen : Fr.)
+//!     Schum."`; Java dropped it).
+//!     [`has_upper_word`] then gates whether this is really a
 //!     basionym at all: a `(...)` containing no upper-case WORD (e.g. a malformed
 //!     `"(ilic)"`) is NOT a basionym — it is parked as `unparsed_from`/`unparsed_text` and
 //!     skipped over.
 //!   - **Phase B** — the remaining span is the combination. A top-level trailing colon
 //!     splits off a sanctioning author (`"Boletus versicolor L. : Fr."` →
-//!     `sanctioning_author = Some("Fr.")`, combination span truncated before the colon).
+//!     `sanctioning_author = Some("Fr.")`, also on the combination authorship; combination span
+//!     truncated before the colon); a year after it is the combination's.
 //!     Whatever remains (with or without a sanctioning author extracted) is parsed as the
 //!     combination authors; the whole trailing span is consumed (`i` set to `tokens.len()`
 //!     unconditionally) — nothing after the combination span is ever unparsed.
@@ -50,8 +52,10 @@
 //!    (`G. B. Sowerby I`) or in a team that also carries a later generation. Deliberate
 //!    divergence too: a generation behind surname-first initials stays behind the surname
 //!    (`Sowerby G.B. II` → `G.B.Sowerby II`, where Java gave `I.I.G.B.Sowerby`).
-//! 4. A bracketed `[YYYY]` is always the *imprint* year (first-wins), never the main year,
-//!    even when it is the only year given. A second *plain* year is the imprint year. A
+//! 4. A bracketed `[YYYY]` is the *imprint* year next to a plain year (`Storr, 1970 [1969]`);
+//!    alone it is the year itself, established from external evidence (ICZN Recommendation
+//!    22A.2.3: `Hübner, [1806]`) — Java made it the imprint year with no year at all. A second
+//!    *plain* year is the imprint year. A
 //!    year range (`NUMBER "-"|"/" NUMBER`) keeps only the first year and sets
 //!    [`AuthState::year_range`].
 //! 5. The surname-first "**M** Balsamo"-style inversion only fires when a real surname
@@ -153,7 +157,6 @@ pub(crate) struct AuthState {
     pub year_range: bool,
     /// True when an "f."/"fil."/"filius" suffix appeared on any author — botanical signal.
     pub has_filius: bool,
-    pub sanctioning_author: Option<String>,
     /// Java `int unparsedFrom = -1;` — kept as a sentinel `i32`, matching the established
     /// convention for this exact shape of field elsewhere in the port (see
     /// `ParseContext::mid_author_from`/`mid_author_to`).
@@ -169,7 +172,6 @@ impl Default for AuthState {
             basionym_present: false,
             year_range: false,
             has_filius: false,
-            sanctioning_author: None,
             unparsed_from: -1,
             unparsed_text: None,
         }
@@ -187,12 +189,17 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
     if i < n && tokens[i].kind == TokenKind::OpenParen {
         if let Some(close) = find_close(tokens, i) {
             // Inside the basionym brackets, a colon also separates the original author
-            // from the sanctioning author ("(Fr. : Fr.)"). Drop the sanctioning span;
-            // canonical names attribute the sanctioning to the species level.
+            // from the sanctioning author ("(Wulfen : Fr.)"), kept on the basionym authorship
+            // when it is Fries or Persoon — Java dropped it. Anything else after the colon is
+            // dropped as before ("(Baba 1949: Burn 1962)" is no sanctioning).
             let bas_from = i + 1;
             let mut bas_end = close;
+            let mut bas_sanctioning = None;
             if let Some(bas_colon) = find_last_colon(tokens, bas_from, bas_end) {
                 if bas_colon > bas_from {
+                    let mut sb = String::new();
+                    append_author_words(tokens, bas_colon + 1, close, &mut sb);
+                    bas_sanctioning = is_sanctioning_author(&sb).then_some(sb);
                     bas_end = bas_colon;
                 }
             }
@@ -205,6 +212,8 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 s.year_range |= yr;
                 s.has_filius |= contains_filius_suffix(tokens, bas_from, bas_end);
                 s.basionym_present = true;
+                s.basionym.sanctioning_author = bas_sanctioning;
+                take_sanctioning_year(&tokens[bas_end..close], &mut s.basionym);
             } else {
                 // Park the whole "(...)" span as unparsed and skip past it.
                 let open_tok = &tokens[i];
@@ -220,13 +229,14 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
     if i < n {
         let comb_from = i;
         let mut comb_end = n;
+        let mut comb_sanctioning = None;
         // pull out a colon + sanctioning author at the end of the combination span
         if let Some(colon) = find_last_colon(tokens, comb_from, comb_end) {
             if colon > comb_from {
                 let mut sb = String::new();
                 append_author_words(tokens, colon + 1, comb_end, &mut sb);
                 if !sb.is_empty() {
-                    s.sanctioning_author = Some(sb);
+                    comb_sanctioning = Some(sb);
                     comb_end = colon;
                 }
             }
@@ -234,6 +244,8 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
         s.year_range |= yr;
         s.has_filius |= contains_filius_suffix(tokens, comb_from, comb_end);
+        s.combination.sanctioning_author = comb_sanctioning;
+        take_sanctioning_year(&tokens[comb_end..n], &mut s.combination);
         // Whether or not a sanctioning author was extracted, the entire trailing span
         // belongs to combination + sanctioning; nothing is unparsed afterwards.
         i = n;
@@ -294,8 +306,8 @@ fn find_close(tokens: &[Token], open_idx: usize) -> Option<usize> {
 ///
 /// Parses the author list within `tokens[from..to)`, populating `into`. Handles `ex`
 /// splitting (ex authors come before main authors). A second 4-digit year encountered after
-/// the first (or a bracketed year) becomes `into`'s imprint year, sitting next to its
-/// publication year on the [`Authorship`]. Returns `true` if a year range was detected
+/// the first, or a bracketed year next to a plain one, becomes `into`'s imprint year, sitting next
+/// to its publication year on the [`Authorship`]; a bracketed year on its own is the year. Returns `true` if a year range was detected
 /// (e.g. "1845-1847", "1987-92").
 fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship) -> bool {
     let mut authors: Vec<String> = Vec::new();
@@ -306,6 +318,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     let mut ex_after_separator: Vec<usize> = Vec::new();
     let mut cur = String::new();
     let mut year_range = false;
+    let mut bracketed_year: Option<String> = None;
     let mut i = from;
     // A later generation in the same team (`Sowerby I & Sowerby II`) tells that a trailing `I`
     // is a generation too (#22).
@@ -342,9 +355,8 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         if t.kind == TokenKind::Number && (3..=4).contains(&t.text.chars().count()) {
             flush(&mut cur, &mut authors);
             let mut year = t.text.clone();
-            // Detect a bracketed year: "[YYYY]" / "[YYYY?]". A year inside square brackets
-            // is by convention the imprint year (the year actually printed on the work),
-            // not the nominal publication year — even when it is the only year given.
+            // Detect a bracketed year: "[YYYY]" / "[YYYY?]": the imprint year next to a plain
+            // year, else the year itself (decided once the whole authorship is read).
             let in_brackets_initial = i > from && tokens[i - 1].kind == TokenKind::OpenBracket;
             i += 1;
             // Uncertain year: a trailing "?" is part of the year ("198?" → year="198?").
@@ -356,11 +368,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             let in_brackets =
                 in_brackets_initial && i < to && tokens[i].kind == TokenKind::CloseBracket;
             if in_brackets {
-                // A bracketed year is the imprint year of THIS authorship (basionym or
-                // combination), sitting next to its publication year; never its main year.
-                if into.imprint_year.is_none() {
-                    into.imprint_year = Some(year);
-                }
+                bracketed_year.get_or_insert(year);
                 i += 1; // skip CLOSE_BRACKET
                 continue;
             }
@@ -777,6 +785,17 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     }
     flush(&mut cur, &mut authors);
 
+    // A bracketed year is the imprint year printed on the work next to the actual year ("Storr,
+    // 1970 [1969]"); on its own it is the actual year, established from external evidence (ICZN
+    // Recommendation 22A.2.3: "Hübner, [1806]").
+    if let Some(year) = bracketed_year {
+        if into.year.is_none() {
+            into.year = Some(year);
+        } else if into.imprint_year.is_none() {
+            into.imprint_year = Some(year);
+        }
+    }
+
     // An anonymous author alone ("Anon., 1830", "(Fr.) anon.", "Sw. ex Anon.") is the work's
     // anonymity, not an author. In a team ("Anonymous & Bennett") or as the ex author ("Anon. ex
     // Schltdl.") it stays an author string: the flag cannot say which author it means.
@@ -1159,6 +1178,40 @@ fn flush(cur: &mut String, authors: &mut Vec<String>) {
     }
 }
 
+/// A year after the sanctioning author (ICN Art. 15: Fries or Persoon) is the name's own, as the
+/// source writes it: "Pers.:Fr., 1801", "Retz.:Fr., 1769" predate Fries' sanctioning work. Java
+/// dropped it. Any other "sanctioning author" is a colon misread ("C. Mu:2ller"). `tokens` is the
+/// span from the colon on.
+fn take_sanctioning_year(tokens: &[Token], auth: &mut Authorship) {
+    if auth.year.is_none()
+        && auth
+            .sanctioning_author
+            .as_deref()
+            .is_some_and(is_sanctioning_author)
+    {
+        auth.year = tokens
+            .iter()
+            .find(|t| {
+                t.kind == TokenKind::Number
+                    && t.text.len() == 4
+                    && t.text
+                        .parse::<u16>()
+                        .is_ok_and(|y| (1700..2100).contains(&y))
+            })
+            .map(|t| t.text.clone());
+    }
+}
+
+/// Fries or Persoon, the two sanctioning authors (ICN Art. 15), with or without the abbreviation's
+/// dot — anything else after a colon is a misread colon ("C. Mu:2ller").
+pub(crate) fn is_sanctioning_author(author: &str) -> bool {
+    ["Fr", "Fries", "Pers", "Persoon"].iter().any(|f| {
+        author
+            .strip_prefix(f)
+            .is_some_and(|rest| !rest.starts_with(char::is_alphabetic))
+    })
+}
+
 /// Java `AuthorshipParser.appendSpace(StringBuilder)`.
 fn append_space(cur: &mut String) {
     match cur.chars().last() {
@@ -1354,7 +1407,7 @@ impl BracketedAuthors {
 }
 
 /// Where the author names of `tokens[from..to)` end: at the first year outside brackets or an
-/// imprint year in brackets ("[Hübner], [1806]"), less the commas before it.
+/// bracketed year ("[Hübner], [1806]"), less the commas before it.
 fn author_head_end(tokens: &[Token], from: usize, to: usize) -> usize {
     let mut depth = 0i32;
     let mut end = to;
@@ -1871,14 +1924,14 @@ mod tests {
     }
 
     #[test]
-    fn basionym_colon_sanctioning_is_dropped_inside_parens() {
-        // "(Fr. : Fr.)": the colon inside the basionym parens separates the original
-        // author from a sanctioning author, which is dropped entirely (canonical names
-        // attribute sanctioning to the species level, never the basionym).
-        let s = parse_str("(Fr. : Fr.) Fr.");
-        assert_eq!(s.basionym.authors, vec!["Fr.".to_string()]);
-        assert_eq!(s.combination.authors, vec!["Fr.".to_string()]);
-        assert_eq!(s.sanctioning_author, None);
+    fn basionym_colon_sanctioning_is_kept_on_the_basionym() {
+        // "(Wulfen : Fr.)": the colon inside the basionym parens separates the original author
+        // from the basionym's sanctioning author. Java dropped it.
+        let s = parse_str("(Wulfen : Fr.) Schum.");
+        assert_eq!(s.basionym.authors, vec!["Wulfen".to_string()]);
+        assert_eq!(s.basionym.sanctioning_author.as_deref(), Some("Fr."));
+        assert_eq!(s.combination.authors, vec!["Schum.".to_string()]);
+        assert_eq!(s.combination.sanctioning_author, None);
     }
 
     // ---- sanctioning author (phase B, top-level colon) --------------------------------
@@ -1887,14 +1940,35 @@ mod tests {
     fn top_level_colon_splits_off_sanctioning_author() {
         let s = parse_str("L. : Fr.");
         assert_eq!(s.combination.authors, vec!["L.".to_string()]);
-        assert_eq!(s.sanctioning_author, Some("Fr.".to_string()));
+        assert_eq!(s.combination.sanctioning_author, Some("Fr.".to_string()));
+    }
+
+    #[test]
+    fn a_basionym_keeps_only_fries_or_persoon_after_its_colon() {
+        // without the abbreviation's dot too
+        let s = parse_str("(Pers. : Fr)");
+        assert_eq!(s.basionym.sanctioning_author.as_deref(), Some("Fr"));
+        // a colon before anyone else is no sanctioning
+        let s = parse_str("(Baba 1949: Burn 1962)");
+        assert_eq!(s.basionym.authors, vec!["Baba".to_string()]);
+        assert_eq!(s.basionym.sanctioning_author, None);
+    }
+
+    #[test]
+    fn sanctioning_authors_are_fries_and_persoon() {
+        for a in ["Fr.", "Fr", "Fries", "Pers.", "Pers", "Persoon"] {
+            assert!(is_sanctioning_author(a), "{a}");
+        }
+        for a in ["Fritsch", "Persson", "2ller", "Burn"] {
+            assert!(!is_sanctioning_author(a), "{a}");
+        }
     }
 
     #[test]
     fn pers_colon_fr_sanctioning() {
         let s = parse_str("Pers. : Fr.");
         assert_eq!(s.combination.authors, vec!["Pers.".to_string()]);
-        assert_eq!(s.sanctioning_author, Some("Fr.".to_string()));
+        assert_eq!(s.combination.sanctioning_author, Some("Fr.".to_string()));
     }
 
     // ---- years --------------------------------------------------------------------------
@@ -1925,11 +1999,12 @@ mod tests {
     }
 
     #[test]
-    fn bracketed_year_wins_as_imprint_even_when_the_only_year_given() {
+    fn a_bracketed_year_on_its_own_is_the_year() {
+        // ICZN Recommendation 22A.2.3: the actual year, established from external evidence
         let s = parse_str("Fruhstorfer, [1912]");
         assert_eq!(s.combination.authors, vec!["Fruhstorfer".to_string()]);
-        assert_eq!(s.combination.year, None);
-        assert_eq!(s.combination.imprint_year, Some("1912".to_string()));
+        assert_eq!(s.combination.year, Some("1912".to_string()));
+        assert_eq!(s.combination.imprint_year, None);
     }
 
     #[test]

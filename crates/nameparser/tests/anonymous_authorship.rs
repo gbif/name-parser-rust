@@ -67,6 +67,7 @@ fn a_lone_anonymous_word_is_the_flag() {
         .species("Aus", "bus")
         .comb_anon(None, &[])
         .comb_ex_authors(&["Sw."])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -85,6 +86,7 @@ fn bracketed_authors_of_an_anonymous_work() {
     assert_name_auth("Clupea ovalis", "Anonymous [Bennett], 1830")
         .species("Clupea", "ovalis")
         .comb_anon(Some("1830"), &["Bennett"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Rhinobatos typus (Anonymous [Bennett], 1830)")
         .species("Rhinobatos", "typus")
@@ -102,11 +104,11 @@ fn bracketed_authors_of_an_anonymous_work() {
         .comb_anon(None, &["Clairv."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // an imprint year in brackets ends the author slot
+    // a bracketed year ends the author slot; alone it is the year (ICZN Rec. 22A.2.3)
     assert_name_auth("Aus bus", "[Hübner], [1806]")
         .species("Aus", "bus")
-        .comb_anon(None, &["Hübner"])
-        .imprint_year("1806")
+        .comb_anon(Some("1806"), &["Hübner"])
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -117,16 +119,19 @@ fn a_bracketed_pre_starting_point_author_is_an_ex_author() {
         .monomial("Lupinus")
         .comb_authors(None, &["L."])
         .comb_ex_authors(&["Tourn."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Cuphea lanceolata", "[Dryand.] Ait.")
         .species("Cuphea", "lanceolata")
         .comb_authors(None, &["Ait."])
         .comb_ex_authors(&["Dryand."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Aus bus", "[Kar. & Kir.] Regel")
         .species("Aus", "bus")
         .comb_authors(None, &["Regel"])
         .comb_ex_authors(&["Kar.", "Kir."])
+        .code(NomCode::Botanical)
         .nothing_else();
     // the bracket may already carry its "ex"
     assert_name_auth(
@@ -136,6 +141,7 @@ fn a_bracketed_pre_starting_point_author_is_an_ex_author() {
     .species("Pseudocercospora", "dendrobii")
     .comb_authors(None, &["Goh", "W.H.Hsieh"])
     .comb_ex_authors(&["Sawada"])
+    .code(NomCode::Botanical)
     .nothing_else();
 }
 
@@ -145,10 +151,12 @@ fn other_brackets_are_left_alone() {
     assert_name_auth("Aus bus", "Gerstaecker, [C.E.] A., 1871")
         .species("Aus", "bus")
         .comb_authors(Some("1871"), &["C.E.A.Gerstaecker"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Aus bus", "[Hübner, 1806]")
         .species("Aus", "bus")
         .comb_authors(Some("1806"), &["Hübner"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Notochlamys hexactes", "([Péron in] Lamarck, 1819)")
         .species("Notochlamys", "hexactes")
@@ -168,10 +176,12 @@ fn an_anonymous_ex_author_or_team_member_stays_a_string() {
         .monomial("Depierrea")
         .comb_authors(None, &["Schltdl."])
         .comb_ex_authors(&["anon."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Serranus confertus", "Anonymous & Bennett, 1830")
         .species("Serranus", "confertus")
         .comb_authors(Some("1830"), &["Anonymous", "Bennett"])
+        .code(NomCode::Zoological)
         .nothing_else();
     // a lower-case "anonym…" is an epithet, never an author
     assert_name("Aegeria anonyma")

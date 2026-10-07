@@ -56,19 +56,37 @@ fn the_host_team_does_not_become_authors_of_the_name() {
         &["Valenciennes"],
     )
     .published_in("Cuvier & Valenciennes, 1850")
-    .published_in_year(Some(1850));
+    .published_in_year(Some(1850))
+    .comb_authors(Some("1850"), &["Valenciennes"])
+    .nothing_else();
     assert_authorship("Hustedt in Schmidt et al., 1925", &["Hustedt"])
-        .published_in("Schmidt et al., 1925");
-    assert_authorship("Nees & Mart. in Nova Acta", &["Nees", "Mart."]).published_in("Nova Acta");
+        .published_in("Schmidt et al., 1925")
+        .comb_authors(Some("1925"), &["Hustedt"])
+        .published_in_year(Some(1925))
+        .nothing_else();
+    assert_authorship("Nees & Mart. in Nova Acta", &["Nees", "Mart."])
+        .published_in("Nova Acta")
+        .comb_authors(None, &["Nees", "Mart."])
+        .nothing_else();
 }
 
 #[test]
 fn an_abbreviated_author_keeps_its_own_name() {
     // Was `Trel.in J.F.Macbr.` — one author, with the space before `in` gone.
-    assert_authorship("Trel. in J.F.Macbr.", &["Trel."]).published_in("J.F.Macbr.");
+    assert_authorship("Trel. in J.F.Macbr.", &["Trel."])
+        .published_in("J.F.Macbr.")
+        .comb_authors(None, &["Trel."])
+        .nothing_else();
     // Was `D.C.Benth.in` ex Pohl: the host `DC.` was read as the initials of `Benth.in`.
-    assert_ex_authorship("Pohl ex Benth. in DC.", Some("Pohl"), &["Benth."]).published_in("DC.");
-    assert_authorship("Müll.Arg. in DC.", &["Müll.Arg."]).published_in("DC.");
+    assert_ex_authorship("Pohl ex Benth. in DC.", Some("Pohl"), &["Benth."])
+        .published_in("DC.")
+        .comb_authors(None, &["Benth."])
+        .comb_ex_authors(&["Pohl"])
+        .nothing_else();
+    assert_authorship("Müll.Arg. in DC.", &["Müll.Arg."])
+        .published_in("DC.")
+        .comb_authors(None, &["Müll.Arg."])
+        .nothing_else();
 }
 
 #[test]

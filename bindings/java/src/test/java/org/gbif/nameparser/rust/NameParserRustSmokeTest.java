@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -84,6 +85,21 @@ class NameParserRustSmokeTest {
     assertTrue(bot.getCombinationAuthorship().getAuthors().isEmpty());
     assertEquals(NomCode.BOTANICAL, bot.getCode());
     assertEquals("(Fr.) anon.", bot.authorshipComplete());
+  }
+
+  @Test
+  void sanctioningAuthorsCrossTheWireOnEachAuthorship() throws UnparsableNameException {
+    // ABI 6: the basionym's sanctioning author is kept inside its brackets (ICN Art. 15)
+    ParsedName pn = parser.parse("Merulius lacrimans (Wulfen : Fr.) Schum.", null, null, null).orElseThrow();
+    assertEquals("Fr.", pn.getBasionymAuthorship().getSanctioningAuthor());
+    assertNull(pn.getCombinationAuthorship().getSanctioningAuthor());
+    assertEquals(NomCode.BOTANICAL, pn.getCode());
+    assertEquals("(Wulfen : Fr.) Schum.", pn.authorshipComplete());
+
+    ParsedName comb = parser.parse("Boletus versicolor L. : Fr.", null, null, null).orElseThrow();
+    assertEquals("Fr.", comb.getCombinationAuthorship().getSanctioningAuthor());
+    assertNull(comb.getBasionymAuthorship().getSanctioningAuthor());
+    assertEquals("L. : Fr.", comb.authorshipComplete());
   }
 
   @Test
