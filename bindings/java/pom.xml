@@ -11,7 +11,7 @@
     VERSIONING: this binding shares the Rust ENGINE's version — the Cargo [workspace.package]
     version at this repo's root (package gbif-name-parser) — released in lockstep with the
     CLI/Python/R bindings, so one version across all bindings means one engine. It is NOT the
-    version of the api it implements: `org.gbif:name-parser-api` (5.1.0, a dependency
+    version of the api it implements: `org.gbif:name-parser-api` (5.2.0, a dependency
     below) is independently versioned and pinned. The bindings sit at 0.x while new / gathering
     real-use feedback, and graduate to the product's 5.x line once stable. Keep <version> below in sync
     with the Cargo workspace version — scripts/bump-version.sh does this; see RELEASE.md.
@@ -80,15 +80,15 @@
   <dependencies>
     <!-- The 5.x exceptionless API this binding implements: NameParser (now returning
          ParseResult), the three-way ParseResult (Parsed | Informal | Unparsable), ParsedName,
-         UnparsableNameException, the enums (incl. NameType.IDENTIFIER). 5.2.0 moves the sanctioning
-         author onto Authorship (ABI 6); pin the release once it is out. Resolves from repository.gbif.org via the
-         <repositories> block below — see bindings/java/README.md. NOTE: the 5.x api is api-ONLY —
+         UnparsableNameException, the enums (incl. NameType.IDENTIFIER). Pinned to the released
+         5.2.0, which moves the sanctioning author onto Authorship (ABI 6). Resolves from
+         repository.gbif.org via the <repositories> block below — see bindings/java/README.md. NOTE: the 5.x api is api-ONLY —
          the Java NameParserImpl reference impl was removed, so this Rust binding is the sole
          implementation. -->
     <dependency>
       <groupId>org.gbif</groupId>
       <artifactId>name-parser-api</artifactId>
-      <version>5.2.0-SNAPSHOT</version>
+      <version>5.2.0</version>
     </dependency>
 
     <!-- TEST-ONLY. The binding itself no longer uses Gson (the struct wire path rebuilds
