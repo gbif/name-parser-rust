@@ -163,6 +163,8 @@ fn an_of_note_needs_authors_outside_any_bracket_or_corporate_name() {
         .bas_authors(Some("1952"), &["Mag of Dollfus"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): "Em." is emend. (as at the top of this file), not initials of Chisaka; 1960 is
+    // the emendation, no imprint year
     assert_name_auth(
         "Praeskinnerella tamanouchiensis",
         "(Sakagami, 1956 Em. Chisaka, 1960)",

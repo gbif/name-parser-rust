@@ -141,6 +141,8 @@ fn a_particle_chain_is_never_taken_as_an_epithet() {
         .nothing_else();
     // Under a (mistaken) SPECIES hint the chain is still refused: rather than inventing the
     // epithet "van" and the author "den Boom", the name stays indetermined.
+    // FIXME(review): the authorship is dropped (no phrase), yet its year still makes the code
+    // ZOOLOGICAL; an informal name's authorship belongs in the phrase and yields no code
     assert_informal_hinted(
         "Cladoniicola van den Boom, 2001",
         None,
@@ -152,6 +154,8 @@ fn a_particle_chain_is_never_taken_as_an_epithet() {
     .rank(Rank::Species)
     .code(NomCode::Zoological)
     .nothing_else();
+    // FIXME(review): the authorship is dropped (no phrase), yet its year still makes the code
+    // ZOOLOGICAL; an informal name's authorship belongs in the phrase and yields no code
     assert_informal_hinted(
         "Verrucaria von der Linde, 1902",
         None,

@@ -155,12 +155,16 @@ fn ex_authors() {
 
 #[test]
 fn four_parted_names() {
+    // FIXME(review): "kewensis" is dropped without the QUADRINOMIAL warning the var./f.
+    // quadrinomials get
     assert_name("Poa pratensis kewensis primula (L.) Rouy, 1913")
         .infra_species("Poa", "pratensis", Rank::InfrasubspecificName, "primula")
         .comb_authors(Some("1913"), &["Rouy"])
         .bas_authors(None, &["L."])
         .nothing_else();
 
+    // FIXME(review): "alticola" is dropped without the QUADRINOMIAL warning the var./f.
+    // quadrinomials get
     assert_name("Bombus sichelii alticola latofasciatus")
         .infra_species(
             "Bombus",
@@ -170,6 +174,8 @@ fn four_parted_names() {
         )
         .nothing_else();
 
+    // FIXME(review): "colchicus" is dropped without the QUADRINOMIAL warning the var./f.
+    // quadrinomials get
     assert_name("Acipenser gueldenstaedti colchicus natio danubicus Movchan, 1967")
         .infra_species("Acipenser", "gueldenstaedti", Rank::Natio, "danubicus")
         .comb_authors(Some("1967"), &["Movchan"])
@@ -269,8 +275,9 @@ fn infra_generic() {
         .code(NomCode::Botanical)
         .nothing_else();
 
-    // Authorship placed BEFORE the infrageneric marker is the genus author, captured as the
-    // generic authorship; "Salimori" is the (unauthored) sectional epithet, not an author.
+    // Authorship placed BEFORE the infrageneric marker is captured as the generic authorship.
+    // Nomenclaturally it is the section's here: Adanson's genus Salimori, reduced to a section by
+    // Kuntze (the benchmark also has the ordered "Cordia sect. Salimori (Adans.) Kuntz").
     assert_name("Cordia (Adans.) Kuntze sect. Salimori")
         .infrageneric_at("Cordia", Rank::SectionBotany, "Salimori")
         .generic_bas_authors(None, &["Adans."])

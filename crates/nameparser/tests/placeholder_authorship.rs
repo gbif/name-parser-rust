@@ -65,6 +65,8 @@ fn a_placeholder_on_the_name_string_is_removed() {
         .warning(&[warnings::AUTHORSHIP_REMOVED])
         .nothing_else();
     // ... but a name that is nothing but the placeholder word is left alone
+    // FIXME(review): a no-name placeholder parsed as a uninomial (cf. "None" in gna_06.rs;
+    // "Unknown" below is PLACEHOLDER)
     assert_name("None").monomial("None").nothing_else();
     assert_unparsable("Unknown", NameType::Placeholder);
 }

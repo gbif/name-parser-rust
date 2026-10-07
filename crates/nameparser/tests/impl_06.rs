@@ -428,6 +428,8 @@ fn test_authorteam() {
         .comb_authors(None, &["Monterosato"])
         .nom_note("ms.")
         .nothing_else();
+    // FIXME(review): "ms." is glued onto Arnott; stripped as for "Monterosato ms.", it reads Arn.
+    // ex Grunow
     assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"])
         .comb_authors(None, &["Arn.ms.", "Grunow"])
         .nothing_else();
@@ -473,12 +475,15 @@ fn test_authorteam() {
     assert_authorship("Xiao & Knoll", &["Xiao", "Knoll"])
         .comb_authors(None, &["Xiao", "Knoll"])
         .nothing_else();
+    // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
+    // Y.-j." already is
     assert_authorship(
         "Wang, Yuwen & Xian-wei Liu",
         &["Wang", "Yuwen", "Xian-wei Liu"],
     )
     .comb_authors(None, &["Wang", "Yuwen", "Xian-wei Liu"])
     .nothing_else();
+    // FIXME(review): "Liu, Xian-wei" is one person written surname-first (Xian-wei Liu), not two
     assert_authorship(
         "Liu, Xian-wei, Z. Zheng & G. Xi",
         &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"],
@@ -584,7 +589,8 @@ fn test_authorteam() {
     assert_single_author("Brunner von Wattenwyl v.W.")
         .comb_authors(None, &["Brunner von Wattenwyl v.W."])
         .nothing_else();
-    // spanish "et"
+    // FIXME(review): "Martinez y Saez" is one person (Martínez y Sáez, a Spanish double surname),
+    // not two; "y" is no "et" here (cf. "Da Silva e Castro" below)
     assert_authorship("Martinez y Saez", &["Martinez", "Saez"])
         .comb_authors(None, &["Martinez", "Saez"])
         .nothing_else();
@@ -748,6 +754,8 @@ fn test_authorteam() {
         .comb_authors(None, &["Monterosato"])
         .nom_note("ms.")
         .nothing_else();
+    // FIXME(review): "ms." is glued onto Arnott; stripped as for "Monterosato ms.", it reads Arn.
+    // ex Grunow
     assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"])
         .comb_authors(None, &["Arn.ms.", "Grunow"])
         .nothing_else();

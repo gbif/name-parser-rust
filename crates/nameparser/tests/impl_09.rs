@@ -95,10 +95,13 @@ fn authorship_only() {
         .bas_authors(Some("1996"), &["Wang", "Liu"])
         .nothing_else();
 
+    // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
+    // Y.-j." already is
     assert_authorship("(Wang, Yuwen & Xian-wei Liu, 1996)", &[])
         .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xian-wei Liu"])
         .nothing_else();
 
+    // FIXME(review): "Liu, Xian-wei" is one person written surname-first (Xian-wei Liu), not two
     assert_authorship("(Liu, Xian-wei, Z. Zheng & G. Xi, 1991)", &[])
         .bas_authors(Some("1991"), &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"])
         .nothing_else();

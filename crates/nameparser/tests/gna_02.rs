@@ -256,14 +256,14 @@ fn infraspecies_without_rank_iczn() {
 fn legacy_iczn_names_with_rank() {
     // group: Legacy ICZN names with rank — quadrinomial: parser keeps the explicit
     // rank-marker (natio) + its trailing epithet (danubicus) and drops the middle
-    // "extra" epithet (colchicus) with a QUADRINOMIAL warning.
+    // "extra" epithet (colchicus).
+    // FIXME(review): "colchicus" is dropped without the QUADRINOMIAL warning the var./f.
+    // quadrinomials get
     assert_name("Acipenser gueldenstaedti colchicus natio danubicus Movchan, 1967")
         .infra_species("Acipenser", "gueldenstaedti", Rank::Natio, "danubicus")
         .comb_authors(Some("1967"), &["Movchan"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // The middle "colchicus" epithet is dropped silently (no QUADRINOMIAL warning
-    // currently emitted for the natio path; var./subsp./f. paths do emit it).
 }
 
 #[test]
@@ -349,11 +349,13 @@ fn infraspecies_with_rank_icn() {
         .bas_authors(None, &["Lojac."])
         .code(NomCode::Botanical)
         .nothing_else();
+    // FIXME(review): 1753 predates the ICZN (1758) and "fm." is a botanical rank: not ZOOLOGICAL
     assert_name("Pteris longifolia fm. stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): 1753 predates the ICZN (1758) and "fm." is a botanical rank: not ZOOLOGICAL
     assert_name("Pteris longifolia fm stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
@@ -387,12 +389,16 @@ fn infraspecies_with_rank_icn() {
         .nothing_else();
     // "agamosp." marker — parser captures the chloocladus token as infrasp epithet
     // but the rank stays SPECIES (per RankMarkers.put("agamosp", Rank.SPECIES)).
+    // FIXME(review): "A. & D. Löve" is two Löves: A.Löve, D.Löve (cf. "R. & E. Richter" in
+    // impl_09.rs)
     assert_name("Rubus fruticosus agamosp. chloocladus (W.C.R. Watson) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Species, "chloocladus")
         .comb_authors(None, &["A.", "D.Löve"])
         .bas_authors(None, &["W.C.R.Watson"])
         .code(NomCode::Botanical)
         .nothing_else();
+    // FIXME(review): "A. & D. Löve" is two Löves: A.Löve, D.Löve (cf. "R. & E. Richter" in
+    // impl_09.rs)
     assert_name("Rubus fruticosus L. agamossp. discolor (Weihe & Nees) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Subspecies, "discolor")
         .comb_authors(None, &["A.", "D.Löve"])
@@ -400,6 +406,8 @@ fn infraspecies_with_rank_icn() {
         .code(NomCode::Botanical)
         .specific_authors(None, &["L."])
         .nothing_else();
+    // FIXME(review): "A. & D. Löve" is two Löves: A.Löve, D.Löve (cf. "R. & E. Richter" in
+    // impl_09.rs)
     assert_name("Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Variety, "graecensis")
         .comb_authors(None, &["A.", "D.Löve"])
@@ -467,6 +475,8 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(Some("1912"), &["Aurivillius"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): "st.-johnii" splits into epithet "st" + author "johnii …"; "ab. n." makes "n"
+    // the epithet and "undularia" the author
     // Skipped: "Cibotium st.-johnii Krajina" needs hyphenated single-letter epithet
     // recognition; "Acidalia remutaria ab. n. undularia" needs "ab. n." (aberratio
     // nova) handling; "Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f.
@@ -530,6 +540,8 @@ fn infraspecies_with_greek_letters_icn() {
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "δmicrophylla")
         .comb_authors(None, &["Hook.f."])
         .nothing_else();
+    // FIXME(review): "unr." (unranked) is read as the species epithet, the infrageneric name as an
+    // author
     // "Hieracium unr. Verbasciformia Arv.-Touv." — "unr." is an unknown rank
     // marker the parser doesn't recognise, leaving "unr" as the species epithet.
     // Skipped here.

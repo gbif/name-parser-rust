@@ -50,11 +50,14 @@ fn uninomials_with_authorship() {
         .comb_authors(Some("2003"), &["U.Braun", "Crous"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
+    // Y.-j." already is
     assert_name("Abaxisotima acuminata (Wang, Yuwen & Xiangwei Liu 1996)")
         .species("Abaxisotima", "acuminata")
         .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xiangwei Liu"])
         .code(NomCode::Zoological)
         .nothing_else();
+    // FIXME(review): "Liu, Xiang-wei" is one person written surname-first (Xiang-wei Liu), not two
     assert_name("Aboilomimus sichuanensis ornatus Liu, Xiang-wei, M. Zhou, W Bi & L. Tang, 2009")
         .infra_species("Aboilomimus", "sichuanensis", Rank::Subspecies, "ornatus")
         .comb_authors(
@@ -344,6 +347,7 @@ fn binomials_with_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): "Bolvar y Pieltain" is one person (a Spanish double surname), not two
     assert_name("Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967")
         .species_ig("Carabus", "Tanaocarabus", "hendrichsi")
         .comb_authors(Some("1967"), &["Bolvar", "Pieltain", "Rotger", "Coronado"])
@@ -357,18 +361,21 @@ fn binomials_with_authorship() {
         .code(NomCode::Botanical)
         .nothing_else();
 
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii Goh & W.H. Hsieh 1990")
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("1990"), &["Goh", "W.H.Hsieh"])
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii Goh and W.H. Hsieh 1990")
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("1990"), &["Goh", "W.H.Hsieh"])
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii Goh et W.H. Hsieh 1990")
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("1990"), &["Goh", "W.H.Hsieh"])
@@ -529,6 +536,7 @@ fn binomials_with_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Agaricus squamula Berk. & M.A. Curtis 1860")
         .species("Agaricus", "squamula")
         .comb_authors(Some("1860"), &["Berk.", "M.A.Curtis"])
@@ -541,6 +549,7 @@ fn binomials_with_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Tuber liui A S. Xu 1999")
         .species("Tuber", "liui")
         .comb_authors(Some("1999"), &["A.S.Xu"])

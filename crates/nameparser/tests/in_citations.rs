@@ -141,6 +141,8 @@ fn a_redundant_authorship_does_not_repeat_the_reference() {
     .published_in("Bruguiere, 1792")
     .published_in_year(Some(1792))
     .nothing_else();
+    // FIXME(review): the two in-citations are glued into one publishedIn; it is "Hamilton, Poulin,
+    // Charles & Angell"
     assert_name_auth(
         "Brachysira zellensis f. difficilis (Grunow in Van Heurck) P. B. Ham. in Hamilton, Poulin, Charles & Angell",
         "(Grunow in Van Heurck) P. B. Ham. in Hamilton, Poulin, Charles & Angell",
