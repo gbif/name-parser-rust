@@ -9,6 +9,7 @@ pub(crate) mod blacklisted_epithets;
 pub(crate) mod code_inference;
 pub(crate) mod context;
 pub(crate) mod culture_collections;
+pub(crate) mod double_surnames;
 pub(crate) mod name_tokens;
 pub(crate) mod preflight;
 pub(crate) mod rank_markers;

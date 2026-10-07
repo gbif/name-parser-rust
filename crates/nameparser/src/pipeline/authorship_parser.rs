@@ -89,6 +89,7 @@
 //! private here.
 
 use crate::model::Authorship;
+use crate::pipeline::double_surnames;
 use crate::token::{is_particle, Token, TokenKind};
 
 /// Java `AuthorshipParser.AUTHOR_SUFFIXES` — tokens that are filius/junior/etc.
@@ -223,6 +224,12 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 s.unparsed_text = Some(slice_text(tokens, open_tok.start, close_tok.end));
             }
             i = close + 1;
+        } else if let Some((bas_from, bas_end)) = unclosed_basionym(tokens, i) {
+            let yr = parse_authors(tokens, bas_from, bas_end, &mut s.basionym);
+            s.year_range |= yr;
+            s.has_filius |= contains_filius_suffix(tokens, bas_from, bas_end);
+            s.basionym_present = true;
+            i = bas_end;
         }
     }
 
@@ -263,6 +270,42 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         s.unparsed_text = Some(slice_text(tokens, first.start, last.end));
     }
     s
+}
+
+/// The basionym of a bracket opened at `tokens[open]` but never closed, as `(from, end)`, where the
+/// string shows where it ends: after its year (`( Dejean, 1831 Mill.`) or after a filius
+/// (`( (L. f. Klatt`), with the combination author following straight on. Java read the whole
+/// span as one combination authorship (`Dejean, Mill.`, `L.f.Klatt`). Without such an end the
+/// bracket is left as it was.
+fn unclosed_basionym(tokens: &[Token], open: usize) -> Option<(usize, usize)> {
+    let mut from = open + 1;
+    while from < tokens.len() && tokens[from].kind == TokenKind::OpenParen {
+        from += 1;
+    }
+    if tokens[from..]
+        .iter()
+        .any(|t| t.kind == TokenKind::CloseParen)
+    {
+        return None;
+    }
+    let surname_at = |k: usize| {
+        tokens
+            .get(k)
+            .is_some_and(|t| t.kind == TokenKind::Word && starts_upper(&t.text))
+    };
+    (from..tokens.len()).find_map(|k| {
+        let t = &tokens[k];
+        if is_year(t) && k > from && surname_at(k + 1) {
+            return Some((from, k + 1));
+        }
+        let filius = t.kind == TokenKind::Word
+            && AUTHOR_SUFFIXES.contains(&t.text.as_str())
+            && k > from
+            && tokens.get(k + 1).is_some_and(|d| d.kind == TokenKind::Dot)
+            && surname_at(k + 2)
+            && contains_lower(&tokens[k + 2].text);
+        filius.then_some((from, k + 2))
+    })
 }
 
 /// Java `AuthorshipParser.findLastColon(List<Token>, int, int)`. Depth-aware over both
@@ -437,6 +480,13 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             continue;
         }
 
+        // a y joining the two surnames of one person: "Bolívar y Pieltain", "Dus. y Alon."
+        if t.kind == TokenKind::Word && t.text == "y" && y_joins_surnames(tokens, i, from, to) {
+            cur.push_str(" y");
+            i += 1;
+            continue;
+        }
+
         // separators
         if t.kind == TokenKind::Ampersand
             || (t.kind == TokenKind::Word
@@ -515,9 +565,15 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             // An undotted `I` is the first generation when nothing else can be meant: the
             // author already has leading initials (`G. B. Sowerby I`), or another author
             // of the team carries a later generation (#22). Java read it as an initial.
+            // After leading initials a dotted `I.` that ends the author is the generation
+            // too (`G.B. Sowerby I.`): such an author carries no initials behind the surname.
+            let dotted = i + 1 < to && tokens[i + 1].kind == TokenKind::Dot;
             let generation_i = text == "I"
-                && (i + 1 >= to || tokens[i + 1].kind != TokenKind::Dot)
-                && (starts_with_initial(&cur) || team_has_generation);
+                && if dotted {
+                    starts_with_initial(&cur) && author_ends_at(tokens, i + 2, to)
+                } else {
+                    starts_with_initial(&cur) || team_has_generation
+                };
             if !cur.is_empty()
                 && contains_lower(&cur)
                 && !cur.ends_with('.')
@@ -526,7 +582,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             {
                 append_space(&mut cur);
                 cur.push_str(&text.to_uppercase());
-                i += 1;
+                i += 1 + usize::from(generation_i && dotted);
                 continue;
             }
             // No-comma "<Surname> <Initials>" inversion pattern: if cur already holds a
@@ -862,6 +918,11 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
 /// the left author is an abbreviation (`Lam.`, `Lap. & G.` = Laporte & Gory) or the right one
 /// has a capital run (`DC.`, `A.DC.`, `HBK.`, `MULSANT & REY`). The rare initials written as a
 /// run after a full surname (`Sclater & PL`) are the cost.
+///
+/// A lone initial before a separator shares the surname of the single-initialled author after
+/// it: `A. & D. Löve` are A.Löve and D.Löve, `R. & G. Forst.` the two Forsters (5,267
+/// ChecklistBank rows, all such family pairs). Java kept `A.` as an author of its own. `L.` is
+/// left alone: it is Linnaeus.
 fn invert_all(authors: &[String], after_separator: &[usize]) -> Vec<String> {
     let mut out = Vec::with_capacity(authors.len());
     let mut i = 0;
@@ -869,6 +930,13 @@ fn invert_all(authors: &[String], after_separator: &[usize]) -> Vec<String> {
         let cur = &authors[i];
         if i + 1 < authors.len() {
             let next = &authors[i + 1];
+            if after_separator.contains(&(i + 1)) && cur != "L." {
+                if let Some(surname) = shared_surname(cur, next) {
+                    out.push(format!("{cur}{surname}"));
+                    i += 1;
+                    continue;
+                }
+            }
             let joinable = !after_separator.contains(&(i + 1))
                 || (!cur.ends_with('.') && !has_capital_run(next));
             if joinable && looks_like_surname(cur) && looks_like_initials(next) {
@@ -881,6 +949,23 @@ fn invert_all(authors: &[String], after_separator: &[usize]) -> Vec<String> {
         i += 1;
     }
     out
+}
+
+/// The surname `next` lends to the lone initial `cur` in [`invert_all`]: `cur` is one capital
+/// and its dot (`A.`), `next` one initial and a surname (`D.Löve`, `G.Forst.`) — returned as
+/// `Löve`, `Forst.`.
+fn shared_surname<'a>(cur: &str, next: &'a str) -> Option<&'a str> {
+    let one_initial = |s: &str| {
+        let mut cs = s.chars();
+        cs.next().is_some_and(char::is_uppercase) && cs.next() == Some('.')
+    };
+    if cur.chars().count() != 2 || !one_initial(cur) || !one_initial(next) {
+        return None;
+    }
+    let surname = next[next.find('.')? + 1..].trim_start();
+    let mut cs = surname.chars();
+    (cs.next().is_some_and(char::is_uppercase) && cs.next().is_some_and(char::is_lowercase))
+        .then_some(surname)
 }
 
 /// Java `AuthorshipParser.invertAuthor(String)`. Re-orders names like "Surname, J.L." or
@@ -967,6 +1052,25 @@ fn author_ends_at(tokens: &[Token], k: usize, to: usize) -> bool {
         }
         _ => false,
     }
+}
+
+/// True when the `y` at `tokens[i]` joins the paternal and maternal surname of one person listed in
+/// [`double_surnames`] (`Bolívar y Pieltain`, `Dusmet y Alonso`, `Caballero y C.`, `Graells y de la
+/// Agüera`); Java read every `y` as `&`. Any other `y` still separates two people: the string
+/// cannot tell `Dusmet y Alonso` (one person) from `Spix y Agassiz` (two).
+fn y_joins_surnames(tokens: &[Token], i: usize, from: usize, to: usize) -> bool {
+    // the word before the y, behind an abbreviation's dot ("Dus. y Alon.")
+    let left = match tokens[from..i].iter().rev().take(2).collect::<Vec<_>>()[..] {
+        [w, ..] if w.kind == TokenKind::Word => w,
+        [d, w] if d.kind == TokenKind::Dot && w.kind == TokenKind::Word => w,
+        _ => return false,
+    };
+    // the first word after it that is no particle ("Asso y del Río")
+    let right = tokens[i + 1..to]
+        .iter()
+        .take_while(|t| t.kind == TokenKind::Word)
+        .find(|t| !double_surnames::skips(&t.text));
+    right.is_some_and(|right| double_surnames::joins(&left.text, &right.text))
 }
 
 /// True when `tokens[k]` starts a particle surname: one or more particles (`de`, `van den`,
@@ -2253,9 +2357,19 @@ mod tests {
             authors(&parse_str("Xing, Yan & Yin")),
             &["Xing".to_string(), "Yan".to_string(), "Yin".to_string()]
         );
+        // a y between two surnames is one person; it separates where the string shows two
         assert_eq!(
             authors(&parse_str("Martinez y Saez")),
-            &["Martinez".to_string(), "Saez".to_string()]
+            &["Martinez y Saez".to_string()]
+        );
+        assert_eq!(
+            authors(&parse_str("Ruiz-Carranza y Lynch")),
+            &["Ruiz-Carranza".to_string(), "Lynch".to_string()]
+        );
+        // an & before an earlier year belongs to another team: this y closes a list
+        assert_eq!(
+            authors(&parse_str("Isbrücker & Nico, 1992 Nijssen, Ortega y Nico")),
+            &["Isbrücker", "Nico", "Nijssen", "Ortega", "Nico"].map(String::from)
         );
     }
 

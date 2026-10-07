@@ -347,10 +347,9 @@ fn binomials_with_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): "Bolvar y Pieltain" is one person (a Spanish double surname), not two
     assert_name("Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967")
         .species_ig("Carabus", "Tanaocarabus", "hendrichsi")
-        .comb_authors(Some("1967"), &["Bolvar", "Pieltain", "Rotger", "Coronado"])
+        .comb_authors(Some("1967"), &["Bolvar y Pieltain", "Rotger", "Coronado"])
         .code(NomCode::Zoological)
         .nothing_else();
 

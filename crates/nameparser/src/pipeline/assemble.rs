@@ -270,6 +270,15 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     {
         ctx.name.rank = Rank::Subspecies;
     }
+    // Likewise a zoological "Genus (Subgenus)": the only rank the ICZN puts in parentheses
+    // after a genus is the subgenus (Art. 6.1). Rust-only: Java kept INFRAGENERIC_NAME.
+    if ctx.name.rank == Rank::InfragenericName
+        && ctx.name.code == Some(NomCode::Zoological)
+        && ctx.name.infrageneric_epithet.is_some()
+        && ctx.name.specific_epithet.is_none()
+    {
+        ctx.name.rank = Rank::Subgenus;
+    }
 
     // Step 14: suffix-based rank inference for monomials: use the explicitly-requested code
     // when provided, otherwise fall back to globally unambiguous suffixes only (-aceae,

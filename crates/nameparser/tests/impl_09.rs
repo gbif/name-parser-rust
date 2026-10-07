@@ -560,13 +560,12 @@ fn test_nomenclatural_notes_pattern() {
     .bas_authors(None, &["Goodenough", "Woodward"])
     .code(NomCode::Botanical)
     .nothing_else();
-    // FIXME(review): "R. & E. Richter" is two Richters: R.Richter, E.Richter
     assert_nom_note(
         "nom. nud.",
         "Sao hispanica R. & E. Richter nom. nud. in Sampelayo 1935",
     )
     .species("Sao", "hispanica")
-    .comb_authors(Some("1935"), &["R.", "E.Richter"])
+    .comb_authors(Some("1935"), &["R.Richter", "E.Richter"])
     .published_in("Sampelayo 1935")
     .published_in_year(Some(1935))
     .nothing_else();

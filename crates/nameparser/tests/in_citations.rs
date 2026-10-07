@@ -141,8 +141,7 @@ fn a_redundant_authorship_does_not_repeat_the_reference() {
     .published_in("Bruguiere, 1792")
     .published_in_year(Some(1792))
     .nothing_else();
-    // FIXME(review): the two in-citations are glued into one publishedIn; it is "Hamilton, Poulin,
-    // Charles & Angell"
+    // the combination's in-citation is the name's publication, not the basionym's
     assert_name_auth(
         "Brachysira zellensis f. difficilis (Grunow in Van Heurck) P. B. Ham. in Hamilton, Poulin, Charles & Angell",
         "(Grunow in Van Heurck) P. B. Ham. in Hamilton, Poulin, Charles & Angell",
@@ -150,7 +149,34 @@ fn a_redundant_authorship_does_not_repeat_the_reference() {
     .infra_species("Brachysira", "zellensis", Rank::Form, "difficilis")
     .bas_authors(None, &["Grunow"])
     .comb_authors(None, &["P.B.Ham."])
-    .published_in("Van Heurck Hamilton, Poulin, Charles & Angell")
+    .published_in("Hamilton, Poulin, Charles & Angell")
     .code(NomCode::Botanical)
     .nothing_else();
+}
+
+#[test]
+fn a_capitalised_or_bracketed_in_is_a_citation_too() {
+    // 1,251 ChecklistBank rows write the in-citation with a capital: all of them citations
+    assert_name("Monitor pulcher Leach In Bowdich, 1819")
+        .species("Monitor", "pulcher")
+        .comb_authors(Some("1819"), &["Leach"])
+        .published_in("Bowdich, 1819")
+        .published_in_year(Some(1819))
+        .nothing_else();
+    assert_name("Zornia diphylla var. leptophylla Benth. In Mart. Fl. Bras.")
+        .infra_species("Zornia", "diphylla", Rank::Variety, "leptophylla")
+        .comb_authors(None, &["Benth."])
+        .published_in("Mart. Fl. Bras.")
+        .nothing_else();
+    // a citation cut off after its "In" leaves no author behind
+    assert_name("Asterocheres unicus Johnsson, In")
+        .species("Asterocheres", "unicus")
+        .comb_authors(None, &["Johnsson"])
+        .nothing_else();
+    // "[Dryander in] Aiton": the author in brackets, published in Aiton's work
+    assert_name("Glycine debilis [Dryander in] Aiton")
+        .species("Glycine", "debilis")
+        .comb_authors(None, &["Dryander"])
+        .published_in("Aiton")
+        .nothing_else();
 }

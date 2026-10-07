@@ -32,6 +32,7 @@
 //! list, invoked on the caller-supplied `authorship` string from `pipeline::mod`'s
 //! aux-authorship path.
 
+use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use fancy_regex::Regex as FancyRegex;
@@ -1177,6 +1178,13 @@ fn normalise_hyphens(ctx: &mut ParseContext, s: String) -> String {
 /// (a table hit always changes the string, since no row's canonical ever equals one of its
 /// own look-alikes) but ported verbatim anyway, mirroring Java's exact structure.
 fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
+    let s = match OCR_ZERO.replace_all(&s, "${1}O${2}${3}") {
+        Cow::Owned(repl) => {
+            ctx.name.add_warning(warnings::HOMOGLYHPS);
+            repl
+        }
+        Cow::Borrowed(_) => s,
+    };
     if crate::unicode::contains_homoglyphs(&s) {
         let repl = crate::unicode::replace_homoglyphs(&s);
         if repl != s {
@@ -1186,6 +1194,13 @@ fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
     }
     s
 }
+
+/// A zero scanned for the capital O that opens a word of lower-case letters: "Phyllodoce mucosa
+/// 0ersted, 1843", "Attelabus 0l.", "Acrobothrium 0lsson 1872". Rust-only: Java dropped the zero
+/// and kept "ersted". Codes that carry more digits stay ("Anabaena sp. 0tu39s7", "Shewanella sp.
+/// 0m-11").
+static OCR_ZERO: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(^|[\s(\[,&])0(\p{Ll}+)([\s.,;)\]]|$)").unwrap());
 
 // ---- Step 14: repairWin1252Artefacts (structural — no Pattern; shared w/ stripAuthorshipMarkers) ----
 
@@ -2041,11 +2056,14 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// backtracking search that would otherwise explore every equivalent partition of the
 /// run. Built via `concat!` (compile-time string concatenation) mirroring the Java
 /// source's own `"..." + "..."` layout, one alternative per line, so it stays directly
-/// diffable against StripAndStash.java line-by-line.
+/// diffable against StripAndStash.java line-by-line. Rust-only first alternative: "nomen" and its
+/// Latin status word in any case, "Akeratidae Nomen Nudum", whose capital the general alternative
+/// stops at — Java read "Nudum" as an author.
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r"\s+(",
-        r"(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
+        r"(?i:nomen\s+(?:nudum|novum|dubium|oblitum|illegitimum|invalidum|conservandum|rejiciendum|protectum|inquirendum)\b\.?)",
+        r"|(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
         r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
@@ -2590,6 +2608,14 @@ fn strip_bracketed_tax_note(ctx: &mut ParseContext, s: String) -> String {
 
 // ---- Step 40: stripParenTaxNote ----
 
+/// A bracketed "sensu stricto" or "sensu lato" wherever it stands: after the authors
+/// ("(Wollaston,1860) (s.str.)"), before them, or between two epithets ("Ammodramus caudacutus
+/// (s.s.) diversus"). Rust-only: Java read it as an author, or the epithet after it as one. The
+/// lower-case "s." keeps an author's initials ("(S. L. Schultes)") out.
+static PAREN_SENSU_STRICTO: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s*)\((?-u:\s*)(s\.(?-u:\s*)(?:str|s|l|lat|ampl)\.?)(?-u:\s*)\)").unwrap()
+});
+
 /// Java PAREN_TAX_NOTE (StripAndStash.java:101-103):
 /// `\s*\(\s*((?:nec|non|not)\s+[^)]+)\)\s*\.?\s*$`, `Pattern.CASE_INSENSITIVE` — extended
 /// beyond Java with the concept keywords `auct`/`auctt`/`auctorum`/`sensu`/`sec` (the set the separate
@@ -2639,6 +2665,13 @@ static PAREN_AUCT_REPEATED: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\s\(\s*(?i:auctt?\.?|auctorum)\s*\)\s*((?i:auct))").unwrap());
 
 fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = PAREN_SENSU_STRICTO.captures(&s) {
+        ctx.name
+            .add_taxonomic_note(&WHITESPACE.replace_all(caps.get(1).unwrap().as_str(), " "));
+        let whole = caps.get(0).unwrap();
+        let s = format!("{} {}", java_trim(&s[..whole.start()]), &s[whole.end()..]);
+        return strip_paren_tax_note(ctx, java_trim(&s).to_string());
+    }
     if let Some(caps) = PAREN_AUCT_REPEATED.captures(&s) {
         let (whole, next) = (caps.get(0).unwrap(), caps.get(1).unwrap());
         let s = format!("{} {}", java_trim(&s[..whole.start()]), &s[next.start()..]);
@@ -2789,7 +2822,7 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
         r"auctt?(?-u:\b)\.?(?:[,.]?(?-u:\s).*)?",
         r"|auctorum(?-u:\b)(?:[,.]?(?-u:\s).*)?",
-        r"|sensu(?:(?-u:\s).*)?",
+        r"|sensu\.?(?:(?-u:\s).*)?",
         r"|sec\.?(?:(?-u:\s).*)?",
         r"|nec(?-u:\b)(?:(?-u:\s).*)?",
         r"|nonn?\.?(?-u:\s+)\(?\p{Lu}.*",
@@ -2833,6 +2866,20 @@ static KEYWORD_ONLY_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
 /// needs whitespace before the keyword) missed it and "sensu Schmidt" became the author.
 fn unwrap_keyword_only_bracket(s: &str) -> String {
     KEYWORD_ONLY_BRACKET.replace_all(s, "$1 ").into_owned()
+}
+
+/// An emendation inside the basionym's brackets, after its year: "(Sakagami, 1956 Em. Chisaka,
+/// 1960)". Lifted out behind the bracket, where [`TAX_NOTE`] takes it as the note it is. Rust-only:
+/// Java read "Em." as Chisaka's initials and 1960 as an imprint year.
+static BRACKETED_EMENDATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"\(([^()]*?(?-u:\d{4}))(?-u:\s*),?(?-u:\s+)((?:[Ee]m\.|emend\.?)(?-u:\s+)\p{Lu}[^()]*)\)",
+    )
+    .unwrap()
+});
+
+fn lift_bracketed_emendation(s: &str) -> String {
+    BRACKETED_EMENDATION.replace(s, "($1) $2").into_owned()
 }
 
 /// The authors a concept "of …" names: up to the first year, comma or bracket — never a lower-case
@@ -2947,7 +2994,7 @@ fn follows_author(prefix: &str, authorship_only: bool) -> bool {
 /// branch); uppercase "Aus bus Mill. S.L." does NOT match at all (author initials, not a
 /// sensu-lato marker).
 fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
-    let s = unwrap_keyword_only_bracket(&s);
+    let s = lift_bracketed_emendation(&unwrap_keyword_only_bracket(&s));
     let Some((match_start, note_start)) = find_tax_note(&s, false) else {
         return s;
     };
@@ -3133,9 +3180,41 @@ fn strip_in_press(ctx: &mut ParseContext, s: String) -> String {
 /// `publishedIn="Van Heurck, 1883"` whichever way it arrives. Java only ran these steps on the
 /// name string, so a separately supplied authorship kept the host inside the author (#20).
 pub(crate) fn strip_in_author_citations(ctx: &mut ParseContext, s: String) -> String {
+    let s = BRACKETED_IN_AUTHOR.replace_all(&s, "$1 in ").into_owned();
+    let s = DANGLING_IN.replace(&s, "").into_owned();
+    let before = ctx.name.published_in.clone();
     let s = strip_in_author_in_parens(ctx, s);
-    strip_in_author_citation(ctx, s)
+    let from_basionym = ctx.name.published_in != before;
+    let published_in = ctx.name.published_in.clone();
+    let s = strip_in_author_citation(ctx, s);
+    // "(Grunow in Van Heurck) P. B. Ham. in Hamilton, …": the name was published where its
+    // combination was, so that reference replaces the basionym's rather than joining it
+    if from_basionym && ctx.name.published_in != published_in {
+        let own = ctx.name.published_in.as_deref().and_then(|p| {
+            published_in
+                .as_deref()
+                .and_then(|b| p.strip_prefix(b))
+                .map(|rest| java_trim(rest).to_string())
+        });
+        if let Some(own) = own {
+            ctx.name
+                .set_published_in(&before.map_or(own.clone(), |b| format!("{b} {own}")));
+        }
+    }
+    s
 }
+
+/// "[Péron in] Lamarck, 1819", "[Dryander in] Aiton": an in-citation whose author is set in
+/// square brackets, the way catalogues mark an author taken from the work's text. Rust-only:
+/// Java kept "Péron in Lamarck" as one author. Something must follow the bracket ("(L.) [Web.
+/// in]" names no work).
+static BRACKETED_IN_AUTHOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\[(\p{Lu}[^\[\]]*?)(?-u:\s+)(?:in|In)\](?-u:\s+)").unwrap());
+
+/// A citation cut off after its "In" ("Asterocheres unicus Johnsson, In"): nothing to cite, and no
+/// author either. Rust-only: Java read "In" as a second author.
+static DANGLING_IN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:,?\s+)(?:in|In)(?-u:\s*)$").unwrap());
 
 // ---- Step 47: stripInAuthorInParens ----
 
@@ -3147,9 +3226,10 @@ pub(crate) fn strip_in_author_citations(ctx: &mut ParseContext, s: String) -> St
 /// backreference-free shape; confirmed empirically in an isolated scratch-crate spike against
 /// the exact worked example below, not just assumed). group(1) = basionym author span,
 /// group(2) = publication reference. Rust-only: the reference may also start with the anonymous
-/// author "anon." (step 37 has already lower-cased "Anon."), as in "(Swainson in Anon. 1837)".
+/// author "anon." (step 37 has already lower-cased "Anon."), as in "(Swainson in Anon. 1837)",
+/// and the "in" may be capitalised, as in [`IN_AUTHOR`].
 static IN_AUTHOR_IN_PARENS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\(([^()]*?)\s+(?:in|apud)\s+((?:\p{Lu}|anon\.)[^()]*?)\)").unwrap()
+    Regex::new(r"\(([^()]*?)\s+(?:in|In|apud)\s+((?:\p{Lu}|anon\.)[^()]*?)\)").unwrap()
 });
 
 /// Java IN_AUTHOR_YEAR (StripAndStash.java:241-242): `,?\s*(\d{3,4})\s*\.?\s*$`, no flags. Has
@@ -3206,8 +3286,10 @@ fn strip_in_author_in_parens(ctx: &mut ParseContext, s: String) -> String {
 /// unescaped wildcard, Unicode default. No lookaround/backreference -> plain `regex` crate.
 /// Rust-only: the reference may also be the anonymous author "anon." (step 37 has already
 /// lower-cased "Anon."): "Swainson in Anon. 1837" -> author Swainson, publishedIn "anon. 1837".
+/// Rust-only as well: a capitalised "In" ("Leach In Bowdich, 1819"), as 1,251 ChecklistBank rows
+/// write it, every one of them a citation; Java read it as an author.
 static IN_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?-u:\s+)(?:in|apud)(?-u:\s+)((?:\p{Lu}[^\t\n\x0B\f\r ]|anon\.).*)$").unwrap()
+    Regex::new(r"(?-u:\s+)(?:in|In|apud)(?-u:\s+)((?:\p{Lu}[^\t\n\x0B\f\r ]|anon\.).*)$").unwrap()
 });
 
 /// Java IN_AUTHOR_PAREN_YEAR (StripAndStash.java:243): `\((\d{4})\)`, no flags. Has `\d`, no
@@ -4027,7 +4109,7 @@ static LEADING_HOMONYM_PAREN: LazyLock<Regex> =
 /// lookaround/backreference -> plain `regex` crate.
 static PAREN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)\((?-u:\s*)((?:auctt?|auctorum|sensu|sec|vide|synonym)(?-u:\b)[^)]*)\)(?-u:\s*)",
+        r"(?i)\((?-u:\s*)((?:auctt?|auctorum|sensu|sec|vide|synonym)(?-u:\b)[^)]*|(?-i:s\.(?-u:\s*)(?:str|s|l|lat|ampl)\.?))(?-u:\s*)\)(?-u:\s*)",
     )
     .unwrap()
 });
@@ -4245,7 +4327,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // authorship string — same patterns `run()`'s `strip_tax_note` applies to the main
     // working string. Matched against a space-padded copy (same reasoning as NOM_NOTE
     // above).
-    let padded_tax = format!(" {s}");
+    let padded_tax = format!(" {}", lift_bracketed_emendation(&s));
     if let Some((_, group1_start)) = find_tax_note(&padded_tax, true) {
         let raw = java_trim(&padded_tax[group1_start..]).to_string();
         if !raw.is_empty() {

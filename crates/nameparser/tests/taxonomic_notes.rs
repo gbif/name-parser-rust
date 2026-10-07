@@ -210,3 +210,49 @@ fn a_note_repeated_in_the_separate_authorship_is_kept_once() {
         .sensu("sensu Pers. non sensu Pers.")
         .nothing_else();
 }
+
+#[test]
+fn sensu_stricto_or_lato_in_brackets_is_a_note_wherever_it_stands() {
+    // after the authors, before them, and between two epithets
+    assert_name("Amaurorhinus bewichianus (Wollaston,1860) (s.str.)")
+        .species("Amaurorhinus", "bewichianus")
+        .bas_authors(Some("1860"), &["Wollaston"])
+        .sensu("s.str.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Aus bus (s.str.) Smith")
+        .species("Aus", "bus")
+        .comb_authors(None, &["Smith"])
+        .sensu("s.str.")
+        .nothing_else();
+    assert_name("Ammodramus caudacutus (s.s.) diversus")
+        .infra_species(
+            "Ammodramus",
+            "caudacutus",
+            Rank::InfraspecificName,
+            "diversus",
+        )
+        .sensu("s.s.")
+        .nothing_else();
+    // an author's capital initials are no note
+    assert_name("Aus bus (S. L. Schultes)")
+        .species("Aus", "bus")
+        .bas_authors(None, &["S.L.Schultes"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn a_note_keyword_with_a_stray_dot_is_still_the_note() {
+    assert_name("Aus bus (Smith, 1900) sensu. Dworkin and Foster 1956")
+        .species("Aus", "bus")
+        .bas_authors(Some("1900"), &["Smith"])
+        .sensu("sensu. Dworkin and Foster 1956")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // "nomen nudum" in title case, as 15 ChecklistBank rows write it
+    assert_name("Akeratidae Nomen Nudum")
+        .monomial("Akeratidae")
+        .nom_note("Nomen Nudum")
+        .nothing_else();
+}

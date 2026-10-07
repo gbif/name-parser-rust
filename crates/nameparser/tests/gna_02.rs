@@ -389,28 +389,22 @@ fn infraspecies_with_rank_icn() {
         .nothing_else();
     // "agamosp." marker — parser captures the chloocladus token as infrasp epithet
     // but the rank stays SPECIES (per RankMarkers.put("agamosp", Rank.SPECIES)).
-    // FIXME(review): "A. & D. Löve" is two Löves: A.Löve, D.Löve (cf. "R. & E. Richter" in
-    // impl_09.rs)
     assert_name("Rubus fruticosus agamosp. chloocladus (W.C.R. Watson) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Species, "chloocladus")
-        .comb_authors(None, &["A.", "D.Löve"])
+        .comb_authors(None, &["A.Löve", "D.Löve"])
         .bas_authors(None, &["W.C.R.Watson"])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "A. & D. Löve" is two Löves: A.Löve, D.Löve (cf. "R. & E. Richter" in
-    // impl_09.rs)
     assert_name("Rubus fruticosus L. agamossp. discolor (Weihe & Nees) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Subspecies, "discolor")
-        .comb_authors(None, &["A.", "D.Löve"])
+        .comb_authors(None, &["A.Löve", "D.Löve"])
         .bas_authors(None, &["Weihe", "Nees"])
         .code(NomCode::Botanical)
         .specific_authors(None, &["L."])
         .nothing_else();
-    // FIXME(review): "A. & D. Löve" is two Löves: A.Löve, D.Löve (cf. "R. & E. Richter" in
-    // impl_09.rs)
     assert_name("Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Variety, "graecensis")
-        .comb_authors(None, &["A.", "D.Löve"])
+        .comb_authors(None, &["A.Löve", "D.Löve"])
         .bas_authors(None, &["W.Maurer"])
         .code(NomCode::Botanical)
         .nothing_else();

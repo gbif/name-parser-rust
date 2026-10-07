@@ -64,27 +64,24 @@ fn names_with_ex_as_sp_epithet() {
 
 #[test]
 fn names_with_spanish_y_instead_of() {
-    // group: Names with Spanish 'y' instead of '&'
-    // FIXME(review): "Martínez y Fernández-Castillo" is one person (a Spanish double surname), not
-    // two
+    // group: Names with Spanish 'y' instead of '&' — here every 'y' joins the two surnames of one
+    // person, a Spanish double surname (author_teams.rs)
     assert_name("Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)")
         .species("Caloptenopsis", "crassiusculus")
-        .bas_authors(Some("1896"), &["Martínez", "Fernández-Castillo"])
+        .bas_authors(Some("1896"), &["Martínez y Fernández-Castillo"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): "X y Y" is one person (Lagasca y Segura, Clemente y Rubio), not two
     assert_name("Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802")
         .species("Dicranum", "saxatile")
         .comb_authors(
             Some("1802"),
-            &["Lagasca", "Segura", "García", "Clemente", "Rubio"],
+            &["Lagasca y Segura", "García", "Clemente y Rubio"],
         )
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): "Bolvar y Pieltain" is one person (a Spanish double surname), not two
     assert_name("Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967")
         .species_ig("Carabus", "Tanaocarabus", "hendrichsi")
-        .comb_authors(Some("1967"), &["Bolvar", "Pieltain", "Rotger", "Coronado"])
+        .comb_authors(Some("1967"), &["Bolvar y Pieltain", "Rotger", "Coronado"])
         .code(NomCode::Zoological)
         .nothing_else();
 }
@@ -115,11 +112,11 @@ fn possible_canonical() {
         .species("Verpericola", "megasoma")
         .comb_authors(None, &["Dall Pils."])
         .nothing_else();
-    // FIXME(review): basionym author "L. f." and combination author "Klatt" are merged into one
-    // person
+    // an unclosed basionym bracket ends where the filius does: (L. f.) Klatt
     assert_name("Moraea spathulata ( (L. f. Klatt")
         .species("Moraea", "spathulata")
-        .comb_authors(None, &["L.f.Klatt"])
+        .bas_authors(None, &["L.f."])
+        .comb_authors(None, &["Klatt"])
         .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Agropyron pectiniforme var. karabaljikji ined.?")
@@ -454,15 +451,10 @@ fn ignoring_sensu_sec() {
         .comb_authors(None, &["R.Vig."])
         .doubtful()
         .nothing_else();
-    // FIXME(review): the notes become authors: "sensu.Dworkin", "s.str.", and "diversus" in
-    // "Ammodramus caudacutus (s.s.) diversus"
-    // The remaining inputs ("Pseudomonas methanica (...) sensu. Dworkin and Foster
-    // 1956", "Acantholimon ulicinum s.l. (Schultes) Boiss.", "Amaurorhinus
-    // bewichianus (Wollaston,1860) (s.str.)", "Ammodramus caudacutus (s.s.)
-    // diversus", "Asplenium trichomanes L. s.lat. - Asplen trich") aren't yet
-    // disambiguated — the s.str./s.l./s.s. tokens get folded into the author span
-    // when they sit between the species and parenthesised basionym/comb-author
-    // material. Left as TODOs.
+    // bracketed and dotted notes: taxonomic_notes.rs
+    // FIXME(review): an unbracketed "s.l." or "s.lat." before the authorship leaves them unparsed
+    // ("Acantholimon ulicinum s.l. (Schultes) Boiss.", "Asplenium trichomanes L. s.lat. - Asplen
+    // trich")
 }
 
 #[test]
