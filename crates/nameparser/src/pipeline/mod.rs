@@ -270,21 +270,20 @@ pub fn run(
         }
     }
 
-    // Code inference uses the main scientific name's authState by default. When the main
-    // name had no authorship of its own, fall back to the auxiliary authorship state when
-    // it carries a basionym citation (parens) that tips the code, or (failing that) to the
-    // autonym's species-author state — see `code_state_needs_fallback`'s doc comment.
-    let mut code_state: Option<&AuthState> = auth_state.as_ref();
-    if code_state_needs_fallback(code_state)
-        && extra_state.as_ref().is_some_and(|st| {
-            st.basionym_present && (st.basionym.year.is_some() || st.combination.exists())
-        })
-    {
-        code_state = extra_state.as_ref();
-    }
-    if code_state_needs_fallback(code_state) && autonym_state.is_some() {
-        code_state = autonym_state.as_ref();
-    }
+    // Code inference reads the authorship the name ends up with: the separately supplied one
+    // when it carries authors or a basionym (it is applied last, so it wins), else the name
+    // string's own, else the autonym's species author. Java 4.2.0 consulted a separate
+    // authorship only when the name string had none AND it carried a basionym with a year or a
+    // combination author, so `Aus bus` + `L., 1758` got no code while `Aus bus L., 1758` was
+    // zoological — a deliberate change: both paths now infer alike.
+    let has_signal = |st: &&AuthState| !code_state_needs_fallback(Some(st));
+    let code_state: Option<&AuthState> = extra_state
+        .as_ref()
+        .filter(has_signal)
+        .or_else(|| auth_state.as_ref().filter(has_signal))
+        .or(autonym_state.as_ref())
+        .or(auth_state.as_ref())
+        .or(extra_state.as_ref());
 
     // Year that came directly off the author span (e.g. "Linnaeus, 1771") is applied
     // BEFORE code inference because it IS the zoological author-year citation we want to

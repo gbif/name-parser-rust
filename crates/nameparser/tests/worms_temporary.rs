@@ -298,6 +298,7 @@ fn single_letter_species_epithet_is_informal() {
     .species("Collettea", "a")
     .type_(NameType::Informal)
     .comb_authors(Some("2005"), &["Blazewicz-Paszkowycz", "Larsen"])
+    .code(NomCode::Zoological)
     .nothing_else();
 }
 

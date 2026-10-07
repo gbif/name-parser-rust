@@ -2,304 +2,7 @@
 # authorship, rank, code (wire names), the differing fields, then an optional note. A row may only
 # be removed (when the paths agree again) or have its fields narrowed; the tests fail otherwise.
 # variant	input	authorship	rank	code	fields	note
-separate	'Prosthète' Hesse 1861				code	code
-separate	?Lupocyclus sexspinosus Leene, 1940				code	code
-separate	[Acontia] chia Holland, 1894				code	code
-separate	[Diomea] orbicularis Walker, 1858				code	code
-separate	Aa Baker 1940				code	code
-separate	Aaaba de Laubenfels, 1936				code	code
-separate	Aaaba nodosa de Laubenfels, 1936		SPECIES		code	code
-separate	Abacetus laevicollis de Chaudoir, 1869				code	code
-separate	Abbottia F. von Mueller, 1875				code	code
-separate	Abella von Heyden, 1826				code	code
-separate	Abies alba (Müller)				code	code
-separate	Abies alba (Smith)				code	code
-separate	Aboilomimus sichuanensis ornatus Liu, Xiang-wei, M. Zhou, W Bi & L. Tang, 2009				code,rank	code
-separate	Abramis brama subsp. bergi Grib & Vernidub 1935 sec Eschmeyer 2004				code	code
-separate	Abramis Cuvier 1816 sec. Dybowski 1862				code	code
-separate	Abrodictyum caespifrons (C. Chr.) comb. ined.				code	code
-separate	Abryna -petri Paiva, 1860				code	code
-separate	Abryna petri- Paiva, 1860				code	code
-separate	Abryna regis-petri Paiva, 1860				code	code
-separate	Acanthoderes (acanthoderes) satanas Aurivillius, 1923				code	code
-separate	Achromobacter Yabuuchi and Yano, 1981 emend. Yabuuchi et al., 1998				code	code
-separate	Acidobacterium ailaaui Myers & King, 2016				code	code
-separate	Acleris forskoliana [Denis & Schiffermüller], 1775				code	code
-separate	Acranthera virescens (Ridl.) ined.				code	code
-separate	Acripeza Guérin-Ménéville 1838				code	code
-separate	Actinomma leptodermum longispinum Cortese & Bjørklund 1998				code,rank	code
-separate	Adetus fuscoapicalis Souza f. et al. 2001				code	code
-separate	Aeolothrips andalusiacus zur Strassen 1973				code	code
-separate	Agama annectans Blanford, 1870 [orth. error]				code	code
-separate	Agaricus campestris L. : Fr.				code	code
-separate	Agaricus ericetorum Pers. : Fr.				code	code
-separate	Agaricus squamula Berk. & M.A. Curtis 1860				code	code
-separate	Agnetina den Cao, T.K.T. & Bae, 2006				code	code
-separate	Agnetina den Cao, T.K.T. & Bae, 2006		SPECIES		code	code
-separate	Agra not Erwin, 2002				code	code
-separate	Allidothrips zur Strassen, 1968				code	code
-separate	Allidothrips zur Strassen, 1968		GENUS		code	code
-separate	Alnetoidia (Alnella) [sic] sudzhuchenica Sohi, 1998				code	code
-separate	Ameiva plei (sic) Duméril & Bibron, 1839				code	code
-separate	Ameiva plei Rosicky, 1955				code	code
-separate	Amphisbæna fuliginoſa Linnaeus 1758				code	code
-separate	Anatolidamnicola gloeri gloeri Şahin, Koca & Yildirim, 2012				code,rank	code
-separate	Anchimolgidae gen. nov. New Caledonia-Rjh-, 2004				code	code
-separate	Anniella nigra FISCHER 1885				code	code
-separate	Anomalurus laticeps Aguilar-Amat i Banús, 1922				code	code
-separate	Antaplaga dela Druce, 1904				code	code
-separate	Antaplaga dela Druce, 1904		SPECIES		code	code
-separate	Anteplana le Renard 1995				code	code
-separate	Apseudes minutus Brown, 1956 not Claus, 1888				code	code
-separate	Arachnosphaera dichotoma  Jørgensen, 1900				code	code
-separate	Arca m'coyi Tenison-Woods, 1878				code	code
-separate	Architectonica offlexa Iredale, 1931				code	code
-separate	As Slipinski 1982				code	code
-separate	Ataladoris Iredale & O'Donoghue 1923				code	code
-separate	Aus bus [Hübner], 1806				code	code
-separate	Ba Solem 1983				code	code
-separate	Balanoglossus delle Chiaje, 1829				code	code
-separate	Bancroftia Anonymous, 1838				code	code
-separate	Benthogone rosea var. 4-lineata R. Perrier, 1896				code	code
-separate	Biscogniauxia nothofagi Whalley, Læssøe & Kile 1990				code	code
-separate	Boletus versicolor L. : Fr.				code	code
-separate	Bolivina albatrossi Cushman Em. Sellier de Civrieux, 1976				code	code
-separate	Brachyspira Hovind-Hougen, Birch-Andersen, Henrik-Nielsen, Orholm, Pedersen, Teglbjaerg & Thaysen, 1983, 1982				code	code
-separate	Branchinecta papillata Rogers, de los Rios & Zuniga, 2008				code	code
-separate	Ca Dyar 1914				code	code
-separate	Calathus (Lindrothius) KURNAKOV 1961				code	code
-separate	Campylobacter lari (corrig.) Benjamin et al. 1984				code	code
-separate	Campylobacter lari corrig. Benjamin et al. 1984				code	code
-separate	Campylobacter laridis (sic) Benjamin et al. 1984				code	code
-separate	Candinia le Renard, Sabelli & Taviani 1996				code	code
-separate	Canis lupus subsp. Linnaeus, 1758				code	code
-separate	Cantuaria delli Forster, 1968				code	code
-separate	Cantuaria delli Forster, 1968		SPECIES		code	code
-separate	Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967				code	code
-separate	Carabus satyrus satyrus KURNAKOV, 1962				code,rank	code
-separate	Caranx (Usa) Whitley, 1927				code	code
-separate	Caveasphaera Xiao & Knoll, 2000				code	code
-separate	Cerastium arvense var. fuegianum Hook. f.				code	code
-separate	Ceylonesmus vector Chamberlin, 1941				code	code
-separate	Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003				code	code
-separate	Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003				code	code
-separate	Choriozopella trägårdhi Lawrence, 1947				code	code
-separate	Cladoniicola staurospora Diederich, van den Boom & Aptroot 2001				code	code
-separate	Cladoniicola staurospora van den Boom, 2001		SPECIES		code	code
-separate	Cladoniicola van den Boom, 2001				code	code
-separate	Coccinella 11-punctata Linnaeus, 1758				code	code
-separate	Coccinella 6maculata Fabricius, 1781				code	code
-separate	Coleophora mendica Baldizzone & v. d.Wolf 2000				code	code
-separate	Collettea a Blazewicz-Paszkowycz & Larsen, 2005				code	code
-separate	Collettea b Blazewicz-Paszkowycz & Larsen, 2005				code	code
-separate	Conus textile G. B. Sowerby I, 1825				code	code
-separate	Crassatellites janus Hedley, 1906				code	code
-separate	Crematogaster impressa st. brazzai Santschi 1937				code,rank	code
-separate	Crisia romanica Zágoršek Silye & Szabó 2008				code	code
-separate	Ctenotus alacer Storr, 1970 ("1969")				code	code
-separate	Ctenotus alacer Storr, 1970 ["1969"]				code	code
-separate	Ctenotus alacer Storr, 1970 [1969]				code	code
-separate	Culexlineatascinciina Hoser, 2015				code	code
-separate	Cyclotus amethystinus var. β Guppy, 1868				code	code
-separate	Cymatium raderi D’Attilio & Myers, 1984				code	code
-separate	De-Filippii Gortani & Merla 1934				code	code
-separate	Desbrochers des Loges, 1881				code	code
-separate	Deyeuxia coarctata Kunth, 1815 [1816]				code	code
-separate	Dicentria dela Druce, 1894				code	code
-separate	Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802				code	code
-separate	Dicromita (Pterodicromita) Fowler, 1925				code	code
-separate	Drosophila obscura-x Burla, 1951				code	code
-separate	Dysponetus bulbosus Hartmann-Schroder 1982				code	code
-separate	Döringina Ihering 1929 (synonym)				code	code
-separate	Ea Distant 1911				code	code
-separate	Erebia aethiops uralensis Goltz, 1930 nom. praeoccup.				code,rank	code
-separate	Eresus da Lin & Li, 2022				code	code
-separate	Eresus da Lin & Li, 2022		SPECIES		code	code
-separate	Errantia Audouin & H Milne Edwards, 1832				code	code
-separate	Eu-Scalpellum Hoek, 1907				code	code
-separate	Eulaira dela Chamberlin & Ivie, 1933				code	code
-separate	Euphorbia rossiana var. nov. Steinmann, 1199				code	code
-separate	Euplectus cavicollis LeConte, J. L., 1878				code	code
-separate	Euplexauridae McFadden, van Ofwegen & Quattrini, 2022				code	code
-separate	fam. Arrenuridae Thor, 1900				code	code
-separate	Firmicutes corrig. Gibbons & Murray, 1978				code	code
-separate	Flavobacterium branchiophila (sic) Wakabayashi et al. 1989				code	code
-separate	Gahrliepia (G.) tessellata Traub & Morrow 1955				code	code
-separate	Gastrosericus eremorum von Beaumont 1955				code	code
-separate	Gazella farasani Thouless, al Bassri, 1991				code	code
-separate	Ge Nicéville 1895				code	code
-separate	Gerrhonotus lazcanoi Banda-Leal, Manuel Nevárez-de los Reyes and Bryson, 2017				code	code
-separate	Glis wagneri Đulić & Tortić, 1960				code	code
-separate	Glomopsis lonicerae Peck ex C.J. Gould 1945				code	code
-separate	Glomopsis lonicerae Peck ex. C.J. Gould 1945				code	code
-separate	Gracillaria v-flava Haworth, 1828				code	code
-separate	Gyracanthus filius Snyder, 2011				code	code
-separate	Gyrosigma angulatum var. gamma Griffith & Henfrey, 1860, 1856				code	code
-separate	Hebeloma album Peck 1900 non ss. auct. europ.				code	code
-separate	Hegeter (Hegeter) intercedens Lindberg H 1950				code	code
-separate	Hegeter (Hegeter) tenuipunctatus Brullé, 1838				code	code
-separate	Helophorus (Lihelophorus) ser Zaitzev, 1908				code	code
-separate	Hexaconthium pachydermum form A Cortese & Bjørklund 1998				code	code
-separate	Hexaconthium pachydermum forma legitime Cortese & Bjørklund 1998				code	code
-separate	Huaiyuanella Xing, Yan & Yin, 1984				code	code
-separate	Hyalesthes angustula Horvßth, 1909				code	code
-separate	Ia Thomas 1902				code	code
-separate	Io Blanchard 1852				code	code
-separate	Io Lea 1831				code	code
-separate	Ix Bergroth 1916				code	code
-separate	Ja Uéno 1955				code	code
-separate	Jezzinothrips cretacicus amazur Strassen, 1973				code,rank	code
-separate	Jezzinothrips cretacicus zur Strassen, 1973				code	code
-separate	Junellia o'donelli Moldenke, 1946				code	code
-separate	Kinosternidae　Agassiz, 1857				code	code
-separate	Kudoa amazonica Velasco, Sindeaux Neto, Videira, de Cássia Silva do Nascimento, Gonçalves & Matos, 2019				code	code
-separate	La Bleszynski 1966				code	code
-separate	Lacerta agilis Linnaeus f., 1789				code	code
-separate	Laevapex vazi dos Santos, 1989				code	code
-separate	Lamprostiba pu!chra Pace, 2014				code	code
-separate	Latrodectus 13decimguttatus Walckenaer, 1805				code	code
-separate	Lecanora wetmorei Śliwa 2004				code	code
-separate	Lepidanthrax coquilletti Evenhuis and Hall, 0000				code	code
-separate	Leptonetela la Wang & Li, 2017				code	code
-separate	Leptonetela la Wang & Li, 2017		SPECIES		code	code
-separate	Leptura leætifica Dow, 1913				code	code
-separate	Leptura lætifica Dow, 1913				code	code
-separate	Leucopogon veillonii (Virot) comb. ined.				code	code
-separate	Leæptura laetifica Dow, 1913				code	code
-separate	Leœptura laetifica Dow, 1913				code	code
-separate	Lo Seale 1906				code	code
-separate	Lobotes auctorum Günther, 1859				code	code
-separate	Lynceus huentelauquensis  Sigvardt, Rogers, De los Ríos, Palero, and Olesen, 2019				code	code
-separate	Læptura laetifica Dow, 1913				code	code
-separate	Malamatidia zu Jäger & Dankittipakul, 2010		SPECIES		code	code
-separate	Melanargia halimede menetriesi Wagener, 1959 & 1961				code,rank	code
-separate	Melania testudinaria Von dem Busch, 1842				code	code
-separate	Membranipora minuscula Canu, 1911 non Hincks, 1882				code	code
-separate	Mergus merganser Linnaeus, 1758				code	code
-separate	Mesotrichia senior (Vachal)				code	code
-separate	Mico rondoni Ferrari, Sena, M. P. C. Schneider, & e Silva Júnior, 2010				code	code
-separate	Micropleura v Linstow 1906				code	code
-separate	Micropleura v Linstow, 1906				code	code
-separate	Missing penchinati Bourguignat, 1870				code	code
-separate	Monocelis non-scripta Curini-Galletti, 2014				code	code
-separate	Moraea spathulata ( (L. f. Klatt				code	code
-separate	Musca capraria Trustees of the British Museum (Natural History), 1939				code	code
-separate	Musca domeſtica Linnaeus 1758				code	code
-separate	Muscicapa randi Amadon & duPont, 1970				code	code
-separate	Myotis fimbriatus taiwanensis Ärnbäck-Christie-Linde, 1908				code,rank	code
-separate	Navicula ambigua f. craticularis Istv?nffi, 1898, 1897				code	code
-separate	Nemopistha sinica C.-k. Yang, 1986				code	code
-separate	Nitocris (Nitocris) similis Breuning, 1956 (nec Gahan, 1893)				code	code
-separate	Nototriton matama Boza-Oviedo, Rovito, Chaves, García-Rodríguez, Artavia, Bolaños, and Wake, 2012				code	code
-separate	Nucula m'andrewii Hanley, 1860				code	code
-separate	Oa Girault 1929				code	code
-separate	Ocydromus dalmatinus dalmatinus Dejean, 1831 )				code,rank	code
-separate	Ocydromus dalmatinus dalmatinus Dejean, 1831)				code,rank	code
-separate	Oligota (Logiota) Mulsant & Rey 1873				code	code
-separate	Ophidocampa tapacumae Ehrenberg, 1870, 1869				code	code
-separate	Orcevia zu Yu & Zhang, 2023		SPECIES		code	code
-separate	Orthosia kindermannii Fischer v. Roslerstamm, 1837				code	code
-separate	Oxytropis minjanensis Rech. f.				code	code
-separate	Parachipteria van der Hammen, 1952				code	code
-separate	Paraconchoecia oblonga f. (A) Müller, 1906				code	code
-separate	Paraconchoecia oblonga f. (a) Müller, 1906				code	code
-separate	Paralvinella dela Detinova, 1988				code	code
-separate	Passalus (Pertinax) gaboi Jiménez-Maxim & Reyes, 2022				code	code
-separate	Peltula coriacea Büdel, Henssen & Wessels 1986				code	code
-separate	Periclimenaeus aurae dos Santos, Calado & Araújo, 2008				code	code
-separate	Peristernia nassatula forskali Tapparone-Canefri 1875				code,rank	code
-separate	Phagesaurus Price, 1950				code	code
-separate	Phalium (Semicassis) vector R. T. Abbott, 1993				code	code
-separate	Phora sororcula v d Wulp 1871				code	code
-separate	Physomerinus septemfoveolatus Schaufuss, L. W., 1877				code	code
-separate	Platypus bicaudatulus Schedl (1935)				code	code
-separate	Platypus bicaudatulus Schedl (1935h)				code	code
-separate	Platypus bicaudatulus Schedl 1935				code	code
-separate	Platypus bicaudatulus Schedl f. 1935				code	code
-separate	Platypus bicaudatulus Schedl filius 1935				code	code
-separate	Platypus bicaudatulus Schedl, 1935h				code	code
-separate	Polypodium pectinatum L. f.				code	code
-separate	Polypodium pectinatum L. f., Rosenst.				code	code
-separate	Prion Lacépède, 1799				code	code
-separate	Proboscina subechinata Canu & Bassler, 1920 non d'Orbigny, 1853				code	code
-separate	Procamallanus (Spirocamallanus) soodi Lakshmi & Kumari, 2001 nec (Gupta & Masood, 1988)				code	code
-separate	Protis hydrothermica ten Hove & Zibrowius, 1986				code	code
-separate	Pseudocercospora dendrobii Goh & W.H. Hsieh 1990				code	code
-separate	Pseudocercospora dendrobii Goh and W.H. Hsieh 1990				code	code
-separate	Pseudocercospora dendrobii Goh et W.H. Hsieh 1990				code	code
-separate	Pseudocercospora dendrobii U. Braun & Crous 2003				code	code
-separate	Pseudocercospora Speg. 1910				code	code
-separate	Pseudocercospora Spegazzini, 1910				code	code
-separate	Pseudocyrtopora el Hajjaji 1987				code	code
-separate	Pteris longifolia fm stipularis Linnaeus 1753				code	code
-separate	Pteris longifolia fm. stipularis Linnaeus 1753				code	code
-separate	Puccinia band-i-amirii Durrieu, 1975				code	code
-separate	Ra Whitley 1931				code	code
-separate	Raja batis Forster f., 1781				code	code
-separate	Rhynchonellidae d'Orbigny 1847				code	code
-separate	Rhynchonellidae d‘Orbigny 1847				code	code
-separate	Rhynchonellidae d’Orbigny 1847				code	code
-separate	Rotalina cultrata d'Orb. 1840				code	code
-separate	Ruteloryctes bis Dechambre, 2006				code	code
-separate	Saccharomyces drosophilae anon. 1923				code	code
-separate	Salix repens L. subsp. galeifolia Neumann ex Rech. f.				code	code
-separate	Salix ×capreola Andersson (1867)				code	code
-separate	Scincus homolocephalus (sic) Wiegmann, 1828				code	code
-separate	Scoparia dela Clarke, 1965				code	code
-separate	Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena 2017				code	code
-separate	Selenops ab Logunov & Jäger, 2015				code	code
-separate	Seleuca chûjôi Voss, 1957				code	code
-separate	Sepidium capricorne des Desbrochers des Loges, 1881				code	code
-separate	Sepidium capricorne Desbrochers des Loges, 1881				code	code
-separate	Simia (Cercop.) nasuus Kerr 1792				code	code
-separate	Sp. Lupocyclus sexspinosus Leene, 1940				code	code
-separate	Sphaerotheca    fuliginea    f.     dahliae    Movss.     1967				code	code
-separate	Sphagebranchus Bloch, 1795				code	code
-separate	Sphagesauridae Kuhn, 1968				code	code
-separate	Spirophora bacterium Lendenfeld, 1887				code	code
-separate	Stagonospora polyspora M.T. Lucas & Sousa da Câmara 1934				code	code
-separate	Stagonospora polyspora M.T. Lucas et Sousa da Câmara 1934				code	code
-separate	Staphylococcus hyicus chromogenes Devriese et al. 1978				code,rank	code
-separate	Stenosigma humerale Giordani Soika, 1990				code	code
-separate	Sterigmostemon rhodanthum Rech. f. et al. in Rech. f.				code	code
-separate	Strombus guidoi Man in't Veld & De Turck, 1998				code	code
-separate	Strombus vittatus entropi Man in't Veld & Visser, 1993				code,rank	code
-separate	Sténométope laevissimus Bibron 1855				code	code
-separate	Tenthredo (Macrophya) Dahlbom, 1835				code	code
-separate	Testudo graeca Linnaeus f., 1789				code	code
-separate	Tipula rubiginosa Loew, 1863, nom. nov.				code	code
-separate	Tortolena dela Chamberlin & Ivie, 1941				code	code
-separate	Trappeindia Castellano, S.L. Mill., L. Singh bis & T.N. Lakh. 2012				code	code
-separate	Tremoctopus violaceus Delle Chiaje, 1830				code	code
-separate	Tridentella tangeroae Bruce, 198?				code	code
-separate	Trismegistia monodii Ando, 1973 [1974]				code	code
-separate	Trophon d'orbignyi Carcelles, 1946				code	code
-separate	Tuber liui A S. Xu 1999				code	code
-separate	Turkozelotes attavirus Chatzaki, 2019				code	code
-separate	Ty Bory de St. Vincent 1827				code	code
-separate	Ua Girault 1929				code	code
-separate	Uba fallai Fletcher, 1938				code	code
-separate	Undella hyalina var. a Brandt, 1907				code	code
-separate	Undella hyalina var. b Brandt, 1907				code	code
-separate	Vachonobisium troglophilum Vitali-di Castri, 1963				code	code
-separate	Vernoniastrum musofense var. miamensis (S. Moore) comb. ined.				code	code
-separate	Verrucaria von der Linde, 1902				code	code
-separate	Vulpes vulpes silaceus Miller, 1907				code,rank	code
-separate	Vulpes vulpes sp. silaceus Miller, 1907				code	code
-separate	Zanthopsis bispinosa M'Coy, 1849				code	code
-separate	Zodarion van Bosmans, 2009				code	code
-separate	Zodarion van Bosmans, 2009		SPECIES		code	code
-separate	Zu Walters & Fitch 1960				code	code
-separate	Zygocera norfolkensis Mac'Keown 1938				code	code
-separate	Zygocera norfolkensis MacKeown 1938				code	code
-separate	Zygocera norfolkensis Mc'Keown 1938				code	code
-separate	Zygocera norfolkensis McKeown 1938				code	code
-separate	×Agropogon P. Fourn. 1934				code	code
-separate	Ærenea cognata Lacordaire, 1872				code	code
-separate	Æschopalæa grisella Pascoe, 1864				code	code
-separate	Östrupia Heiden ex Hustedt, 1935				code	code
-separate	† Tuarangiida MacKinnon, 1982				code	code
-separate	 Anolis marmoratus girafus LAZELL 1964: 377				code,combinationAuthorship,publishedInPage,rank	strip
+separate	 Anolis marmoratus girafus LAZELL 1964: 377				combinationAuthorship,publishedInPage	strip
 separate	"Pseudomonas denitrificans" (Christensen, 1903) Bergey et al., 1923, nom. rejic.				combinationAuthorship,unparsed	strip
 separate	<i>Abies alba</i> Mill. &amp; Rohe				combinationAuthorship,warnings	strip
 separate	Abarema clypearia (Jack) Kosterm., P. P.				combinationAuthorship,doubtful	strip
@@ -310,30 +13,29 @@ separate	Abies alba Smith/Jones				doubtful,warnings	strip
 separate	Abies alba Smith?				doubtful,warnings	strip
 separate	Abies brevifolia cv. ex Dallim.				combinationAuthorship	strip
 separate	Abutilon ×hybridum cv. ex Voss				combinationAuthorship	strip
-separate	Acarospora cratericola cratericola Shenk 1974 group				code,combinationAuthorship,rank	strip
-separate	Acarospora cratericola cratericola Shenk 1974 species complex				code,combinationAuthorship,rank	strip
-separate	Acarospora cratericola cratericola Shenk 1974 species group				code,combinationAuthorship,rank	strip
+separate	Acarospora cratericola cratericola Shenk 1974 group				combinationAuthorship	strip
+separate	Acarospora cratericola cratericola Shenk 1974 species complex				combinationAuthorship	strip
+separate	Acarospora cratericola cratericola Shenk 1974 species group				combinationAuthorship	strip
 separate	Acer campestre L. cv. 'Elsrijk' Broerse				specificAuthorship	strip
 separate	Achillea millefolium L. s.s.				combinationAuthorship,taxonomicNote	strip
 separate	Achillea millefolium L. s.s. - junk here				combinationAuthorship,state,taxonomicNote,unparsed	strip
 separate	Achillea millefolium s. s.				combinationAuthorship,taxonomicNote	strip
 separate	Achillea millefolium s.s.				combinationAuthorship,taxonomicNote	strip
-separate	Aegiphila pyramidata Rich. ex Moldenke, Phytologia 1: 204, in obs., pro syn. (1937).				combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
-separate	Antacanthus Rich. ex DC., Prodr. 4: 484 (1830), pro syn.				combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
+separate	Aegiphila pyramidata Rich. ex Moldenke, Phytologia 1: 204, in obs., pro syn. (1937).				code,combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
+separate	Antacanthus Rich. ex DC., Prodr. 4: 484 (1830), pro syn.				code,combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
 separate	Asplenium mayi ht.May; Gard.				combinationAuthorship	strip
 separate	Asplenium mayii ht.May; Gard.				combinationAuthorship	strip
 separate	Asplenium trichomanes L. s.lat. - Asplen trich				combinationAuthorship,state,taxonomicNote,unparsed	strip
-separate	Casearia arborea Urb., Symb. Antill. (Urban). 4(3): 421 (1910).				combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
+separate	Casearia arborea Urb., Symb. Antill. (Urban). 4(3): 421 (1910).				code,combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
 separate	Combretum Loefl. (1758), nom. cons. [= Grislea L. 1753].				code,combinationAuthorship,doubtful,nomenclaturalNote,state,unparsed	strip
-separate	Ctenotus alacer Storr, 1887 ("1886-1888")				code,combinationAuthorship	strip
-separate	Ctenotus alacer Storr, 1970 (imprint 1969)				code,combinationAuthorship	strip
-separate	Ctenotus alacer Storr, 1970 (not 1969)				code,combinationAuthorship,taxonomicNote	strip
+separate	Ctenotus alacer Storr, 1887 ("1886-1888")				combinationAuthorship,warnings	strip
+separate	Ctenotus alacer Storr, 1970 (imprint 1969)				combinationAuthorship	strip
+separate	Ctenotus alacer Storr, 1970 (not 1969)				combinationAuthorship,taxonomicNote	strip
 separate	Davallia decora ht.Bull.; Gard.Chr.				combinationAuthorship	strip
 separate	denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017				combinationAuthorship	strip
 separate	Dryopteris X separabilis Small (pro sp.)				combinationAuthorship	strip
-separate	Eucyclops serrulatus mihi Dussart, Graf & Husson, 1966				code,combinationAuthorship,warnings	strip
+separate	Eucyclops serrulatus mihi Dussart, Graf & Husson, 1966				combinationAuthorship,warnings	strip
 separate	Eudoxia cf. Chelophyes contorta				combinationAuthorship,epithetQualifier,type	strip
-separate	Eurodryas orientalis Herrich-Schäffer 1845-1847				code,warnings	strip
 separate	Galium tricorne Stokes, pro parte				combinationAuthorship,doubtful	strip
 separate	Galium tricorne Stokes,pro parte				combinationAuthorship,doubtful	strip
 separate	Gobiosoma spec (Ginsburg, 1939)				basionymAuthorship,code,combinationAuthorship	strip
@@ -341,52 +43,39 @@ separate	Gymnogramma alstoni ht.Birkenh.; Gard.				combinationAuthorship	strip
 separate	Gymnogramma sprengeriana ht.Wiener Ill.				combinationAuthorship	strip
 separate	Hemicloeina spec Platnick, 2002				code,combinationAuthorship	strip
 separate	Heteralocha acutirostris (Gould, 1837) Huia N E†				extinct	strip
-separate	Homo naledi Berger, Hawks, de Ruiter, Churchill, Schmid, Delezene, Kivell, Garvin, Williams, DeSilva, Skinner, Musiba, Cameron, Holliday, Harcourt-Smith, Ackermann, Bastir, Bogin, Bolter, Brophy, Cofran, Congdon, Deane, Dembo, Drapeau, Elliott, Feuerriegel, Garcia-Martinez, Green, Gurtov, Irish, Kruger, Laird, Marchi, Meyer, Nalla, Negash, Orr, Radovcic, Schroeder, Scott, Throckmorton, Tocheri, VanSickle, Walker, Wei & Zipfel, 2015 sec. Berger, Hawks, de Ruiter, Churchill, Schmid, Delezene, Kivell, Garvin, Williams, DeSilva, Skinner, Musiba, Cameron, Holliday, Harcourt-Smith, Ackermann, Bastir, Bogin, Bolter, Brophy, Cofran, Congdon, Deane, Dembo, Drapeau, Elliott, Feuerriegel, Garcia-Martinez, Green, Gurtov, Irish, Kruger, Laird, Marchi, Meyer, Nalla, Negash, Orr, Radovcic, Schroeder, Scott, Throckmorton, Tocheri, VanSickle, Walker, Wei & Zipfel				code,warnings	strip
+separate	Homo naledi Berger, Hawks, de Ruiter, Churchill, Schmid, Delezene, Kivell, Garvin, Williams, DeSilva, Skinner, Musiba, Cameron, Holliday, Harcourt-Smith, Ackermann, Bastir, Bogin, Bolter, Brophy, Cofran, Congdon, Deane, Dembo, Drapeau, Elliott, Feuerriegel, Garcia-Martinez, Green, Gurtov, Irish, Kruger, Laird, Marchi, Meyer, Nalla, Negash, Orr, Radovcic, Schroeder, Scott, Throckmorton, Tocheri, VanSickle, Walker, Wei & Zipfel, 2015 sec. Berger, Hawks, de Ruiter, Churchill, Schmid, Delezene, Kivell, Garvin, Williams, DeSilva, Skinner, Musiba, Cameron, Holliday, Harcourt-Smith, Ackermann, Bastir, Bogin, Bolter, Brophy, Cofran, Congdon, Deane, Dembo, Drapeau, Elliott, Feuerriegel, Garcia-Martinez, Green, Gurtov, Irish, Kruger, Laird, Marchi, Meyer, Nalla, Negash, Orr, Radovcic, Schroeder, Scott, Throckmorton, Tocheri, VanSickle, Walker, Wei & Zipfel				warnings	strip
 separate	Indigofera phyllogramme var. aphylla R.Vig., p.p.B				combinationAuthorship,doubtful	strip
 separate	Lachenalia tricolor var. nelsonii (auct.) Baker				state,taxonomicNote,unparsed	strip
 separate	Lachenalia tricolor var. nelsonii (hort.) Baker				state,unparsed	strip
 separate	Lachenalia tricolor var. nelsonii (ht.) Baker				state,unparsed	strip
 separate	Lampona spec Platnick, 2000				code,combinationAuthorship	strip
-separate	Macroplectra unicolor Moore, 1858/59				code,warnings	strip
 separate	Micromeria cristata subsp. kosaninii ( ilic) ined.				state,unparsed	strip
 separate	Onthophagus cf. Aphodius				combinationAuthorship,epithetQualifier,type	strip
-separate	Passalus (Pertinax) gaboi Jiménez‑Ferbans & Reyes‑Castillo, 2022				code,combinationAuthorship,warnings	strip
-separate	Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75. figs 1, 2B, and 3. 1988. Figs 36-37				combinationAuthorship,publishedIn,publishedInYear	strip
-separate	Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37				combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
-separate	Passiflora eglandulosa J.M. MacDougal. Lingua franca de Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37				combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
-separate	Passiflora jussieui Feuillet, Journal of the Botanical Research Institute of Texas 4(2): 611, f. 1. 2010. Figs 2E, F, 3E, F				combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
-separate	Passiflora plumosa Feuillet & Cremers, Proceedings of the Koninklijke Nederlandse Akademie van Wetenschappen, Series C: Biological and Medical Sciences 87(3): 381, f. 2. 1984. Fig. 2I, J				combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
+separate	Passalus (Pertinax) gaboi Jiménez‑Ferbans & Reyes‑Castillo, 2022				combinationAuthorship,warnings	strip
+separate	Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75. figs 1, 2B, and 3. 1988. Figs 36-37				code,combinationAuthorship,publishedIn,publishedInYear	strip
+separate	Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37				code,combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
+separate	Passiflora eglandulosa J.M. MacDougal. Lingua franca de Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37				code,combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
+separate	Passiflora jussieui Feuillet, Journal of the Botanical Research Institute of Texas 4(2): 611, f. 1. 2010. Figs 2E, F, 3E, F				code,combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
+separate	Passiflora plumosa Feuillet & Cremers, Proceedings of the Koninklijke Nederlandse Akademie van Wetenschappen, Series C: Biological and Medical Sciences 87(3): 381, f. 2. 1984. Fig. 2I, J				code,combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	strip
 separate	Puya acris ht.				combinationAuthorship	strip
 separate	Quadrella steyermarkii (Standl.) Iltis &amp; Cornejo				combinationAuthorship,warnings	strip
-separate	Recilia truncatus Dash & Viraktamath, 1998: 29				code,publishedInPage	strip
-separate	Recilia truncatus Dash & Viraktamath, 1998:29				code,publishedInPage	strip
-separate	Regulus modestus mihi. Gould 1837				code,combinationAuthorship,warnings	strip
-separate	Salmonidae Jarocki or Schinz, 1822				code,doubtful,warnings	strip
-separate	Samyda arborea Rich., Actes Soc. Hist. Nat. Paris 1: 109 (1792).				combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
-separate	Seryda basirei Druce, 1891/901				code,warnings	strip
-separate	Sicyoniidae † Ortmann, 1898				code,extinct	strip
+separate	Recilia truncatus Dash & Viraktamath, 1998: 29				publishedInPage	strip
+separate	Recilia truncatus Dash & Viraktamath, 1998:29				publishedInPage	strip
+separate	Regulus modestus mihi. Gould 1837				combinationAuthorship,warnings	strip
+separate	Salmonidae Jarocki or Schinz, 1822				doubtful,warnings	strip
+separate	Samyda arborea Rich., Actes Soc. Hist. Nat. Paris 1: 109 (1792).				code,combinationAuthorship,doubtful,publishedIn,publishedInYear,warnings	strip
+separate	Sicyoniidae † Ortmann, 1898				extinct	strip
 separate	Spermacoce tenuis Sess? & Moc., orth. var.				doubtful,warnings	strip
 separate	Stebbinsoseris gen. nov. ined.				nomenclaturalNote	strip
 separate	Taraxacum piet-oosterveldii H. Øllg. in press				combinationAuthorship,manuscript,nomenclaturalNote	strip
 separate	Torymus bangalorensis (Mani &amp; Kurian, 1953)				basionymAuthorship,warnings	strip
 separate	Tragacantha leporina (?) Kuntze				state,unparsed	strip
-separate	Tridentella tangeroae Bruce, 1987-92				code,warnings	strip
-separate	Turritella aff. adulterata Deshayes 1820-1851				code,warnings	strip
 separate	Uroleptopsis viridis (Perejaslawzewa, 1886) ?				doubtful,warnings	strip
 separate	Velutina haliotoides (Linnaeus, 1758) <i>sensu</i> Fabricius, 1780				code,combinationAuthorship,taxonomicNote,warnings	strip
 separate	Velutina haliotoides (Linnaeus, 1758), <i>sensu</i> Fabricius, 1780				code,combinationAuthorship,taxonomicNote,warnings	strip
 separate	Vespa emarginata Linnaeus, 1758: Fabricius, 1793				code,sanctioningAuthor,taxonomicNote	strip
 separate	Zygonyx spec Dijkstra & Kipping				combinationAuthorship	strip
-embedded	Aus bus	Gerstaecker, [C.E.] A., 1871			code	code
-embedded	Aus bus	[Hübner, 1806]			code	code
-embedded	Cercis arizonica	Anon ex Patraw, 1932			code	code
-embedded	Clupea ovalis	Anonymous [Bennett], 1830			code	code
-embedded	Collettea a	Blazewicz-Paszkowycz & Larsen, 2005	SPECIES		code	code
-embedded	Eurilenus	Anon., 1829			code	code
-embedded	Eurytoma maculipes	Ashmead 1887 not Motschulsky 1863			code	code
-embedded	Monas vulgaris	(Cienkowski) Unknown			code	code
-embedded	Prionus heros	Fall, 1905 (nec Semenov, 1900)			code	code
-embedded	Serranus confertus	Anonymous & Bennett, 1830			code	code
+embedded	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship	deliberate: a different separate authorship wins over the name string's own
 embedded	?Archaeopharetra sp.	of Zhuravlev & Gravestock 1994	SPECIES		warnings	strip
 embedded	Abies alba  Mill	Mill.			combinationAuthorship	strip
 embedded	Accacladocoelium sp.	[of Sokolov et al., 2025]	SPECIES		warnings	strip
@@ -399,16 +88,6 @@ embedded	Eucnidoideae	ined.	SUPERFAMILY		nomenclaturalNote	strip
 embedded	Eucnidoideae	ms.	SUPERFAMILY		nomenclaturalNote	strip
 embedded	Saprinus sp.	sp.	GENUS		phrase,warnings	strip
 embedded	Spongia	[Renier]	GENUS		combinationAuthorship,phrase,type	strip
-redundant	Aus bus	Gerstaecker, [C.E.] A., 1871			code	code
-redundant	Aus bus	[Hübner, 1806]			code	code
-redundant	Cercis arizonica	Anon ex Patraw, 1932			code	code
-redundant	Clupea ovalis	Anonymous [Bennett], 1830			code	code
-redundant	Collettea a	Blazewicz-Paszkowycz & Larsen, 2005	SPECIES		code	code
-redundant	Eurilenus	Anon., 1829			code	code
-redundant	Eurytoma maculipes	Ashmead 1887 not Motschulsky 1863			code	code
-redundant	Monas vulgaris	(Cienkowski) Unknown			code	code
-redundant	Prionus heros	Fall, 1905 (nec Semenov, 1900)			code	code
-redundant	Serranus confertus	Anonymous & Bennett, 1830			code	code
 redundant	 Anolis marmoratus girafus LAZELL 1964: 377				combinationAuthorship	redundant
 redundant	"Pseudomonas denitrificans" (Christensen, 1903) Bergey et al., 1923, nom. rejic.				combinationAuthorship,nomenclaturalNote	redundant
 redundant	<i>Abies alba</i> Mill. &amp; Rohe				combinationAuthorship	redundant
@@ -433,12 +112,12 @@ redundant	Achillea millefolium L. s.s. - junk here				combinationAuthorship	redu
 redundant	Achillea millefolium s. s.				combinationAuthorship	redundant
 redundant	Achillea millefolium s.s.				combinationAuthorship	redundant
 redundant	Aconitum napellus var. formosum (Rchb.) W. D. J. Koch (nom. ambig.)				nomenclaturalNote	redundant
-redundant	Aegiphila pyramidata Rich. ex Moldenke, Phytologia 1: 204, in obs., pro syn. (1937).				combinationAuthorship,doubtful,nomenclaturalNote,warnings	redundant
+redundant	Aegiphila pyramidata Rich. ex Moldenke, Phytologia 1: 204, in obs., pro syn. (1937).				code,combinationAuthorship,doubtful,nomenclaturalNote,warnings	redundant
 redundant	Agama annectans Blanford, 1870 [orth. error]				nomenclaturalNote	redundant
 redundant	Agrostis compressa Willd., nom. superfl.				nomenclaturalNote	redundant
 redundant	Amanita pruittii A.H.Sm. ex Tulloss & J.Lindgr., nom. prov.				nomenclaturalNote	redundant
 redundant	Amphiprora pseudoduplex (Osada & Kobayasi, 1990) comb. nov.				nomenclaturalNote	redundant
-redundant	Antacanthus Rich. ex DC., Prodr. 4: 484 (1830), pro syn.				combinationAuthorship,doubtful,nomenclaturalNote,warnings	redundant
+redundant	Antacanthus Rich. ex DC., Prodr. 4: 484 (1830), pro syn.				code,combinationAuthorship,doubtful,nomenclaturalNote,warnings	redundant
 redundant	Anthoceros agrestis var. agrestis Paton nom. cons. prop.				nomenclaturalNote	redundant
 redundant	Anthurium lanceum Engl. nom.illeg.				nomenclaturalNote	redundant
 redundant	Anthurium lanceum Engl., nom. illeg., non. A. lancea.				nomenclaturalNote	redundant
@@ -458,13 +137,13 @@ redundant	Cantuaria sp.	Forster, 1968	SPECIES		warnings	redundant
 redundant	Cantuaria sp. Forster, 1968	Forster	SPECIES		phrase	redundant
 redundant	Cantuaria sp. Forster, 1968	Forster 1968	SPECIES		phrase	redundant
 redundant	Cantuaria sp. Forster, 1968	Forster, 1968	SPECIES		phrase	redundant
-redundant	Casearia arborea Urb., Symb. Antill. (Urban). 4(3): 421 (1910).				combinationAuthorship,doubtful,warnings	redundant
+redundant	Casearia arborea Urb., Symb. Antill. (Urban). 4(3): 421 (1910).				code,combinationAuthorship,doubtful,warnings	redundant
 redundant	Cavendishia polyantha H?rold, pro syn.				nomenclaturalNote	redundant
 redundant	Coccocypselum tontanea (Aubl.) Kunth, nom. superfl.				nomenclaturalNote	redundant
 redundant	Combretum Loefl. (1758), nom. cons. [= Grislea L. 1753].				combinationAuthorship	redundant
 redundant	Corydalis bulbosa (L.) DC., nom. utique rej.				nomenclaturalNote	redundant
 redundant	Cryptomys "Kasama" Kawalika et al., 2001, nom. nud. (Kasama, Zambia) .				nomenclaturalNote	redundant
-redundant	Ctenotus alacer Storr, 1887 ("1886-1888")				combinationAuthorship	redundant
+redundant	Ctenotus alacer Storr, 1887 ("1886-1888")				combinationAuthorship,warnings	redundant
 redundant	Ctenotus alacer Storr, 1970 (imprint 1969)				combinationAuthorship	redundant
 redundant	Ctenotus alacer Storr, 1970 (not 1969)				taxonomicNote	redundant
 redundant	Davallia decora ht.Bull.; Gard.Chr.				combinationAuthorship	redundant
@@ -483,17 +162,17 @@ redundant	Fucus ramosissimus Oeder, nom. ambig.				nomenclaturalNote	redundant
 redundant	Fucus vesiculosus forma volubilis (Goodenough & Woodward) H.T. Powell, nom. inval				nomenclaturalNote	redundant
 redundant	Galium tricorne Stokes, pro parte				combinationAuthorship	redundant
 redundant	Galium tricorne Stokes,pro parte				combinationAuthorship	redundant
-redundant	Gobiosoma spec (Ginsburg, 1939)				combinationAuthorship	redundant
+redundant	Gobiosoma spec (Ginsburg, 1939)				code,combinationAuthorship	redundant
 redundant	Gymnogramma alstoni ht.Birkenh.; Gard.				combinationAuthorship	redundant
 redundant	Gymnogramma sprengeriana ht.Wiener Ill.				combinationAuthorship	redundant
 redundant	Hallo (nom.illeg.)				nomenclaturalNote	redundant
-redundant	Hemicloeina spec Platnick, 2002				combinationAuthorship	redundant
+redundant	Hemicloeina spec Platnick, 2002				code,combinationAuthorship	redundant
 redundant	Indigofera phyllogramme var. aphylla R.Vig., p.p.B				combinationAuthorship	redundant
 redundant	Ipomopsis tridactyla (Rydb.) Wilken, comb. nov. ined.				nomenclaturalNote	redundant
 redundant	Iridaea undulosa var. papillosa Bory de Saint-Vincent, nom. nud.				nomenclaturalNote	redundant
 redundant	Kluyver and van Niel, 1936 emend. Barker, 1956 (Approved Lists, 1980) , nom. cons., emend. Mah and Kuhn, 1984				nomenclaturalNote	redundant
 redundant	Lachenalia tricolor var. nelsonii (auct.) Baker				taxonomicNote	redundant
-redundant	Lampona spec Platnick, 2000				combinationAuthorship	redundant
+redundant	Lampona spec Platnick, 2000				code,combinationAuthorship	redundant
 redundant	Leptocephalus	[Ophichthidae]	GENUS		phrase	redundant
 redundant	Lespedeza bicolor var. intermedia Maxim. , nom. ambig.				nomenclaturalNote	redundant
 redundant	Leucopogon veillonii (Virot) comb. ined.				nomenclaturalNote	redundant
@@ -505,7 +184,7 @@ redundant	Onthophagus cf. Aphodius				combinationAuthorship	redundant
 redundant	Orobanche riparia Collins, sp. nov. ined.				nomenclaturalNote	redundant
 redundant	Pandanus odorifer (Forssk.) Kuntze, nom. dub.				nomenclaturalNote	redundant
 redundant	Passalus (Pertinax) gaboi Jiménez‑Ferbans & Reyes‑Castillo, 2022				combinationAuthorship	redundant
-redundant	Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75. figs 1, 2B, and 3. 1988. Figs 36-37				combinationAuthorship	redundant
+redundant	Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75. figs 1, 2B, and 3. 1988. Figs 36-37				code,combinationAuthorship	redundant
 redundant	Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37				code,combinationAuthorship,sanctioningAuthor	redundant
 redundant	Passiflora eglandulosa J.M. MacDougal. Lingua franca de Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37				code,combinationAuthorship,sanctioningAuthor	redundant
 redundant	Passiflora jussieui Feuillet, Journal of the Botanical Research Institute of Texas 4(2): 611, f. 1. 2010. Figs 2E, F, 3E, F				code,combinationAuthorship,sanctioningAuthor	redundant
@@ -519,7 +198,7 @@ redundant	Quadrella steyermarkii (Standl.) Iltis &amp; Cornejo				combinationAut
 redundant	Quercus aquifolia Kotschy ex A.DC., nom. subnud.				nomenclaturalNote	redundant
 redundant	Ramonda Rich., nom. cons.				nomenclaturalNote	redundant
 redundant	Regulus modestus mihi. Gould 1837				combinationAuthorship	redundant
-redundant	Samyda arborea Rich., Actes Soc. Hist. Nat. Paris 1: 109 (1792).				combinationAuthorship,doubtful,warnings	redundant
+redundant	Samyda arborea Rich., Actes Soc. Hist. Nat. Paris 1: 109 (1792).				code,combinationAuthorship,doubtful,warnings	redundant
 redundant	Sao hispanica R. & E. Richter nom. nud. in Sampelayo 1935				nomenclaturalNote	redundant
 redundant	Saprinus sp.	sp.	GENUS		phrase,warnings	redundant
 redundant	Sargassum angustifolium forma filiforme V. Krishnamurthy & H. Joshi, nom. inval				nomenclaturalNote	redundant
@@ -532,59 +211,19 @@ redundant	Taraxacum piet-oosterveldii H. Øllg. in press				combinationAuthorshi
 redundant	Tipula rubiginosa Loew, 1863, nom. nov.				nomenclaturalNote	redundant
 redundant	Torymus bangalorensis (Mani &amp; Kurian, 1953)				basionymAuthorship	redundant
 redundant	Vaucheria longicaulis var. bengalensis Islam, nom. illeg.				nomenclaturalNote	redundant
-redundant	Velutina haliotoides (Linnaeus, 1758) <i>sensu</i> Fabricius, 1780				combinationAuthorship	redundant
-redundant	Velutina haliotoides (Linnaeus, 1758), <i>sensu</i> Fabricius, 1780				combinationAuthorship	redundant
+redundant	Velutina haliotoides (Linnaeus, 1758) <i>sensu</i> Fabricius, 1780				code,combinationAuthorship	redundant
+redundant	Velutina haliotoides (Linnaeus, 1758), <i>sensu</i> Fabricius, 1780				code,combinationAuthorship	redundant
 redundant	Vernoniastrum musofense var. miamensis (S. Moore) comb. ined.				nomenclaturalNote	redundant
 redundant	Vespa emarginata Linnaeus, 1758: Fabricius, 1793				code,sanctioningAuthor	redundant
 redundant	Yersinia pestis (Lehmann and Neumann, 1896) van Loghem, 1944 (Approved Lists, 1980) , nom. cons				nomenclaturalNote	redundant
 redundant	Zygonyx spec Dijkstra & Kipping				combinationAuthorship	redundant
-auth-embedded	Castellano, S.L. Mill., L. Singh bis & T.N. Lakh. 2012				code	code
-auth-embedded	Cushman Em. Sellier de Civrieux, 1976				code	code
-auth-embedded	Denis & J-R, 1924				code	code
-auth-embedded	FISCHER 1885				code	code
-auth-embedded	Fischer-Le Saux et al., 1999 emend. Akhurst et al., 2004				code	code
-auth-embedded	G. B. Sowerby I, 1825				code	code
-auth-embedded	G. B. Sowerby II, 1842				code	code
-auth-embedded	G. B. Sowerby III, 1912				code	code
-auth-embedded	G.Don fil.				code	code
-auth-embedded	Hernández-García et. al., 2023				code	code
-auth-embedded	Istv?nffi, 1898				code	code
-auth-embedded	Lea & A.M., 1906				code	code
-auth-embedded	LeConte, J. L., 1878				code	code
-auth-embedded	Linnaeus filius				code	code
-auth-embedded	MULSANT & REY 1852				code	code
-auth-embedded	Pallas, 1771				code	code
-auth-embedded	Say & T., 1826				code	code
-auth-embedded	Schaufuss, L. W., 1877				code	code
-auth-embedded	ZHOU & LIU 1981				code	code
-auth-embedded	Şahin, Koca & Yildirim, 2012				code	code
 auth-embedded	(auct.) auct.				state,unparsed	strip
 auth-embedded	(auct.) Rolfe				state,taxonomicNote,unparsed	strip
 auth-embedded	(non Scacchi, 1836) sensu Zibrowius, 1968				basionymAuthorship,code,taxonomicNote	strip
-auth-embedded	(sensu Mereschkowsky, 1878) Jankowski, 1992				basionymAuthorship,taxonomicNote	strip
+auth-embedded	(sensu Mereschkowsky, 1878) Jankowski, 1992				basionymAuthorship,code,taxonomicNote	strip
 auth-embedded	Jarocki or Schinz				doubtful,warnings	strip
 auth-embedded	sensu Turcz., p.p.				doubtful,taxonomicNote	strip
 auth-embedded	van-der Land				combinationAuthorship,infraspecificEpithet,rank,warnings	strip
-auth-redundant	Castellano, S.L. Mill., L. Singh bis & T.N. Lakh. 2012				code	code
-auth-redundant	Cushman Em. Sellier de Civrieux, 1976				code	code
-auth-redundant	Denis & J-R, 1924				code	code
-auth-redundant	FISCHER 1885				code	code
-auth-redundant	Fischer-Le Saux et al., 1999 emend. Akhurst et al., 2004				code	code
-auth-redundant	G. B. Sowerby I, 1825				code	code
-auth-redundant	G. B. Sowerby II, 1842				code	code
-auth-redundant	G. B. Sowerby III, 1912				code	code
-auth-redundant	G.Don fil.				code	code
-auth-redundant	Hernández-García et. al., 2023				code	code
-auth-redundant	Istv?nffi, 1898				code	code
-auth-redundant	Lea & A.M., 1906				code	code
-auth-redundant	LeConte, J. L., 1878				code	code
-auth-redundant	Linnaeus filius				code	code
-auth-redundant	MULSANT & REY 1852				code	code
-auth-redundant	Pallas, 1771				code	code
-auth-redundant	Say & T., 1826				code	code
-auth-redundant	Schaufuss, L. W., 1877				code	code
-auth-redundant	ZHOU & LIU 1981				code	code
-auth-redundant	Şahin, Koca & Yildirim, 2012				code	code
 auth-redundant	(auct.) auct.				state,unparsed	redundant
 auth-redundant	(auct.) Rolfe				state,unparsed	redundant
 auth-redundant	(non Scacchi, 1836) sensu Zibrowius, 1968				basionymAuthorship,code	redundant

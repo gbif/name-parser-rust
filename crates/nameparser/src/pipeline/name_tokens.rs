@@ -796,7 +796,17 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         specific = Some(lower_epithets[0].clone());
         if lower_epithets.len() >= 2 {
             infraspecific = Some(lower_epithets[lower_epithets.len() - 1].clone());
-            rank = Some(if lower_epithets.len() == 2 {
+            // A trinomial without a rank marker takes the caller's infraspecific rank hint
+            // ("Abies alba alpina" + VARIETY): the source's rank column is all there is. A
+            // cultivar rank needs a cultivar epithet, which a plain trinomial does not have.
+            let hinted = ctx.requested_rank.filter(|r| {
+                r.is_infraspecific()
+                    && !matches!(r, Rank::Cultivar | Rank::CultivarGroup | Rank::Grex)
+                    && lower_epithets.len() == 2
+            });
+            rank = Some(if let Some(r) = hinted {
+                r
+            } else if lower_epithets.len() == 2 {
                 Rank::InfraspecificName
             } else {
                 Rank::InfrasubspecificName

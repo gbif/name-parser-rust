@@ -131,6 +131,7 @@ fn not_is_a_note_like_non() {
         .species("Eurytoma", "maculipes")
         .comb_authors(Some("1887"), &["Ashmead"])
         .sensu("not Motschulsky 1863")
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Apseudes minutus Brown, 1956 not Claus, 1888")
         .species("Apseudes", "minutus")
@@ -174,6 +175,7 @@ fn a_parenthesised_homonym_citation_after_the_author() {
         .species("Prionus", "heros")
         .comb_authors(Some("1905"), &["Fall"])
         .sensu("nec Semenov, 1900")
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 

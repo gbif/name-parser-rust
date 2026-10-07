@@ -85,6 +85,7 @@ fn bracketed_authors_of_an_anonymous_work() {
     assert_name_auth("Clupea ovalis", "Anonymous [Bennett], 1830")
         .species("Clupea", "ovalis")
         .comb_anon(Some("1830"), &["Bennett"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Rhinobatos typus (Anonymous [Bennett], 1830)")
         .species("Rhinobatos", "typus")
@@ -145,10 +146,12 @@ fn other_brackets_are_left_alone() {
     assert_name_auth("Aus bus", "Gerstaecker, [C.E.] A., 1871")
         .species("Aus", "bus")
         .comb_authors(Some("1871"), &["C.E.A.Gerstaecker"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Aus bus", "[Hübner, 1806]")
         .species("Aus", "bus")
         .comb_authors(Some("1806"), &["Hübner"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Notochlamys hexactes", "([Péron in] Lamarck, 1819)")
         .species("Notochlamys", "hexactes")
@@ -172,6 +175,7 @@ fn an_anonymous_ex_author_or_team_member_stays_a_string() {
     assert_name_auth("Serranus confertus", "Anonymous & Bennett, 1830")
         .species("Serranus", "confertus")
         .comb_authors(Some("1830"), &["Anonymous", "Bennett"])
+        .code(NomCode::Zoological)
         .nothing_else();
     // a lower-case "anonym…" is an epithet, never an author
     assert_name("Aegeria anonyma")
