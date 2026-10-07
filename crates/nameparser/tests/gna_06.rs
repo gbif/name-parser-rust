@@ -306,22 +306,19 @@ fn no_parsing_bacterium_candidatus() {
 #[test]
 fn no_parsing_not_none_unidentified_phrases() {
     // group: No parsing -- 'Not', 'None', 'Unidentified'  phrases
-    // FIXME(review): a no-name placeholder parsed as genus "None"
-    // skipped: None recorded
-    // FIXME(review): a no-name placeholder parsed as genus "None"
-    // skipped: NONE recorded
-    // FIXME(review): a no-name placeholder parsed as genus "NoNe"
-    // skipped: NoNe recorded
-    // FIXME(review): a no-name placeholder parsed as a uninomial
-    // skipped: None
-    assert_unparsable("unidentified recorded", NameType::Placeholder);
-    assert_unparsable("UniDentiFied recorded", NameType::Placeholder);
-    // FIXME(review): a no-name placeholder parsed as genus "Not"
-    // skipped: not recorded
-    // FIXME(review): a no-name placeholder parsed as genus "Not"
-    // skipped: NOT recorded
-    // FIXME(review): a no-name placeholder parsed as genus "Not"
-    // skipped: Not recorded
+    for input in [
+        "None recorded",
+        "NONE recorded",
+        "NoNe recorded",
+        "None",
+        "unidentified recorded",
+        "UniDentiFied recorded",
+        "not recorded",
+        "NOT recorded",
+        "Not recorded",
+    ] {
+        assert_unparsable(input, NameType::Placeholder);
+    }
     assert_unparsable("Not assigned", NameType::Placeholder);
     assert_name("Notassigned")
         .monomial("Notassigned")

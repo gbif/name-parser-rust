@@ -4699,14 +4699,14 @@ Candidatus Endomicrobium sp. MdDo-005	true	"Candidatus Endomicrobium" sp. MdDo-0
 Candidatus Abawacabacteria bacterium	true	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	
 Candidatus Accumulibacter phosphatis clade IIA str. UW-1	false					
 Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	
-None recorded	true	None recorded	None recorded	None recorded	None recorded	
-NONE recorded	true	None recorded	None recorded	None recorded	None recorded	
-NoNe recorded	true	NoNe recorded	NoNe recorded	NoNe recorded	NoNe recorded	
-None	true	None	None	None	None	
+None recorded	false					
+NONE recorded	false					
+NoNe recorded	false					
+None	false					
 unidentified recorded	false					
 UniDentiFied recorded	false					
-not recorded	true	Not recorded	Not recorded	Not recorded	Not recorded	
-NOT recorded	true	Not recorded	Not recorded	Not recorded	Not recorded	
+not recorded	false					
+NOT recorded	false					
 Not assigned	false					
 Notassigned	true	Notassigned	Notassigned	Notassigned	Notassigned	
 Unnamed clade	false					
