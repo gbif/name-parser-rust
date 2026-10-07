@@ -10,20 +10,39 @@ use common::*;
 #[test]
 fn every_listed_divergence_still_diverges_as_listed() {
     let mut problems = Vec::new();
+    let mut report = Vec::new();
     for k in KNOWN.iter() {
         let call = k.call();
         let now = path_divergences(&call, k.shape());
         match now.iter().find(|d| d.variant == k.variant) {
             Some(d) if d.fields == k.fields => {}
-            Some(d) => problems.push(format!(
-                "{KNOWN_FILE}:{}: `{}` {} lists `{}`, now `{}`",
-                k.line, k.input, k.variant, k.fields, d.fields
-            )),
-            None => problems.push(format!(
-                "{KNOWN_FILE}:{}: `{}` {} now parses alike — remove the line",
-                k.line, k.input, k.variant
-            )),
+            Some(d) => {
+                problems.push(format!(
+                    "{KNOWN_FILE}:{}: `{}` {} lists `{}`, now `{}`",
+                    k.line, k.input, k.variant, k.fields, d.fields
+                ));
+                report.push(tsv_line(&call, d));
+            }
+            None => {
+                problems.push(format!(
+                    "{KNOWN_FILE}:{}: `{}` {} now parses alike — remove the line",
+                    k.line, k.input, k.variant
+                ));
+                report.push(format!("STALE\t{}", k.line));
+            }
         }
+    }
+    if let Ok(path) = std::env::var("NAMEPARSER_DUAL_PATH_REPORT") {
+        use std::io::Write;
+        let mut f = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)
+            .unwrap_or_else(|e| panic!("cannot open {path}: {e}"));
+        for line in report {
+            writeln!(f, "{line}").unwrap_or_else(|e| panic!("cannot write {path}: {e}"));
+        }
+        return;
     }
     assert!(problems.is_empty(), "{}", problems.join("\n"));
 }

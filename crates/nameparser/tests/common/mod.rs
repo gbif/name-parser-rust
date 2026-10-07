@@ -104,7 +104,7 @@ pub fn assert_name_hinted(
     };
     check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
-        ParseResult::Parsed(pn) => NameAssertion::new(pn, input),
+        ParseResult::Parsed(pn) => NameAssertion::new(pn, &call.label()),
         ParseResult::Informal(inf) => {
             panic!("expected `{input}` to be a Parsed name, but it was Informal: {inf:?}")
         }
@@ -139,7 +139,7 @@ pub fn assert_informal_hinted(
     };
     check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
-        ParseResult::Informal(inf) => InformalAssertion::new(inf, input),
+        ParseResult::Informal(inf) => InformalAssertion::new(inf, &call.label()),
         ParseResult::Parsed(pn) => {
             panic!("expected `{input}` to be an Informal result, but it Parsed: {pn:?}")
         }
@@ -236,7 +236,7 @@ pub fn assert_phrase_name(
         Some(canonical),
         "canonical mismatch for `{sciname}`"
     );
-    let na = NameAssertion::new(n, sciname).phrase(phrase);
+    let na = NameAssertion::new(n, &format!("`{sciname}`")).phrase(phrase);
     let na = match rank {
         Some(r) => na.rank(r),
         None => na,
@@ -250,7 +250,7 @@ pub fn assert_nom_note(note: &str, sciname: &str) -> NameAssertion {
     check_paths(Call::name(sciname), Shape::Name);
     let n = nameparser::parse_name(sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
-    NameAssertion::new(n, sciname).nom_note(note)
+    NameAssertion::new(n, &format!("`{sciname}`")).nom_note(note)
 }
 
 /// `assertCultivar(note)` — parse `"Abies alba <note>"` and assert its nomenclatural note
@@ -260,7 +260,7 @@ pub fn assert_cultivar(note: &str) -> NameAssertion {
     check_paths(Call::name(&sciname), Shape::Name);
     let n = nameparser::parse_name(&sciname, None, None, None)
         .unwrap_or_else(|e| panic!("expected `{sciname}` to parse: {e:?}"));
-    NameAssertion::new(n, &sciname).nom_note(note)
+    NameAssertion::new(n, &format!("`{sciname}`")).nom_note(note)
 }
 
 /// `assertAuthorship(rawAuthorship, expectedAuthors...)` — parse a bare authorship string and
@@ -331,7 +331,7 @@ pub fn assert_ex_authorship(
         sanctioning_author: full.sanctioning_author,
         ..Default::default()
     };
-    NameAssertion::new(pn, raw)
+    NameAssertion::new(pn, &format!("authorship `{raw}`"))
 }
 
 /// The name with its authorship embedded, the name with the authorship passed separately, and the
@@ -403,7 +403,7 @@ enum Np {
 
 pub struct NameAssertion {
     n: ParsedName,
-    /// The parsed input, named in the failure message of [`Self::nothing_else`].
+    /// The parsed call, named in the failure message of [`Self::nothing_else`].
     input: String,
     tested: std::collections::HashSet<Np>,
 }
@@ -1063,7 +1063,7 @@ enum InfProp {
 /// result, not just the parts it named.
 pub struct InformalAssertion {
     inf: Informal,
-    /// The parsed input, named in the failure message of [`Self::nothing_else`].
+    /// The parsed call, named in the failure message of [`Self::nothing_else`].
     input: String,
     tested: std::collections::HashSet<InfProp>,
 }
@@ -1267,7 +1267,7 @@ fn with_input(input: &str, check: impl FnOnce()) {
             .cloned()
             .or_else(|| e.downcast_ref::<&str>().map(|s| s.to_string()))
             .unwrap_or_default();
-        panic!("`{input}`: {msg}");
+        panic!("{input}: {msg}");
     }
 }
 

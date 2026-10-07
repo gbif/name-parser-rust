@@ -46,6 +46,21 @@ pub struct Call<'a> {
 }
 
 impl<'a> Call<'a> {
+    /// "`input` + authorship `…` (rank …, code …)", for failure messages.
+    pub fn label(&self) -> String {
+        let mut s = format!("`{}`", self.input);
+        if let Some(a) = self.authorship {
+            s.push_str(&format!(" + authorship `{a}`"));
+        }
+        if let Some(r) = self.rank {
+            s.push_str(&format!(" (rank {r:?})"));
+        }
+        if let Some(c) = self.code {
+            s.push_str(&format!(" (code {c:?})"));
+        }
+        s
+    }
+
     pub fn name(input: &'a str) -> Self {
         Call {
             input,
