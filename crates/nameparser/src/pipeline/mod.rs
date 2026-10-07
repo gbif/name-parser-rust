@@ -21,7 +21,8 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::model::{
-    warnings, CombinedAuthorship, NameType, NomCode, ParseError, ParsedName, Rank, State,
+    warnings, Authorship, CombinedAuthorship, NameType, NomCode, ParseError, ParsedName, Rank,
+    State,
 };
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
@@ -78,13 +79,8 @@ fn append_authorship_to_phrase(authorship: &str, name: &mut ParsedName) -> bool 
 /// `haystack` contains `needle` once both are reduced to their letters and digits — so
 /// `sp. Forster, 1968` contains `Forster 1968`, and `sp.` contains `sp.`.
 fn contains_ignoring_punctuation(haystack: &str, needle: &str) -> bool {
-    let squash = |s: &str| {
-        s.chars()
-            .filter(|c| c.is_alphanumeric())
-            .collect::<String>()
-    };
-    let needle = squash(needle);
-    needle.is_empty() || squash(haystack).contains(&needle)
+    let needle = letters(needle);
+    needle.is_empty() || letters(haystack).contains(&needle)
 }
 
 /// Java `Pipeline.run`. Orchestrates the staged parsing pipeline: guards → normalize →
@@ -142,16 +138,11 @@ pub fn run(
 
     // The length of the name as a whole, whichever column its authorship came in — counted once
     // when the name string already repeats it.
-    let letters = |s: &str| {
-        s.chars()
-            .filter(|c| c.is_alphanumeric())
-            .collect::<String>()
-    };
     let full_length = trimmed.chars().count()
         + authorship
             .as_deref()
             .map(java_trim)
-            .filter(|a| !a.is_empty() && !letters(&trimmed).contains(&letters(a)))
+            .filter(|a| !a.is_empty() && !contains_ignoring_punctuation(&trimmed, a))
             .map_or(0, |a| a.chars().count() + 1);
     let mut ctx = ParseContext::new(trimmed.clone(), authorship, rank, code);
     if full_length > LONG_NAME_LENGTH {
@@ -248,60 +239,41 @@ pub fn run(
     // sanctioning author, applied further below, overwrites it — last-write-wins).
     let mut extra_state: Option<AuthState> = None;
     if let Some(authorship) = ctx.authorship_input.clone() {
-        // a placeholder ("Missing", "Not specified") is dropped first, so it never reaches the
-        // phrase of a provisional name or the authorship parser
-        let authorship = stripandstash::strip_authorship_placeholder(&authorship, &mut ctx.name);
-        if !authorship.chars().all(crate::token::is_whitespace_java)
-            && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
-            && !append_authorship_to_phrase(&authorship, &mut ctx.name)
-        {
-            let auth_clean = stripandstash::strip_authorship_leading_steps(&mut ctx, authorship);
-            let auth_clean = stripandstash::strip_authorship_markers(&auth_clean, &mut ctx.name);
-            let auth_clean = stripandstash::strip_authorship_trailing_steps(&mut ctx, auth_clean);
-            let embedded_reference = ctx
-                .name
-                .published_in
-                .clone()
-                .map(|r| (r, ctx.name.published_in_year));
-            let auth_clean = stripandstash::strip_in_author_citations(&mut ctx, auth_clean);
-            let auth_clean = stripandstash::strip_authorship_reference_steps(&mut ctx, auth_clean);
-            // after the in-citation, as on the name string: "Busk ms in Chimonides, 1987"
-            let auth_clean =
-                stripandstash::strip_trailing_manuscript_marker(&auth_clean, &mut ctx.name);
-            if let Some((reference, year)) = embedded_reference {
-                ctx.name.published_in = Some(reference);
-                ctx.name.published_in_year = year;
+        // The name string's own authorship: the trailing one, or an autonym's species author.
+        let own = auth_state
+            .as_ref()
+            .or(autonym_state.as_ref())
+            .filter(|st| st.combination.exists() || st.basionym.exists());
+        let repeated = own.is_some()
+            && !letters(&authorship).is_empty()
+            && contains_ignoring_punctuation(&trimmed, &authorship);
+        match own.filter(|_| repeated) {
+            // The name string repeats this authorship — sources fill both columns, not always
+            // alike — so keep the name string's parse, which may well carry more: the year of
+            // `Germar, 1848` + `Germar`, the brackets of `(Bloch, 1792)` + `Bloch 1792`, the
+            // variety author of `… P.Willemet var. roxburghianus Müll.Arg.` + `P.Willemet`. The
+            // column is parsed on a copy and only lends its spelling when it says the same
+            // (`Mill` + `Mill.`), so nothing it carries is recorded twice.
+            Some(own) => {
+                let mut column = ctx.clone();
+                if let Some(st) = parse_separate_authorship(&mut column, authorship, &trimmed) {
+                    if same_authorship(own, &st) {
+                        apply_authorship(&mut ctx.name, &st);
+                        extra_state = Some(st);
+                    }
+                }
             }
-            let aux = tokenize(&auth_clean);
-            let st = authorship_parser::parse(&aux, 0);
-            // A name string ending in its cultivar epithet can only carry the species author
-            // ("Acer campestre L. cv. 'Elsrijk'"), so the separate authorship is the cultivar's —
-            // as on the name string, "… L. cv. 'Elsrijk' Broerse".
-            let ends_in_cultivar = ctx
-                .name
-                .cultivar_epithet
-                .as_deref()
-                .is_some_and(|cv| letters(&trimmed).ends_with(&letters(cv)));
-            if ends_in_cultivar
-                && ctx.name.has_authorship()
-                && ctx.pending_specific_author.is_none()
-                && (st.combination.exists() || st.basionym.exists())
-            {
-                ctx.name.specific_authorship = Some(CombinedAuthorship {
-                    combination_authorship: std::mem::take(&mut ctx.name.combination_authorship),
-                    basionym_authorship: std::mem::take(&mut ctx.name.basionym_authorship),
-                    sanctioning_author: None,
-                });
+            None => {
+                // A note the name string already gave is not recorded twice: sources repeat
+                // notes in both columns too ("Abies keralia spec. nov." + "spec. nov.").
+                let notes = (
+                    ctx.name.nomenclatural_note.clone(),
+                    ctx.name.taxonomic_note.clone(),
+                );
+                extra_state = parse_separate_authorship(&mut ctx, authorship, &trimmed);
+                drop_repeated_note(&mut ctx.name.nomenclatural_note, notes.0);
+                drop_repeated_note(&mut ctx.name.taxonomic_note, notes.1);
             }
-            apply_authorship(&mut ctx.name, &st);
-            if st.unparsed_from >= 0 {
-                ctx.name.state = State::Partial;
-                ctx.name.unparsed = st.unparsed_text.clone();
-            }
-            if st.sanctioning_author.is_some() {
-                ctx.name.sanctioning_author = st.sanctioning_author.clone();
-            }
-            extra_state = Some(st);
         }
     }
     if let Some(st) = auth_state.as_ref() {
@@ -386,6 +358,104 @@ pub fn run(
     }
 
     Ok(ctx.name)
+}
+
+/// Runs a separately supplied authorship through the name string's annotation steps and the
+/// authorship parser onto `ctx` (see the comment at the call site in [`run`]). Returns its parsed
+/// state, or `None` when nothing was left to parse as an authorship: a placeholder, a bracketed
+/// family-group authorship, or one an informal name's phrase took.
+fn parse_separate_authorship(
+    ctx: &mut ParseContext,
+    authorship: String,
+    trimmed: &str,
+) -> Option<AuthState> {
+    // a placeholder ("Missing", "Not specified") is dropped first, so it never reaches the
+    // phrase of a provisional name or the authorship parser
+    let authorship = stripandstash::strip_authorship_placeholder(&authorship, &mut ctx.name);
+    if !authorship.chars().all(crate::token::is_whitespace_java)
+        && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
+        && !append_authorship_to_phrase(&authorship, &mut ctx.name)
+    {
+        let auth_clean = stripandstash::strip_authorship_leading_steps(ctx, authorship);
+        let auth_clean = stripandstash::strip_authorship_markers(&auth_clean, &mut ctx.name);
+        let auth_clean = stripandstash::strip_authorship_trailing_steps(ctx, auth_clean);
+        let embedded_reference = ctx
+            .name
+            .published_in
+            .clone()
+            .map(|r| (r, ctx.name.published_in_year));
+        let auth_clean = stripandstash::strip_in_author_citations(ctx, auth_clean);
+        let auth_clean = stripandstash::strip_authorship_reference_steps(ctx, auth_clean);
+        // after the in-citation, as on the name string: "Busk ms in Chimonides, 1987"
+        let auth_clean =
+            stripandstash::strip_trailing_manuscript_marker(&auth_clean, &mut ctx.name);
+        if let Some((reference, year)) = embedded_reference {
+            ctx.name.published_in = Some(reference);
+            ctx.name.published_in_year = year;
+        }
+        let aux = tokenize(&auth_clean);
+        let st = authorship_parser::parse(&aux, 0);
+        // A name string ending in its cultivar epithet can only carry the species author
+        // ("Acer campestre L. cv. 'Elsrijk'"), so the separate authorship is the cultivar's —
+        // as on the name string, "… L. cv. 'Elsrijk' Broerse".
+        let ends_in_cultivar = ctx
+            .name
+            .cultivar_epithet
+            .as_deref()
+            .is_some_and(|cv| letters(trimmed).ends_with(&letters(cv)));
+        if ends_in_cultivar
+            && ctx.name.has_authorship()
+            && ctx.pending_specific_author.is_none()
+            && (st.combination.exists() || st.basionym.exists())
+        {
+            ctx.name.specific_authorship = Some(CombinedAuthorship {
+                combination_authorship: std::mem::take(&mut ctx.name.combination_authorship),
+                basionym_authorship: std::mem::take(&mut ctx.name.basionym_authorship),
+                sanctioning_author: None,
+            });
+        }
+        apply_authorship(&mut ctx.name, &st);
+        if st.unparsed_from >= 0 {
+            ctx.name.state = State::Partial;
+            ctx.name.unparsed = st.unparsed_text.clone();
+        }
+        if st.sanctioning_author.is_some() {
+            ctx.name.sanctioning_author = st.sanctioning_author.clone();
+        }
+        return Some(st);
+    }
+    None
+}
+
+/// Undoes the separate authorship's addition to a note when the name string's note already said
+/// the same: the note was `before`, and everything appended since is already in it.
+fn drop_repeated_note(note: &mut Option<String>, before: Option<String>) {
+    if let (Some(now), Some(before)) = (note.as_deref(), before) {
+        if let Some(added) = now.strip_prefix(before.as_str()) {
+            if contains_ignoring_punctuation(&before, added) {
+                *note = Some(before);
+            }
+        }
+    }
+}
+
+/// `a` and `b` name the same combination and basionym authors, ex-authors and years, regardless of
+/// punctuation and spacing (`Mill` and `Mill.`).
+fn same_authorship(a: &AuthState, b: &AuthState) -> bool {
+    let key = |x: &Authorship| {
+        (
+            letters(&x.authors.concat()),
+            letters(&x.ex_authors.concat()),
+            x.year.clone(),
+            x.anonymous,
+        )
+    };
+    key(&a.combination) == key(&b.combination) && key(&a.basionym) == key(&b.basionym)
+}
+
+/// `s` reduced to its letters and digits.
+fn letters(s: &str) -> String {
+    s.chars().filter(|c| c.is_alphanumeric()).collect()
 }
 
 /// Java `Pipeline.applyAuthorship(ParsedName, AuthorshipParser.AuthState)`. Applies the

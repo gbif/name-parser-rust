@@ -23,6 +23,7 @@ use crate::token::Token;
 /// Every field now has a real reader, so the allow is no longer load-bearing; removing it
 /// is a separate cleanup from this comment.
 #[allow(dead_code)]
+#[derive(Clone)]
 pub(crate) struct ParseContext {
     // ---- Java `final` (conceptually immutable after construction) ----
     pub original: String,

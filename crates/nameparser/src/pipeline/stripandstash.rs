@@ -984,6 +984,8 @@ pub(crate) fn stash_bracketed_family_group_authorship(
         return false;
     }
     name.phrase = Some(match name.phrase.take() {
+        // once: sources repeat it in the name string ("Leptocephalus [Ophichthidae]")
+        Some(p) if p.contains(a) => p,
         Some(p) => format!("{p} {a}"),
         None => a.to_string(),
     });
