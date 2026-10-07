@@ -70,7 +70,7 @@ fn imprint_years() {
         .nothing_else();
 }
 
-/// The four equivalent imprint-year forms from the ICZN Article 22 example:
+/// The four equivalent imprint-year forms from the example of ICZN Recommendation 22A.2.3:
 /// <a href="https://code.iczn.org/date-of-publication/article-22-citation-of-date/">code.iczn.org/date-of-publication/article-22-citation-of-date</a>.
 /// Anomalopus truncatus carries an imprint year inside the basionym brackets.
 #[test]

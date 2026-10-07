@@ -8,8 +8,8 @@ use nameparser::model::{NamePart, NameType, NomCode, Rank};
 #[test]
 fn year_in_square_brackets() {
     // group: Year in square brackets — next to a plain year a bracketed year is the imprint
-    // year (the year printed on the work); on its own it is the year itself, established from
-    // external evidence (ICZN Recommendation 22A.2.3)
+    // year (the year printed on the work, ICZN Recommendation 22A.2.3); on its own it is the
+    // year itself, established from external evidence
     assert_name("Anthoscopus Cabanis [1851]")
         .monomial("Anthoscopus")
         .comb_authors(Some("1851"), &["Cabanis"])

@@ -39,8 +39,9 @@ pub struct Authorship {
     pub year: Option<String>,
     /// Java `Authorship.imprintYear`: the year printed on the work when it differs from the actual
     /// publication year, cited after it (`Storr, 1970 [1969]` → year 1970, imprint year 1969). A
-    /// bracketed year on its own is the actual year, established from external evidence (ICZN
-    /// Recommendation 22A.2.3: `Cabanis [1851]` → year 1851, no imprint year).
+    /// bracketed year on its own is the actual year, established from external evidence — the
+    /// cataloguers' convention, `Cabanis [1851]` → year 1851, no imprint year. ICZN Recommendation
+    /// 22A.2.3 brackets only an imprint year cited after the actual one.
     #[serde(rename = "imprintYear", skip_serializing_if = "Option::is_none")]
     pub imprint_year: Option<String>,
     /// Java `Authorship.anonymous` (name-parser-api 5.1): the work was published anonymously,

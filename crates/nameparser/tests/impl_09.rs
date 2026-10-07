@@ -794,7 +794,7 @@ fn fungus_names() {
 
 #[test]
 fn year_variations() {
-    // The bracketed [1912] alone is the year (ICZN Rec. 22A.2.3), zoological evidence like any
+    // The bracketed [1912] alone is the year, zoological evidence like any
     // year after a spelled-out author: the trinomial is a subspecies.
     assert_name("Deudorix epijarbas turbo Fruhstorfer, [1912]")
         .infra_species("Deudorix", "epijarbas", Rank::Subspecies, "turbo")

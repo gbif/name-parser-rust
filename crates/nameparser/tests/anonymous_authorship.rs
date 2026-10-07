@@ -104,7 +104,7 @@ fn bracketed_authors_of_an_anonymous_work() {
         .comb_anon(None, &["Clairv."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // a bracketed year ends the author slot; alone it is the year (ICZN Rec. 22A.2.3)
+    // a bracketed year ends the author slot; alone it is the year
     assert_name_auth("Aus bus", "[Hübner], [1806]")
         .species("Aus", "bus")
         .comb_anon(Some("1806"), &["Hübner"])
