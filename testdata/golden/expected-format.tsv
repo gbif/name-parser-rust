@@ -4330,7 +4330,7 @@ Ocydromus dalmatinus dalmatinus (Dejean, 1831 Mill.	true	Ocydromus dalmatinus da
 Saccharomyces drosophilae anon.	true	Saccharomyces drosophilae Anon.	Saccharomyces drosophilae	Saccharomyces drosophilae	Saccharomyces drosophilae Anon.	Anon.
 Physalospora rubiginosa (Fr.) anon.	true	Physalospora rubiginosa (Fr.) anon.	Physalospora rubiginosa	Physalospora rubiginosa	Physalospora rubiginosa (Fr.) anon.	(Fr.) anon.
 Tragacantha leporina (?) Kuntze	true	Tragacantha leporina Kuntze	Tragacantha leporina	Tragacantha leporina	Tragacantha leporina Kuntze	Kuntze
-Lachenalia tricolor var. nelsonii (auct.) Baker	true	Lachenalia tricolor var. nelsonii Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii Baker	Baker
+Lachenalia tricolor var. nelsonii (auct.) Baker	true	Lachenalia tricolor var. nelsonii Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii Baker auct.	Baker
 Lachenalia tricolor var. nelsonii (anon.) Baker	true	Lachenalia tricolor var. nelsonii (anon.) Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii (anon.) Baker	(anon.) Baker
 Puya acris anon.	true	Puya acris Anon.	Puya acris	Puya acris	Puya acris Anon.	Anon.
 Pseudocercospora dendrobii Goh apud W.H. Hsieh 1990	true	Pseudocercospora dendrobii Goh, 1990	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii Goh, 1990	Goh, 1990
@@ -5036,7 +5036,7 @@ Abies alba (Huguet del Villar) S. Rivas-Martínez, F. Fernández González & D. 
 Sida kohautiana var. corchorifolia (H. da C. Monteiro Filho) H. da C. Monteiro Filho	true	Sida kohautiana var. corchorifolia (H.da C.Monteiro Filho) H.da C.Monteiro Filho	Sida kohautiana var. corchorifolia	Sida kohautiana corchorifolia	Sida kohautiana var. corchorifolia (H.da C.Monteiro Filho) H.da C.Monteiro Filho	(H.da C.Monteiro Filho) H.da C.Monteiro Filho
 Stenosigma humerale Giordani Soika, 1990	true	Stenosigma humerale Giordani Soika, 1990	Stenosigma humerale	Stenosigma humerale	Stenosigma humerale Giordani Soika, 1990	Giordani Soika, 1990
 Allemão	true	Allemão	Allemão	Allemao	Allemão	
-ex DC.	true	? ex DC.	? ex	? ex	? ex DC.	DC.
+ex DC.	true	? DC.	?	?	? DC.	DC.
 Sicyoniidae † Ortmann, 1898	true	Sicyoniidae Ortmann, 1898	Sicyoniidae	Sicyoniidae	Sicyoniidae Ortmann, 1898	Ortmann, 1898
 †Titanoptera	true	Titanoptera	Titanoptera	Titanoptera	Titanoptera	
 †††Titanoptera	true	Titanoptera	Titanoptera	Titanoptera	Titanoptera	
@@ -5104,7 +5104,7 @@ Abies alba Choi,J.H.; Im,W.T.; Yoo,J.S.; Lee,S.M.; Moon,D.S.; Kim,H.J.; Rhee,S.K
 Abies alba da Costa Lima	true	Abies alba da Costa Lima	Abies alba	Abies alba	Abies alba da Costa Lima	da Costa Lima
 Abies alba Krapov., W.C.Greg. & C.E.Simpson	true	Abies alba Krapov., W.C.Greg. & C.E.Simpson	Abies alba	Abies alba	Abies alba Krapov., W.C.Greg. & C.E.Simpson	Krapov., W.C.Greg. & C.E.Simpson
 Abies alba de Jussieu	true	Abies alba de Jussieu	Abies alba	Abies alba	Abies alba de Jussieu	de Jussieu
-Abies alba van-der Land	true	Abies alba van-der Land	Abies alba van-der	Abies alba van-der	Abies alba van-der Land	Land
+Abies alba van-der Land	true	Abies alba van-der Land	Abies alba	Abies alba	Abies alba van-der Land	van-der Land
 Abies alba van der Land	true	Abies alba van der Land	Abies alba	Abies alba	Abies alba van der Land	van der Land
 Abies alba van Helmsick	true	Abies alba van Helmsick	Abies alba	Abies alba	Abies alba van Helmsick	van Helmsick
 Abies alba Xing, Yan & Yin	true	Abies alba Xing, Yan & Yin	Abies alba	Abies alba	Abies alba Xing, Yan & Yin	Xing, Yan & Yin
@@ -5262,7 +5262,7 @@ Abaxisotima acuminata (Wang, Yuwen & Xian-wei Liu, 1996)	true	Abaxisotima acumin
 Abaxisotima bicolor (Liu, Xian-wei, Z. Zheng & G. Xi, 1991)	true	Abaxisotima bicolor (Liu, Xian-wei, Z.Zheng & G.Xi, 1991)	Abaxisotima bicolor	Abaxisotima bicolor	Abaxisotima bicolor (Liu, Xian-wei, Z.Zheng & G.Xi, 1991)	(Liu, Xian-wei, Z.Zheng & G.Xi, 1991)
 Foo bar Hernández-García et. al., 2023	true	Foo bar Hernández-García et al., 2023	Foo bar	Foo bar	Foo bar Hernández-García et al., 2023	Hernández-García et al., 2023
 Foo bar Fischer-Le Saux et al., 1999 emend. Akhurst et al., 2004	true	Foo bar Fischer-Le Saux et al., 1999	Foo bar	Foo bar	Foo bar Fischer-Le Saux et al., 1999 emend. Akhurst et al., 2004	Fischer-Le Saux et al., 1999
-Foo bar (auct.) Rolfe	true	Foo bar Rolfe	Foo bar	Foo bar	Foo bar Rolfe	Rolfe
+Foo bar (auct.) Rolfe	true	Foo bar Rolfe	Foo bar	Foo bar	Foo bar Rolfe auct.	Rolfe
 Foo bar auct., nom. subnud.	true	Foo bar	Foo bar	Foo bar	Foo bar auct., nom. subnud.	
 Foo bar Trautv. & Meyer sensu lato	true	Foo bar Trautv. & Meyer	Foo bar	Foo bar	Foo bar Trautv. & Meyer sensu lato	Trautv. & Meyer
 Foo bar Mill. non Parolly	true	Foo bar Mill.	Foo bar	Foo bar	Foo bar Mill. non Parolly	Mill.
@@ -5736,7 +5736,7 @@ Ocydromus dalmatinus dalmatinus (Dejean, 1831 Mill.	true	Ocydromus dalmatinus da
 Saccharomyces drosophilae anon.	true	Saccharomyces drosophilae Anon.	Saccharomyces drosophilae	Saccharomyces drosophilae	Saccharomyces drosophilae Anon.	Anon.
 Physalospora rubiginosa (Fr.) anon.	true	Physalospora rubiginosa (Fr.) anon.	Physalospora rubiginosa	Physalospora rubiginosa	Physalospora rubiginosa (Fr.) anon.	(Fr.) anon.
 Tragacantha leporina (?) Kuntze	true	Tragacantha leporina Kuntze	Tragacantha leporina	Tragacantha leporina	Tragacantha leporina Kuntze	Kuntze
-Lachenalia tricolor var. nelsonii (auct.) Baker	true	Lachenalia tricolor var. nelsonii Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii Baker	Baker
+Lachenalia tricolor var. nelsonii (auct.) Baker	true	Lachenalia tricolor var. nelsonii Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii Baker auct.	Baker
 Lachenalia tricolor var. nelsonii (anon.) Baker	true	Lachenalia tricolor var. nelsonii (anon.) Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii (anon.) Baker	(anon.) Baker
 Puya acris anon.	true	Puya acris Anon.	Puya acris	Puya acris	Puya acris Anon.	Anon.
 Pseudocercospora dendrobii Goh apud W.H. Hsieh 1990	true	Pseudocercospora dendrobii Goh, 1990	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii Goh, 1990	Goh, 1990

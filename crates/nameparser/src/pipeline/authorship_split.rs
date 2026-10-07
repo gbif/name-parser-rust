@@ -140,6 +140,16 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 if w.eq_ignore_ascii_case("anon") {
                     return i;
                 }
+                // "ex" before a capitalised author starts an authorship whose ex-author is lost
+                // ("Abies alba ex DC.", gbif/name-parser#49), never an epithet; "ex gr." stays a
+                // qualifier.
+                if t.text == "ex"
+                    && tokens
+                        .get(i + 1)
+                        .is_some_and(|next| next.kind == TokenKind::Word && starts_upper(next))
+                {
+                    return i;
+                }
                 // cf./aff. qualifiers and indet markers — keep walking
                 if w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")

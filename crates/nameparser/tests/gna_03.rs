@@ -558,7 +558,7 @@ fn unknown_authorship() {
     assert_name("Lachenalia tricolor var. nelsonii (auct.) Baker")
         .infra_species("Lachenalia", "tricolor", Rank::Variety, "nelsonii")
         .comb_authors(None, &["Baker"])
-        .partial("(auct.)")
+        .sensu("auct.")
         .nothing_else();
     assert_name("Lachenalia tricolor var. nelsonii (anon.) Baker")
         .infra_species("Lachenalia", "tricolor", Rank::Variety, "nelsonii")

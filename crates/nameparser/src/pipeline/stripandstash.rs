@@ -2256,8 +2256,16 @@ static PRO_PARTE: LazyLock<Regex> =
 /// "in part" taxonomic-concept qualifier is stripped silently, flagging doubtful —
 /// spot-checked: "Aus bus Smith, pro parte" -> authors=["Smith"], doubtful=true, no note
 /// text added (this step never touches `taxonomicNote`).
+/// A sensu / auct. / sec. note keyword, which a trailing "p.p." then qualifies.
+static NOTE_KEYWORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\b(?:sensu|auctt?|auctorum|sec)\b)").unwrap());
+
 fn strip_pro_parte(ctx: &mut ParseContext, s: String) -> String {
     if let Some(m) = PRO_PARTE.find(&s) {
+        // "sensu Turcz., p.p.": the note's own "in part", kept in it, as in a separate authorship
+        if NOTE_KEYWORD.is_match(&s[..m.start()]) {
+            return s;
+        }
         ctx.name.doubtful = true;
         return java_trim(&s[..m.start()]).to_string();
     }
@@ -2517,7 +2525,42 @@ static INDET_MARKER_WORD: LazyLock<Regex> =
 /// embedded inside an authorship span, not this end-anchored standalone form) — APPENDS the
 /// captured text (verbatim, trimmed) to `taxonomicNote` — spot-checked: "Aus bus Smith (non
 /// Foo, 1850)" -> `taxonomicNote="non Foo, 1850"`, authors=["Smith"].
+/// A parenthesised taxonomic note before the author on the name string — "… var. nelsonii (auct.)
+/// Baker", "… (sensu Mereschkowsky, 1878) Jankowski, 1992": group 1 the note, group 2 the first
+/// letter of the author it is followed by. The keyword alone is case-insensitive.
+static PAREN_NOTE_BEFORE_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\s\(\s*((?i:auctt?|auctorum|sensu|sec)\b[^)]*)\)\s*(\p{Lu})").unwrap()
+});
+
+/// A parenthesised homonym note followed by a sensu note, "(non Scacchi, 1836) sensu Zibrowius,
+/// 1968": together the taxonomic note, verbatim, as in a separate authorship.
+static PAREN_HOMONYM_THEN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\s(\(\s*(?i:non|nec|not)\s[^)]+\)\s*(?i:sensu|auct|sec)\b.*)$").unwrap()
+});
+
+/// "(auct.) auct.": the bracketed note only repeats the one that follows.
+static PAREN_AUCT_REPEATED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\s\(\s*(?i:auctt?\.?|auctorum)\s*\)\s*((?i:auct))").unwrap());
+
 fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = PAREN_AUCT_REPEATED.captures(&s) {
+        let (whole, next) = (caps.get(0).unwrap(), caps.get(1).unwrap());
+        let s = format!("{} {}", java_trim(&s[..whole.start()]), &s[next.start()..]);
+        return strip_paren_tax_note(ctx, s);
+    }
+    // the two shapes a separate authorship already reads as notes, alike on the name string
+    if let Some(caps) = PAREN_HOMONYM_THEN_NOTE.captures(&s) {
+        let note = collapse_whitespace(java_trim(caps.get(1).unwrap().as_str()));
+        ctx.name.add_taxonomic_note(&note);
+        return java_trim(&s[..caps.get(0).unwrap().start()]).to_string();
+    }
+    if let Some(caps) = PAREN_NOTE_BEFORE_AUTHOR.captures(&s) {
+        let note = WHITESPACE.replace_all(java_trim(caps.get(1).unwrap().as_str()), " ");
+        ctx.name.add_taxonomic_note(&normalise_leading_auct(&note));
+        let whole = caps.get(0).unwrap();
+        let author = caps.get(2).unwrap().start();
+        return format!("{} {}", java_trim(&s[..whole.start()]), &s[author..]);
+    }
     if let Some(caps) = PAREN_TAX_NOTE.captures(&s) {
         let whole = caps.get(0).unwrap();
         // A provisional `Genus sp. a (sensu Eagle)` keeps its concept citation in the phrase: the
@@ -3245,10 +3288,28 @@ static COMMA_PREFIXED_REFERENCE: LazyLock<Regex> = LazyLock::new(|| {
 /// publication year of the article, not a zoological/botanical author-year citation).
 /// Truncates to `pm.start(1)` (group 1's start, same "keep the author prefix" reasoning as
 /// steps 49/50) then strips a dangling trailing comma.
+/// The end of an author team, not a reference: capitalised names (with particles) joined by
+/// et / and / &, perhaps with a year — "Zhang et Yang, 1995", "Dubost and Heim de Balsac 1965",
+/// "Ortiz Jaureguizar et al. 1992". A reference has lower-case words and numbers of its own
+/// ("Journal of the Botanical Research Institute of Texas 4(2): 611").
+static AUTHOR_TEAM_TAIL: LazyLock<Regex> = LazyLock::new(|| {
+    let particle = r"(?:de|da|do|dos|van|von|der|den|du|le|la|di|del)";
+    let name = format!(
+        r"(?:{particle}\s+)*\p{{Lu}}[\p{{L}}'.\-]*(?:\s+(?:\p{{Lu}}[\p{{L}}'.\-]*|{particle}))*"
+    );
+    Regex::new(&format!(
+        r"^{name}(?:,\s+{name})*\s+(?:et|and|&)\s+(?:al\.?|{name})(?:(?:,\s*|\s+)\d{{4}}[a-z]?)?\.?$"
+    ))
+    .unwrap()
+});
+
 fn strip_comma_prefixed_reference(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = COMMA_PREFIXED_REFERENCE.captures(&s) {
         let group1 = caps.get(1).unwrap();
         let reference = java_trim(group1.as_str()).to_string();
+        if AUTHOR_TEAM_TAIL.is_match(&reference) {
+            return s;
+        }
         ctx.name.set_published_in(&reference);
         let mut result = java_trim(&s[..group1.start()]).to_string();
         if result.ends_with(',') {
@@ -3755,12 +3816,13 @@ pub(crate) fn strip_authorship_trailing_steps(ctx: &mut ParseContext, s: String)
 }
 
 /// [`run`]'s publication-reference steps for a separately supplied authorship, after the
-/// in-citation split: IPNI-style and period-separated references. Not the comma-prefixed one: it
-/// also takes the end of an author team joined by `et` for a reference ("Yang, Zhang et Yang,
-/// 1995" -> "Zhang et Yang, 1995"), which on the name string is a known bug still to fix.
+/// in-citation split: IPNI-style, period-separated and comma-prefixed references.
 pub(crate) fn strip_authorship_reference_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 2] =
-        [strip_ipni_citation, strip_period_separated_reference];
+    let steps: [fn(&mut ParseContext, String) -> String; 3] = [
+        strip_ipni_citation,
+        strip_period_separated_reference,
+        strip_comma_prefixed_reference,
+    ];
     steps
         .into_iter()
         .fold(s, |s, step| on_authorship(ctx, s, step))

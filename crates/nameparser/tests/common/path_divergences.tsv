@@ -2,38 +2,13 @@
 # authorship, rank, code (wire names), the differing fields, then an optional note. A row may only
 # be removed (when the paths agree again) or have its fields narrowed; the tests fail otherwise.
 # variant	input	authorship	rank	code	fields	note
-separate	Lachenalia tricolor var. nelsonii (auct.) Baker				state,taxonomicNote,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
 separate	Eudoxia cf. Chelophyes contorta				combinationAuthorship,epithetQualifier,type	embedded: cf. + another genus is read as an author
 separate	Onthophagus cf. Aphodius				combinationAuthorship,epithetQualifier,type	embedded: cf. + another genus is read as an author
-separate	Passiflora jussieui Feuillet, Journal of the Botanical Research Institute of Texas 4(2): 611, f. 1. 2010. Figs 2E, F, 3E, F				code,combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	embedded: the comma-prefixed reference step misfires on author teams (X, Y et Z), so it stays off the separate path until fixed
-separate	Passiflora plumosa Feuillet & Cremers, Proceedings of the Koninklijke Nederlandse Akademie van Wetenschappen, Series C: Biological and Medical Sciences 87(3): 381, f. 2. 1984. Fig. 2I, J				code,combinationAuthorship,publishedIn,publishedInYear,sanctioningAuthor,warnings	embedded: the comma-prefixed reference step misfires on author teams (X, Y et Z), so it stays off the separate path until fixed
 embedded	Spongia	[Renier]	GENUS		combinationAuthorship,phrase,type	deliberate: [Renier] in the authorship column is an attributed anonymous author, on the name string a WoRMS [Word] phrase
 embedded	Abies alba  Mill	Mill.			combinationAuthorship	deliberate: a different separate authorship wins over the name string's own
 embedded	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship	deliberate: a different separate authorship wins over the name string's own
-embedded	?Archaeopharetra sp.	of Zhuravlev & Gravestock 1994	SPECIES		warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
-embedded	Accacladocoelium sp.	[of Sokolov et al., 2025]	SPECIES		warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
-embedded	Cantuaria sp.	Forster, 1968	SPECIES		warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
-embedded	Hemicloeina spec.	Platnick, 2002			warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
 redundant	Spongia	[Renier]	GENUS		combinationAuthorship,phrase,type	deliberate: [Renier] in the authorship column is an attributed anonymous author, on the name string a WoRMS [Word] phrase
 redundant	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship	deliberate: a different separate authorship wins over the name string's own
-redundant	?Archaeopharetra sp.	of Zhuravlev & Gravestock 1994	SPECIES		warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
-redundant	Accacladocoelium sp.	[of Sokolov et al., 2025]	SPECIES		warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
-redundant	Cantuaria sp.	Forster, 1968	SPECIES		warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
-redundant	Hemicloeina spec.	Platnick, 2002			warnings	embedded: the name string takes an authorship after sp. for a distinguishing tail (no INDETERMINED)
-auth-embedded	(non Scacchi, 1836) sensu Zibrowius, 1968				basionymAuthorship,code,taxonomicNote	embedded: a parenthesised note before the author becomes a basionym on the name string
-auth-embedded	(sensu Mereschkowsky, 1878) Jankowski, 1992				basionymAuthorship,code,taxonomicNote	embedded: a parenthesised note before the author becomes a basionym on the name string
-auth-embedded	(auct.) auct.				state,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
-auth-embedded	(auct.) Rolfe				state,taxonomicNote,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
-auth-embedded	sensu Turcz., p.p.				doubtful,taxonomicNote	embedded: the name string drops p.p. from the sensu note
-auth-embedded	ex DC.				doubtful,infraspecificEpithet,rank,warnings	embedded: the name string reads a leading "ex" as an epithet (gbif/name-parser#49)
-auth-embedded	van-der Land				combinationAuthorship,infraspecificEpithet,rank,warnings	embedded: the name string reads the hyphenated particle as an epithet
-auth-redundant	(non Scacchi, 1836) sensu Zibrowius, 1968				basionymAuthorship,code,taxonomicNote	embedded: a parenthesised note before the author becomes a basionym on the name string
-auth-redundant	(sensu Mereschkowsky, 1878) Jankowski, 1992				basionymAuthorship,code,taxonomicNote	embedded: a parenthesised note before the author becomes a basionym on the name string
-auth-redundant	(auct.) auct.				state,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
-auth-redundant	(auct.) Rolfe				state,taxonomicNote,unparsed	embedded: a parenthesised note before the author is left unparsed on the name string
-auth-redundant	sensu Turcz., p.p.				doubtful	embedded: the name string drops p.p. from the sensu note
-auth-redundant	ex DC.				doubtful,infraspecificEpithet,rank,warnings	embedded: the name string reads a leading "ex" as an epithet (gbif/name-parser#49)
-auth-redundant	van-der Land				combinationAuthorship,infraspecificEpithet,rank,warnings	embedded: the name string reads the hyphenated particle as an epithet
 nosplit	"Accipiter bicolor (Vieillot, 1817)"				-	structural
 nosplit	"Pseudomonas denitrificans" (Christensen, 1903) Bergey et al., 1923, nom. rejic.				-	structural
 nosplit	? alba Smith				-	structural

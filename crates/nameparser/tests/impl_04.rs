@@ -56,6 +56,13 @@ fn lineage_labels_rescued_or_other() {
 /// desired parse) in the ignored `todo_*` tests below.
 #[test]
 fn todo_names() {
+    // "(auct.)" before the author is the taxonomic note, as in a separate authorship
+    assert_name("Osmanthus ilicifolius f. variegatus (auct.) Rehder")
+        .infra_species("Osmanthus", "ilicifolius", Rank::Form, "variegatus")
+        .comb_authors(None, &["Rehder"])
+        .sensu("auct.")
+        .nothing_else();
+
     assert_name("Pseudoleptomesochrella incerta (Chap. and Delam. -deb., 1956)")
         .species("Pseudoleptomesochrella", "incerta")
         .bas_authors(Some("1956"), &["Chap.", "Delam.-deb."])
@@ -462,16 +469,6 @@ fn todo_psilopteryx_psorosa() {
         .comb_authors(Some("1978"), &["Botosaneanu", "Schneider"])
         .code(NomCode::Zoological)
         .doubtful();
-}
-
-#[test]
-#[ignore = "desired parse, not yet supported"]
-fn todo_osmanthus_ilicifolius() {
-    // "(auct.)" should become the taxonomic note, not be left unparsed (state PARTIAL).
-    assert_name("Osmanthus ilicifolius f. variegatus (auct.) Rehder")
-        .infra_species("Osmanthus", "ilicifolius", Rank::Form, "variegatus")
-        .comb_authors(None, &["Rehder"])
-        .sensu("auct.");
 }
 
 #[test]

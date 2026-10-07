@@ -53,6 +53,10 @@
 //! single source of truth, replacing this file's former ad-hoc `rank_is_infraspecific`/
 //! `rank_marker` free functions.
 
+use std::sync::LazyLock;
+
+use regex::Regex;
+
 use crate::model::{warnings, NamePart, NameType, Rank, State};
 use crate::pipeline::authorship_split;
 use crate::pipeline::rank_markers;
@@ -63,6 +67,18 @@ use crate::unicode::java_trim;
 
 /// Java `NameTokens.AGG_HYPHEN_SUFFIXES` (`NameTokens.java:21`).
 const AGG_HYPHEN_SUFFIXES: [&str; 3] = ["-group", "-complex", "-aggregate"];
+
+/// An authorship or a source citation with its year, as the whole tail after an indet marker:
+/// "Forster, 1968", "N. Bruce, 2008", "of Zhuravlev & Gravestock 1994", "[of Sokolov et al.,
+/// 2025]". Capitalised words, connectors and particles only, then the year — a designation
+/// ("RMCC TR1811", "Olinda (R.Coveny 6616)", "Bunney Road") never ends in a separate year, and a
+/// lone letter ("sp. A Soto-Adames, 2010") is a designation, not an initial.
+static AUTHOR_YEAR_TAIL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^\[?(?:of\s+)?(?:\p{Lu}\.|\p{Lu}[\p{L}'\-]+\.?)(?:\s+(?:\p{Lu}[\p{L}'.\-]*|&|et|and|al\.?|de|van|von|der|den|du|le|la|da|del|di))*,?\s+\d{4}[a-z]?\]?$",
+    )
+    .unwrap()
+});
 
 /// Java `NameTokens.classify(ParseContext, int)` (`NameTokens.java:25-536`). Walks
 /// `ctx.tokens[0, boundary)`, classifying it into the structural name-part fields on
@@ -439,8 +455,12 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     {
                         // A distinguishing tail after the marker (a specimen tag, number, voucher)
                         // makes the name determinable; a bare "Genus sp." does not, so it stays
-                        // flagged INDETERMINED below even though its phrase carries the marker.
-                        indet_bare = i >= ts.len();
+                        // flagged INDETERMINED below even though its phrase carries the marker. Nor
+                        // does an authorship or source citation with its year ("Cantuaria sp.
+                        // Forster, 1968", "[of Sokolov et al., 2025]"), as when it comes separately.
+                        let tail = &ctx.working
+                            [ts.get(i).map_or(marker_start, |t| t.start)..ts[ts.len() - 1].end];
+                        indet_bare = i >= ts.len() || AUTHOR_YEAR_TAIL.is_match(tail);
                         ctx.name.phrase =
                             Some(ctx.working[marker_start..ts[ts.len() - 1].end].to_string());
                         i = ts.len();

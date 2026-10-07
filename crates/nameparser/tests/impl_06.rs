@@ -11,8 +11,7 @@ fn unparsable_authors() {
     assert_authorship("Allemão", &[])
         .comb_authors(None, &["Allemão"])
         .nothing_else();
-    // FIXME(review): https://github.com/gbif/name-parser/issues/49 — right as a separate
-    // authorship, but on the name string ("Abies alba ex DC.") "ex" becomes an epithet
+    // the lost ex-author: on the name string too, "ex" is no epithet
     assert_authorship("ex DC.", &["DC."])
         .comb_authors(None, &["DC."])
         .nothing_else();
