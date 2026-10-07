@@ -104,11 +104,11 @@ fn bracketed_authors_of_an_anonymous_work() {
         .comb_anon(None, &["Clairv."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // an imprint year in brackets ends the author slot
+    // a bracketed year ends the author slot; alone it is the year (ICZN Rec. 22A.2.3)
     assert_name_auth("Aus bus", "[Hübner], [1806]")
         .species("Aus", "bus")
-        .comb_anon(None, &["Hübner"])
-        .imprint_year("1806")
+        .comb_anon(Some("1806"), &["Hübner"])
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 

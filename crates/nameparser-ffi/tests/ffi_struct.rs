@@ -784,24 +784,28 @@ fn imprint_year_alongside_a_year_on_the_base_combination() {
 }
 
 #[test]
-fn bracketed_imprint_year_with_no_regular_year() {
-    // Anthoscopus Cabanis [1851]: combinationAuthorship imprintYear=1851, no year.
-    let name = "Anthoscopus Cabanis [1851]";
+fn bracketed_imprint_year_next_to_a_regular_year() {
+    // Trismegistia monodii Ando, 1973 [1974]: year=1973, imprintYear=1974. (A bracketed year on
+    // its own is the year itself, ICZN Rec. 22A.2.3.)
+    let name = "Trismegistia monodii Ando, 1973 [1974]";
     let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert_eq!(
         pn.combination_authorship.imprint_year.as_deref(),
-        Some("1851")
+        Some("1974")
     );
-    assert_eq!(pn.combination_authorship.year, None);
+    assert_eq!(pn.combination_authorship.year.as_deref(), Some("1973"));
     let buf = parse_struct_success(name);
     assert_abi_version_header(&buf);
     let decoded = decode(&buf);
     assert_decoded_matches(name, &decoded, &pn);
 
-    assert_eq!(decoded.strings[layout::SLOT_YEAR_COMB], None);
+    assert_eq!(
+        decoded.strings[layout::SLOT_YEAR_COMB].as_deref(),
+        Some("1973")
+    );
     assert_eq!(
         decoded.strings[layout::SLOT_IMPRINT_YEAR_COMB].as_deref(),
-        Some("1851")
+        Some("1974")
     );
 }
 

@@ -794,12 +794,11 @@ fn fungus_names() {
 
 #[test]
 fn year_variations() {
-    // The bracketed [1912] is the imprint year; the author span has no nominal
-    // publication year, so code can't be inferred from authorship and the trinomial
-    // stays INFRASPECIFIC_NAME.
+    // The bracketed [1912] alone is the year (ICZN Rec. 22A.2.3), zoological evidence like any
+    // year after a spelled-out author: the trinomial is a subspecies.
     assert_name("Deudorix epijarbas turbo Fruhstorfer, [1912]")
-        .infra_species("Deudorix", "epijarbas", Rank::InfraspecificName, "turbo")
-        .comb_authors(None, &["Fruhstorfer"])
-        .imprint_year("1912")
+        .infra_species("Deudorix", "epijarbas", Rank::Subspecies, "turbo")
+        .comb_authors(Some("1912"), &["Fruhstorfer"])
+        .code(NomCode::Zoological)
         .nothing_else();
 }

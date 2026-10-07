@@ -197,7 +197,7 @@
 //! the core parser's own output for every input. The four fields an earlier revision of this layout
 //! omitted are now all encoded: `combination_authorship.imprint_year` /
 //! `basionym_authorship.imprint_year` (the `SLOT_IMPRINT_YEAR_COMB`/`_BAS` string slots — 33 of
-//! 11,302 corpus names, e.g. the `1985, 1984` double-year and `[1851]` bracketed patterns), and
+//! 11,302 corpus names, e.g. the `1985, 1984` double-year and `1970 [1969]` bracketed patterns), and
 //! `generic_authorship` / `specific_authorship` (the two nested authorship groups above — 5 of
 //! 11,302 corpus names). The one deliberate non-carry is `Authorship.imprint_year` on the
 //! nested groups' *inner* authorships, which IS carried (each nested `Authorship` encodes all

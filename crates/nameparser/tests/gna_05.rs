@@ -7,23 +7,23 @@ use nameparser::model::{NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn year_in_square_brackets() {
-    // group: Year in square brackets — bracketed years are imprint years (the year
-    // printed on the work) and never become the nominal publication year, even when
-    // they are the only year in the input.
+    // group: Year in square brackets — next to a plain year a bracketed year is the imprint
+    // year (the year printed on the work); on its own it is the year itself, established from
+    // external evidence (ICZN Recommendation 22A.2.3)
     assert_name("Anthoscopus Cabanis [1851]")
         .monomial("Anthoscopus")
-        .comb_authors(None, &["Cabanis"])
-        .imprint_year("1851")
+        .comb_authors(Some("1851"), &["Cabanis"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Anthoscopus Cabanis [185?]")
         .monomial("Anthoscopus")
-        .comb_authors(None, &["Cabanis"])
-        .imprint_year("185?")
+        .comb_authors(Some("185?"), &["Cabanis"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Anthoscopus Cabanis [1851?]")
         .monomial("Anthoscopus")
-        .comb_authors(None, &["Cabanis"])
-        .imprint_year("1851?")
+        .comb_authors(Some("1851?"), &["Cabanis"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Trismegistia monodii Ando, 1973 [1974]")
         .species("Trismegistia", "monodii")
@@ -33,8 +33,8 @@ fn year_in_square_brackets() {
         .nothing_else();
     assert_name("Zygaena witti Wiegel [1973]")
         .species("Zygaena", "witti")
-        .comb_authors(None, &["Wiegel"])
-        .imprint_year("1973")
+        .comb_authors(Some("1973"), &["Wiegel"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Deyeuxia coarctata Kunth, 1815 [1816]")
         .species("Deyeuxia", "coarctata")
