@@ -1150,7 +1150,8 @@ fn has_infraspecific_epithet_after(ts: &[Token], marker_idx: usize) -> bool {
     if nx.kind == TokenKind::Word && nx.text.chars().count() == 1 && starts_upper(nx) {
         return true;
     }
-    false
+    // a numeral epithet ("var. 4-lineata") is an epithet too, not a designation
+    nx.kind == TokenKind::Word && token::is_numeral_epithet(&nx.text)
 }
 
 /// True for strain-code-shaped tokens — mixed letters and digits, no spaces, length >= 3

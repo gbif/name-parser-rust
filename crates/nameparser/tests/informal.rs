@@ -351,13 +351,10 @@ fn a_numbered_indeterminate_infraspecific_keeps_its_designation() {
 /// with nothing after it, and a marker followed by an author, are both untouched too.
 #[test]
 fn the_designation_capture_leaves_epithets_and_authors_alone() {
-    // FIXME(review): "4-lineata" is a real epithet (docs/non-scientific-names.md): type SCIENTIFIC,
-    // not INFORMAL
     assert_name("Benthogone rosea var. 4-lineata R. Perrier, 1896")
         .infra_species("Benthogone", "rosea", Rank::Variety, "4-lineata")
         .comb_authors(Some("1896"), &["R.Perrier"])
         .code(NomCode::Zoological)
-        .type_(NameType::Informal)
         .nothing_else();
     for (input, author) in [
         ("Abies alba var.", None),
