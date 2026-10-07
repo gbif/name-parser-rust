@@ -1220,8 +1220,15 @@ static HYPHEN_GLUED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 fn split_hyphen_glued_author(_ctx: &mut ParseContext, s: String) -> String {
-    HYPHEN_GLUED_AUTHOR.replace(&s, "$1 $2").into_owned()
+    let s = HYPHEN_GLUED_AUTHOR.replace(&s, "$1 $2");
+    DASH_BEFORE_EPITHET.replace(&s, "$1 $2").into_owned()
 }
+
+/// A dash in front of the species epithet: "Abryna -petri Paiva, 1860", "Allotheronia -guttata
+/// Ashm." (61 ChecklistBank names). Dropped, as a dash after the epithet ("Abryna petri- Paiva")
+/// always was. Rust-only: Java read the epithet as an author ("petri Paiva").
+static DASH_BEFORE_EPITHET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)-(\p{Ll})").unwrap());
 // ---- Step 14: repairWin1252Artefacts (structural — no Pattern; shared w/ stripAuthorshipMarkers) ----
 
 /// Java `StripAndStash.repairWin1252Artefacts(ParsedName, String)`

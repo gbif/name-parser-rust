@@ -197,14 +197,11 @@ fn authors_do_not_start_with_apostrophe() {
 
 #[test]
 fn epithets_do_not_start_or_end_with_a_dash() {
-    // group: Epithets do not start or end with a dash. A leading-dash epithet is not
-    // recognised as the species, so the rest of the line collapses into authorship.
-    // A trailing-dash epithet has the dash stripped and parses as a normal binomial.
-    // FIXME(review): the epithet "petri" is swallowed into an author "petri Paiva"; the "petri-"
-    // twin below parses
+    // group: Epithets do not start or end with a dash — a dash before or after the epithet is
+    // dropped and the name parses as a normal binomial.
     assert_name("Abryna -petri Paiva, 1860")
-        .monomial("Abryna")
-        .comb_authors(Some("1860"), &["petri Paiva"])
+        .species("Abryna", "petri")
+        .comb_authors(Some("1860"), &["Paiva"])
         .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Abryna petri- Paiva, 1860")
