@@ -53,9 +53,10 @@
 //!    divergence too: a generation behind surname-first initials stays behind the surname
 //!    (`Sowerby G.B. II` → `G.B.Sowerby II`, where Java gave `I.I.G.B.Sowerby`).
 //! 4. A bracketed `[YYYY]` is the *imprint* year next to a plain year (`Storr, 1970 [1969]`);
-//!    alone it is the year itself, established from external evidence (ICZN Recommendation
-//!    22A.2.3: `Hübner, [1806]`) — Java made it the imprint year with no year at all. A second
-//!    *plain* year is the imprint year. A
+//!    alone it is the year itself, established from external evidence (the cataloguers'
+//!    convention: `Hübner, [1806]`) — Java made it the imprint year with no year at all. A second
+//!    *plain* year is the imprint year; quotation marks around it and the `imprint`/`not` of
+//!    ICZN Recommendation 22A.2.3 (`(Peters, 1876 (imprint 1877))`) are no authors. A
 //!    year range (`NUMBER "-"|"/" NUMBER`) keeps only the first year and sets
 //!    [`AuthState::year_range`].
 //! 5. The surname-first "**M** Balsamo"-style inversion only fires when a real surname
@@ -404,6 +405,25 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             continue;
         }
 
+        // "(Peters, 1876 (imprint 1877))", "(not 1877)": the keyword of an imprint year cited
+        // after the actual year (ICZN Recommendation 22A.2.3) is no author; the year that follows
+        // becomes the imprint year like any second year.
+        if t.kind == TokenKind::Word
+            && (t.text.eq_ignore_ascii_case("imprint") || t.text.eq_ignore_ascii_case("not"))
+            && into.year.is_some()
+            && i > from
+            && matches!(
+                tokens[i - 1].kind,
+                TokenKind::OpenParen | TokenKind::OpenBracket
+            )
+            && i + 1 < to
+            && tokens[i + 1].kind == TokenKind::Number
+            && tokens[i + 1].text.chars().count() == 4
+        {
+            i += 1;
+            continue;
+        }
+
         // ex separator
         if t.kind == TokenKind::Word && t.text == "ex" {
             start_ex_authors(
@@ -715,6 +735,16 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             continue;
         }
 
+        // An apostrophe next to a year is a quotation mark around it ("2018 ['2019']"), not part
+        // of an author name.
+        if t.kind == TokenKind::Other
+            && t.text == "'"
+            && ((i > from && tokens[i - 1].kind == TokenKind::Number)
+                || (i + 1 < to && tokens[i + 1].kind == TokenKind::Number))
+        {
+            i += 1;
+            continue;
+        }
         // Apostrophe between authors / inside an author span — preserve it so that
         // names with internal apostrophes ("L.'t Mannetje", "M'Coy", "d'Urv.", "'t Hart")
         // render verbatim. Glue to the preceding character when there's no whitespace
@@ -786,8 +816,8 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     flush(&mut cur, &mut authors);
 
     // A bracketed year is the imprint year printed on the work next to the actual year ("Storr,
-    // 1970 [1969]"); on its own it is the actual year, established from external evidence (ICZN
-    // Recommendation 22A.2.3: "Hübner, [1806]").
+    // 1970 [1969]", ICZN Recommendation 22A.2.3); on its own it is the actual year, established
+    // from external evidence (the cataloguers' convention: "Hübner, [1806]").
     if let Some(year) = bracketed_year {
         if into.year.is_none() {
             into.year = Some(year);
@@ -2000,7 +2030,7 @@ mod tests {
 
     #[test]
     fn a_bracketed_year_on_its_own_is_the_year() {
-        // ICZN Recommendation 22A.2.3: the actual year, established from external evidence
+        // the actual year, established from external evidence
         let s = parse_str("Fruhstorfer, [1912]");
         assert_eq!(s.combination.authors, vec!["Fruhstorfer".to_string()]);
         assert_eq!(s.combination.year, Some("1912".to_string()));

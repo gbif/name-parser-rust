@@ -786,7 +786,7 @@ fn imprint_year_alongside_a_year_on_the_base_combination() {
 #[test]
 fn bracketed_imprint_year_next_to_a_regular_year() {
     // Trismegistia monodii Ando, 1973 [1974]: year=1973, imprintYear=1974. (A bracketed year on
-    // its own is the year itself, ICZN Rec. 22A.2.3.)
+    // its own is the year itself.)
     let name = "Trismegistia monodii Ando, 1973 [1974]";
     let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
     assert_eq!(
