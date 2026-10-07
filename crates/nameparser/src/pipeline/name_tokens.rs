@@ -56,8 +56,10 @@
 use crate::model::{warnings, NamePart, NameType, Rank, State};
 use crate::pipeline::authorship_split;
 use crate::pipeline::rank_markers;
+use crate::pipeline::stripandstash;
 use crate::pipeline::ParseContext;
 use crate::token::{self, Token, TokenKind};
+use crate::unicode::java_trim;
 
 /// Java `NameTokens.AGG_HYPHEN_SUFFIXES` (`NameTokens.java:21`).
 const AGG_HYPHEN_SUFFIXES: [&str; 3] = ["-group", "-complex", "-aggregate"];
@@ -377,11 +379,16 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 // word), and the marker can only be the section's last token when
                 // AuthorshipSplit kept a tail out of it, which `!name_section_covers_all`
                 // re-asserts. Only `spec` is rescued: a bare `sp` is overwhelmingly a dot-less
-                // `sp.`, not an epithet. Mirrors AuthorshipSplit's own guard of the same name.
+                // `sp.`, not an epithet. Mirrors AuthorshipSplit's own guard of the same name. A
+                // separately supplied authorship is the same signal (`Hemicloeina spec` +
+                // `Platnick, 2002`, how ChecklistBank passes it).
+                let separate_authorship = ctx.authorship_input.as_deref().is_some_and(|a| {
+                    !java_trim(stripandstash::without_authorship_placeholder(a)).is_empty()
+                });
                 let is_published_spec_epithet = w.eq_ignore_ascii_case("spec")
                     && genus.is_some()
                     && lower_epithets.is_empty()
-                    && !name_section_covers_all
+                    && (!name_section_covers_all || separate_authorship)
                     && i + 1 == ts.len();
                 if (w.eq_ignore_ascii_case("sp")
                     || w.eq_ignore_ascii_case("spec")

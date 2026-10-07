@@ -3697,6 +3697,72 @@ static PAREN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)\((?-u:\s*)((?:auctt?|auctorum|sensu|sec)(?-u:\b)[^)]*)\)(?-u:\s*)").unwrap()
 });
 
+/// One of [`run`]'s steps applied to a separately supplied authorship: on a copy padded with a
+/// leading space, since several patterns expect whitespace before the annotation they strip (on
+/// the name string the name itself precedes it).
+fn on_authorship(
+    ctx: &mut ParseContext,
+    s: String,
+    step: fn(&mut ParseContext, String) -> String,
+) -> String {
+    java_trim(&step(ctx, format!(" {s}"))).to_string()
+}
+
+/// [`run`]'s steps that apply to a separately supplied authorship as much as to an authorship on
+/// the name string, and that come before [`strip_authorship_markers`]'s: uncertain authors (`?`,
+/// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
+/// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
+pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
+    let steps: [fn(&mut ParseContext, String) -> String; 9] = [
+        flag_uncertain_authorship,
+        strip_imprint_years,
+        normalise_hyphens,
+        replace_homoglyphs,
+        strip_angle_bracket_authorship,
+        strip_html,
+        normalise_hort_ex_placeholder,
+        strip_extinct_dagger,
+        stash_synonym_bracket,
+    ];
+    steps
+        .into_iter()
+        .fold(s, |s, step| on_authorship(ctx, s, step))
+}
+
+/// [`run`]'s steps for a separately supplied authorship that come after
+/// [`strip_authorship_markers`]'s and before the in-citation split: `pro parte`, `pro sp.`, the
+/// Approved Lists, `mihi`, colon concept references, `s.lat.`/`s.s.`, aggregate suffixes, the page
+/// and `in press`. In `run`'s order.
+pub(crate) fn strip_authorship_trailing_steps(ctx: &mut ParseContext, s: String) -> String {
+    let steps: [fn(&mut ParseContext, String) -> String; 10] = [
+        strip_pro_parte,
+        strip_pro_sp_annotation,
+        strip_approved_lists,
+        strip_mihi,
+        strip_colon_concept_reference,
+        strip_sensu_lato_remainder,
+        strip_sensu_stricto_ss,
+        strip_aggregate_suffix,
+        strip_published_page,
+        strip_in_press,
+    ];
+    steps
+        .into_iter()
+        .fold(s, |s, step| on_authorship(ctx, s, step))
+}
+
+/// [`run`]'s publication-reference steps for a separately supplied authorship, after the
+/// in-citation split: IPNI-style and period-separated references. Not the comma-prefixed one: it
+/// also takes the end of an author team joined by `et` for a reference ("Yang, Zhang et Yang,
+/// 1995" -> "Zhang et Yang, 1995"), which on the name string is a known bug still to fix.
+pub(crate) fn strip_authorship_reference_steps(ctx: &mut ParseContext, s: String) -> String {
+    let steps: [fn(&mut ParseContext, String) -> String; 2] =
+        [strip_ipni_citation, strip_period_separated_reference];
+    steps
+        .into_iter()
+        .fold(s, |s, step| on_authorship(ctx, s, step))
+}
+
 /// Java `StripAndStash.stripAuthorshipMarkers(String authorship, ParsedName name)`
 /// (StripAndStash.java:409-525). See the section doc comment above for the step order.
 /// Strips inline annotations from an externally-supplied authorship string and applies
@@ -3707,11 +3773,10 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     if s.is_empty() {
         return s;
     }
-    // A standalone manuscript marker as the WHOLE authorship is a manuscript flag, not an
-    // author.
+    // A standalone manuscript marker as the WHOLE authorship is a manuscript flag and note, not
+    // an author — as the same marker after a name: "Eucnidoideae ined.".
     if STANDALONE_MS.is_match(&s) {
-        name.manuscript = true;
-        return String::new();
+        return strip_trailing_manuscript_marker(&format!(" {s}"), name);
     }
     if let Some(m) = SIC_WITH_COMMENT.find(&s) {
         name.original_spelling = Some(true);

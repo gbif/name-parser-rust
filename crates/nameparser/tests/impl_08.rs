@@ -24,15 +24,18 @@ fn botanical_code_from_separate_recombination_authorship() {
 
 #[test]
 fn standalone_manuscript_authorship() {
-    // a standalone "ined." / "ms." supplied as the whole authorship is a manuscript marker,
-    // not an author (after an author, "Monterosato ms.", it is stripped off the author too).
+    // a standalone "ined." / "ms." supplied as the whole authorship is a manuscript marker and
+    // note, not an author — as after the name ("Eucnidoideae ined.") or an author
+    // ("Monterosato ms.").
     assert_name_hinted("Eucnidoideae", Some("ined."), Some(Rank::Superfamily), None)
         .monomial_rank("Eucnidoideae", Rank::Superfamily)
         .manuscript()
+        .nom_note("ined.")
         .nothing_else();
     assert_name_hinted("Eucnidoideae", Some("ms."), Some(Rank::Superfamily), None)
         .monomial_rank("Eucnidoideae", Rank::Superfamily)
         .manuscript()
+        .nom_note("ms.")
         .nothing_else();
 }
 

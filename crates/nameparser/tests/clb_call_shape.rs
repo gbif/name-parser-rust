@@ -102,3 +102,34 @@ fn a_code_hint_wins_over_the_authorship() {
     .code(NomCode::Botanical)
     .nothing_else();
 }
+
+#[test]
+fn a_cultivar_keeps_its_species_author_when_the_cultivar_author_comes_separately() {
+    assert_name_auth("Acer campestre L. cv. 'Elsrijk'", "Broerse")
+        .cultivar_sp("Acer", "campestre", "Elsrijk")
+        .specific_authors(None, &["L."])
+        .comb_authors(None, &["Broerse"])
+        .nothing_else();
+}
+
+#[test]
+fn spec_with_a_separate_authorship_is_the_published_epithet() {
+    // the dot-less `spec` + an authorship rescue sees the authorship in its own column too
+    assert_name_auth("Hemicloeina spec", "Platnick, 2002")
+        .species("Hemicloeina", "spec")
+        .comb_authors(Some("2002"), &["Platnick"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Gobiosoma spec", "(Ginsburg, 1939)")
+        .species("Gobiosoma", "spec")
+        .bas_authors(Some("1939"), &["Ginsburg"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // with the dot it stays provisional, and the authorship rides along in the phrase
+    assert_informal_hinted("Hemicloeina spec.", Some("Platnick, 2002"), None, None)
+        .taxon("Hemicloeina")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spec. Platnick, 2002")
+        .nothing_else();
+}

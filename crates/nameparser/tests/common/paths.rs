@@ -16,8 +16,8 @@
 //!   A name with an authorship but no such split (an autonym's species author, a cultivar's, a
 //!   mid-name `†`) is a `nosplit`.
 //! * A name with a separate authorship is checked **embedded** (`"{name} {authorship}"`) and
-//!   **redundant** (that string + the authorship). If the name already carries its own authorship,
-//!   the embedded shape is the name alone.
+//!   **redundant** (that string + the authorship). If the name already carries that authorship
+//!   (sources repeat it in both columns), the embedded shape is the name alone.
 //! * A bare authorship (`assert_authorship`, parsed as `Abies alba` + it) is checked as
 //!   **auth-embedded** and **auth-redundant** the same way.
 //!
@@ -111,8 +111,14 @@ fn carries_authorship(p: &ParsedName) -> bool {
         || p.manuscript
 }
 
+/// `s` reduced to its letters and digits, to compare authorships regardless of punctuation.
+fn letters(s: &str) -> String {
+    s.chars().filter(|c| c.is_alphanumeric()).collect()
+}
+
 /// Where the authorship starts in a full name string: the first whitespace or `(` whose trimmed
-/// prefix alone parses to the same name parts and rank. The code the authorship implied is tried
+/// prefix alone parses to the same name parts and rank, with no authorship of its own (else the cut
+/// fell inside the authorship: `Lampona spec Platnick,` + `2000`). The code the authorship implied is tried
 /// as a hint first (a zoological trinomial is a subspecies only under that code), then without it
 /// (a code hint, unlike an inferred code, also ranks a `-idae` uninomial a family). `None` if no
 /// prefix does.
@@ -150,10 +156,9 @@ pub fn find_split(
         } else {
             &hints[..]
         };
-        if hints
-            .iter()
-            .any(|&c| raw(prefix, None, rank, c).is_ok_and(|p| key(&p) == want))
-        {
+        if hints.iter().any(|&c| {
+            raw(prefix, None, rank, c).is_ok_and(|p| key(&p) == want && !carries_authorship(&p))
+        }) {
             return Some((prefix.to_string(), rest.to_string()));
         }
     }
@@ -249,7 +254,15 @@ pub fn path_divergences(call: &Call, shape: Shape) -> Vec<Divergence> {
             Some(a) => {
                 let own = raw(input, Some(a), rank, code);
                 let alone = raw(input, None, rank, code);
-                if alone.as_ref().is_ok_and(carries_authorship) {
+                // the name already carries this authorship (sources repeat it, not always
+                // identically) — as authors, or swallowed into the phrase of a provisional name
+                // (`Cantuaria sp. Forster, 1968`); a different one, like a cultivar's species
+                // author before the cultivar author, does not count
+                let repeated = letters(input).contains(&letters(a))
+                    && alone
+                        .as_ref()
+                        .is_ok_and(|p| carries_authorship(p) || p.phrase.is_some());
+                if repeated {
                     derived.push(("embedded", describe(input, None), alone));
                 } else {
                     let full = format!("{input} {a}");
