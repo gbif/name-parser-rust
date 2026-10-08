@@ -149,6 +149,22 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
             votes.insert(NomCode::Botanical);
         }
 
+        // A year before 1758 predates zoological nomenclature (ICZN Art. 3.1); 1753 to 1757 lie
+        // within the botanical one only (ICN Art. 13.1): "Pteris longifolia fm. stipularis
+        // Linnaeus 1753". An implausible year ("Hall, 0000", flagged elsewhere) is no date at all.
+        let years = [&auth_state.combination.year, &auth_state.basionym.year];
+        let pre_zoological = years
+            .iter()
+            .filter_map(|y| y.as_deref().and_then(|y| y.get(..4)?.parse::<u32>().ok()))
+            .any(|y| (1500..1758).contains(&y));
+        if years
+            .iter()
+            .filter_map(|y| y.as_deref().and_then(|y| y.get(..4)?.parse::<u32>().ok()))
+            .any(|y| (1753..1758).contains(&y))
+        {
+            votes.insert(NomCode::Botanical);
+        }
+
         // --- zoological votes ---
         // Basionym-only parenthesised recombination with no recombination author, "(Author)"
         // or "(Author, year)" — the year is optional. Fires on a species recombination
@@ -160,7 +176,7 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
             votes.insert(NomCode::Zoological);
         }
         // A year on an authored basionym or combination, unless every author is abbreviated.
-        if zoological_year {
+        if zoological_year && !pre_zoological {
             votes.insert(NomCode::Zoological);
         }
     }

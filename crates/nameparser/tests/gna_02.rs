@@ -353,17 +353,15 @@ fn infraspecies_with_rank_icn() {
         .bas_authors(None, &["Lojac."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): 1753 predates the ICZN (1758) and "fm." is a botanical rank: not ZOOLOGICAL
     assert_name("Pteris longifolia fm. stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
-        .code(NomCode::Zoological)
+        .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): 1753 predates the ICZN (1758) and "fm." is a botanical rank: not ZOOLOGICAL
     assert_name("Pteris longifolia fm stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
-        .code(NomCode::Zoological)
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Sphaerotheca    fuliginea    f.     dahliae    Movss.     1967")
         .infra_species("Sphaerotheca", "fuliginea", Rank::Form, "dahliae")
