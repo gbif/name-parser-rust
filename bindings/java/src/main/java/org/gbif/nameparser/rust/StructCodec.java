@@ -281,11 +281,14 @@ final class StructCodec {
   /**
    * The informal discriminator — mirror of Rust {@code lib.rs::is_informal}: an INFORMAL-typed name
    * with a real supraspecific anchor but no species epithet. Keying on the specific epithet routes
-   * cf./aff. and infraspecific-indeterminate binomials to {@code Parsed} automatically.
+   * cf./aff. and infraspecific-indeterminate binomials to {@code Parsed} automatically; an
+   * infraspecific epithet under a bare genus ("Navicula var. fasciata Grunow") stays {@code Parsed}
+   * too, as the anchor has no slot for it.
    */
   private static boolean isInformal(ParsedName pn) {
     return pn.getType() == NameType.INFORMAL
         && pn.getSpecificEpithet() == null
+        && pn.getInfraspecificEpithet() == null
         && (pn.getGenus() != null
             || pn.getUninomial() != null
             || pn.getInfragenericEpithet() != null);

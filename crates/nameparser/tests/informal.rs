@@ -692,17 +692,25 @@ fn a_genus_repeated_after_cf_is_skipped_not_read_as_an_author() {
 /// all — so those keep their current reading rather than having an epithet invented for them.
 #[test]
 fn a_different_genus_after_cf_is_not_skipped() {
-    // No species epithet is reachable, so these land in the informal band on the anchor alone —
-    // unchanged by this fix, and pinned here so the skip cannot widen onto them.
+    // No species epithet is reachable: the qualifier opens the informal phrase, which keeps the
+    // other taxon verbatim. Pinned here so the skip cannot widen onto them.
     assert_informal("Onthophagus cf. Aphodius")
         .taxon("Onthophagus")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf. Aphodius")
         .nothing_else();
     assert_informal("Eudoxia cf. Chelophyes contorta")
         .taxon("Eudoxia")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf. Chelophyes contorta")
+        .nothing_else();
+    assert_informal("Acroceridae aff. Terphis sp. SLW-2002")
+        .taxon("Acroceridae")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("aff. Terphis sp. SLW-2002")
         .nothing_else();
 }
 

@@ -140,7 +140,7 @@ fn a_synonym_remark_is_the_taxonomic_note() {
 }
 
 #[test]
-fn an_of_note_needs_authors_outside_any_bracket_or_corporate_name() {
+fn an_of_note_needs_authors_and_no_corporate_name() {
     // a corporate author: the "of" is part of its name
     assert_name_auth("Elimaea grandis", "Research Group of Orthoptera, 1983")
         .species("Elimaea", "grandis")
@@ -156,13 +156,22 @@ fn an_of_note_needs_authors_outside_any_bracket_or_corporate_name() {
     .published_in("Sichuan Institute of Biology Herpetology Department, 1977")
     .published_in_year(Some(1977))
     .nothing_else();
-    // inside the bracket the note would take the basionym author with it: left as it was
-    // FIXME(review): a note inside the basionym bracket is still read as its author
+    // inside the basionym's bracket it is the note too, its year the cited concept's
     assert_name_auth("Thelastoma bulhoesi", "(Mag of Dollfus 1952)")
         .species("Thelastoma", "bulhoesi")
-        .bas_authors(Some("1952"), &["Mag of Dollfus"])
+        .bas_authors(None, &["Mag"])
+        .sensu("of Dollfus 1952")
         .code(NomCode::Zoological)
         .nothing_else();
+    assert_name_auth(
+        "Aus bus",
+        "(Schellwien of Grozdylova & Lebedeva 1961) Smith, 1970",
+    )
+    .species("Aus", "bus")
+    .bas_authors(None, &["Schellwien"])
+    .comb_authors(Some("1970"), &["Smith"])
+    .sensu("of Grozdylova & Lebedeva 1961")
+    .nothing_else();
     // an emendation after the basionym's year is the note, not a second author
     assert_name_auth(
         "Praeskinnerella tamanouchiensis",

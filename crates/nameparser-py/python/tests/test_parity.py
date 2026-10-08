@@ -232,6 +232,7 @@ def _oracle_is_informal(p: dict) -> bool:
     return bool(
         p.get("type") == "INFORMAL"
         and not p.get("specificEpithet")
+        and not p.get("infraspecificEpithet")
         and (p.get("genus") or p.get("uninomial") or p.get("infragenericEpithet"))
     )
 

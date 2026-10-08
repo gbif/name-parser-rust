@@ -746,13 +746,12 @@ fn test_nomenclatural_notes_pattern() {
         .monomial_rank("Stebbinsoseris", Rank::Genus)
         .manuscript()
         .nothing_else();
-    // FIXME(review): 1199 is a page or typo, and a Euphorbia is no zoological name
+    // 1199 is a page or typo: no year that could vote for the zoological code
     assert_nom_note("var. nov.", "Euphorbia rossiana var. nov. Steinmann, 1199")
         .species("Euphorbia", "rossiana")
         .comb_authors(Some("1199"), &["Steinmann"])
         .doubtful()
         .warning(&[warnings::UNLIKELY_YEAR])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

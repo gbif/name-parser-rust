@@ -507,11 +507,27 @@ fn indet_names() {
     assert_name("Ocymyrmex Weitzaeckeri subsp. arnoldi")
         .infra_species("Ocymyrmex", "weitzaeckeri", Rank::Subspecies, "arnoldi")
         .nothing_else();
-    // FIXME(review): a variety under a bare genus: the epithet "fasciata" is dropped silently
-    //    assertName("Navicula var. fasciata", "Navicula var. fasciata")
-    //        .infraSpecies("Navicula", null, Rank.VARIETY, "fasciata")
-    //        .type(NameType.INFORMAL)
-    //        .nothingElse();
+    // a variety under a bare genus: its species is missing, so the name is INFORMAL, but the
+    // epithet and its author stay (Java made the genus a uninomial and dropped the epithet)
+    assert_name("Navicula var. fasciata")
+        .infra_under_genus("Navicula", Rank::Variety, "fasciata")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Navicula var. fasciata Grunow")
+        .infra_under_genus("Navicula", Rank::Variety, "fasciata")
+        .comb_authors(None, &["Grunow"])
+        .type_(NameType::Informal)
+        .nothing_else();
+    let navicula = nameparser::parse_name("Navicula var. fasciata Grunow", None, None, None)
+        .expect("`Navicula var. fasciata Grunow` should parse");
+    assert_eq!(
+        navicula.canonical_name().as_deref(),
+        Some("Navicula var. fasciata Grunow")
+    );
+    assert!(matches!(
+        nameparser::parse("Navicula var. fasciata Grunow", None, None, None),
+        nameparser::ParseResult::Parsed(_)
+    ));
 
     let n = nameparser::parse_name("Polygonum spec.", None, None, None)
         .expect("`Polygonum spec.` should parse");

@@ -548,6 +548,17 @@ impl NameAssertion {
         self.mark(&[Np::Epithets, Np::Rank])
     }
 
+    /// An infraspecific epithet straight under the genus, its species missing
+    /// ("Navicula var. fasciata").
+    pub fn infra_under_genus(self, genus: &str, rank: Rank, infra_epithet: &str) -> Self {
+        assert!(self.n.uninomial.is_none());
+        assert_eq!(self.n.genus.as_deref(), Some(genus));
+        assert!(self.n.specific_epithet.is_none());
+        assert_eq!(self.n.infraspecific_epithet.as_deref(), Some(infra_epithet));
+        assert_eq!(self.n.rank, rank);
+        self.mark(&[Np::Epithets, Np::Rank])
+    }
+
     pub fn indet(self, genus: &str, epithet: &str, rank: Rank) -> Self {
         assert!(self.n.uninomial.is_none());
         assert_eq!(self.n.genus.as_deref(), Some(genus));

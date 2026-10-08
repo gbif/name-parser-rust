@@ -211,6 +211,16 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                             i = after_repeat;
                             continue;
                         }
+                        // Another taxon after the qualifier ("Acroceridae aff. Terphis sp.
+                        // SLW-2002", "Anobiidae cf. Theca") is no authorship: with no epithet
+                        // the qualifier opens the informal phrase, which runs to the end, as
+                        // after "sp." below.
+                        if tokens
+                            .get(i)
+                            .is_some_and(|t| t.kind == TokenKind::Word && starts_upper(t))
+                        {
+                            return n;
+                        }
                     }
                     // A number immediately after an indet marker is the informal
                     // phrase, not authorship.
@@ -638,7 +648,11 @@ pub fn mid_name_author_end(tokens: &[Token], from: usize) -> Option<usize> {
 /// keeps this off `"Onthophagus cf. Aphodius"` (a different genus, nothing behind it) and
 /// `"Veneridae cf. Phacosoma sp"` (a family anchor naming a different genus) — neither is a
 /// repetition, and neither gains an epithet from being skipped.
-fn skip_repeated_genus(tokens: &[Token], i: usize, genus_text: Option<&str>) -> Option<usize> {
+pub(crate) fn skip_repeated_genus(
+    tokens: &[Token],
+    i: usize,
+    genus_text: Option<&str>,
+) -> Option<usize> {
     let genus = genus_text?;
     let t = tokens.get(i)?;
     if t.kind != TokenKind::Word || !starts_upper(t) {

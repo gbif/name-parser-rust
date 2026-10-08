@@ -3281,6 +3281,61 @@ fn lift_bracketed_emendation(s: &str) -> String {
     BRACKETED_EMENDATION.replace(s, "($1) $2").into_owned()
 }
 
+/// A concept note inside the basionym's brackets, after its author: "(Mag of Dollfus 1952)", "(Hall
+/// of Johnson 1965)" — Mag's species in the sense of Dollfus. Group 1 is the author(s), group 2 the
+/// note.
+static BRACKETED_OF: LazyLock<Regex> = LazyLock::new(|| {
+    let name = r"\p{Lu}[\p{L}'’.\-]*";
+    Regex::new(&format!(
+        r"\(({name}(?:\s+(?:&|and|et)\s+{name})*)\s+(of\s+\p{{Lu}}[^()]*)\)"
+    ))
+    .unwrap()
+});
+
+/// Moves an "of" note out of the basionym's bracket to the end ("(Mag of Dollfus 1952)" -> "(Mag)
+/// of Dollfus 1952", "(Schellwien of Grozdylova & Lebedeva 1961) Smith" -> "(Schellwien) Smith of
+/// Grozdylova & Lebedeva 1961"), where [`TAX_NOTE`] takes it like an "of" note after the bracket.
+/// Only a basionym's bracket — first in the authorship or straight after an epithet, never after an
+/// author ("Dennis (Fungi of South East England)") or a genus ("Copelatus (Ivohibe and North of
+/// Toamasina)") — and only when the note names authors ([`OF_AUTHORS`]) and the "of" is no part of
+/// a corporate author ("(Research Group of Orthoptera, 1983)"), a "not of" ("(Not of Linnaeus,
+/// 1758)") or a direction ("(E of Wollogorang …)"). Rust-only: Java read "Mag of Dollfus" as the
+/// basionym author.
+fn lift_bracketed_of(s: &str) -> String {
+    let Some(caps) = BRACKETED_OF.captures(s) else {
+        return s.to_string();
+    };
+    let (whole, authors, note) = (caps.get(0).unwrap(), &caps[1], &caps[2]);
+    let before = java_trim(&s[..whole.start()]);
+    let basionym_place = before.is_empty()
+        || before
+            .rsplit(char::is_whitespace)
+            .next()
+            .is_some_and(|w| w.chars().all(|c| c.is_lowercase() || c == '-'));
+    let last = authors.rsplit(char::is_whitespace).next().unwrap_or("");
+    let no_author = last.chars().count() < 2
+        || ["not", "non", "north", "south", "east", "west"]
+            .iter()
+            .any(|w| last.eq_ignore_ascii_case(w));
+    if !basionym_place || no_author || CORPORATE_WORD.is_match(last) || !OF_AUTHORS.is_match(note) {
+        return s.to_string();
+    }
+    let rest = java_trim(&s[whole.end()..]);
+    let mut out = format!("{}({authors})", &s[..whole.start()]);
+    if !rest.is_empty() {
+        out.push(' ');
+        out.push_str(rest);
+    }
+    out.push(' ');
+    out.push_str(java_trim(note));
+    out
+}
+
+/// The notes inside a basionym's brackets that belong behind them: an emendation and a concept.
+fn lift_bracketed_notes(s: &str) -> String {
+    lift_bracketed_of(&lift_bracketed_emendation(s))
+}
+
 /// The authors a concept "of …" names: up to the first year, comma or bracket — never a lower-case
 /// word, so "endosymbiont of Drosophila simulans" stays.
 static OF_AUTHORS: LazyLock<Regex> = LazyLock::new(|| {
@@ -3393,7 +3448,7 @@ fn follows_author(prefix: &str, authorship_only: bool) -> bool {
 /// branch); uppercase "Aus bus Mill. S.L." does NOT match at all (author initials, not a
 /// sensu-lato marker).
 fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
-    let s = lift_bracketed_emendation(&unwrap_keyword_only_bracket(&s));
+    let s = lift_bracketed_notes(&unwrap_keyword_only_bracket(&s));
     let Some((match_start, note_start)) = find_tax_note(&s, false) else {
         return s;
     };
@@ -4741,7 +4796,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // authorship string — same patterns `run()`'s `strip_tax_note` applies to the main
     // working string. Matched against a space-padded copy (same reasoning as NOM_NOTE
     // above).
-    let padded_tax = format!(" {}", lift_bracketed_emendation(&s));
+    let padded_tax = format!(" {}", lift_bracketed_notes(&s));
     if let Some((_, group1_start)) = find_tax_note(&padded_tax, true) {
         let raw = java_trim(&padded_tax[group1_start..]).to_string();
         if !raw.is_empty() {

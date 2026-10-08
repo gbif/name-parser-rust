@@ -204,10 +204,10 @@ fn todo_names() {
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 
+    // "0000" is no year, so it casts no zoological vote
     assert_name("Lepidanthrax coquilletti Evenhuis and Hall, 0000")
         .species("Lepidanthrax", "coquilletti")
         .comb_authors(Some("0000"), &["Evenhuis", "Hall"])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();

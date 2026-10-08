@@ -219,6 +219,19 @@ class NameParserRustSmokeTest {
     assertTrue(result.isParsable());
   }
 
+  @Test
+  void infraspecificEpithetUnderBareGenusStaysParsed() throws UnparsableNameException {
+    // The species is missing (INFORMAL), but the epithet and its author need the ParsedName.
+    ParseResult result = parser.parse("Navicula var. fasciata Grunow", null, null, null);
+
+    ParseResult.Parsed parsed = assertInstanceOf(ParseResult.Parsed.class, result);
+    assertEquals("Navicula", parsed.name().getGenus());
+    assertEquals("fasciata", parsed.name().getInfraspecificEpithet());
+    assertEquals(Rank.VARIETY, parsed.name().getRank());
+    assertEquals(NameType.INFORMAL, parsed.name().getType());
+    assertEquals("Grunow", parsed.name().getCombinationAuthorship().getAuthors().get(0));
+  }
+
   // ---- 5.0.0 NameType.IDENTIFIER band (Part A) + trailing culture accession (Part B) ----------
 
   @Test
