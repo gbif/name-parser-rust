@@ -164,6 +164,12 @@ fn digit_epithets_leading_numeral() {
     assert_name("Coccinella 2-pustulata")
         .species("Coccinella", "2-pustulata")
         .nothing_else();
+    // a dot for the hyphen
+    assert_name("Rhynchophorus 13.punctatus Herbst, J.F.W., 1795")
+        .species("Rhynchophorus", "13-punctatus")
+        .comb_authors(Some("1795"), &["J.F.W.Herbst"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 /// gbif/name-parser-rust#16: the UNHYPHENATED spelling of the same Fabricius-era numeral epithet.

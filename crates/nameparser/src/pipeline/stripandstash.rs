@@ -1192,8 +1192,16 @@ fn normalise_hyphens(ctx: &mut ParseContext, s: String) -> String {
     if s != before {
         ctx.name.add_warning(warnings::HOMOGLYHPS);
     }
-    s
+    // A numeral epithet written with a dot for its hyphen ("Rhynchophorus 13.punctatus Herbst",
+    // "Curculio 4.maculatus Villers"), which split into a number and an author.
+    DOTTED_NUMERAL_EPITHET
+        .replace_all(&s, "$1$2-$3$4")
+        .into_owned()
 }
+
+/// A one- or two-digit number, a dot and a lower-case word: [`normalise_hyphens`].
+static DOTTED_NUMERAL_EPITHET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\s)(\d{1,2})\.(\p{Ll}{4,})(\s|$)").unwrap());
 
 // ---- Step 13: replaceHomoglyphs ----
 
