@@ -15,6 +15,7 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::model::{warnings, NomCode};
+use crate::pipeline::assemble;
 use crate::pipeline::authorship_parser::{is_sanctioning_author, AuthState};
 use crate::pipeline::ParseContext;
 
@@ -159,12 +160,21 @@ fn authorship_votes(
     species: bool,
     votes: &mut HashSet<NomCode>,
 ) {
-    // An anonymous author ("Anon., 1830", "(Fr.) anon.") votes like any other author.
+    // An anonymous author ("Anon., 1830", "(Fr.) anon.") votes like any other author. An
+    // implausible year ("Steinmann, 1199", "Barrett 6460", flagged UNLIKELY_YEAR) is a page, a
+    // collector number or a typo, no date: it is no author's year. A year cut short to its first
+    // three digits ("Scopoli, 176", "Forster, 195") still is one.
+    let dated = |y: &Option<String>| {
+        y.as_deref().is_some_and(|y| {
+            !assemble::is_unlikely_year(Some(y))
+                || (y.len() == 3 && y.parse::<u32>().is_ok_and(|v| (150..=210).contains(&v)))
+        })
+    };
     let bas_year = auth_state.basionym_present
-        && auth_state.basionym.year.is_some()
+        && dated(&auth_state.basionym.year)
         && auth_state.basionym.has_authors_or_anon();
     let comb_year =
-        auth_state.combination.year.is_some() && auth_state.combination.has_authors_or_anon();
+        dated(&auth_state.combination.year) && auth_state.combination.has_authors_or_anon();
     let any_author_year = bas_year || comb_year;
     // Authors who are all abbreviated with a dot ("Müll. Arg. 1887", "Henn. 1908") are
     // botanical citation style: zoology spells its authors out, so their year is no zoological

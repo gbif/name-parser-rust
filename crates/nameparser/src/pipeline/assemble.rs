@@ -401,7 +401,7 @@ static YEAR_4DIGIT: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?-u:\d{4})
 /// ("Wilcox, 137", "Hall, 0000", the "193" truncated from "193k7"). An intentionally
 /// uncertain year ("198?") is left alone. `year.is_none()` (Java: `year == null`) returns
 /// `false` (not unlikely — there is simply no year to judge).
-fn is_unlikely_year(year: Option<&str>) -> bool {
+pub(crate) fn is_unlikely_year(year: Option<&str>) -> bool {
     let Some(year) = year else { return false };
     if year.ends_with('?') {
         return false;
