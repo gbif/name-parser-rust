@@ -359,3 +359,17 @@ fn an_abbreviated_author_glued_to_the_epithet() {
         .comb_authors(None, &["Griseb."])
         .nothing_else();
 }
+
+#[test]
+fn a_second_name_after_an_ampersand_is_no_author() {
+    assert_name("Mesalia zinkeni (Dunker 1851) & Promathildia turritella (Dunker 1851)")
+        .species("Mesalia", "zinkeni")
+        .bas_authors(Some("1851"), &["Dunker"])
+        .partial("& Promathildia turritella (Dunker 1851)")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Sillago ciliata & Sillago maculata")
+        .species("Sillago", "ciliata")
+        .partial("& Sillago maculata")
+        .nothing_else();
+}

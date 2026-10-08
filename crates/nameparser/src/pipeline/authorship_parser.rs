@@ -370,13 +370,31 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
     None
 }
 
-/// Where a new sentence starts in the combination span `tokens[from..to)`: after the dot ending a
+/// Where a new sentence or name starts in the combination span `tokens[from..to)`: at a leading "&",
+/// after the dot ending a
 /// year ("Barnes & McDunnough 1913. Next sentence", "Mello-Leitão 1918. Rev. Soc. Brasil. Sci."),
 /// or after the dot ending the epithet when prose follows, a capitalised word and a lower-case one
 /// ("Negalasa fumalis. Next sentence", not "Sphagnum contortulum. H. Crum, 1991"). What follows is
 /// a reference or prose, no author.
 fn sentence_after_authorship(tokens: &[Token], from: usize, to: usize) -> Option<usize> {
     let word_at = |k: usize| k < to && tokens[k].kind == TokenKind::Word;
+    // an "&" leading the span before a genus and its epithet joins another name: "Mesalia zinkeni
+    // (Dunker 1851) & Promathildia turritella (Dunker 1851)", "Acanthopagrus butcheri & A. australis"
+    let lower_word_at = |k: usize| {
+        word_at(k)
+            && tokens[k].text.chars().all(|c| c.is_lowercase())
+            && !is_particle(&tokens[k].text)
+    };
+    let name_after_ampersand = tokens[from].kind == TokenKind::Ampersand
+        && word_at(from + 1)
+        && starts_upper(&tokens[from + 1].text)
+        && (lower_word_at(from + 2)
+            || (from + 2 < to
+                && tokens[from + 2].kind == TokenKind::Dot
+                && lower_word_at(from + 3)));
+    if name_after_ampersand {
+        return Some(from);
+    }
     let epithet_before = from > 0 && {
         let w = tokens[from - 1].text.as_str();
         tokens[from - 1].kind == TokenKind::Word
