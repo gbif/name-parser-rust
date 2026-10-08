@@ -12,13 +12,12 @@
 //!
 //! 1. **`boundary == 0`** short-circuits immediately: `ctx.name.state = PARTIAL`,
 //!    `ctx.name.unparsed = ctx.original`, return — no other field is touched.
-//! 2. **The `set_notho`/`add_notho` overwrite asymmetry.** A `HYBRID_MARK` token anywhere
-//!    in the name adds to the notho set (`ParsedName::add_notho`, additive, deduped). But
-//!    the post-loop `if inline_rank_notho { ctx.name.set_notho(Infraspecific) }` — fired by
-//!    a notho-prefixed infraspecific rank marker like "nothovar."/"nvar." — REPLACES the
-//!    whole set, silently erasing any earlier `add_notho(Generic)` a leading hybrid mark
-//!    ("×Abies alba nothovar. rubra") already recorded. Reproduced exactly: [`set_notho`]
-//!    (`model::name::ParsedName::set_notho`) overwrites, [`add_notho`] inserts.
+//! 2. **Notho parts add up.** A `HYBRID_MARK` token anywhere in the name adds its part to
+//!    the notho set (`ParsedName::add_notho`, additive, deduped), and so does a
+//!    notho-prefixed infraspecific rank marker like "nothosubsp."/"nvar." after the loop:
+//!    `Aconitum ×teppneri nothosubsp. goetzii` is notho SPECIFIC and INFRASPECIFIC.
+//!    Deliberate divergence from Java 4.2.0, whose `setNotho(INFRASPECIFIC)` replaced the
+//!    whole set and erased the hybrid sign before the genus or species.
 //! 3. **[`skip_paren_author_block`] here is NameTokens's OWN copy**, textually different
 //!    from `authorship_split::skip_paren_author_block` (Task 2) of the same name: that one
 //!    gates its match on `has_epithet_after_marker` before returning the marker index; this
@@ -994,7 +993,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     }
 
     if inline_rank_notho {
-        ctx.name.set_notho(NamePart::Infraspecific);
+        ctx.name.add_notho(NamePart::Infraspecific);
     }
     if let Some(q) = &cf_aff_qualifier {
         // Qualifier applies to the epithet after it, or the last one when it trails them all.
@@ -1466,12 +1465,9 @@ mod tests {
     }
 
     #[test]
-    fn set_notho_overwrite_asymmetry_erases_earlier_generic_notho() {
-        // A leading HYBRID_MARK adds GENERIC via add_notho (additive); the trailing
-        // notho-prefixed infraspecific marker ("nothovar.") then fires the post-loop
-        // `if (inlineRankNotho) setNotho(INFRASPECIFIC)`, which REPLACES the whole set —
-        // erasing the earlier GENERIC entry rather than adding to it. This is the
-        // load-bearing overwrite asymmetry the brief calls out.
+    fn notho_rank_marker_adds_to_an_earlier_generic_notho() {
+        // A leading HYBRID_MARK adds GENERIC; the notho-prefixed infraspecific marker
+        // ("nothovar.") adds INFRASPECIFIC beside it. Java replaced the set instead.
         let ctx = run("x Abies alba nothovar. rubra", None);
         assert_eq!(ctx.name.genus, Some("Abies".to_string()));
         assert_eq!(ctx.name.specific_epithet, Some("alba".to_string()));
@@ -1479,8 +1475,7 @@ mod tests {
         assert_eq!(ctx.name.rank, Rank::Variety);
         assert_eq!(
             ctx.name.notho,
-            Some(vec![NamePart::Infraspecific]),
-            "setNotho(INFRASPECIFIC) must REPLACE the set, not add to the earlier GENERIC entry"
+            Some(vec![NamePart::Generic, NamePart::Infraspecific])
         );
     }
 

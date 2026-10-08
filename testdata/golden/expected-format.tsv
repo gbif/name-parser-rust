@@ -4244,9 +4244,9 @@ Abies masjoannis nothof. mesoides	true	Abies masjoannis nothof. mesoides	Abies m
 Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	true	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	Aconitum berdaui nothosubsp. walasii	Aconitum berdaui walasii	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	(Mitka) Mitka
 Aconitum tauricum nothossp. hayekianum (Gáyer) Grintescu	true	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	Aconitum tauricum nothosubsp. hayekianum	Aconitum tauricum hayekianum	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	(Gáyer) Grintescu
 Aeonium holospathulatum nothovar. sanchezii (Bañares) Bañares	true	Aeonium holospathulatum nothovar. sanchezii (Bañares) Bañares	Aeonium holospathulatum nothovar. sanchezii	Aeonium holospathulatum sanchezii	Aeonium holospathulatum nothovar. sanchezii (Bañares) Bañares	(Bañares) Bañares
-Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii	true	Amaranthus ozanonii nothosubsp. ralletii	Amaranthus ozanonii nothosubsp. ralletii	Amaranthus ozanonii ralletii	Amaranthus ozanonii (Contré) Lambinon nothosubsp. ralletii	
-Aconitum ×teppneri Mucher ex Starm. nothosubsp. goetzii	true	Aconitum teppneri nothosubsp. goetzii	Aconitum teppneri nothosubsp. goetzii	Aconitum teppneri goetzii	Aconitum teppneri Mucher ex Starm. nothosubsp. goetzii	
-Aeonium × proliferum Bañares nothovar. glabrifolium Bañares	true	Aeonium proliferum nothovar. glabrifolium Bañares	Aeonium proliferum nothovar. glabrifolium	Aeonium proliferum glabrifolium	Aeonium proliferum Bañares nothovar. glabrifolium Bañares	Bañares
+Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii	true	Amaranthus × ozanonii nothosubsp. ralletii	Amaranthus × ozanonii nothosubsp. ralletii	Amaranthus ozanonii ralletii	Amaranthus × ozanonii (Contré) Lambinon nothosubsp. ralletii	
+Aconitum ×teppneri Mucher ex Starm. nothosubsp. goetzii	true	Aconitum × teppneri nothosubsp. goetzii	Aconitum × teppneri nothosubsp. goetzii	Aconitum teppneri goetzii	Aconitum × teppneri Mucher ex Starm. nothosubsp. goetzii	
+Aeonium × proliferum Bañares nothovar. glabrifolium Bañares	true	Aeonium × proliferum nothovar. glabrifolium Bañares	Aeonium × proliferum nothovar. glabrifolium	Aeonium proliferum glabrifolium	Aeonium × proliferum Bañares nothovar. glabrifolium Bañares	Bañares
 Biscogniauxia nothofagi Whalley, Læssøe & Kile 1990	true	Biscogniauxia nothofagi Whalley, Læssøe & Kile, 1990	Biscogniauxia nothofagi	Biscogniauxia nothofagi	Biscogniauxia nothofagi Whalley, Laessøe & Kile, 1990	Whalley, Læssøe & Kile, 1990
 ×Agropogon P. Fourn. 1934	true	× Agropogon P.Fourn., 1934	× Agropogon	Agropogon	× Agropogon P.Fourn., 1934	P.Fourn., 1934
 xAgropogon P. Fourn.	true	× Agropogon P.Fourn.	× Agropogon	Agropogon	× Agropogon P.Fourn.	P.Fourn.
@@ -4263,7 +4263,7 @@ XAgroelymus Lapage sect. Agroelinelymus	true	× Agroelymus sect. Agroelinelymus	
 Asplenium X inexpectatum (E.L. Braun 1940) Morton (1956)	true	Asplenium × inexpectatum (E.L.Braun, 1940) Morton, 1956	Asplenium × inexpectatum	Asplenium inexpectatum	Asplenium × inexpectatum (E.L.Braun, 1940) Morton, 1956	(E.L.Braun, 1940) Morton, 1956
 Androrchis × fallax (De Not.) W.Foelsche & Jakely	true	Androrchis × fallax (De Not.) W.Foelsche & Jakely	Androrchis × fallax	Androrchis fallax	Androrchis × fallax (De Not.) W.Foelsche & Jakely	(De Not.) W.Foelsche & Jakely
 Salix ×capreola Andersson (1867)	true	Salix × capreola Andersson, 1867	Salix × capreola	Salix capreola	Salix × capreola Andersson, 1867	Andersson, 1867
-Polypodium  x vulgare nothosubsp. mantoniae (Rothm.) Schidlay	true	Polypodium vulgare nothosubsp. mantoniae (Rothm.) Schidlay	Polypodium vulgare nothosubsp. mantoniae	Polypodium vulgare mantoniae	Polypodium vulgare nothosubsp. mantoniae (Rothm.) Schidlay	(Rothm.) Schidlay
+Polypodium  x vulgare nothosubsp. mantoniae (Rothm.) Schidlay	true	Polypodium × vulgare nothosubsp. mantoniae (Rothm.) Schidlay	Polypodium × vulgare nothosubsp. mantoniae	Polypodium vulgare mantoniae	Polypodium × vulgare nothosubsp. mantoniae (Rothm.) Schidlay	(Rothm.) Schidlay
 Salix x capreola Andersson	true	Salix × capreola Andersson	Salix × capreola	Salix capreola	Salix × capreola Andersson	Andersson
 x Abacopterella x altifrons T.E.Almeida & A.R.Field	true	× Abacopterella × altifrons T.E.Almeida & A.R.Field	× Abacopterella × altifrons	Abacopterella altifrons	× Abacopterella × altifrons T.E.Almeida & A.R.Field	T.E.Almeida & A.R.Field
 Stanhopea tigrina Bateman ex Lindl. x S. ecornuta Lem.	false					
@@ -4947,7 +4947,7 @@ Primula Border Auricula Group	true	Primula Border Auricula Group	Primula Border 
 Rhododendron boothii Mishmiense Group	true	Rhododendron boothii Mishmiense Group	Rhododendron boothii Mishmiense Group	Rhododendron boothii	Rhododendron boothii Mishmiense Group	
 Paphiopedilum Sorel grex	true	Paphiopedilum Sorel gx	Paphiopedilum Sorel gx	Paphiopedilum	Paphiopedilum Sorel gx	
 Cattleya Prince John gx	true	Cattleya Prince John gx	Cattleya Prince John gx	Cattleya	Cattleya Prince John gx	
-Polypodium  x vulgare nothosubsp. mantoniae (Rothm.) Schidlay	true	Polypodium vulgare nothosubsp. mantoniae (Rothm.) Schidlay	Polypodium vulgare nothosubsp. mantoniae	Polypodium vulgare mantoniae	Polypodium vulgare nothosubsp. mantoniae (Rothm.) Schidlay	(Rothm.) Schidlay
+Polypodium  x vulgare nothosubsp. mantoniae (Rothm.) Schidlay	true	Polypodium × vulgare nothosubsp. mantoniae (Rothm.) Schidlay	Polypodium × vulgare nothosubsp. mantoniae	Polypodium vulgare mantoniae	Polypodium × vulgare nothosubsp. mantoniae (Rothm.) Schidlay	(Rothm.) Schidlay
 Desulfobacterota_B	true	Desulfobacterota B	Desulfobacterota B	Desulfobacterota	Desulfobacterota B	
 UBA3054	false					
 F0040	false					
@@ -5000,7 +5000,7 @@ Pyrocrataegus x willei L. L. Daniel	true	Pyrocrataegus × willei L.L.Daniel	Pyro
 Pyrocrataegus X willei L. L. Daniel	true	Pyrocrataegus × willei L.L.Daniel	Pyrocrataegus × willei	Pyrocrataegus willei	Pyrocrataegus × willei L.L.Daniel	L.L.Daniel
 Pyrocrataegus willei ×libidi  L.L.Daniel	true	Pyrocrataegus willei × libidi L.L.Daniel	Pyrocrataegus willei × libidi	Pyrocrataegus willei libidi	Pyrocrataegus willei × libidi L.L.Daniel	L.L.Daniel
 Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel	true	Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	Pyrocrataegus willei nothosubsp. libidi	Pyrocrataegus willei libidi	Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	L.L.Daniel
-+ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel	true	Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	Pyrocrataegus willei nothosubsp. libidi	Pyrocrataegus willei libidi	Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	L.L.Daniel
++ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel	true	× Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	× Pyrocrataegus willei nothosubsp. libidi	Pyrocrataegus willei libidi	× Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	L.L.Daniel
 Asplenium cyprium Viane & Van den heede	true	Asplenium cyprium Viane & Van den heede	Asplenium cyprium	Asplenium cyprium	Asplenium cyprium Viane & Van den heede	Viane & Van den heede
 Lagenophora queenslandica Jian Wang ter & A.R.Bean	true	Lagenophora queenslandica Jian Wang ter & A.R.Bean	Lagenophora queenslandica	Lagenophora queenslandica	Lagenophora queenslandica Jian Wang ter & A.R.Bean	Jian Wang ter & A.R.Bean
 Abies arctica A.Murray bis	true	Abies arctica A.Murray bis	Abies arctica	Abies arctica	Abies arctica A.Murray bis	A.Murray bis
@@ -5654,9 +5654,9 @@ Abies masjoannis nothof. mesoides	true	Abies masjoannis nothof. mesoides	Abies m
 Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	true	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	Aconitum berdaui nothosubsp. walasii	Aconitum berdaui walasii	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	(Mitka) Mitka
 Aconitum tauricum nothossp. hayekianum (Gáyer) Grintescu	true	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	Aconitum tauricum nothosubsp. hayekianum	Aconitum tauricum hayekianum	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	(Gáyer) Grintescu
 Aeonium holospathulatum nothovar. sanchezii (Bañares) Bañares	true	Aeonium holospathulatum nothovar. sanchezii (Bañares) Bañares	Aeonium holospathulatum nothovar. sanchezii	Aeonium holospathulatum sanchezii	Aeonium holospathulatum nothovar. sanchezii (Bañares) Bañares	(Bañares) Bañares
-Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii	true	Amaranthus ozanonii nothosubsp. ralletii	Amaranthus ozanonii nothosubsp. ralletii	Amaranthus ozanonii ralletii	Amaranthus ozanonii (Contré) Lambinon nothosubsp. ralletii	
-Aconitum ×teppneri Mucher ex Starm. nothosubsp. goetzii	true	Aconitum teppneri nothosubsp. goetzii	Aconitum teppneri nothosubsp. goetzii	Aconitum teppneri goetzii	Aconitum teppneri Mucher ex Starm. nothosubsp. goetzii	
-Aeonium × proliferum Bañares nothovar. glabrifolium Bañares	true	Aeonium proliferum nothovar. glabrifolium Bañares	Aeonium proliferum nothovar. glabrifolium	Aeonium proliferum glabrifolium	Aeonium proliferum Bañares nothovar. glabrifolium Bañares	Bañares
+Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii	true	Amaranthus × ozanonii nothosubsp. ralletii	Amaranthus × ozanonii nothosubsp. ralletii	Amaranthus ozanonii ralletii	Amaranthus × ozanonii (Contré) Lambinon nothosubsp. ralletii	
+Aconitum ×teppneri Mucher ex Starm. nothosubsp. goetzii	true	Aconitum × teppneri nothosubsp. goetzii	Aconitum × teppneri nothosubsp. goetzii	Aconitum teppneri goetzii	Aconitum × teppneri Mucher ex Starm. nothosubsp. goetzii	
+Aeonium × proliferum Bañares nothovar. glabrifolium Bañares	true	Aeonium × proliferum nothovar. glabrifolium Bañares	Aeonium × proliferum nothovar. glabrifolium	Aeonium proliferum glabrifolium	Aeonium × proliferum Bañares nothovar. glabrifolium Bañares	Bañares
 Biscogniauxia nothofagi Whalley, Læssøe & Kile 1990	true	Biscogniauxia nothofagi Whalley, Læssøe & Kile, 1990	Biscogniauxia nothofagi	Biscogniauxia nothofagi	Biscogniauxia nothofagi Whalley, Laessøe & Kile, 1990	Whalley, Læssøe & Kile, 1990
 ×Agropogon P. Fourn. 1934	true	× Agropogon P.Fourn., 1934	× Agropogon	Agropogon	× Agropogon P.Fourn., 1934	P.Fourn., 1934
 xAgropogon P. Fourn.	true	× Agropogon P.Fourn.	× Agropogon	Agropogon	× Agropogon P.Fourn.	P.Fourn.

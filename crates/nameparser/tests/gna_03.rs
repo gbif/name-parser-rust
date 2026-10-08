@@ -75,7 +75,7 @@ fn hybrids_with_notho_ranks() {
     assert_name("Aeonium × proliferum Bañares nothovar. glabrifolium Bañares")
         .infra_species("Aeonium", "proliferum", Rank::Variety, "glabrifolium")
         .comb_authors(None, &["Bañares"])
-        .notho(&[NamePart::Infraspecific])
+        .notho(&[NamePart::Specific, NamePart::Infraspecific])
         .code(NomCode::Botanical)
         .specific_authors(None, &["Bañares"])
         .nothing_else();
@@ -93,9 +93,17 @@ fn hybrids_with_notho_ranks() {
         .nothing_else();
     assert_name("Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii")
         .infra_species("Amaranthus", "ozanonii", Rank::Subspecies, "ralletii")
-        .notho(&[NamePart::Infraspecific])
+        .notho(&[NamePart::Specific, NamePart::Infraspecific])
         .specific_authors(None, &["Lambinon"])
         .specific_bas_authors(None, &["Contré"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a hybrid sign before the species and a notho rank marker: both parts are hybrids
+    assert_name("Aconitum ×teppneri Mucher ex Starm. nothosubsp. goetzii")
+        .infra_species("Aconitum", "teppneri", Rank::Subspecies, "goetzii")
+        .notho(&[NamePart::Specific, NamePart::Infraspecific])
+        .specific_authors(None, &["Starm."])
+        .specific_ex_authors(&["Mucher"])
         .code(NomCode::Botanical)
         .nothing_else();
 }
@@ -191,10 +199,10 @@ fn named_hybrids() {
         .comb_authors(Some("1867"), &["Andersson"])
         .code(NomCode::Botanical)
         .nothing_else();
-    // x before the specific epithet + nothosubsp. rank marker: the rank marker wins for notho
+    // x before the specific epithet + nothosubsp. rank marker: both parts are hybrids
     assert_name("Polypodium  x vulgare nothosubsp. mantoniae (Rothm.) Schidlay")
         .infra_species("Polypodium", "vulgare", Rank::Subspecies, "mantoniae")
-        .notho(&[NamePart::Infraspecific])
+        .notho(&[NamePart::Specific, NamePart::Infraspecific])
         .comb_authors(None, &["Schidlay"])
         .bas_authors(None, &["Rothm."])
         .code(NomCode::Botanical)

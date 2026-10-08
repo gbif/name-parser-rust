@@ -227,7 +227,7 @@ fn hybrid_formulas() {
         .infra_species("Polypodium", "vulgare", Rank::Subspecies, "mantoniae")
         .bas_authors(None, &["Rothm."])
         .comb_authors(None, &["Schidlay"])
-        .notho(&[NamePart::Infraspecific])
+        .notho(&[NamePart::Specific, NamePart::Infraspecific])
         .code(NomCode::Botanical)
         .nothing_else();
 
@@ -477,7 +477,7 @@ fn hybrid_names() {
     assert_name("+ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::Subspecies, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
-        .notho(&[NamePart::Infraspecific])
+        .notho(&[NamePart::Generic, NamePart::Infraspecific])
         .code(NomCode::Botanical)
         .nothing_else();
 }
