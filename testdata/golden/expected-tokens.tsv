@@ -4184,7 +4184,7 @@ Rhinanthus glacialis simplex(Sterneck) J.Dostál	WORD:RhinanthusWORD:glacialis
 Acipenser gueldenstaedti colchicus natio danubicus Movchan, 1967	WORD:AcipenserWORD:gueldenstaedtiWORD:colchicusWORD:natioWORD:danubicusWORD:MovchanCOMMA:,NUMBER:1967
 Cantharellus sinuosus var. multiplex(A.H.Sm.) Romagn., 1995	WORD:CantharellusWORD:sinuosusWORD:varDOT:.WORD:multiplexOPEN_PAREN:(WORD:ADOT:.WORD:HDOT:.WORD:SmDOT:.CLOSE_PAREN:)WORD:RomagnDOT:.COMMA:,NUMBER:1995
 Crematogaster impressa st. brazzai Santschi 1937	WORD:CrematogasterWORD:impressaWORD:stDOT:.WORD:brazzaiWORD:SantschiNUMBER:1937
-Cibotium st.-johnii Krajina	WORD:CibotiumWORD:stDOT:.OTHER:-WORD:johniiWORD:Krajina
+Cibotium st.-johnii Krajina	WORD:CibotiumWORD:st.-johniiWORD:Krajina
 Plantago major prol. lutulenta (Lamotte) Rouy	WORD:PlantagoWORD:majorWORD:prolDOT:.WORD:lutulentaOPEN_PAREN:(WORD:LamotteCLOSE_PAREN:)WORD:Rouy
 Camponotus conspicuus st. zonatus	WORD:CamponotusWORD:conspicuusWORD:stDOT:.WORD:zonatus
 Fagus sylvatica subsp. orientalis (Lipsky) Greuter & Burdet	WORD:FagusWORD:sylvaticaWORD:subspDOT:.WORD:orientalisOPEN_PAREN:(WORD:LipskyCLOSE_PAREN:)WORD:GreuterAMPERSAND:&WORD:Burdet
@@ -4314,7 +4314,7 @@ Acanthoderes (Abramov) satanas Aurivillius	WORD:AcanthoderesOPEN_PAREN:(WORD:A
 Athyrium boreo-occidentali-indobharaticola-birianum Fraser-Jenk.	WORD:AthyriumWORD:boreo-occidentali-indobharaticola-birianumWORD:Fraser-JenkDOT:.
 Puccinia band-i-amirii Durrieu, 1975	WORD:PucciniaWORD:band-i-amiriiWORD:DurrieuCOMMA:,NUMBER:1975
 Ferganoconcha? oblonga	WORD:FerganoconchaOTHER:?WORD:oblonga
-Macromitrium st.-johnii E. B. Bartram	WORD:MacromitriumWORD:stDOT:.OTHER:-WORD:johniiWORD:EDOT:.WORD:BDOT:.WORD:Bartram
+Macromitrium st.-johnii E. B. Bartram	WORD:MacromitriumWORD:st.-johniiWORD:EDOT:.WORD:BDOT:.WORD:Bartram
 Peperomia non-alata Trel.	WORD:PeperomiaWORD:non-alataWORD:TrelDOT:.
 Hyacinthoides non-scripta (L.) Chouard ex Rothm.	WORD:HyacinthoidesWORD:non-scriptaOPEN_PAREN:(WORD:LDOT:.CLOSE_PAREN:)WORD:ChouardWORD:exWORD:RothmDOT:.
 Monocelis non-scripta Curini-Galletti, 2014	WORD:MonocelisWORD:non-scriptaWORD:Curini-GallettiCOMMA:,NUMBER:2014
@@ -5594,7 +5594,7 @@ Caulerpa fastigiata confervoides P. L. Crouan & H. M. Crouan ex Weber-van Bosse	
 Rhinanthus glacialis simplex(Sterneck) J.Dostál	WORD:RhinanthusWORD:glacialisWORD:simplexOPEN_PAREN:(WORD:SterneckCLOSE_PAREN:)WORD:JDOT:.WORD:Dostál
 Cantharellus sinuosus var. multiplex(A.H.Sm.) Romagn., 1995	WORD:CantharellusWORD:sinuosusWORD:varDOT:.WORD:multiplexOPEN_PAREN:(WORD:ADOT:.WORD:HDOT:.WORD:SmDOT:.CLOSE_PAREN:)WORD:RomagnDOT:.COMMA:,NUMBER:1995
 Crematogaster impressa st. brazzai Santschi 1937	WORD:CrematogasterWORD:impressaWORD:stDOT:.WORD:brazzaiWORD:SantschiNUMBER:1937
-Cibotium st.-johnii Krajina	WORD:CibotiumWORD:stDOT:.OTHER:-WORD:johniiWORD:Krajina
+Cibotium st.-johnii Krajina	WORD:CibotiumWORD:st.-johniiWORD:Krajina
 Plantago major prol. lutulenta (Lamotte) Rouy	WORD:PlantagoWORD:majorWORD:prolDOT:.WORD:lutulentaOPEN_PAREN:(WORD:LamotteCLOSE_PAREN:)WORD:Rouy
 Camponotus conspicuus st. zonatus	WORD:CamponotusWORD:conspicuusWORD:stDOT:.WORD:zonatus
 Fagus sylvatica subsp. orientalis (Lipsky) Greuter & Burdet	WORD:FagusWORD:sylvaticaWORD:subspDOT:.WORD:orientalisOPEN_PAREN:(WORD:LipskyCLOSE_PAREN:)WORD:GreuterAMPERSAND:&WORD:Burdet
@@ -5720,7 +5720,7 @@ Acanthoderes (Abramov) satanas Aurivillius	WORD:AcanthoderesOPEN_PAREN:(WORD:A
 Athyrium boreo-occidentali-indobharaticola-birianum Fraser-Jenk.	WORD:AthyriumWORD:boreo-occidentali-indobharaticola-birianumWORD:Fraser-JenkDOT:.
 Puccinia band-i-amirii Durrieu, 1975	WORD:PucciniaWORD:band-i-amiriiWORD:DurrieuCOMMA:,NUMBER:1975
 Ferganoconcha? oblonga	WORD:FerganoconchaOTHER:?WORD:oblonga
-Macromitrium st.-johnii E. B. Bartram	WORD:MacromitriumWORD:stDOT:.OTHER:-WORD:johniiWORD:EDOT:.WORD:BDOT:.WORD:Bartram
+Macromitrium st.-johnii E. B. Bartram	WORD:MacromitriumWORD:st.-johniiWORD:EDOT:.WORD:BDOT:.WORD:Bartram
 Peperomia non-alata Trel.	WORD:PeperomiaWORD:non-alataWORD:TrelDOT:.
 Hyacinthoides non-scripta (L.) Chouard ex Rothm.	WORD:HyacinthoidesWORD:non-scriptaOPEN_PAREN:(WORD:LDOT:.CLOSE_PAREN:)WORD:ChouardWORD:exWORD:RothmDOT:.
 Monocelis non-scripta Curini-Galletti, 2014	WORD:MonocelisWORD:non-scriptaWORD:Curini-GallettiCOMMA:,NUMBER:2014

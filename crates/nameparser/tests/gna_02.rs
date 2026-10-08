@@ -471,10 +471,13 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(Some("1912"), &["Aurivillius"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): "st.-johnii" splits into epithet "st" + author "johnii …"; "ab. n." makes "n"
-    // the epithet and "undularia" the author
-    // Skipped: "Cibotium st.-johnii Krajina" needs hyphenated single-letter epithet
-    // recognition; "Acidalia remutaria ab. n. undularia" needs "ab. n." (aberratio
+    // an abbreviated "st." (sancti) hyphenated to the epithet
+    assert_name("Cibotium st.-johnii Krajina")
+        .species("Cibotium", "st.-johnii")
+        .comb_authors(None, &["Krajina"])
+        .nothing_else();
+    // FIXME(review): "ab. n." makes "n" the epithet and "undularia" the author
+    // Skipped: "Acidalia remutaria ab. n. undularia" needs "ab. n." (aberratio
     // nova) handling; "Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f.
     // fakeepithet" and the bracketed variant need quadrinomial-with-rank handling.
 }
