@@ -792,13 +792,19 @@ pub(crate) fn is_capitalised_autonym(tokens: &[Token], k: usize) -> bool {
 /// before a rank marker.
 pub(crate) fn continues_author_span(tokens: &[Token], j: usize, from: usize) -> bool {
     let t = &tokens[j];
-    let inner = j > from;
+    // an "ex" may follow the basionym bracket straight away ("(Kütz.) ex Ralfs var. laevis")
+    let inner = j > from || (j > 0 && tokens[j - 1].kind == TokenKind::CloseParen);
     match t.kind {
         TokenKind::Word => {
             starts_upper(t)
                 || token::is_particle(&t.text)
                 || looks_like_apostrophe_particle(&t.text)
                 || t.text.eq_ignore_ascii_case("al")
+                // the Dutch "'t" ("'t Hart")
+                || (t.text == "t"
+                    && j > 0
+                    && tokens[j - 1].text == "'"
+                    && next_word_starts_upper(tokens, j + 1))
                 || (inner
                     && matches!(t.text.as_str(), "ex" | "et" | "and")
                     && next_word_starts_author(tokens, j + 1))
@@ -870,6 +876,10 @@ fn has_epithet_after_marker(tokens: &[Token], marker_idx: usize, infrageneric: b
     let n = tokens.len();
     let mut k = marker_idx + 1;
     if k < n && tokens[k].kind == TokenKind::Dot {
+        k += 1;
+    }
+    // a hybrid sign before a nothotaxon's epithet ("subsp. ×medium")
+    if k < n && tokens[k].kind == TokenKind::HybridMark && k + 1 < n {
         k += 1;
     }
     if k >= n {

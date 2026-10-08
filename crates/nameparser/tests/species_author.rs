@@ -87,3 +87,23 @@ fn a_species_author_with_a_filius_in_a_team_ends_at_the_rank_marker() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn more_species_author_shapes_before_the_rank_marker() {
+    // the Dutch "'t", and an "ex" right after the basionym bracket
+    assert_name("Phedimus aizoon (L.) 't Hart var. floribundus (Nakai) H.Ohba")
+        .infra_species("Phedimus", "aizoon", Rank::Variety, "floribundus")
+        .comb_authors(None, &["H.Ohba"])
+        .bas_authors(None, &["Nakai"])
+        .specific_authors(None, &["'t Hart"])
+        .specific_bas_authors(None, &["L."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a hybrid sign after the rank marker
+    assert_name("Eriophorum ×medium Andersson subsp. ×medium")
+        .infra_species("Eriophorum", "medium", Rank::Subspecies, "medium")
+        .notho(&[NamePart::Specific, NamePart::Infraspecific])
+        .comb_authors(None, &["Andersson"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
