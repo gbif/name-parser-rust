@@ -338,6 +338,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     && !have_epithet
                     && !after_subgenus
                     && rank_markers::match_infrageneric_allow_notho(w).is_some()
+                    && !is_epithet_before_dated_author(tokens, i)
                 {
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
@@ -746,6 +747,30 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
         return None;
     }
     None
+}
+
+/// The marker word "ser" or "subser" at `i` — real epithets too — is undotted and followed by an
+/// author with a year, or by nothing at all: a species epithet, not the botanical rank ("Serina
+/// ser Gredler, 1898", "Serina subser Gredler, 1898" — snails; "Serina ser" with its authorship
+/// given apart).
+pub(crate) fn is_epithet_before_dated_author(tokens: &[Token], i: usize) -> bool {
+    if !matches!(tokens[i].text.as_str(), "ser" | "subser") {
+        return false;
+    }
+    if i + 1 == tokens.len() {
+        return true;
+    }
+    let author = tokens
+        .get(i + 1)
+        .is_some_and(|t| t.kind == TokenKind::Word && starts_upper(t));
+    let mut k = i + 2;
+    if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Comma) {
+        k += 1;
+    }
+    author
+        && tokens
+            .get(k)
+            .is_some_and(|t| has_year_token(std::slice::from_ref(t), 0, 1))
 }
 
 /// The word at `k`, in the species-epithet slot, is an epithet capitalised in the old style:

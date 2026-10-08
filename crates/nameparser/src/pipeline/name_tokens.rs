@@ -746,6 +746,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 }
                 // 4. infrageneric marker (with optional "notho-" prefix)
                 if let Some((rm_infragen, gnotho)) = rank_markers::match_infrageneric_allow_notho(w)
+                    .filter(|_| !authorship_split::is_epithet_before_dated_author(&ctx.tokens, i))
                 {
                     if lower_epithets.is_empty() && subgenus.is_none() && infragen_epithet.is_none()
                     {

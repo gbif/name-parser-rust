@@ -135,12 +135,17 @@ fn exceptions_from_ranks_rank_line_epithets() {
         .comb_authors(Some("1908"), &["Zaitzev"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): the snail epithets "ser"/"subser" become botanical series ranks with the
-    // infrageneric epithet "Gredler"
-    // "Serina subser Gredler, 1898" and "Serina ser Gredler, 1898" — the parser
-    // takes "subser"/"ser" as infrageneric rank markers (SUBSERIES_BOTANY /
-    // SERIES_BOTANY) and folds "Gredler" into the infrageneric epithet. Left
-    // as TODOs — needs context-aware disambiguation.
+    // the snail epithets "ser"/"subser" before a dated author, no botanical series ranks
+    assert_name("Serina ser Gredler, 1898")
+        .species("Serina", "ser")
+        .comb_authors(Some("1898"), &["Gredler"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Serina subser Gredler, 1898")
+        .species("Serina", "subser")
+        .comb_authors(Some("1898"), &["Gredler"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]
