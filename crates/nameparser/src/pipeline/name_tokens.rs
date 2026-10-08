@@ -363,6 +363,16 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         }
                     }
                 }
+                // 1a. "ex gr." (ex grege, of the species group of): the paleontologists' qualifier
+                if w == "ex" && is_ex_grege(ts, i) && lower_epithets.len() < 2 {
+                    cf_aff_qualifier = Some("ex gr.".to_string());
+                    ctx.name.type_ = NameType::Informal;
+                    i += 2;
+                    if i < ts.len() && ts[i].kind == TokenKind::Dot {
+                        i += 1;
+                    }
+                    continue;
+                }
                 // 1. cf./aff./near open-nomenclature qualifier
                 if (w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")
@@ -1192,6 +1202,16 @@ fn has_infraspecific_epithet_after(ts: &[Token], marker_idx: usize) -> bool {
     }
     // a numeral epithet ("var. 4-lineata") is an epithet too, not a designation
     nx.kind == TokenKind::Word && token::is_numeral_epithet(&nx.text)
+}
+
+/// The "ex" at `i` opens "ex gr." / "ex grege" ("Acastella ex gr. rouaulti") before an epithet.
+pub(crate) fn is_ex_grege(ts: &[Token], i: usize) -> bool {
+    let gr = ts.get(i + 1).filter(|t| t.kind == TokenKind::Word);
+    let gr_dot = usize::from(ts.get(i + 2).is_some_and(|t| t.kind == TokenKind::Dot));
+    gr.is_some_and(|t| t.text == "gr" || t.text == "grege")
+        && ts
+            .get(i + 2 + gr_dot)
+            .is_some_and(|t| t.kind == TokenKind::Word && starts_lower(t))
 }
 
 /// True for strain-code-shaped tokens — mixed letters and digits, no spaces, length >= 3

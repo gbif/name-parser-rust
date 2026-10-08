@@ -150,6 +150,14 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 {
                     return i;
                 }
+                // "ex gr." (ex grege) before an epithet is a qualifier like cf.
+                if t.text == "ex" && crate::pipeline::name_tokens::is_ex_grege(tokens, i) {
+                    i += 2;
+                    if i < n && tokens[i].kind == TokenKind::Dot {
+                        i += 1;
+                    }
+                    continue;
+                }
                 // cf./aff. qualifiers and indet markers — keep walking
                 if w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")

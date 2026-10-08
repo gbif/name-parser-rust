@@ -802,10 +802,12 @@ fn stray_ex_is_not_parsed_as_species() {
         .bas_authors(None, &["L."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "ex gr." is read as two epithets and "rouaulti" as the author
-    // "Acastella ex gr. rouaulti" — ex grege ("of the species-group of") is a
-    // paleontological qualifier that the parser doesn't recognise. The trailing
-    // "rouaulti" survives as authorship; the test is left as a TODO.
+    // "ex gr." — ex grege, "of the species group of" — is a paleontological qualifier like cf.
+    assert_name("Acastella ex gr. rouaulti")
+        .species("Acastella", "rouaulti")
+        .qualifiers(&[(NamePart::Specific, "ex gr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
 }
 
 #[test]
