@@ -2154,7 +2154,9 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// source's own `"..." + "..."` layout, one alternative per line, so it stays directly
 /// diffable against StripAndStash.java line-by-line. Rust-only first alternative: "nomen" and its
 /// Latin status word in any case, "Akeratidae Nomen Nudum", whose capital the general alternative
-/// stops at — Java read "Nudum" as an author.
+/// stops at — Java read "Nudum" as an author. Rust-only too: the "n." spelling of nova, "sp. n.",
+/// "n. sp.", "n.sp." ("Anomia atacamensis n.sp. HERM 1969", where Java read an epithet "n" and an
+/// author "sp.Herm").
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r"\s+(",
@@ -2162,6 +2164,7 @@ static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
         r"|(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
         r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
+        r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
         r")\s*(?=$|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
     ))
@@ -2173,6 +2176,11 @@ static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
 /// scoping (not whole-wrap). Called via `.matches()` -> trailing `$` added.
 static SP_NOV_PREFIX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:sp|spec)(?-u:\b)\.?(?-u:\s+)nov.*$").unwrap());
+
+/// The "n." spelling of a nova note, "sp. n." or "n. sp.", matched by [`NOM_NOTE`].
+static NOVA_ABBREVIATED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?)$").unwrap()
+});
 
 /// Java SINGLE_TITLE_WORD (StripAndStash.java:340): `^[\p{Lu}][\p{Ll}]+$`, no flags.
 /// `\p{Lu}`/`\p{Ll}` always Unicode, no ASCII atoms at all -> nothing to scope. Its own
@@ -2223,6 +2231,26 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
     let match_start = caps.get(0).unwrap().start();
     let match_end = caps.get(0).unwrap().end();
     let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+    // A "sp. n." / "n. sp." before a specimen code, or after a bare genus with anything behind it,
+    // is a provisional name's designation, kept whole for its phrase ("Heteropriapulus sp. n.
+    // AAA-2017", "Amrasca (Amrasca) sp. n. VN1", "Aphonopelma sp. n. Guatemala"), and so is a new
+    // subspecies not yet named ("Heliconius timareta ssp. n. CPD-2012", "Lasiophila alkaios ssp.
+    // n.").
+    if NOVA_ABBREVIATED.is_match(&raw) {
+        let after = java_trim(&s[match_end..]);
+        let code_follows = after
+            .split_whitespace()
+            .next()
+            .is_some_and(|w| w.chars().any(|c| c.is_ascii_digit() || c == '_'));
+        // a trailing code may already be stashed ("Anaka sp. n. RWW_2025")
+        let stashed = ctx.name.phrase.is_some() || ctx.pending_unparsed.is_some();
+        let after_bare_genus = SINGLE_TITLE_WORD.is_match(java_trim(&s[..match_start]))
+            && (!after.is_empty() || stashed);
+        let subspecies = raw.contains("ssp") || raw.contains("subsp");
+        if code_follows || after_bare_genus || subspecies {
+            return s;
+        }
+    }
     let norm = normalise_nom_note(&raw);
     ctx.name.add_nomenclatural_note(&norm);
 
@@ -2239,7 +2267,9 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
         result = java_trim(&result).to_string();
     }
 
-    if SP_NOV_PREFIX.is_match(&raw) && SINGLE_TITLE_WORD.is_match(&before) {
+    if (SP_NOV_PREFIX.is_match(&raw) || NOVA_ABBREVIATED.is_match(&raw))
+        && SINGLE_TITLE_WORD.is_match(&before)
+    {
         result = format!("{before} sp.");
     }
     if MANUSCRIPT_KEYWORD.is_match(&raw) {

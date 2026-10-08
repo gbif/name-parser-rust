@@ -256,3 +256,26 @@ fn a_note_keyword_with_a_stray_dot_is_still_the_note() {
         .nom_note("Nomen Nudum")
         .nothing_else();
 }
+
+#[test]
+fn nova_abbreviated_with_n_is_a_note() {
+    // "n. sp." / "sp. n." spell "sp. nov." too
+    assert_name("Anomia atacamensis n.sp. HERM 1969")
+        .species("Anomia", "atacamensis")
+        .comb_authors(Some("1969"), &["Herm"])
+        .nom_note("n. sp.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Cryptopimpla carinifacialis Sheng, sp. n.")
+        .species("Cryptopimpla", "carinifacialis")
+        .comb_authors(None, &["Sheng"])
+        .nom_note("sp. n.")
+        .nothing_else();
+    // a provisional name keeps it in its phrase
+    assert_informal("Heteropriapulus sp. n. AAA-2017")
+        .taxon("Heteropriapulus")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. n. AAA-2017")
+        .nothing_else();
+}
