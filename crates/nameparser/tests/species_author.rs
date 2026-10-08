@@ -6,7 +6,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NameType, NomCode, Rank};
+use nameparser::model::{NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn a_species_author_before_the_rank_marker_is_kept() {
@@ -45,6 +45,19 @@ fn a_cultivar_without_its_own_author_keeps_the_species_author_apart() {
         .cultivar_sp("Acer", "campestre", "Elsrijk")
         .specific_authors(None, &["L."])
         .comb_authors(None, &["Broerse"])
+        .nothing_else();
+    // a cultivar author starting with a particle, and a species author after a hybrid sign
+    assert_name("Acer saccharinum L. cv. 'Asplenifolium' de Bie")
+        .cultivar_sp("Acer", "saccharinum", "Asplenifolium")
+        .specific_authors(None, &["L."])
+        .comb_authors(None, &["de Bie"])
+        .nothing_else();
+    assert_name("Symphoricarpos x chenaultii Rehder cv. 'Erect' Door. ex Koppeschaar")
+        .cultivar_sp("Symphoricarpos", "chenaultii", "Erect")
+        .notho(&[NamePart::Specific])
+        .specific_authors(None, &["Rehder"])
+        .comb_authors(None, &["Koppeschaar"])
+        .comb_ex_authors(&["Door."])
         .nothing_else();
 }
 

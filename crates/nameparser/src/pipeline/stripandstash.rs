@@ -1721,17 +1721,26 @@ static RANK_MARKER_SUFFIX: LazyLock<Regex> =
 /// -> keep default Unicode `\s` (fancy_regex's own default, so no ASCII spelling-out
 /// needed here, unlike `QUOTED_CULTIVAR_END`). BACKREFERENCE (`\1`) -> `fancy_regex`.
 /// Group 1 = quote char, group 2 = cultivar epithet content, group 3 = the trailing
-/// author span (kept verbatim for splicing back onto the name part).
+/// author span (kept verbatim for splicing back onto the name part). Rust-only: the author may
+/// start with a particle behind a capitalised epithet ("Acer saccharinum L. cv. 'Asplenifolium' de
+/// Bie"), groups 4 to 6 then; a quoted lower-case word before one is no cultivar (`Haplochromis
+/// "black" van Oijen, 1982`, a fish).
 static QUOTED_CULTIVAR_MID: LazyLock<FancyRegex> = LazyLock::new(|| {
-    FancyRegex::new(r#"\s+(?:cv\.?\s+)?(['"])([^'"]+)\1(\s+[\p{Lu}].*)$"#).unwrap()
+    FancyRegex::new(concat!(
+        r#"\s+(?:cv\.?\s+)?(['"])([^'"]+)\1(\s+[\p{Lu}].*)$"#,
+        r#"|\s+(?:cv\.?\s+)?(['"])(\p{Lu}[^'"]*)\4(\s+(?:(?:de|den|der|van|von|du|da|dos|la|le|ten|ter|zu|zur)\s+){1,2}[\p{Lu}].*)$"#,
+    ))
+    .unwrap()
 });
 
 /// Java AUTHOR_START (StripAndStash.java:283-285):
 /// `^([\p{Lu}][\p{Ll}]+(?:\s+[\p{Ll}]+)?)\s+([\p{Lu}][\p{L}.]+.*)$`,
 /// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim (no
-/// backreference, no lookaround -> plain `regex` crate).
+/// backreference, no lookaround -> plain `regex` crate). Rust-only: the epithet may carry a
+/// hybrid sign ("Symphoricarpos x chenaultii Rehder cv. 'Erect' Door. ex Koppeschaar").
 static AUTHOR_START: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^([\p{Lu}][\p{Ll}]+(?:\s+[\p{Ll}]+)?)\s+([\p{Lu}][\p{L}.]+.*)$").unwrap()
+    Regex::new(r"^([\p{Lu}][\p{Ll}]+(?:\s+(?:[×x]\s?)?[\p{Ll}]+)?)\s+([\p{Lu}][\p{L}.]+.*)$")
+        .unwrap()
 });
 
 /// Java `StripAndStash.findAuthorStart` (StripAndStash.java:1650-1657): the byte offset of
@@ -1813,8 +1822,9 @@ fn strip_quoted_cultivar(ctx: &mut ParseContext, mut s: String) -> String {
 
     if let Some(caps) = QUOTED_CULTIVAR_MID.captures(&s).ok().flatten() {
         let match_start = caps.get(0).unwrap().start();
-        let epithet = java_trim(caps.get(2).unwrap().as_str()).to_string();
-        let tail = caps.get(3).unwrap().as_str().to_string();
+        let group = |k: usize| caps.get(k).or_else(|| caps.get(k + 3)).unwrap().as_str();
+        let epithet = java_trim(group(2)).to_string();
+        let tail = group(3).to_string();
         let prefix = java_trim(&s[..match_start]).to_string();
         ctx.name.cultivar_epithet = Some(epithet);
         ctx.name.code = Some(NomCode::Cultivars);
