@@ -1011,6 +1011,21 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         // names with internal apostrophes ("L.'t Mannetje", "M'Coy", "d'Urv.", "'t Hart")
         // render verbatim. Glue to the preceding character when there's no whitespace
         // gap in the input ("d'Urv"); otherwise insert a space ("Henk 't").
+        // …but an apostrophe opening an author before a capitalised surname, and never closed, is
+        // a stray quote, no elision ("Nereidavus kulkovi 'Kulkov"); "'t Hart" keeps its "t".
+        if t.kind == TokenKind::Other
+            && t.text == "'"
+            && cur.is_empty()
+            && tokens.get(i + 1).is_some_and(|nx| {
+                nx.kind == TokenKind::Word && nx.start == t.end && starts_upper(&nx.text)
+            })
+            && !tokens[i + 1..to]
+                .iter()
+                .any(|q| q.kind == TokenKind::Other && q.text == "'")
+        {
+            i += 1;
+            continue;
+        }
         if t.kind == TokenKind::Other && t.text == "'" {
             let has_gap = !cur.is_empty() && i > 0 && tokens[i - 1].end < t.start;
             if has_gap {

@@ -190,10 +190,9 @@ fn treating_al_as_et_al_binomials() {
 #[test]
 fn authors_do_not_start_with_apostrophe() {
     // group: Authors do not start with apostrophe
-    // FIXME(review): the leading apostrophe is no part of the author: "Kulkov"
     assert_name("Nereidavus kulkovi 'Kulkov")
         .species("Nereidavus", "kulkovi")
-        .comb_authors(None, &["'Kulkov"])
+        .comb_authors(None, &["Kulkov"])
         .nothing_else();
 }
 
