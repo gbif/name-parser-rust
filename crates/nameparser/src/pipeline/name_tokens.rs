@@ -410,7 +410,20 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     if j < ts.len() && ts[j].kind == TokenKind::Dot {
                         j += 1;
                     }
-                    j < ts.len() && ts[j].kind == TokenKind::Number
+                    // a strain code, a digit-led word or a final capital letter is a designation
+                    // too: "Euxoa idahoensis sp. 1clay", "Abies alba sp. JGP0404", "… sp. E"
+                    let word = |k: usize| ts.get(k).filter(|t| t.kind == TokenKind::Word);
+                    j < ts.len()
+                        && (ts[j].kind == TokenKind::Number
+                            || word(j).is_some_and(|t| {
+                                t.text.starts_with(|c: char| c.is_ascii_digit())
+                                    || (starts_upper(t)
+                                        && (is_strain_code(&t.text)
+                                            || ts.get(j + 1).is_some_and(|nx| {
+                                                nx.kind == TokenKind::Number && j + 2 == ts.len()
+                                            })
+                                            || (t.text.chars().count() == 1 && j + 1 == ts.len())))
+                            }))
                 };
                 // …but `spec` is also a genuine published epithet ("Hemicloeina spec Platnick,
                 // 2002", "Lampona spec Platnick, 2000", "Gobiosoma spec (Ginsburg, 1939)"; COL
@@ -534,8 +547,12 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     {
                         // Single uppercase letter following sp. — informal phrase
                         // identifier ("Bryozoan sp. E"). Stored as phrase, leaves
-                        // indet=true.
-                        ctx.name.phrase = Some(ts[i].text.clone());
+                        // indet=true; after a species epithet with its marker.
+                        ctx.name.phrase = Some(if lower_epithets.is_empty() {
+                            ts[i].text.clone()
+                        } else {
+                            ctx.working[marker_start..ts[i].end].to_string()
+                        });
                         i += 1;
                     } else if i < ts.len()
                         && ts[i].kind == TokenKind::Word
@@ -557,7 +574,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             i += 1;
                         }
                         if is_strain_code(&code) {
-                            ctx.name.phrase = Some(code);
+                            // after a species epithet the marker stays in the phrase, as with a
+                            // number ("Euxoa idahoensis sp. 1clay")
+                            ctx.name.phrase = Some(if lower_epithets.is_empty() {
+                                code
+                            } else {
+                                ctx.working[marker_start..ts[i - 1].end].to_string()
+                            });
                         }
                     }
                     // 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): a supraspecific indet

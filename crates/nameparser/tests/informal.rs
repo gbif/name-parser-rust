@@ -884,3 +884,27 @@ fn the_spec_epithet_rescue_needs_both_a_missing_dot_and_an_authorship() {
         .taxon_rank(Rank::Genus)
         .nothing_else();
 }
+
+#[test]
+fn a_designation_after_sp_behind_a_species_epithet_keeps_the_marker() {
+    // a digit-led word is a designation like a number, and the marker stays in the phrase
+    assert_name("Euxoa idahoensis sp. 1clay")
+        .species("Euxoa", "idahoensis")
+        .phrase("sp. 1clay")
+        .type_(NameType::Informal)
+        .nothing_else();
+}
+
+#[test]
+fn a_code_or_letter_after_sp_behind_a_species_epithet_is_its_phrase() {
+    assert_name("Abies alba sp. JGP0404")
+        .species("Abies", "alba")
+        .phrase("sp. JGP0404")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Bacillus cereus group sp. FL70")
+        .binomial("Bacillus", None, "cereus", Rank::SpeciesAggregate)
+        .phrase("sp. FL70")
+        .type_(NameType::Informal)
+        .nothing_else();
+}

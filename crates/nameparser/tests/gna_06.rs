@@ -59,10 +59,12 @@ fn misc_annotations() {
     // FIXME(review): the upper-case "CF" (cf.) is dropped without a qualifier
     // skipped: Diodora dorsata  CF
     //   — trailing 2-letter all-caps token parses as a short author surname
-    // FIXME(review): a BOLD sample id becomes the infraspecific epithet
-    // skipped: Dasysyrphus intrudens complex sp. BBDCQ003-10
-    //   — multi-annotation strip (`complex` mid-string + trailing strain code)
-    //     not implemented
+    // a BOLD sample id after "complex sp." is the phrase
+    assert_name("Dasysyrphus intrudens complex sp. BBDCQ003-10")
+        .binomial("Dasysyrphus", None, "intrudens", Rank::SpeciesAggregate)
+        .phrase("sp. BBDCQ003-10")
+        .type_(NameType::Informal)
+        .nothing_else();
 }
 
 #[test]
