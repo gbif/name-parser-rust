@@ -148,13 +148,14 @@ class ParityTest {
   }
 
   /** Mirror of Rust {@code is_informal} / {@link StructCodec}'s {@code isInformal}, on the oracle
-   *  JSON: an INFORMAL-typed ParsedName with a real anchor and no species epithet. */
+   *  JSON: an INFORMAL-typed ParsedName with a real anchor and no species or infraspecific
+   *  epithet. */
   private static boolean oracleIsInformal(JsonObject p) {
     if (p == null) {
       return false;
     }
     String type = p.has("type") ? p.get("type").getAsString() : null;
-    boolean hasSpecific = p.has("specificEpithet");
+    boolean hasSpecific = p.has("specificEpithet") || p.has("infraspecificEpithet");
     boolean hasAnchor = p.has("genus") || p.has("uninomial") || p.has("infragenericEpithet");
     return "INFORMAL".equals(type) && !hasSpecific && hasAnchor;
   }
