@@ -70,6 +70,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_trailing_culture_accession(ctx, s);
     s = stash_bracketed_annotation(ctx, s);
     s = stash_underscore_designation(ctx, s);
+    s = split_underscore_binomial(s);
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
@@ -982,6 +983,22 @@ static GLUED_NEW_GENUS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)_(n_gen(?:(?-u:\s+).*)?)$").unwrap());
 static NEW_SPECIES_TAG: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:\b)(?:n_)?sp_").unwrap());
+
+/// A genus joined to its epithet by an underscore for the space ("Calopteryx_splendens
+/// splendens", "Oxalis_barrelieri ined.?"), which made one genus "Calopteryx_splendens".
+static UNDERSCORE_BINOMIAL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_(\p{Ll}{3,})(\s|$)").unwrap());
+
+/// Splits an [`UNDERSCORE_BINOMIAL`]; a family's "_gen"/"_genus" placeholder or a "_sp" tag is no
+/// epithet and stays.
+fn split_underscore_binomial(s: String) -> String {
+    match UNDERSCORE_BINOMIAL.captures(&s) {
+        Some(caps) if !matches!(&caps[2], "gen" | "genus" | "sp" | "spp" | "ssp" | "subsp") => {
+            UNDERSCORE_BINOMIAL.replace(&s, "$1 $2$3").into_owned()
+        }
+        _ => s,
+    }
+}
 
 /// See [`UNDERSCORE_DESIGNATION`] and [`GLUED_NEW_GENUS`].
 fn stash_underscore_designation(ctx: &mut ParseContext, s: String) -> String {
