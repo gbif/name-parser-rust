@@ -149,9 +149,9 @@ fn named_hybrids() {
         .code(NomCode::Botanical)
         .nothing_else();
     // GNA reduces this to a bare monomial; GBIF retains the genus+infrageneric structure
-    // FIXME(review): the author "Lapage" vanishes without a trace (no authorship, not PARTIAL)
     assert_name("XAgroelymus Lapage sect. Agroelinelymus")
         .infrageneric_at("Agroelymus", Rank::SectionBotany, "Agroelinelymus")
+        .generic_authors(None, &["Lapage"])
         .notho(&[NamePart::Generic])
         .code(NomCode::Botanical)
         .nothing_else();

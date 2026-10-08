@@ -244,10 +244,11 @@ fn flag_uncertain_authorship(ctx: &mut ParseContext, mut s: String) -> String {
 /// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim. "Cordia
 /// (Adans.) Kuntze sect. Salimori" — authorship placed BEFORE an infrageneric rank marker.
 /// group(1)=genus, group(2)=author span (optional parenthesised basionym + combination
-/// author words), group(3)=marker + sectional epithet.
+/// author words), group(3)=marker + sectional epithet. Rust-only: the genus may carry its hybrid
+/// sign ("XAgroelymus Lapage sect. Agroelinelymus"), where Java lost the author.
 static INFRAGEN_AUTHOR_BEFORE_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(\p{Lu}[\p{Ll}]+)\s+((?:\(\s*[^()]*\)\s*)?\p{Lu}[\p{L}.'\-]*(?:\s+\p{Lu}[\p{L}.'\-]*)*)\s+((?:subg|subgen|subgenus|sect|subsect|supersect|ser|subser|superser|divisio|div)\.?\s+\p{Lu}[\p{Ll}]+)$",
+        r"^((?:[×xX]\s?)?\p{Lu}[\p{Ll}]+)\s+((?:\(\s*[^()]*\)\s*)?\p{Lu}[\p{L}.'\-]*(?:\s+\p{Lu}[\p{L}.'\-]*)*)\s+((?:subg|subgen|subgenus|sect|subsect|supersect|ser|subser|superser|divisio|div)\.?\s+\p{Lu}[\p{Ll}]+)$",
     )
     .unwrap()
 });
