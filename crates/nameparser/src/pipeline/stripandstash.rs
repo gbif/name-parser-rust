@@ -87,6 +87,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
+    s = strip_rank_nova(ctx, s);
     s = strip_quoted_attributed_author(s);
     s = strip_quoted_cultivar(ctx, s);
     s = strip_extinct_dagger(ctx, s);
@@ -1894,6 +1895,23 @@ static TRAILING_CV: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s+cv\.
 /// out (no ASCII mode in `fancy_regex`).
 static CV_MARKER: LazyLock<FancyRegex> =
     LazyLock::new(|| FancyRegex::new(r"[ \t\n\x0B\f\r]+cv\.?(?=[ \t\n\x0B\f\r]|$)").unwrap());
+
+/// An infraspecific rank marker with "n." (nova) before its epithet: "Acidalia remutaria ab. n.
+/// undularia", "Abies alba var. n. alpina". Group 1 = the marker, group 2 = the epithet.
+static RANK_NOVA: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\s(ab|var|f|forma|subsp|ssp|morpha)\.\s+n\.\s+(\p{Ll}{3,})(\s|$)").unwrap()
+});
+
+/// Moves a [`RANK_NOVA`]'s "n." into the nomenclatural note as "ab. n."; Java read "n" as the
+/// epithet and the real one as an author.
+fn strip_rank_nova(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = RANK_NOVA.captures(&s) else {
+        return s;
+    };
+    ctx.name
+        .add_nomenclatural_note(&format!("{}. n.", &caps[1]));
+    RANK_NOVA.replace(&s, " $1. $2$3").into_owned()
+}
 
 /// A double-quoted author between the epithet and the authorship (`Verpericola megasoma "Dall"
 /// Pils.`, `Vespa anglica "Leach" Sm., 1843`, `Limea bengalensis "Stuardo, 1968" Huber, 2010`):

@@ -476,10 +476,14 @@ fn infraspecies_with_rank_icn() {
         .species("Cibotium", "st.-johnii")
         .comb_authors(None, &["Krajina"])
         .nothing_else();
-    // FIXME(review): "ab. n." makes "n" the epithet and "undularia" the author
-    // Skipped: "Acidalia remutaria ab. n. undularia" needs "ab. n." (aberratio
-    // nova) handling; "Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f.
-    // fakeepithet" and the bracketed variant need quadrinomial-with-rank handling.
+    // "ab. n." — aberratio nova — is the rank marker and a nomenclatural note
+    assert_name("Acidalia remutaria ab. n. undularia")
+        .infra_species("Acidalia", "remutaria", Rank::Aberration, "undularia")
+        .nom_note("ab. n.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // Skipped: "Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet" and the
+    // bracketed variant need quadrinomial-with-rank handling.
 }
 
 #[test]
