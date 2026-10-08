@@ -90,3 +90,14 @@ fn a_replacement_character_inside_a_word_is_a_missing_letter() {
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 }
+
+#[test]
+fn a_cyrillic_o_is_a_letter_o_not_a_zero() {
+    // the homoglyph table lists it on the row of the digit 0
+    assert_name("Anabarhynchus longepil\u{03BF}sus Lyneborg, 1992")
+        .species("Anabarhynchus", "longepilosus")
+        .comb_authors(Some("1992"), &["Lyneborg"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+}
