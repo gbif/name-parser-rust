@@ -162,11 +162,14 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 if w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")
                     || w.eq_ignore_ascii_case("sp")
+                    || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet")
                 {
-                    let is_sp = w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spec");
+                    let is_sp = w.eq_ignore_ascii_case("sp")
+                        || w.eq_ignore_ascii_case("spp")
+                        || w.eq_ignore_ascii_case("spec");
                     let is_cf_or_aff =
                         w.eq_ignore_ascii_case("cf") || w.eq_ignore_ascii_case("aff");
                     // `spec` is also a genuine published epithet ("Hemicloeina spec Platnick,

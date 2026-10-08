@@ -432,6 +432,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     && (!name_section_covers_all || separate_authorship)
                     && i + 1 == ts.len();
                 if (w.eq_ignore_ascii_case("sp")
+                    || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet"))
@@ -464,6 +465,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     // ("Aster indet." -> "Aster sp. indet."). Restrict the marker capture to
                     // sp/spec/species; "indet" falls through and renders via the synthesised rank.
                     let is_species_marker = w.eq_ignore_ascii_case("sp")
+                        || w.eq_ignore_ascii_case("spp")
                         || w.eq_ignore_ascii_case("spec")
                         || w.eq_ignore_ascii_case("species");
                     // A cultivar epithet (extracted upstream from "Genus sp. cv. 'Name'") is the
@@ -584,7 +586,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 // 2b. "sp." between species and infraspecific epithet is almost always a
                 // misspelling of "ssp." (subspecies). Only triggers when there's already
                 // a species epithet and a lower epithet follows.
-                if w.eq_ignore_ascii_case("sp")
+                if (w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spp"))
                     && lower_epithets.len() == 1
                     && marker_idx_in_epithets < 0
                     && has_infraspecific_epithet_after(ts, i)
@@ -603,6 +605,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 // infraspecific epithet (which yielded INFRASPECIFIC_NAME with epithet
                 // "sp"). The sp.->ssp. case (2b) already handled a following epithet.
                 if (w.eq_ignore_ascii_case("sp")
+                    || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species"))
                     && !lower_epithets.is_empty()

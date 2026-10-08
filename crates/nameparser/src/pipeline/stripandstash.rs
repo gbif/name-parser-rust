@@ -946,6 +946,7 @@ fn second_word(head: &str) -> &str {
 /// the CLB corpus diff). Only the markers NameTokens can actually finish belong here.
 fn is_indet_species_marker(w: &str) -> bool {
     w.eq_ignore_ascii_case("sp")
+        || w.eq_ignore_ascii_case("spp")
         || w.eq_ignore_ascii_case("spec")
         || w.eq_ignore_ascii_case("species")
 }

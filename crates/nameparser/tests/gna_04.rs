@@ -446,8 +446,10 @@ fn open_nomenclature_approximate_names() {
         .rank(Rank::Species)
         .phrase("sp. 37")
         .nothing_else();
-    // FIXME(review): "spp." is read as the infraspecific epithet
-    // skipped: Thryothorus leucotis spp. bogotensis
+    // "spp." between two epithets is a misspelt "ssp.", as "sp." is
+    assert_name("Thryothorus leucotis spp. bogotensis")
+        .infra_species("Thryothorus", "leucotis", Rank::Subspecies, "bogotensis")
+        .nothing_else();
     assert_informal("Endoxyla sp. GM-, 2003")
         .taxon("Endoxyla")
         .taxon_rank(Rank::Genus)

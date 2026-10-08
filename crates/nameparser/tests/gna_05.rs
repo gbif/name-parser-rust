@@ -282,10 +282,19 @@ fn open_taxonomy_with_ranks_unfinished() {
         .type_(NameType::Informal)
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
-    // FIXME(review): "spp" is read as the species epithet (an informal "Alaria spp.")
-    // skipped: Alaria spp
-    // FIXME(review): "spp." is read as the species epithet (an informal "Alaria spp.")
-    // skipped: Alaria spp.
+    // "spp." — several species of the genus — is an indet marker like "sp."
+    assert_informal("Alaria spp")
+        .taxon("Alaria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spp")
+        .nothing_else();
+    assert_informal("Alaria spp.")
+        .taxon("Alaria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spp.")
+        .nothing_else();
     assert_informal("Xenodon sp")
         .taxon("Xenodon")
         .taxon_rank(Rank::Genus)
@@ -335,8 +344,12 @@ fn open_taxonomy_with_ranks_unfinished() {
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
-    // FIXME(review): "spp." is read as the species epithet (an informal "Acastoides spp.")
-    // skipped: Acastoides spp.
+    assert_informal("Acastoides spp.")
+        .taxon("Acastoides")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spp.")
+        .nothing_else();
 }
 
 #[test]
