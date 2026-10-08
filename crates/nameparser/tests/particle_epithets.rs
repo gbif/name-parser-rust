@@ -196,3 +196,21 @@ fn non_table_prefix_like_epithets_are_unaffected_by_the_hint() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn den_dem_and_ver_are_particles_only_before_a_surname() {
+    assert_name("Metrocoris ciliatus den Boer, 1965")
+        .species("Metrocoris", "ciliatus")
+        .comb_authors(Some("1965"), &["den Boer"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // an epithet otherwise: the amphipod Gnathopleustes den, the stonefly Agnetina den
+    assert_name("Gnathopleustes den (J.L.Barnard, 1969)")
+        .species("Gnathopleustes", "den")
+        .bas_authors(Some("1969"), &["J.L.Barnard"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Agnetina den")
+        .species("Agnetina", "den")
+        .nothing_else();
+}

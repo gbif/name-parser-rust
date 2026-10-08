@@ -367,7 +367,11 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     i += 1;
                     continue;
                 }
-                if token::is_particle(&t.text) || looks_like_apostrophe_particle(&t.text) {
+                let weak_particle = is_weak_particle_before_surname(tokens, i);
+                if token::is_particle(&t.text)
+                    || looks_like_apostrophe_particle(&t.text)
+                    || weak_particle
+                {
                     // Particle authors may be followed by a structural rank marker —
                     // try to skip past the author span as a mid-name author so the
                     // marker still gets consumed by the name section.
@@ -650,7 +654,7 @@ fn particle_is_epithet_by_rank(
     if !ctx.requested_rank.is_some_and(|r| r.is_species_or_below()) {
         return false;
     }
-    if !token::is_particle(&tokens[i].text) {
+    if !token::is_particle(&tokens[i].text) && !is_weak_particle(&tokens[i].text) {
         return false;
     }
     // Chain guard: look past any abbreviation dots to the next word.
@@ -662,6 +666,30 @@ fn particle_is_epithet_by_rank(
         Some(next) if next.kind == TokenKind::Word => !starts_lower(next),
         _ => true,
     }
+}
+
+/// "den", "dem" and "ver": particles the table lacks, since they are epithets too ("Agnetina den",
+/// "Gnathopleustes den (Barnard 1969)").
+fn is_weak_particle(word: &str) -> bool {
+    matches!(word, "den" | "dem" | "ver")
+}
+
+/// A weak particle at `i` starts an author only right before a capitalised surname ("Metrocoris
+/// ciliatus den Boer, 1965") that is not written surname-first with its initials behind a comma —
+/// that one follows an epithet ("Agnetina den Cao, T.K.T. & Bae, 2006").
+fn is_weak_particle_before_surname(tokens: &[Token], i: usize) -> bool {
+    let initials_after_comma = tokens
+        .get(i + 2)
+        .is_some_and(|c| c.kind == TokenKind::Comma)
+        && tokens.get(i + 3).is_some_and(|t| {
+            t.kind == TokenKind::Word && t.text.chars().count() == 1 && starts_upper(t)
+        })
+        && tokens.get(i + 4).is_some_and(|d| d.kind == TokenKind::Dot);
+    is_weak_particle(&tokens[i].text)
+        && tokens
+            .get(i + 1)
+            .is_some_and(|nx| nx.kind == TokenKind::Word && starts_upper(nx))
+        && !initials_after_comma
 }
 
 /// Java `AuthorshipSplit.consumeMidNameAuthor(List<Token>, int, int)`
