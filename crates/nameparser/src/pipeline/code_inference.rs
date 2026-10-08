@@ -184,8 +184,10 @@ fn authorship_votes(
         votes.insert(NomCode::Botanical);
     }
     // An ex-author ("Mart. ex DC.", "(Fr. ex Duby) Johanson"): the formal ex citation is
-    // botanical usage.
-    if !auth_state.combination.ex_authors.is_empty() || !auth_state.basionym.ex_authors.is_empty() {
+    // botanical usage — not a manuscript name another published ("Carpenter MS, Dall, 1879").
+    if (!auth_state.combination.ex_authors.is_empty() || !auth_state.basionym.ex_authors.is_empty())
+        && !auth_state.manuscript_ex
+    {
         votes.insert(NomCode::Botanical);
     }
     // Filius ("f." / "fil.") without any year.

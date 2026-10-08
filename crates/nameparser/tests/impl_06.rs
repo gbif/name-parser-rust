@@ -446,10 +446,10 @@ fn test_authorteam() {
         .comb_authors(None, &["Monterosato"])
         .nom_note("ms.")
         .nothing_else();
-    // FIXME(review): "ms." is glued onto Arnott; stripped as for "Monterosato ms.", it reads Arn.
-    // ex Grunow
-    assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"])
-        .comb_authors(None, &["Arn.ms.", "Grunow"])
+    // "ms." before the comma: Arnott's manuscript name, published by Grunow — Arn. ex Grunow
+    assert_ex_authorship("Arn. ms., Grunow", Some("Arn."), &["Grunow"])
+        .comb_authors(None, &["Grunow"])
+        .comb_ex_authors(&["Arn."])
         .nothing_else();
     assert_authorship(
         "Choi,J.H.; Im,W.T.; Yoo,J.S.; Lee,S.M.; Moon,D.S.; Kim,H.J.; Rhee,S.K.; Roh,D.H.",
@@ -771,10 +771,10 @@ fn test_authorteam() {
         .comb_authors(None, &["Monterosato"])
         .nom_note("ms.")
         .nothing_else();
-    // FIXME(review): "ms." is glued onto Arnott; stripped as for "Monterosato ms.", it reads Arn.
-    // ex Grunow
-    assert_authorship("Arn. ms., Grunow", &["Arn.ms.", "Grunow"])
-        .comb_authors(None, &["Arn.ms.", "Grunow"])
+    // "ms." before the comma: Arnott's manuscript name, published by Grunow — Arn. ex Grunow
+    assert_ex_authorship("Arn. ms., Grunow", Some("Arn."), &["Grunow"])
+        .comb_authors(None, &["Grunow"])
+        .comb_ex_authors(&["Arn."])
         .nothing_else();
     assert_ex_authorship("Griseb. ex. Wedd.", Some("Griseb."), &["Wedd."])
         .comb_authors(None, &["Wedd."])

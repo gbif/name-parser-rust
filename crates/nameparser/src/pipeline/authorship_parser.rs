@@ -165,6 +165,9 @@ pub(crate) struct AuthState {
     /// True when a combination author is written with dotted initials before the surname
     /// ("M.A. Curtis"), not behind it ("Lindberg H").
     pub combination_initials_first: bool,
+    /// An ex-author is a manuscript name another published ("Carpenter MS, Dall", `"Dall" Pils.`
+    /// rewritten so), zoology's usage as much as botany's: no botanical evidence.
+    pub manuscript_ex: bool,
     /// Java `int unparsedFrom = -1;` — kept as a sentinel `i32`, matching the established
     /// convention for this exact shape of field elsewhere in the port (see
     /// `ParseContext::mid_author_from`/`mid_author_to`).
@@ -182,6 +185,7 @@ impl Default for AuthState {
             has_filius: false,
             combination_year_after_comma: false,
             combination_initials_first: false,
+            manuscript_ex: false,
             unparsed_from: -1,
             unparsed_text: None,
         }
@@ -221,6 +225,7 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 let yr = parse_authors(tokens, bas_from, bas_end, &mut s.basionym);
                 s.year_range |= yr;
                 s.has_filius |= contains_filius_suffix(tokens, bas_from, bas_end);
+                s.manuscript_ex |= has_manuscript_ex(tokens, bas_from, bas_end);
                 s.basionym_present = true;
                 s.basionym.sanctioning_author = bas_sanctioning;
                 take_sanctioning_year(&tokens[bas_end..close], &mut s.basionym);
@@ -273,6 +278,7 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         }
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
         s.year_range |= yr;
+        s.manuscript_ex |= has_manuscript_ex(tokens, comb_from, comb_end);
         s.combination_year_after_comma = (comb_from..comb_end)
             .find(|&k| is_year(&tokens[k]))
             .is_some_and(|k| k > comb_from && tokens[k - 1].kind == TokenKind::Comma);
@@ -628,6 +634,20 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             continue;
         }
 
+        // "Carpenter MS, Dall", "Arn. ms., Grunow": the name of a manuscript, published by the
+        // author after the comma — an ex citation
+        if let Some(len) = manuscript_ex_at(tokens, i, to) {
+            start_ex_authors(
+                &mut cur,
+                &mut authors,
+                &mut ex_authors,
+                &mut after_separator,
+                &mut ex_after_separator,
+            );
+            i += len;
+            continue;
+        }
+
         // ex separator
         if t.kind == TokenKind::Word && t.text == "ex" {
             start_ex_authors(
@@ -877,7 +897,9 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                     // Filius / junior / etc. — case-sensitive: lowercase only. An
                     // uppercase "F" following a surname is an initial, not the filius
                     // suffix, so we don't collapse it here.
-                    if AUTHOR_SUFFIXES.contains(&nxt.as_str()) {
+                    if AUTHOR_SUFFIXES.contains(&nxt.as_str())
+                        && manuscript_ex_at(tokens, i, to).is_none()
+                    {
                         // abbreviated surname ends with '.': "Burm.f." — no separator needed
                         // full surname ends with a letter: "Hooker f." — use a space
                         if !cur.is_empty() && !cur.ends_with('.') {
@@ -1627,6 +1649,29 @@ fn has_anon_word(tokens: &[Token], from: usize, to: usize) -> bool {
     tokens[from..to]
         .iter()
         .any(|t| t.kind == TokenKind::Word && is_anon_word(&t.text))
+}
+
+/// A manuscript mark, its dot and the comma after it ("MS,", "ms.,", "Ms.,"), between an author and
+/// the one who published the name: its token count at `i`, else `None`.
+fn manuscript_ex_at(tokens: &[Token], i: usize, to: usize) -> Option<usize> {
+    let t = &tokens[i];
+    if t.kind != TokenKind::Word || !matches!(t.text.as_str(), "ms" | "MS" | "Ms" | "mss" | "MSS") {
+        return None;
+    }
+    let mut k = i + 1;
+    if k < to && tokens[k].kind == TokenKind::Dot {
+        k += 1;
+    }
+    let author_follows = k + 1 < to
+        && tokens[k].kind == TokenKind::Comma
+        && tokens[k + 1].kind == TokenKind::Word
+        && (starts_upper(&tokens[k + 1].text) || is_particle(&tokens[k + 1].text));
+    (i > 0 && author_follows).then_some(k + 1 - i)
+}
+
+/// The span `tokens[from..to)` cites a manuscript name as an ex-author ("Carpenter MS, Dall").
+pub(crate) fn has_manuscript_ex(tokens: &[Token], from: usize, to: usize) -> bool {
+    (from..to).any(|k| manuscript_ex_at(tokens, k, to).is_some())
 }
 
 /// "Everything collected so far becomes ex authors": the authors before an `ex`, or before the

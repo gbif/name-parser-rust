@@ -87,6 +87,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
+    s = strip_quoted_attributed_author(s);
     s = strip_quoted_cultivar(ctx, s);
     s = strip_extinct_dagger(ctx, s);
     s = strip_tinfr_marker(ctx, s);
@@ -1893,6 +1894,38 @@ static TRAILING_CV: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s+cv\.
 /// out (no ASCII mode in `fancy_regex`).
 static CV_MARKER: LazyLock<FancyRegex> =
     LazyLock::new(|| FancyRegex::new(r"[ \t\n\x0B\f\r]+cv\.?(?=[ \t\n\x0B\f\r]|$)").unwrap());
+
+/// A double-quoted author between the epithet and the authorship (`Verpericola megasoma "Dall"
+/// Pils.`, `Vespa anglica "Leach" Sm., 1843`, `Limea bengalensis "Stuardo, 1968" Huber, 2010`):
+/// group 1 = the name, group 2 = the quoted author, group 3 = its year, group 4 = the authorship.
+static QUOTED_ATTRIBUTED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"^(\p{Lu}\p{Ll}+(?:\s+\(\p{Lu}\p{Ll}+\))?\s+\p{Ll}[\p{Ll}-]+(?:\s+\p{Ll}[\p{Ll}-]+)?)\s+"+(\p{Lu}[\p{L}.'\-]*(?:\s\p{Lu}[\p{L}.'\-]*)?)(,?\s+\d{4})?"\s+(\p{Lu}.*)$"#,
+    )
+    .unwrap()
+});
+
+/// The [`QUOTED_ATTRIBUTED_AUTHOR`] is the author of the manuscript name, the one after it
+/// published it, as malacologists write it — no cultivar, which Java made it ("a land snail").
+/// Rewritten as the "Dall MS, Pils." that the authorship parser reads as an ex citation casting no
+/// botanical vote. Its own year goes; the name's is the publishing author's. Not after an indet
+/// marker ('Phytophthora species "Tokoroa" McAlonan' is a provisional name).
+fn strip_quoted_attributed_author(s: String) -> String {
+    let Some(caps) = QUOTED_ATTRIBUTED_AUTHOR.captures(&s) else {
+        return s;
+    };
+    let last = caps[1].split_whitespace().last().unwrap_or_default();
+    if matches!(last, "sp" | "spp" | "species" | "spec") {
+        return s;
+    }
+    format!("{} {} MS, {}", &caps[1], &caps[2], &caps[4])
+}
+
+/// [`QUOTED_ATTRIBUTED_AUTHOR`] leading a separately supplied authorship (`"Dall" Pils.`).
+static AUTHORSHIP_QUOTED_ATTRIBUTED: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#"^"+(\p{Lu}[\p{L}.'\-]*(?:\s\p{Lu}[\p{L}.'\-]*)?)(?:,?\s+\d{4})?"\s+(\p{Lu}.*)$"#)
+        .unwrap()
+});
 
 /// Java `StripAndStash.stripQuotedCultivar` (StripAndStash.java:1004-1068). A quoted
 /// cultivar epithet — " 'Name'" / " \"Name\"", optionally preceded by an explicit "cv."
@@ -4581,6 +4614,11 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
         let whole = caps.get(0).unwrap();
         let (start, end) = (whole.start(), whole.end());
         s = java_trim(&format!("{}{}", &s[..start], &s[end..])).to_string();
+    }
+
+    // A quoted attributed author leading it, as on the name string.
+    if let Some(caps) = AUTHORSHIP_QUOTED_ATTRIBUTED.captures(&s) {
+        s = format!("{} MS, {}", &caps[1], &caps[2]);
     }
 
     // A bracketed quoted spelling after the author, as on the name string.

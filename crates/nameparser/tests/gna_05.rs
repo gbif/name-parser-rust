@@ -101,16 +101,17 @@ fn normalize_atypical_dashes() {
 fn possible_canonical() {
     // group: Possible canonical. Various trailing junk forms recoverable to
     // the core canonical name. Gibberish trailing digit strings are dropped,
-    // stray opening parens / quoted "Dall"-style annotations are stripped,
+    // stray opening parens are closed, a quoted "Dall" is the attributed author,
     // botanical " ined.?" tentative-publication markers leave a PARTIAL state,
     // "(Approved Lists YYYY)" bacterial-code annotations are stripped.
     assert_name("Morea (Morea) burtius 2342343242 23424322342 23424234")
         .species_ig("Morea", "Morea", "burtius")
         .nothing_else();
-    // FIXME(review): Dall and Pilsbry are merged into one author "Dall Pils."
+    // the quoted "Dall" is the attributed (manuscript) author: Dall ex Pils.
     assert_name("Verpericola megasoma \"\"Dall\" Pils.")
         .species("Verpericola", "megasoma")
-        .comb_authors(None, &["Dall Pils."])
+        .comb_authors(None, &["Pils."])
+        .comb_ex_authors(&["Dall"])
         .nothing_else();
     // an unclosed basionym bracket ends where the filius does: (L. f.) Klatt
     assert_name("Moraea spathulata ( (L. f. Klatt")
@@ -131,8 +132,7 @@ fn possible_canonical() {
     // FIXME(review): "Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004" merges both
     // author teams and makes 2004 an imprint year
     // skipped:
-    //   "Verpericola megasoma \"Dall\" Pils." — the quoted "Dall" is parsed as
-    //     a cultivar epithet; pinned (with a FIXME: a snail, no cultivar) in impl_05.rs.
+    //   "Verpericola megasoma \"Dall\" Pils." — pinned in impl_05.rs (Dall ex Pils.).
     //   "Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967." —
     //     IPNI-style publication ref with page-and-plate; the page/plate span
     //     bleeds into the author span.

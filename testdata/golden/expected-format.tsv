@@ -4545,8 +4545,8 @@ Labeotropheus trewavasae albino'	true	Labeotropheus trewavasae albino '	Labeotro
 Phedimus takesimensis (Nakai) 't Hart	true	Phedimus takesimensis (Nakai) 't Hart	Phedimus takesimensis	Phedimus takesimensis	Phedimus takesimensis (Nakai) 't Hart	(Nakai) 't Hart
 Solanum juzepczukii janck'o-ckaisalla	true	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	
 Morea (Morea) burtius 2342343242 23424322342 23424234	true	Morea burtius	Morea burtius	Morea burtius	Morea (Morea) burtius	
-Verpericola megasoma ""Dall" Pils.	true	Verpericola megasoma Dall Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall Pils.	Dall Pils.
-Verpericola megasoma "Dall" Pils.	true	Verpericola megasoma 'Dall' Pils.	Verpericola megasoma 'Dall'	Verpericola megasoma	Verpericola megasoma 'Dall' Pils.	Pils.
+Verpericola megasoma ""Dall" Pils.	true	Verpericola megasoma Dall ex Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall ex Pils.	Dall ex Pils.
+Verpericola megasoma "Dall" Pils.	true	Verpericola megasoma Dall ex Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall ex Pils.	Dall ex Pils.
 Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata (L.f.) Klatt	Moraea spathulata	Moraea spathulata	Moraea spathulata (L.f.) Klatt	(L.f.) Klatt
 Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia micrantha (Chun) Sealy, 1967	Stewartia micrantha	Stewartia micrantha	Stewartia micrantha (Chun) Sealy, 1967	(Chun) Sealy, 1967
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
@@ -4937,7 +4937,7 @@ Protocystis xiphodon  (Haeckel, 1887), Borgert, 1901	true	Protocystis xiphodon (
 Acrosphaera lappacea  (Haeckel, 1887) Takahashi, 1991	true	Acrosphaera lappacea (Haeckel, 1887) Takahashi, 1991	Acrosphaera lappacea	Acrosphaera lappacea	Acrosphaera lappacea (Haeckel, 1887) Takahashi, 1991	(Haeckel, 1887) Takahashi, 1991
 Abutilon 'Kentish Belle'	true	Abutilon 'Kentish Belle'	Abutilon 'Kentish Belle'	Abutilon	Abutilon 'Kentish Belle'	
 Acer campestre L. cv. 'nanum'	true	Acer campestre 'nanum'	Acer campestre 'nanum'	Acer campestre	Acer campestre L. 'nanum'	
-Verpericola megasoma "Dall" Pils.	true	Verpericola megasoma 'Dall' Pils.	Verpericola megasoma 'Dall'	Verpericola megasoma	Verpericola megasoma 'Dall' Pils.	Pils.
+Verpericola megasoma "Dall" Pils.	true	Verpericola megasoma Dall ex Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall ex Pils.	Dall ex Pils.
 Abutilon 'Nabob'	true	Abutilon 'Nabob'	Abutilon 'Nabob'	Abutilon	Abutilon 'Nabob'	
 Sorbus americana Marshall cv. 'Belmonte'	true	Sorbus americana 'Belmonte'	Sorbus americana 'Belmonte'	Sorbus americana	Sorbus americana Marshall 'Belmonte'	
 Sorbus hupehensis C.K.Schneid. cv. 'November pink'	true	Sorbus hupehensis 'November pink'	Sorbus hupehensis 'November pink'	Sorbus hupehensis	Sorbus hupehensis C.K.Schneid. 'November pink'	
@@ -5099,7 +5099,7 @@ Abies alba N'Yeurt, Payri & P.W.Gabrielson	true	Abies alba N'Yeurt, Payri & P.W.
 Abies alba VanLand.	true	Abies alba VanLand.	Abies alba	Abies alba	Abies alba VanLand.	VanLand.
 Abies alba MacLeish	true	Abies alba MacLeish	Abies alba	Abies alba	Abies alba MacLeish	MacLeish
 Abies alba Monterosato ms.	true	Abies alba Monterosato	Abies alba	Abies alba	Abies alba Monterosato, ms.	Monterosato
-Abies alba Arn. ms., Grunow	true	Abies alba Arn.ms. & Grunow	Abies alba	Abies alba	Abies alba Arn.ms. & Grunow	Arn.ms. & Grunow
+Abies alba Arn. ms., Grunow	true	Abies alba Arn. ex Grunow	Abies alba	Abies alba	Abies alba Arn. ex Grunow	Arn. ex Grunow
 Abies alba Choi,J.H.; Im,W.T.; Yoo,J.S.; Lee,S.M.; Moon,D.S.; Kim,H.J.; Rhee,S.K.; Roh,D.H.	true	Abies alba J.H.Choi, W.T.Im, J.S.Yoo, S.M.Lee, D.S.Moon, H.J.Kim, S.K.Rhee & D.H.Roh	Abies alba	Abies alba	Abies alba J.H.Choi, W.T.Im, J.S.Yoo, S.M.Lee, D.S.Moon, H.J.Kim, S.K.Rhee & D.H.Roh	J.H.Choi, W.T.Im, J.S.Yoo, S.M.Lee, D.S.Moon, H.J.Kim, S.K.Rhee & D.H.Roh
 Abies alba da Costa Lima	true	Abies alba da Costa Lima	Abies alba	Abies alba	Abies alba da Costa Lima	da Costa Lima
 Abies alba Krapov., W.C.Greg. & C.E.Simpson	true	Abies alba Krapov., W.C.Greg. & C.E.Simpson	Abies alba	Abies alba	Abies alba Krapov., W.C.Greg. & C.E.Simpson	Krapov., W.C.Greg. & C.E.Simpson
@@ -5877,7 +5877,7 @@ Labeotropheus trewavasae albino'	true	Labeotropheus trewavasae albino '	Labeotro
 Phedimus takesimensis (Nakai) 't Hart	true	Phedimus takesimensis (Nakai) 't Hart	Phedimus takesimensis	Phedimus takesimensis	Phedimus takesimensis (Nakai) 't Hart	(Nakai) 't Hart
 Solanum juzepczukii janck'o-ckaisalla	true	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	Solanum juzepczukii janck'o-ckaisalla	
 Morea (Morea) burtius 2342343242 23424322342 23424234	true	Morea burtius	Morea burtius	Morea burtius	Morea (Morea) burtius	
-Verpericola megasoma ""Dall" Pils.	true	Verpericola megasoma Dall Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall Pils.	Dall Pils.
+Verpericola megasoma ""Dall" Pils.	true	Verpericola megasoma Dall ex Pils.	Verpericola megasoma	Verpericola megasoma	Verpericola megasoma Dall ex Pils.	Dall ex Pils.
 Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata (L.f.) Klatt	Moraea spathulata	Moraea spathulata	Moraea spathulata (L.f.) Klatt	(L.f.) Klatt
 Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia micrantha (Chun) Sealy, 1967	Stewartia micrantha	Stewartia micrantha	Stewartia micrantha (Chun) Sealy, 1967	(Chun) Sealy, 1967
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
