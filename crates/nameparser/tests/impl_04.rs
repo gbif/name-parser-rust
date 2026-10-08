@@ -769,6 +769,50 @@ fn comma_hyphenated_initials() {
         .nothing_else();
 }
 
+/// A Chinese, Korean or Taiwanese surname and the spelled-out given name after its comma are one
+/// person, given name first. An unhyphenated given name joins only when the team lists no other
+/// bare surname: `Fan, Chiba & Wang` are three people.
+#[test]
+fn cjk_surname_first_given_names() {
+    assert_authorship(
+        "Yin, Zi-Wei & Li-Zhen Li, 2012",
+        &["Zi-Wei Yin", "Li-Zhen Li"],
+    )
+    .comb_authors(Some("2012"), &["Zi-Wei Yin", "Li-Zhen Li"])
+    .nothing_else();
+    assert_authorship(
+        "Park, Jong-Seok & Carlton, 2014",
+        &["Jong-Seok Park", "Carlton"],
+    )
+    .comb_authors(Some("2014"), &["Jong-Seok Park", "Carlton"])
+    .nothing_else();
+    assert_authorship(
+        "Yang, Jeng-tze & C.-S. Yang, 2012",
+        &["Jeng-tze Yang", "C.-S.Yang"],
+    )
+    .comb_authors(Some("2012"), &["Jeng-tze Yang", "C.-S.Yang"])
+    .nothing_else();
+    assert_authorship("Li, Fasheng, 1995", &["Fasheng Li"])
+        .comb_authors(Some("1995"), &["Fasheng Li"])
+        .nothing_else();
+    // hyphenated surnames and teams of bare surnames stay apart
+    assert_authorship(
+        "Zhao, Al-Farraj & Song, 2015",
+        &["Zhao", "Al-Farraj", "Song"],
+    )
+    .comb_authors(Some("2015"), &["Zhao", "Al-Farraj", "Song"])
+    .nothing_else();
+    assert_authorship("Fan, Chiba & Wang, 2010", &["Fan", "Chiba", "Wang"])
+        .comb_authors(Some("2010"), &["Fan", "Chiba", "Wang"])
+        .nothing_else();
+    assert_authorship(
+        "Zhang, Sasan & O'Kennon, 2022",
+        &["Zhang", "Sasan", "O'Kennon"],
+    )
+    .comb_authors(Some("2022"), &["Zhang", "Sasan", "O'Kennon"])
+    .nothing_else();
+}
+
 /// A bare trailing "sp."/"spec." after a complete binomial is a redundant leftover marker: it is
 /// dropped and the name stays a SPECIES, instead of "sp" becoming an infraspecific epithet at the
 /// unspecific INFRASPECIFIC_NAME rank. (A3)

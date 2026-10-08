@@ -89,6 +89,7 @@
 //! private here.
 
 use crate::model::Authorship;
+use crate::pipeline::cjk_names::{self, GivenName};
 use crate::pipeline::double_surnames;
 use crate::pipeline::rank_markers;
 use crate::token::{is_particle, Token, TokenKind};
@@ -1153,6 +1154,12 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
 /// it: `A. & D. Löve` are A.Löve and D.Löve, `R. & G. Forst.` the two Forsters (5,267
 /// ChecklistBank rows, all such family pairs). Java kept `A.` as an author of its own. `L.` is
 /// left alone: it is Linnaeus.
+///
+/// A Chinese, Korean or Taiwanese surname and the spelled-out given name after its comma are one
+/// person, rendered given name first: `Liu, Xian-wei` is `Xian-wei Liu`, `Park, Jong-Seok` is
+/// `Jong-Seok Park` (see [`cjk_names`]). An unhyphenated given name (`Wang, Yuwen`) joins only
+/// when no other author of the team is a bare surname: `Fan, Chiba & Wang` are three people.
+/// Java kept both words as authors.
 fn invert_all(authors: &[String], after_separator: &[usize]) -> Vec<String> {
     let mut out = Vec::with_capacity(authors.len());
     let mut i = 0;
@@ -1160,6 +1167,21 @@ fn invert_all(authors: &[String], after_separator: &[usize]) -> Vec<String> {
         let cur = &authors[i];
         if i + 1 < authors.len() {
             let next = &authors[i + 1];
+            if !after_separator.contains(&(i + 1)) {
+                let joins = match cjk_names::given_name_after(cur, next) {
+                    Some(GivenName::Hyphenated) => true,
+                    Some(GivenName::Joined) => !authors
+                        .iter()
+                        .enumerate()
+                        .any(|(j, a)| j != i && j != i + 1 && cjk_names::is_bare_surname(a)),
+                    None => false,
+                };
+                if joins {
+                    out.push(format!("{next} {cur}"));
+                    i += 2;
+                    continue;
+                }
+            }
             if after_separator.contains(&(i + 1)) && cur != "L." {
                 if let Some(surname) = shared_surname(cur, next) {
                     out.push(format!("{cur}{surname}"));
