@@ -237,10 +237,9 @@ fn author_with_publication() {
     .code(NomCode::Botanical)
     .nothing_else();
 
-    // FIXME(review): "Wang, Guang-Xu" is one person written surname-first (Guang-Xu Wang), not two
     assert_name("Amplexoididae Wang, Guang-Xu in Wang, He, Tang & Percival, 2018")
         .monomial("Amplexoididae")
-        .comb_authors(Some("2018"), &["Wang", "Guang-Xu"])
+        .comb_authors(Some("2018"), &["Guang-Xu Wang"])
         .published_in("Wang, He, Tang & Percival, 2018")
         .published_in_year(Some(2018))
         .nothing_else();

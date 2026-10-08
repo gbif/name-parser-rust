@@ -493,20 +493,17 @@ fn test_authorteam() {
     assert_authorship("Xiao & Knoll", &["Xiao", "Knoll"])
         .comb_authors(None, &["Xiao", "Knoll"])
         .nothing_else();
-    // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
-    // Y.-j." already is
     assert_authorship(
         "Wang, Yuwen & Xian-wei Liu",
-        &["Wang", "Yuwen", "Xian-wei Liu"],
+        &["Yuwen Wang", "Xian-wei Liu"],
     )
-    .comb_authors(None, &["Wang", "Yuwen", "Xian-wei Liu"])
+    .comb_authors(None, &["Yuwen Wang", "Xian-wei Liu"])
     .nothing_else();
-    // FIXME(review): "Liu, Xian-wei" is one person written surname-first (Xian-wei Liu), not two
     assert_authorship(
         "Liu, Xian-wei, Z. Zheng & G. Xi",
-        &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"],
+        &["Xian-wei Liu", "Z.Zheng", "G.Xi"],
     )
-    .comb_authors(None, &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"])
+    .comb_authors(None, &["Xian-wei Liu", "Z.Zheng", "G.Xi"])
     .nothing_else();
     assert_authorship(
         "Clayton, D.H.; Price, R.D.; Page, R.D.M.",

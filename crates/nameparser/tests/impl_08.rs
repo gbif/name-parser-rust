@@ -656,18 +656,15 @@ fn chinese_authors() {
         .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
-    // Y.-j." already is
     assert_name("Abaxisotima acuminata (Wang, Yuwen & Xian-wei Liu, 1996)")
         .species("Abaxisotima", "acuminata")
-        .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xian-wei Liu"])
+        .bas_authors(Some("1996"), &["Yuwen Wang", "Xian-wei Liu"])
         .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): "Liu, Xian-wei" is one person written surname-first (Xian-wei Liu), not two
     assert_name("Abaxisotima bicolor (Liu, Xian-wei, Z. Zheng & G. Xi, 1991)")
         .species("Abaxisotima", "bicolor")
-        .bas_authors(Some("1991"), &["Liu", "Xian-wei", "Z.Zheng", "G.Xi"])
+        .bas_authors(Some("1991"), &["Xian-wei Liu", "Z.Zheng", "G.Xi"])
         .code(NomCode::Zoological)
         .nothing_else();
 }

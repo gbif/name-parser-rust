@@ -6,6 +6,7 @@ pub(crate) mod assemble;
 pub(crate) mod authorship_parser;
 pub(crate) mod authorship_split;
 pub(crate) mod blacklisted_epithets;
+pub(crate) mod cjk_names;
 pub(crate) mod code_inference;
 pub(crate) mod context;
 pub(crate) mod culture_collections;

@@ -44,20 +44,14 @@ fn uninomials_with_authorship() {
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("2003"), &["U.Braun", "Crous"])
         .nothing_else();
-    // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
-    // Y.-j." already is
     assert_name("Abaxisotima acuminata (Wang, Yuwen & Xiangwei Liu 1996)")
         .species("Abaxisotima", "acuminata")
-        .bas_authors(Some("1996"), &["Wang", "Yuwen", "Xiangwei Liu"])
+        .bas_authors(Some("1996"), &["Yuwen Wang", "Xiangwei Liu"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): "Liu, Xiang-wei" is one person written surname-first (Xiang-wei Liu), not two
     assert_name("Aboilomimus sichuanensis ornatus Liu, Xiang-wei, M. Zhou, W Bi & L. Tang, 2009")
         .infra_species("Aboilomimus", "sichuanensis", Rank::Subspecies, "ornatus")
-        .comb_authors(
-            Some("2009"),
-            &["Liu", "Xiang-wei", "M.Zhou", "W.Bi", "L.Tang"],
-        )
+        .comb_authors(Some("2009"), &["Xiang-wei Liu", "M.Zhou", "W.Bi", "L.Tang"])
         .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Pseudocercospora Speg.")
