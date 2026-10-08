@@ -285,8 +285,9 @@ fn no_parsing_incertae_sedis() {
         "Incertaesedis obscuricornis Fairmaire LMH 1893",
         NameType::Placeholder,
     );
-    // FIXME(review): a glued "incertae sedis" placeholder parsed as a uninomial
-    // skipped: Uropodoideaincertaesedis
+    // glued to the taxon
+    assert_unparsable("Uropodoideaincertaesedis", NameType::Placeholder);
+    assert_unparsable("KobresiaIncertaeSedis", NameType::Placeholder);
 }
 
 #[test]

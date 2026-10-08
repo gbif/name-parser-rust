@@ -176,10 +176,12 @@ static OTU_SPECIMEN_SUFFIX: LazyLock<Regex> =
 
 // ---------- PLACEHOLDER ----------
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\s`/`\b` (many), no `\p{…}`, no wildcard `.` (only
-/// escaped `\.`) → whole alternation `(?-u:…)`-wrapped.
+/// escaped `\.`) → whole alternation `(?-u:…)`-wrapped. `incertae sedis` needs no word boundary
+/// before it: glued to the taxon (`Uropodoideaincertaesedis`, `KobresiaIncertaeSedis`) it is
+/// still the placeholder. Java required one.
 static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:\(delete\)|\b(?:incertae[\s_]*sedis|inc\.\s*sed\.?|incertaesedis|not\s+assigned|unassigned|unknown|unaccepted|unidentified|undetermined|undet|indet\.?|indeterminate|uncultured|undescribed(?:\s+(?:species|genus|family))?|temp\s+dummy(?:\s+name)?)\b))",
+        r"(?i)(?-u:(?:\(delete\)|incertae[\s_]*sedis\b|\b(?:inc\.\s*sed\.?|not\s+assigned|unassigned|unknown|unaccepted|unidentified|undetermined|undet|indet\.?|indeterminate|uncultured|undescribed(?:\s+(?:species|genus|family))?|temp\s+dummy(?:\s+name)?)\b))",
     )
     .unwrap()
 });
