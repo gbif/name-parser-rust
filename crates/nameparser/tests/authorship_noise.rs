@@ -312,3 +312,20 @@ fn lower_case_words_an_author_carries_stay() {
         .comb_authors(None, &["Hal csy"])
         .nothing_else();
 }
+
+#[test]
+fn an_ex_with_no_author_after_it_keeps_the_authors_before() {
+    // the validating author is unknown or missing: the cited one is all there is
+    assert_name("Bembicia uniflora (H.Perrier) Capuron ex ?")
+        .species("Bembicia", "uniflora")
+        .comb_authors(None, &["Capuron"])
+        .bas_authors(None, &["H.Perrier"])
+        .code(NomCode::Botanical)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+    assert_name("Adenophora manshurica Nakai ex")
+        .species("Adenophora", "manshurica")
+        .comb_authors(None, &["Nakai"])
+        .nothing_else();
+}

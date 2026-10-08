@@ -988,6 +988,15 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         into.anonymous = true;
     }
 
+    // An "ex" with no author after it ("Capuron ex ?", "Mill. ex") leaves the authors before it
+    // as the only ones, instead of dropping them all; an anonymous one is an author ("Sw. ex
+    // anon.").
+    if authors.is_empty() && !into.anonymous {
+        if let Some(ex) = ex_authors.take() {
+            authors = ex;
+            after_separator = std::mem::take(&mut ex_after_separator);
+        }
+    }
     if !authors.is_empty() {
         into.authors = invert_all(&authors, &after_separator);
     }
