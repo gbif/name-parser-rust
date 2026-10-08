@@ -73,3 +73,20 @@ fn a_zero_opening_a_word_is_a_scanned_capital_o() {
         .phrase("sp. 0m-11")
         .nothing_else();
 }
+
+#[test]
+fn a_replacement_character_inside_a_word_is_a_missing_letter() {
+    // a broken encoding leaves U+FFFD for the letter; it no longer splits the word
+    assert_name("Fusinus eucos\u{FFFD}nius")
+        .species("Fusinus", "eucosnius")
+        .doubtful()
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+    assert_name("Macrotes cordovaria Guen\u{FFFD}e 1857")
+        .species("Macrotes", "cordovaria")
+        .comb_authors(Some("1857"), &["Guene"])
+        .code(NomCode::Zoological)
+        .doubtful()
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+}

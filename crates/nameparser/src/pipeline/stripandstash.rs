@@ -700,6 +700,24 @@ static LETTER_QMARK_LETTER: LazyLock<Regex> =
 static QMARK_BETWEEN_LETTERS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(\p{L})\?(\p{L})").unwrap());
 
+/// U+FFFD REPLACEMENT CHARACTER(s) between two letters.
+static LETTER_FFFD_LETTER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\p{L})\x{FFFD}+(\p{L})").unwrap());
+
+/// The replacement character a broken encoding leaves for a letter ("Fusinus eucos\u{FFFD}nius",
+/// "Guen\u{FFFD}e 1857") is a missing letter, like a "?" inside a word: removed, it no longer
+/// splits the word in two. Flags doubtful + `UNUSUAL_CHARACTERS`.
+fn remove_replacement_characters(name: &mut ParsedName, mut s: String) -> String {
+    if s.contains('\u{FFFD}') && LETTER_FFFD_LETTER.is_match(&s) {
+        while LETTER_FFFD_LETTER.is_match(&s) {
+            s = LETTER_FFFD_LETTER.replace_all(&s, "$1$2").into_owned();
+        }
+        name.doubtful = true;
+        name.add_warning(warnings::UNUSUAL_CHARACTERS);
+    }
+    s
+}
+
 /// Removes every "?" between two letters. Matches of [`QMARK_BETWEEN_LETTERS`] share their letters
 /// ("D?s?gl."), so one pass leaves every second one — Java's did, and a later step then took the
 /// rest of the word's punctuation with it ("Dsgl").
@@ -719,6 +737,7 @@ fn remove_qmarks_between_letters(mut s: String) -> String {
 /// `StripAndStash.java` duplicates it rather than sharing a helper, so this port does too,
 /// reusing the same static patterns.)
 fn repair_question_mark_in_word(ctx: &mut ParseContext, s: String) -> String {
+    let s = remove_replacement_characters(&mut ctx.name, s);
     if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
         let s = remove_qmarks_between_letters(s);
         ctx.name.doubtful = true;
@@ -4363,6 +4382,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     }
     // "?" inside a word — transcription artefact for a missing letter ("Istv?nffi"). Strip
     // the ? and glue the surrounding word parts; flag doubtful + warning.
+    s = remove_replacement_characters(name, s);
     if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
         s = remove_qmarks_between_letters(s);
         name.doubtful = true;
