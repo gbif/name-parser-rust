@@ -378,9 +378,10 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     }
                     continue;
                 }
-                // 1. cf./aff./near open-nomenclature qualifier
+                // 1. cf./aff./near/nr. open-nomenclature qualifier
                 if (w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")
+                    || w.eq_ignore_ascii_case("nr")
                     || w.eq_ignore_ascii_case("near"))
                     && lower_epithets.len() < 2
                 {

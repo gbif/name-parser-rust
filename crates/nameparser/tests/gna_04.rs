@@ -428,8 +428,7 @@ fn open_nomenclature_approximate_names() {
         .qualifiers(&[(NamePart::Infraspecific, "?")])
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
-    // FIXME(review): "nr." (near) is read as the species epithet
-    // skipped: Euxoa nr. idahoensis sp. 1clay
+    // "nr." (near) is a qualifier: near_is_a_qualifier
     assert_name("Acarinina aff. pentacamerata")
         .species("Acarinina", "pentacamerata")
         .qualifiers(&[(NamePart::Specific, "aff.")])
@@ -914,5 +913,15 @@ fn year_with_page_number() {
         .comb_authors(Some("1998"), &["Dash", "Viraktamath"])
         .published_in_page("29")
         .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn near_is_a_qualifier() {
+    // "nr." (near) qualifies like "aff."
+    assert_name("Abablemma nr. brimleyana")
+        .species("Abablemma", "brimleyana")
+        .qualifiers(&[(NamePart::Specific, "nr.")])
+        .type_(NameType::Informal)
         .nothing_else();
 }

@@ -161,6 +161,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 // cf./aff. qualifiers and indet markers — keep walking
                 if w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")
+                    || w.eq_ignore_ascii_case("nr")
                     || w.eq_ignore_ascii_case("sp")
                     || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
@@ -170,8 +171,9 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     let is_sp = w.eq_ignore_ascii_case("sp")
                         || w.eq_ignore_ascii_case("spp")
                         || w.eq_ignore_ascii_case("spec");
-                    let is_cf_or_aff =
-                        w.eq_ignore_ascii_case("cf") || w.eq_ignore_ascii_case("aff");
+                    let is_cf_or_aff = w.eq_ignore_ascii_case("cf")
+                        || w.eq_ignore_ascii_case("aff")
+                        || w.eq_ignore_ascii_case("nr");
                     // `spec` is also a genuine published epithet ("Hemicloeina spec Platnick,
                     // 2002", "Zygonyx spec Dijkstra & Kipping"; COL carries nine). Two signals
                     // mark those: the word carries NO abbreviation dot, and what follows is
