@@ -800,7 +800,11 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                         // line 757 there is no null-marker rank to mirror Java's "null" for.
                         sb.push_str(n.rank.marker().unwrap_or(""));
                     }
-                    authorship = false;
+                    // An infraspecific epithet under a bare genus ("Navicula var. fasciata
+                    // Grunow") is no indetermined name: its author stays.
+                    if n.infraspecific_epithet.is_none() {
+                        authorship = false;
+                    }
                 }
             } else if n.infraspecific_epithet.is_some() {
                 append_infraspecific(

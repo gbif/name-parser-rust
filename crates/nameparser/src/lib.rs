@@ -127,11 +127,14 @@ pub fn parse(
 /// name with a real supraspecific anchor but NO species epithet is an [`ParseResult::Informal`];
 /// everything else parsable stays `Parsed`. Keying on `specific_epithet` routes cf./aff. and
 /// infraspecific-indeterminate binomials to `Parsed` automatically (they keep a species epithet),
-/// so their `epithet_qualifier` annotation and `specific_authorship` survive. The anchor guard keeps
-/// a degenerate anchor-less `INFORMAL` (should not occur on the `Ok` path) out of `Informal`.
+/// so their `epithet_qualifier` annotation and `specific_authorship` survive. An infraspecific
+/// epithet under a bare genus ("Navicula var. fasciata Grunow") stays `Parsed` for the same reason:
+/// the anchor has no slot for the epithet or its author. The anchor guard keeps a degenerate
+/// anchor-less `INFORMAL` (should not occur on the `Ok` path) out of `Informal`.
 fn is_informal(pn: &ParsedName) -> bool {
     pn.type_ == NameType::Informal
         && pn.specific_epithet.is_none()
+        && pn.infraspecific_epithet.is_none()
         && (pn.genus.is_some() || pn.uninomial.is_some() || pn.infrageneric_epithet.is_some())
 }
 

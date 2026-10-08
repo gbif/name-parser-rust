@@ -945,7 +945,15 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         }
     }
 
+    // A rank marker and its epithet straight after the genus ("Navicula var. fasciata") name an
+    // infraspecific taxon whose species is missing: the genus stays a genus and the name is
+    // INFORMAL. Java made the genus a uninomial and dropped the epithet.
+    let species_missing = genus.is_some() && specific.is_none() && infraspecific.is_some();
+    if species_missing {
+        ctx.name.type_ = NameType::Informal;
+    }
     let treat_as_genus = ctx.name.cultivar_epithet.is_some()
+        || species_missing
         || (indet && lower_epithets.is_empty() && genus.is_some());
     if !treat_as_genus
         && genus.is_some()
