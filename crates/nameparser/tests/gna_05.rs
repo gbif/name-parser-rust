@@ -306,17 +306,21 @@ fn open_taxonomy_with_ranks_unfinished() {
         .rank(Rank::Species)
         .phrase("sp.")
         .nothing_else();
-    // FIXME(review): the "cf." is lost, and Formicidae is a family
+    // a bare qualifier is the phrase of an indetermined species, like "sp." (the anchor stays a
+    // genus, as for "Ichneumonidae sp.": the parser does not tell a family by its ending)
     assert_informal("Formicidae cf.")
         .taxon("Formicidae")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf.")
         .nothing_else();
-    // FIXME(review): the "cf" is lost, and Formicidae is a family
+    // a bare qualifier is the phrase of an indetermined species, like "sp." (the anchor stays a
+    // genus, as for "Ichneumonidae sp.": the parser does not tell a family by its ending)
     assert_informal("Formicidae cf")
         .taxon("Formicidae")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf")
         .nothing_else();
     assert_name("Arctostaphylos preglauca cf.")
         .species("Arctostaphylos", "preglauca")

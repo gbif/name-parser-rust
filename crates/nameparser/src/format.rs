@@ -45,9 +45,15 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// phrase that already spells out the species marker as its leading word ("species 1"), so
 /// the formatter must not also synthesise an "sp." marker. Extended beyond Java with the
 /// underscore-glued designations (`n_sp_NIWA_SO254`, `sp_JAVA`, `n_gen n_sp_…`): `\b` sees no
-/// boundary between `sp` and `_`, which rendered "Aulocalyx sp. n_sp_NIWA_SO254".
+/// boundary between `sp` and `_`, which rendered "Aulocalyx sp. n_sp_NIWA_SO254". And with the
+/// open-nomenclature qualifiers that stand for the species marker in a phrase (`cf.`, `aff.`,
+/// `nr.`, `near`: "Formicidae cf.", "Acroceridae aff. Terphis sp. SLW-2002"), which rendered
+/// "Formicidae sp. cf.".
 static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?:(?:species|spec|spp|sp)(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)).*$").unwrap()
+    Regex::new(
+        r"(?i)^(?:(?:species|spec|spp|sp|cf|aff|nr|near)(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)).*$",
+    )
+    .unwrap()
 });
 
 /// Java's inline author-tail pattern `(?U)[\p{Lu}](?:\.[\p{Lu}])*\..+`, tested with

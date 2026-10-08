@@ -119,6 +119,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     // in the indet branch and the warning block near the end of this fn).
     let mut indet_bare = false;
     let mut cf_aff_qualifier: Option<String> = None;
+    // A cf./aff./nr./near with no epithet after it opens the informal phrase (see below).
+    let mut qualifier_phrase = false;
     // how many epithets came before the qualifier: it qualifies the next one, or the last if none
     // follows ("Arctostaphylos preglauca cf.")
     let mut qualifier_at = 0usize;
@@ -393,9 +395,34 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         format!("{w}.")
                     });
                     ctx.name.type_ = NameType::Informal;
+                    let marker_start = t.start;
                     i += 1;
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
                         i += 1;
+                    }
+                    // With no epithet before or after it, the qualifier compares an unnamed
+                    // species to the taxon, like "sp.": it opens that indetermined name's phrase,
+                    // as written, running to the end ("Formicidae cf.", "Acroceridae aff. Terphis
+                    // sp. SLW-2002"). Java kept a bare one as the qualifier of a species epithet
+                    // the name does not have. A repeated genus ("Sorex cf. S. shinto") leads to
+                    // the epithet instead.
+                    let another_taxon = ts.get(i).is_some_and(|t| {
+                        t.kind == TokenKind::Word
+                            && starts_upper(t)
+                            && authorship_split::skip_repeated_genus(ts, i, genus.as_deref())
+                                .is_none()
+                    });
+                    if lower_epithets.is_empty()
+                        && genus.is_some()
+                        && ctx.name.phrase.is_none()
+                        && (i >= ts.len() || another_taxon)
+                    {
+                        indet_bare = i >= ts.len();
+                        ctx.name.phrase =
+                            Some(ctx.working[marker_start..ts[ts.len() - 1].end].to_string());
+                        qualifier_phrase = true;
+                        indet = true;
+                        i = ts.len();
                     }
                     continue;
                 }
@@ -1003,7 +1030,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     if inline_rank_notho {
         ctx.name.add_notho(NamePart::Infraspecific);
     }
-    if let Some(q) = &cf_aff_qualifier {
+    if let Some(q) = cf_aff_qualifier.as_ref().filter(|_| !qualifier_phrase) {
         // Qualifier applies to the epithet after it, or the last one when it trails them all.
         let followed = lower_epithets.len() > qualifier_at;
         let part = if infraspecific.is_none() || (qualifier_at == 0 && followed) {
