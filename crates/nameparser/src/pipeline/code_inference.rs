@@ -33,8 +33,9 @@ static ICN_STATUS: LazyLock<Regex> = LazyLock::new(|| {
 static ICZN_STATUS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:\b(?:oblitum|protectum)\b)").unwrap());
 
-/// An unpublished name or combination: "comb. ined.", "ined.".
-static INED: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i-u:\bined\b)").unwrap());
+/// An unpublished name or combination: "comb. ined.", "ined.", "comb. nud.".
+static INED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i-u:\bined\b|\bcomb\.\s*nud\b)").unwrap());
 
 /// Java `CodeInference.infer(ParseContext, AuthorshipParser.AuthState)`
 /// (`CodeInference.java:47-111`). Tallies the authorship signals onto a name whose code is
@@ -142,9 +143,10 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
 }
 
-/// The votes one parsed authorship casts (see [`infer`]). The bracketed author alone of a
-/// `species` author ("Alcea rosea (L.) var. nigra Cav.") casts no zoological vote: plant names
-/// abbreviate it so too.
+/// The votes one parsed authorship casts (see [`infer`]). A bracketed author alone, with no year,
+/// casts no zoological vote when it is the `species` author ("Alcea rosea (L.) var. nigra Cav.")
+/// or when a species author is written before the rank marker ("Corchoropsis crenata Siebold et
+/// Zucc. f. glabrescens (Nakai)"): zoology never cites the species author inside a trinomial.
 fn authorship_votes(
     ctx: &ParseContext,
     auth_state: &AuthState,
@@ -224,7 +226,8 @@ fn authorship_votes(
     if auth_state.basionym_present
         && !auth_state.combination.has_authors_or_anon()
         && !unpublished_combination
-        && !(species && auth_state.basionym.year.is_none())
+        && !((species || ctx.name.specific_authorship.is_some())
+            && auth_state.basionym.year.is_none())
     {
         votes.insert(NomCode::Zoological);
     }

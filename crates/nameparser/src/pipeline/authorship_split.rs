@@ -711,10 +711,13 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
                 j += 1;
                 continue;
             }
-            // "ex" between two authors ("Nees ex Thwaites var. spiculis", "Baill. ex Baum.-Bod. f.
-            // intermedia") belongs to the span: the rank marker after it still ends the species
+            // "ex", "et" or "and" between two authors ("Nees ex Thwaites var. spiculis", "Baill. ex
+            // Baum.-Bod. f. intermedia", "Hatus. et Ohwi var. minor") belongs to the span: the rank marker after it still ends the species
             // author, instead of the whole tail becoming the ex-author's name.
-            if t.text == "ex" && j > from && next_word_starts_upper(tokens, j + 1) {
+            if matches!(t.text.as_str(), "ex" | "et" | "and")
+                && j > from
+                && next_word_starts_upper(tokens, j + 1)
+            {
                 j += 1;
                 continue;
             }
