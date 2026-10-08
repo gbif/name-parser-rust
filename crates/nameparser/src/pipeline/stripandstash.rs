@@ -3077,12 +3077,33 @@ fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
         let note = WHITESPACE.replace_all(marker, "").to_lowercase();
         let remainder = java_trim(caps.get(2).unwrap().as_str()).to_string();
         ctx.name.add_taxonomic_note(&note);
-        ctx.set_pending_unparsed(&remainder);
         let whole = caps.get(0).unwrap();
-        return java_trim(&s[..whole.start()]).to_string();
+        let name = java_trim(&s[..whole.start()]);
+        // Rust-only: the authorship after a marker straight behind the epithet (or genus) stays for the
+        // authorship parser ("Acantholimon ulicinum s.l. (Schultes) Boiss."); Java left it unparsed.
+        // After an author it is the concept's ("Inocybe tarda Kühner s. str. Stangl").
+        let after_epithet = !name.contains(' ')
+            || name
+                .split_whitespace()
+                .last()
+                .is_some_and(|w| w.chars().all(char::is_lowercase));
+        if after_epithet && AUTHORSHIP_START.is_match(&remainder) {
+            return format!("{name} {remainder}");
+        }
+        ctx.set_pending_unparsed(&remainder);
+        return name.to_string();
     }
     s
 }
+
+/// The start of an authorship: a capitalised author, or a basionym bracket of capitalised authors
+/// and a year — not a phrase like "(Kulnura form)".
+static AUTHORSHIP_START: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:\p{Lu}\p{Ll}*\.?(?:\s|,|$)|\(\p{Lu}[\p{L}.'\-]*(?:(?:\s+|\s*&\s*|\s+(?:et|ex|in)\s+)\p{Lu}[\p{L}.'\-]*)*(?:,?\s*\d{4})?\))",
+    )
+    .unwrap()
+});
 
 // ---- Step 42: stripSensuStrictoSS ----
 

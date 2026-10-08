@@ -450,9 +450,14 @@ fn ignoring_sensu_sec() {
         .doubtful()
         .nothing_else();
     // bracketed and dotted notes: taxonomic_notes.rs
-    // FIXME(review): an unbracketed "s.l." or "s.lat." before the authorship leaves them unparsed
-    // ("Acantholimon ulicinum s.l. (Schultes) Boiss.", "Asplenium trichomanes L. s.lat. - Asplen
-    // trich")
+    // an unbracketed "s.l." before the authorship is a taxonomic note, the authorship parsed
+    assert_name("Acantholimon ulicinum s.l. (Schultes) Boiss.")
+        .species("Acantholimon", "ulicinum")
+        .comb_authors(None, &["Boiss."])
+        .bas_authors(None, &["Schultes"])
+        .sensu("s.l.")
+        .code(NomCode::Botanical)
+        .nothing_else();
 }
 
 #[test]
