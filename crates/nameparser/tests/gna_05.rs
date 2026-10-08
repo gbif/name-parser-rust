@@ -101,16 +101,17 @@ fn normalize_atypical_dashes() {
 fn possible_canonical() {
     // group: Possible canonical. Various trailing junk forms recoverable to
     // the core canonical name. Gibberish trailing digit strings are dropped,
-    // stray opening parens / quoted "Dall"-style annotations are stripped,
+    // stray opening parens are closed, a quoted "Dall" is the attributed author,
     // botanical " ined.?" tentative-publication markers leave a PARTIAL state,
     // "(Approved Lists YYYY)" bacterial-code annotations are stripped.
     assert_name("Morea (Morea) burtius 2342343242 23424322342 23424234")
         .species_ig("Morea", "Morea", "burtius")
         .nothing_else();
-    // FIXME(review): Dall and Pilsbry are merged into one author "Dall Pils."
+    // the quoted "Dall" is the attributed (manuscript) author: Dall ex Pils.
     assert_name("Verpericola megasoma \"\"Dall\" Pils.")
         .species("Verpericola", "megasoma")
-        .comb_authors(None, &["Dall Pils."])
+        .comb_authors(None, &["Pils."])
+        .comb_ex_authors(&["Dall"])
         .nothing_else();
     // an unclosed basionym bracket ends where the filius does: (L. f.) Klatt
     assert_name("Moraea spathulata ( (L. f. Klatt")
@@ -128,19 +129,20 @@ fn possible_canonical() {
         .comb_authors(Some("1978"), &["Devriese", "al."])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): "Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004" merges both
-    // author teams and makes 2004 an imprint year
+    // a semicolon after the year ends the citation: the second is left unparsed
+    assert_name("Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004")
+        .species("Rana", "aurora")
+        .comb_authors(Some("1852"), &["Baird", "Girard"])
+        .partial("H.B. Shaffer et al., 2004")
+        .code(NomCode::Zoological)
+        .nothing_else();
     // skipped:
-    //   "Verpericola megasoma \"Dall\" Pils." — the quoted "Dall" is parsed as
-    //     a cultivar epithet; pinned (with a FIXME: a snail, no cultivar) in impl_05.rs.
+    //   "Verpericola megasoma \"Dall\" Pils." — pinned in impl_05.rs (Dall ex Pils.).
     //   "Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967." —
     //     IPNI-style publication ref with page-and-plate; the page/plate span
     //     bleeds into the author span.
     //   "Pyrobaculum neutrophilum V24Sta" — trailing alphanumeric strain code
     //     captured as informal phrase; expected was bare species.
-    //   "Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004" —
-    //     semicolon-separated dual authorship not recognised; parser merges
-    //     both author teams.
 }
 
 #[test]
@@ -188,10 +190,9 @@ fn treating_al_as_et_al_binomials() {
 #[test]
 fn authors_do_not_start_with_apostrophe() {
     // group: Authors do not start with apostrophe
-    // FIXME(review): the leading apostrophe is no part of the author: "Kulkov"
     assert_name("Nereidavus kulkovi 'Kulkov")
         .species("Nereidavus", "kulkovi")
-        .comb_authors(None, &["'Kulkov"])
+        .comb_authors(None, &["Kulkov"])
         .nothing_else();
 }
 
@@ -224,20 +225,21 @@ fn names_that_contain_of() {
         )
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): an English phrase, not a binomial with the author "of uncertain affinities"
+    // "of" before a lower-case word is English, no author
+    // FIXME(review): an English phrase, not a binomial
     assert_name("Nassellarid genera of uncertain affinities")
         .species("Nassellarid", "genera")
-        .comb_authors(None, &["of uncertain affinities"])
+        .partial("of uncertain affinities")
         .nothing_else();
-    // FIXME(review): "of nidus" is no author
     assert_name("Natica of nidus")
         .monomial("Natica")
-        .comb_authors(None, &["of nidus"])
+        .partial("of nidus")
         .nothing_else();
-    // FIXME(review): "var of cornea Linn" (a variety of N. cornea L.) is no part of the author
+    // "var of cornea Linn" (a variety of N. cornea L.) is no part of the author
     assert_name("Neritina chemmoi Reeve var of cornea Linn")
         .species("Neritina", "chemmoi")
-        .comb_authors(None, &["Reeve var of cornea Linn"])
+        .comb_authors(None, &["Reeve"])
+        .partial("var of cornea Linn")
         .nothing_else();
 }
 
@@ -279,10 +281,19 @@ fn open_taxonomy_with_ranks_unfinished() {
         .type_(NameType::Informal)
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
-    // FIXME(review): "spp" is read as the species epithet (an informal "Alaria spp.")
-    // skipped: Alaria spp
-    // FIXME(review): "spp." is read as the species epithet (an informal "Alaria spp.")
-    // skipped: Alaria spp.
+    // "spp." — several species of the genus — is an indet marker like "sp."
+    assert_informal("Alaria spp")
+        .taxon("Alaria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spp")
+        .nothing_else();
+    assert_informal("Alaria spp.")
+        .taxon("Alaria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spp.")
+        .nothing_else();
     assert_informal("Xenodon sp")
         .taxon("Xenodon")
         .taxon_rank(Rank::Genus)
@@ -319,11 +330,11 @@ fn open_taxonomy_with_ranks_unfinished() {
         .type_(NameType::Informal)
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): the qualifier precedes the species epithet, so it is NamePart::Specific
+    // the qualifier precedes the species epithet, so it qualifies that one
     assert_name("Albinaria cf brevicollis sica Fuchs & Kaufel 1936")
         .infra_species("Albinaria", "brevicollis", Rank::Subspecies, "sica")
         .comb_authors(Some("1936"), &["Fuchs", "Kaufel"])
-        .qualifiers(&[(NamePart::Infraspecific, "cf.")])
+        .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .code(NomCode::Zoological)
         .nothing_else();
@@ -332,8 +343,12 @@ fn open_taxonomy_with_ranks_unfinished() {
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
-    // FIXME(review): "spp." is read as the species epithet (an informal "Acastoides spp.")
-    // skipped: Acastoides spp.
+    assert_informal("Acastoides spp.")
+        .taxon("Acastoides")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spp.")
+        .nothing_else();
 }
 
 #[test]
@@ -449,9 +464,14 @@ fn ignoring_sensu_sec() {
         .doubtful()
         .nothing_else();
     // bracketed and dotted notes: taxonomic_notes.rs
-    // FIXME(review): an unbracketed "s.l." or "s.lat." before the authorship leaves them unparsed
-    // ("Acantholimon ulicinum s.l. (Schultes) Boiss.", "Asplenium trichomanes L. s.lat. - Asplen
-    // trich")
+    // an unbracketed "s.l." before the authorship is a taxonomic note, the authorship parsed
+    assert_name("Acantholimon ulicinum s.l. (Schultes) Boiss.")
+        .species("Acantholimon", "ulicinum")
+        .comb_authors(None, &["Boiss."])
+        .bas_authors(None, &["Schultes"])
+        .sensu("s.l.")
+        .code(NomCode::Botanical)
+        .nothing_else();
 }
 
 #[test]

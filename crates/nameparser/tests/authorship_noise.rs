@@ -258,3 +258,118 @@ fn a_manuscript_marker_before_the_year_in_a_letter() {
     .code(NomCode::Botanical)
     .nothing_else();
 }
+
+#[test]
+fn a_stray_lower_case_word_ends_the_authorship() {
+    // an epithet written without its rank marker, after the species author
+    assert_name("Loranthus incanus Schumach. & Thonn. sessilis Sprague")
+        .species("Loranthus", "incanus")
+        .comb_authors(None, &["Schumach.", "Thonn."])
+        .partial("sessilis Sprague")
+        .nothing_else();
+    assert_name("Polypodium pectinatum (L. f.) typica Rosent")
+        .species("Polypodium", "pectinatum")
+        .bas_authors(None, &["L.f."])
+        .partial("typica Rosent")
+        .nothing_else();
+    // prose and notes the parser does not know
+    assert_name("Acinos clinopodiifacie Gilib., opus utique oppr.")
+        .species("Acinos", "clinopodiifacie")
+        .comb_authors(None, &["Gilib."])
+        .partial("opus utique oppr.")
+        .nothing_else();
+    // the same in a separately supplied authorship
+    assert_name_auth(
+        "Abildgaardia baeothryon",
+        "A.St.-Hil., provisionally listed as a synonym.",
+    )
+    .species("Abildgaardia", "baeothryon")
+    .comb_authors(None, &["A.St.-Hil."])
+    .partial("provisionally listed as a synonym.")
+    .nothing_else();
+}
+
+#[test]
+fn lower_case_words_an_author_carries_stay() {
+    assert_name("Cryptopleura farlowiana (J.Agardh) ver Steeg & Jossly")
+        .species("Cryptopleura", "farlowiana")
+        .comb_authors(None, &["ver Steeg", "Jossly"])
+        .bas_authors(None, &["J.Agardh"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Schizonema crinoideum Crouan frat., 1867")
+        .species("Schizonema", "crinoideum")
+        .comb_authors(Some("1867"), &["Crouan frat."])
+        .nothing_else();
+    // right after another word: a surname written in lower case, or cut by a broken character
+    assert_name("Desmodora scaldensis De man, 1889")
+        .species("Desmodora", "scaldensis")
+        .comb_authors(Some("1889"), &["De man"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Amelanchier cretica Hal csy")
+        .species("Amelanchier", "cretica")
+        .comb_authors(None, &["Hal csy"])
+        .nothing_else();
+}
+
+#[test]
+fn an_ex_with_no_author_after_it_keeps_the_authors_before() {
+    // the validating author is unknown or missing: the cited one is all there is
+    assert_name("Bembicia uniflora (H.Perrier) Capuron ex ?")
+        .species("Bembicia", "uniflora")
+        .comb_authors(None, &["Capuron"])
+        .bas_authors(None, &["H.Perrier"])
+        .code(NomCode::Botanical)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+    assert_name("Adenophora manshurica Nakai ex")
+        .species("Adenophora", "manshurica")
+        .comb_authors(None, &["Nakai"])
+        .nothing_else();
+}
+
+#[test]
+fn a_new_sentence_after_the_authorship_is_no_author() {
+    // after the dot ending a year: a reference or prose
+    assert_name("Gephyrella Mello-Leitão 1918. Rev. Soc. Brasil. Sci.")
+        .monomial("Gephyrella")
+        .comb_authors(Some("1918"), &["Mello-Leitão"])
+        .partial("Rev. Soc. Brasil. Sci.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // after the dot ending the epithet, prose
+    assert_name("Negalasa fumalis. Next sentence")
+        .species("Negalasa", "fumalis")
+        .partial("Next sentence")
+        .nothing_else();
+    // an author after the stray dot stays one
+    assert_name("Amphiporus microocelli. Kajihara et al,2008")
+        .species("Amphiporus", "microocelli")
+        .comb_authors(Some("2008"), &["Kajihara", "al"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn an_abbreviated_author_glued_to_the_epithet() {
+    assert_name("Pentapanax angelicifoliusGriseb.")
+        .species("Pentapanax", "angelicifolius")
+        .comb_authors(None, &["Griseb."])
+        .nothing_else();
+}
+
+#[test]
+fn a_second_name_after_an_ampersand_is_no_author() {
+    assert_name("Mesalia zinkeni (Dunker 1851) & Promathildia turritella (Dunker 1851)")
+        .species("Mesalia", "zinkeni")
+        .bas_authors(Some("1851"), &["Dunker"])
+        .partial("& Promathildia turritella (Dunker 1851)")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Sillago ciliata & Sillago maculata")
+        .species("Sillago", "ciliata")
+        .partial("& Sillago maculata")
+        .nothing_else();
+}

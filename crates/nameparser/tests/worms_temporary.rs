@@ -592,3 +592,15 @@ fn leading_cf_before_an_html_wrapped_genus_qualifies_the_genus() {
         .warning(&["xml tags removed"])
         .nothing_else();
 }
+
+#[test]
+fn an_underscore_for_the_space_after_the_genus() {
+    assert_name("Calopteryx_splendens splendens")
+        .infra_species(
+            "Calopteryx",
+            "splendens",
+            Rank::InfraspecificName,
+            "splendens",
+        )
+        .nothing_else();
+}

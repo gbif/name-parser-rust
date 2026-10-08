@@ -200,6 +200,23 @@ pub fn tokenize(input: &str) -> Vec<Token> {
                 }
                 break;
             }
+            // A lower-case "st."/"s." (sancti) hyphenated to the rest of the epithet is one word:
+            // "Macromitrium st.-johnii", "Cyathea st.-helenae" — not a French "s.-esp." (sous-espèce).
+            let abbreviated = &cs[word_start..k];
+            if matches!(abbreviated, [(_, 's')] | [(_, 's'), (_, 't')])
+                && k + 5 < n
+                && cs[k].1 == '.'
+                && cs[k + 1].1 == '-'
+                && cs[k + 2..k + 6].iter().all(|&(_, c)| c.is_lowercase())
+            {
+                k += 2;
+                while k < n
+                    && (is_letter(cs[k].1)
+                        || (cs[k].1 == '-' && k + 1 < n && is_letter(cs[k + 1].1)))
+                {
+                    k += 1;
+                }
+            }
             let start_b = byte_at(word_start);
             let end_b = byte_at(k);
             let word = &input[start_b..end_b];

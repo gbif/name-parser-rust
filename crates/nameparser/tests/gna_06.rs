@@ -3,7 +3,7 @@
 mod common;
 use common::*;
 use nameparser::model::warnings;
-use nameparser::model::{NameType, NomCode, Rank};
+use nameparser::model::{NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn misc_annotations() {
@@ -51,16 +51,23 @@ fn misc_annotations() {
     assert_name("Parus caeruleus species complex")
         .binomial("Parus", None, "caeruleus", Rank::SpeciesAggregate)
         .nothing_else();
-    // FIXME(review): an environmental sample label parsed as a trinomial
-    // skipped: Crenarchaeote enrichment culture clone OREC-B1022
-    //   — env-sample annotation pattern not implemented (parses as messy trinomial)
-    // FIXME(review): the upper-case "CF" (cf.) is dropped without a qualifier
-    // skipped: Diodora dorsata  CF
-    //   — trailing 2-letter all-caps token parses as a short author surname
-    // FIXME(review): a BOLD sample id becomes the infraspecific epithet
-    // skipped: Dasysyrphus intrudens complex sp. BBDCQ003-10
-    //   — multi-annotation strip (`complex` mid-string + trailing strain code)
-    //     not implemented
+    // an English organism label with its clone code
+    assert_unparsable(
+        "Crenarchaeote enrichment culture clone OREC-B1022",
+        NameType::Identifier,
+    );
+    // an upper-case "CF" is the cf. qualifier
+    assert_name("Diodora dorsata  CF")
+        .species("Diodora", "dorsata")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // a BOLD sample id after "complex sp." is the phrase
+    assert_name("Dasysyrphus intrudens complex sp. BBDCQ003-10")
+        .binomial("Dasysyrphus", None, "intrudens", Rank::SpeciesAggregate)
+        .phrase("sp. BBDCQ003-10")
+        .type_(NameType::Informal)
+        .nothing_else();
 }
 
 #[test]
@@ -133,12 +140,17 @@ fn exceptions_from_ranks_rank_line_epithets() {
         .comb_authors(Some("1908"), &["Zaitzev"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): the snail epithets "ser"/"subser" become botanical series ranks with the
-    // infrageneric epithet "Gredler"
-    // "Serina subser Gredler, 1898" and "Serina ser Gredler, 1898" — the parser
-    // takes "subser"/"ser" as infrageneric rank markers (SUBSERIES_BOTANY /
-    // SERIES_BOTANY) and folds "Gredler" into the infrageneric epithet. Left
-    // as TODOs — needs context-aware disambiguation.
+    // the snail epithets "ser"/"subser" before a dated author, no botanical series ranks
+    assert_name("Serina ser Gredler, 1898")
+        .species("Serina", "ser")
+        .comb_authors(Some("1898"), &["Gredler"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Serina subser Gredler, 1898")
+        .species("Serina", "subser")
+        .comb_authors(Some("1898"), &["Gredler"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]
@@ -357,19 +369,14 @@ fn no_parsing_camelcase_genus_word() {
 
 #[test]
 fn no_parsing_phytoplasma() {
-    // group: No parsing -- phytoplasma
-    // FIXME(review): a phytoplasma label parsed as genus "Alfalfa"
-    // skipped: Alfalfa witches'-broom phytoplasma
-    // FIXME(review): a glued phytoplasma label parsed as a binomial
-    // skipped: Allium ampeloprasumphytoplasma
-    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
-    // species of the plant genus
-    assert_informal("Alstroemeria sp. phytoplasma")
-        .taxon("Alstroemeria")
-        .taxon_rank(Rank::Genus)
-        .rank(Rank::Species)
-        .phrase("sp. phytoplasma")
-        .nothing_else();
+    // group: No parsing -- phytoplasma: a phytoplasma named after its host plant has no anchor
+    for name in [
+        "Alfalfa witches'-broom phytoplasma",
+        "Allium ampeloprasumphytoplasma",
+        "Alstroemeria sp. phytoplasma",
+    ] {
+        assert_unparsable(name, NameType::Other);
+    }
 }
 
 #[test]

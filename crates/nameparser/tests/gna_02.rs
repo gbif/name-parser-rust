@@ -429,6 +429,7 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(None, &["Bern."])
         .specific_authors(None, &["Willd."])
         .specific_bas_authors(None, &["Mill."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Cotoneaster (Pyracantha) rogersiana var.aurantiaca")
         .infra_species("Cotoneaster", "rogersiana", Rank::Variety, "aurantiaca")
@@ -470,12 +471,19 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(Some("1912"), &["Aurivillius"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): "st.-johnii" splits into epithet "st" + author "johnii …"; "ab. n." makes "n"
-    // the epithet and "undularia" the author
-    // Skipped: "Cibotium st.-johnii Krajina" needs hyphenated single-letter epithet
-    // recognition; "Acidalia remutaria ab. n. undularia" needs "ab. n." (aberratio
-    // nova) handling; "Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f.
-    // fakeepithet" and the bracketed variant need quadrinomial-with-rank handling.
+    // an abbreviated "st." (sancti) hyphenated to the epithet
+    assert_name("Cibotium st.-johnii Krajina")
+        .species("Cibotium", "st.-johnii")
+        .comb_authors(None, &["Krajina"])
+        .nothing_else();
+    // "ab. n." — aberratio nova — is the rank marker and a nomenclatural note
+    assert_name("Acidalia remutaria ab. n. undularia")
+        .infra_species("Acidalia", "remutaria", Rank::Aberration, "undularia")
+        .nom_note("ab. n.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // Skipped: "Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet" and the
+    // bracketed variant need quadrinomial-with-rank handling.
 }
 
 #[test]
@@ -540,9 +548,9 @@ fn infraspecies_with_greek_letters_icn() {
         .comb_authors(None, &["Hook.f."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "unr." (unranked) is read as the species epithet, the infrageneric name as an
-    // author
-    // "Hieracium unr. Verbasciformia Arv.-Touv." — "unr." is an unknown rank
-    // marker the parser doesn't recognise, leaving "unr" as the species epithet.
-    // Skipped here.
+    // "unr." marks an unranked infrageneric name
+    assert_name("Hieracium unr. Verbasciformia Arv.-Touv.")
+        .infrageneric_at("Hieracium", Rank::InfragenericName, "Verbasciformia")
+        .comb_authors(None, &["Arv.-Touv."])
+        .nothing_else();
 }

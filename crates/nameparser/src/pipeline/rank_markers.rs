@@ -85,6 +85,12 @@ static INFRASPECIFIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         ("aberration", Rank::Aberration),
         ("strain", Rank::Strain),
         ("str", Rank::Strain),
+        // Rust-only: rarer botanical markers, and the "sssp." typo of "ssp."
+        ("sssp", Rank::Subspecies),
+        ("lusus", Rank::Lusus),
+        ("lus", Rank::Lusus),
+        // Sudre's microgène (Rubus), a rank below the species
+        ("microg", Rank::InfraspecificName),
         // "st." used in some old fungal works as a generic infraspecific marker.
         ("st", Rank::InfraspecificName),
         // "*" between two lowercase epithets is an old infraspecific separator.
@@ -109,6 +115,11 @@ static INFRAGENERIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         ("suprasect", Rank::SupersectionBotany),
         ("ser", Rank::SeriesBotany),
         ("subser", Rank::SubseriesBotany),
+        // Rust-only: Fries's tribus within a genus ("Agaricus tr. Hypholoma"), and an unranked
+        // infrageneric name ("Hieracium unr. Verbasciformia")
+        ("tr", Rank::InfragenericName),
+        ("subtr", Rank::InfragenericName),
+        ("unr", Rank::InfragenericName),
     ])
 });
 

@@ -30,6 +30,7 @@
 //! Task 1 made the full `Rank` model the single source of truth, replacing this file's
 //! former ad-hoc `rank_is_infrageneric_strictly` free function.
 
+use crate::model::{NomCode, Rank};
 use crate::pipeline::rank_markers;
 use crate::pipeline::ParseContext;
 use crate::token::{self, Token, TokenKind};
@@ -150,17 +151,30 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 {
                     return i;
                 }
+                // "ex gr." (ex grege) before an epithet is a qualifier like cf.
+                if t.text == "ex" && crate::pipeline::name_tokens::is_ex_grege(tokens, i) {
+                    i += 2;
+                    if i < n && tokens[i].kind == TokenKind::Dot {
+                        i += 1;
+                    }
+                    continue;
+                }
                 // cf./aff. qualifiers and indet markers — keep walking
                 if w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")
+                    || w.eq_ignore_ascii_case("nr")
                     || w.eq_ignore_ascii_case("sp")
+                    || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet")
                 {
-                    let is_sp = w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spec");
-                    let is_cf_or_aff =
-                        w.eq_ignore_ascii_case("cf") || w.eq_ignore_ascii_case("aff");
+                    let is_sp = w.eq_ignore_ascii_case("sp")
+                        || w.eq_ignore_ascii_case("spp")
+                        || w.eq_ignore_ascii_case("spec");
+                    let is_cf_or_aff = w.eq_ignore_ascii_case("cf")
+                        || w.eq_ignore_ascii_case("aff")
+                        || w.eq_ignore_ascii_case("nr");
                     // `spec` is also a genuine published epithet ("Hemicloeina spec Platnick,
                     // 2002", "Zygonyx spec Dijkstra & Kipping"; COL carries nine). Two signals
                     // mark those: the word carries NO abbreviation dot, and what follows is
@@ -284,7 +298,9 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     // A single letter immediately after a rank marker is an informal infra
                     // epithet ("form A", "f. B", "var. a", "f. (a)"), not the start of
                     // authorship — a lowercase `a` would otherwise open an author particle.
-                    if let Some(len) = single_letter_designation(tokens, i) {
+                    if have_epithet && is_capitalised_autonym(tokens, i) {
+                        i += 1;
+                    } else if let Some(len) = single_letter_designation(tokens, i) {
                         i += len;
                         have_epithet = true;
                     } else if have_epithet && i < n && tokens[i].kind == TokenKind::Number {
@@ -336,6 +352,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     && !have_epithet
                     && !after_subgenus
                     && rank_markers::match_infrageneric_allow_notho(w).is_some()
+                    && !is_epithet_before_dated_author(tokens, i)
                 {
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
@@ -365,7 +382,11 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     i += 1;
                     continue;
                 }
-                if token::is_particle(&t.text) || looks_like_apostrophe_particle(&t.text) {
+                let weak_particle = is_weak_particle_before_surname(tokens, i);
+                if token::is_particle(&t.text)
+                    || looks_like_apostrophe_particle(&t.text)
+                    || weak_particle
+                {
                     // Particle authors may be followed by a structural rank marker —
                     // try to skip past the author span as a mid-name author so the
                     // marker still gets consumed by the name section.
@@ -398,6 +419,13 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 continue;
             }
             if after_genus && starts_digit_epithet(t) {
+                name_words += 1;
+                have_epithet = true;
+                after_subgenus = false;
+                i += 1;
+                continue;
+            }
+            if after_genus && !have_epithet && is_capitalised_old_epithet(tokens, i, genus_text) {
                 name_words += 1;
                 have_epithet = true;
                 after_subgenus = false;
@@ -464,25 +492,47 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         } else {
                             None
                         };
-                        let trailing_is_epithet = next.is_some_and(|nx| {
-                            nx.kind == TokenKind::Word
-                                && starts_lower(nx)
-                                && !token::is_particle(&nx.text)
-                        });
+                        let epithet_at = |k: usize| {
+                            tokens.get(k).is_some_and(|nx| {
+                                nx.kind == TokenKind::Word
+                                    && starts_lower(nx)
+                                    && !token::is_particle(&nx.text)
+                            })
+                        };
+                        // a nothospecies' hybrid sign may stand before it: "Sorbus (Aria) × hybrida"
+                        let trailing_is_epithet = epithet_at(after_paren)
+                            || (next.is_some_and(|nx| nx.kind == TokenKind::HybridMark)
+                                && epithet_at(after_paren + 1))
+                            || is_capitalised_old_epithet(tokens, after_paren, genus_text);
                         let nominotypical =
                             genus_text.is_some_and(|g| eq_ignore_case(g, &tokens[j].text));
                         let rank_requests_infragen = ctx
                             .requested_rank
                             .is_some_and(|r| r.is_infrageneric_strictly());
+                        // Rust-only: a code or rank hint settles a single bracketed word before an
+                        // author, which the shape leaves open ("Humiriastrum (Urban) Cuatrecasas,
+                        // 1961" is a genus with its basionym author, or a zoological subgenus with
+                        // its author). The zoological code makes it the subgenus — genera have no
+                        // basionym authors there — the botanical code, or else a genus-or-higher
+                        // rank, the basionym author.
+                        let rank_requests_genus = ctx
+                            .requested_rank
+                            .is_some_and(|r| r == Rank::Genus || r.is_suprageneric());
+                        let code = ctx.requested_code;
                         let subgenus = if trailing_is_epithet {
                             true
                         } else if abbreviated {
                             false
+                        } else if !has_trailing
+                            || nominotypical
+                            || rank_requests_infragen
+                            || code == Some(NomCode::Zoological)
+                        {
+                            true
+                        } else if code == Some(NomCode::Botanical) || rank_requests_genus {
+                            false
                         } else {
-                            !has_trailing
-                                || nominotypical
-                                || rank_requests_infragen
-                                || has_year_token(tokens, after_paren, n)
+                            has_year_token(tokens, after_paren, n)
                         };
                         if subgenus {
                             i = after_paren;
@@ -648,7 +698,7 @@ fn particle_is_epithet_by_rank(
     if !ctx.requested_rank.is_some_and(|r| r.is_species_or_below()) {
         return false;
     }
-    if !token::is_particle(&tokens[i].text) {
+    if !token::is_particle(&tokens[i].text) && !is_weak_particle(&tokens[i].text) {
         return false;
     }
     // Chain guard: look past any abbreviation dots to the next word.
@@ -660,6 +710,30 @@ fn particle_is_epithet_by_rank(
         Some(next) if next.kind == TokenKind::Word => !starts_lower(next),
         _ => true,
     }
+}
+
+/// "den", "dem" and "ver": particles the table lacks, since they are epithets too ("Agnetina den",
+/// "Gnathopleustes den (Barnard 1969)").
+fn is_weak_particle(word: &str) -> bool {
+    matches!(word, "den" | "dem" | "ver")
+}
+
+/// A weak particle at `i` starts an author only right before a capitalised surname ("Metrocoris
+/// ciliatus den Boer, 1965") that is not written surname-first with its initials behind a comma —
+/// that one follows an epithet ("Agnetina den Cao, T.K.T. & Bae, 2006").
+fn is_weak_particle_before_surname(tokens: &[Token], i: usize) -> bool {
+    let initials_after_comma = tokens
+        .get(i + 2)
+        .is_some_and(|c| c.kind == TokenKind::Comma)
+        && tokens.get(i + 3).is_some_and(|t| {
+            t.kind == TokenKind::Word && t.text.chars().count() == 1 && starts_upper(t)
+        })
+        && tokens.get(i + 4).is_some_and(|d| d.kind == TokenKind::Dot);
+    is_weak_particle(&tokens[i].text)
+        && tokens
+            .get(i + 1)
+            .is_some_and(|nx| nx.kind == TokenKind::Word && starts_upper(nx))
+        && !initials_after_comma
 }
 
 /// Java `AuthorshipSplit.consumeMidNameAuthor(List<Token>, int, int)`
@@ -688,52 +762,170 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
     }
     let mut j = from;
     while j < n {
+        if continues_author_span(tokens, j, from) {
+            j += 1;
+            continue;
+        }
         let t = &tokens[j];
         if t.kind == TokenKind::Word {
-            if starts_upper(t) {
-                j += 1;
-                continue;
-            }
-            if token::is_particle(&t.text) {
-                j += 1;
-                continue;
-            }
-            // Apostrophe-particle word ("d'Urv", "L'Hér") — keep walking.
-            if looks_like_apostrophe_particle(&t.text) {
-                j += 1;
-                continue;
-            }
-            // "al" / "al." inside an author span ("Boiss. & al. var. paryadrica") — the
-            // "et al." abbreviation. Keep walking.
-            if t.text.eq_ignore_ascii_case("al") {
-                j += 1;
-                continue;
-            }
             let w = strip_dot(&t.text);
             let is_infra_marker = rank_markers::match_infraspecific(w).is_some()
                 || rank_markers::match_infraspecific_allow_notho(w).is_some();
-            let is_infra_gen_marker = rank_markers::match_infrageneric(w).is_some();
+            let is_infra_gen_marker = rank_markers::match_infrageneric_allow_notho(w).is_some();
             if (is_infra_marker || is_infra_gen_marker)
                 && j > from
                 && has_epithet_after_marker(tokens, j, is_infra_gen_marker)
             {
                 return Some(j);
             }
-            return None;
-        }
-        if t.kind == TokenKind::Dot || t.kind == TokenKind::Ampersand || t.kind == TokenKind::Comma
-        {
-            j += 1;
-            continue;
-        }
-        // Apostrophe inside an author (M'Coy, d'Urv., L'Hér.) — keep walking.
-        if t.kind == TokenKind::Other && t.text == "'" {
-            j += 1;
-            continue;
         }
         return None;
     }
     None
+}
+
+/// The marker word "ser" or "subser" at `i` — real epithets too — is undotted and followed by an
+/// author with a year, or by nothing at all: a species epithet, not the botanical rank ("Serina
+/// ser Gredler, 1898", "Serina subser Gredler, 1898" — snails; "Serina ser" with its authorship
+/// given apart).
+pub(crate) fn is_epithet_before_dated_author(tokens: &[Token], i: usize) -> bool {
+    if !matches!(tokens[i].text.as_str(), "ser" | "subser") {
+        return false;
+    }
+    if i + 1 == tokens.len() {
+        return true;
+    }
+    let author = tokens
+        .get(i + 1)
+        .is_some_and(|t| t.kind == TokenKind::Word && starts_upper(t));
+    let mut k = i + 2;
+    if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Comma) {
+        k += 1;
+    }
+    author
+        && tokens
+            .get(k)
+            .is_some_and(|t| has_year_token(std::slice::from_ref(t), 0, 1))
+}
+
+/// The word at `k`, in the species-epithet slot, is an epithet capitalised in the old style:
+/// undotted, no repetition of the genus, and followed by an infraspecific rank marker with its
+/// epithet ("Aphaenogaster (Ichnomyrmex) Schwammerdami var. spinipes", "Delias Abnormis var.
+/// euryxantha Honrath, 1892"). It used to be read as the species author, the species epithet lost.
+pub(crate) fn is_capitalised_old_epithet(tokens: &[Token], k: usize, genus: Option<&str>) -> bool {
+    let Some(t) = tokens.get(k) else {
+        return false;
+    };
+    let marker_at = k + 1;
+    t.kind == TokenKind::Word
+        && starts_upper(t)
+        && t.text.chars().count() >= 3
+        && t.text.chars().skip(1).all(|c| c.is_lowercase())
+        && !genus.is_some_and(|g| eq_ignore_case(g, &t.text))
+        && tokens.get(marker_at).is_some_and(|m| {
+            m.kind == TokenKind::Word
+                && m.text != "f"
+                && rank_markers::match_infraspecific_allow_notho(strip_dot(&m.text)).is_some()
+        })
+        && has_epithet_after_marker(tokens, marker_at, false)
+}
+
+/// The word at `k` repeats an earlier lower-case epithet with a capital initial: the capitalised
+/// final epithet of an autonym ("Phyllanthus tenuicaulis Muell.-Arg. var. Tenuicaulis").
+pub(crate) fn is_capitalised_autonym(tokens: &[Token], k: usize) -> bool {
+    tokens.get(k).is_some_and(|t| {
+        t.kind == TokenKind::Word
+            && starts_upper(t)
+            && t.text.chars().count() > 1
+            && tokens[..k].iter().any(|e| {
+                e.kind == TokenKind::Word && starts_lower(e) && eq_ignore_case(&e.text, &t.text)
+            })
+    })
+}
+
+/// Does `tokens[j]` continue an author span that began at `from`? A surname, a particle, the dot of
+/// an initial, a separator, an "et al.", an apostrophe (`M'Coy`), and — never as its first token —
+/// an "ex", "et" or "and" before the next author ("Nees ex Thwaites", "Pallas ex de Candolle",
+/// "Hatus. et Ohwi"), the hyphen of an abbreviated double name ("Baum.-Bod."), a filius right
+/// before a rank marker or an "ex" ("Hook.f. var.", "Hook.f. ex A.W.Benn.") and a year
+/// ("Günther, 1867 ssp. tanganica"). Shared by the walks that skip a species author standing
+/// before a rank marker.
+pub(crate) fn continues_author_span(tokens: &[Token], j: usize, from: usize) -> bool {
+    let t = &tokens[j];
+    // an "ex" may follow the basionym bracket straight away ("(Kütz.) ex Ralfs var. laevis")
+    let inner = j > from || (j > 0 && tokens[j - 1].kind == TokenKind::CloseParen);
+    match t.kind {
+        TokenKind::Word => {
+            starts_upper(t)
+                || token::is_particle(&t.text)
+                || looks_like_apostrophe_particle(&t.text)
+                || t.text.eq_ignore_ascii_case("al")
+                // the Dutch "'t" ("'t Hart")
+                || (t.text == "t"
+                    && j > 0
+                    && tokens[j - 1].text == "'"
+                    && next_word_starts_upper(tokens, j + 1))
+                || (inner
+                    && matches!(t.text.as_str(), "ex" | "et" | "and")
+                    && next_word_starts_author(tokens, j + 1))
+                || (inner && t.text == "f" && filius_before_marker_or_ex(tokens, j))
+        }
+        TokenKind::Dot | TokenKind::Ampersand | TokenKind::Comma => true,
+        TokenKind::Other => {
+            t.text == "'"
+                || (inner
+                    && t.text == "-"
+                    && tokens[j - 1].kind == TokenKind::Dot
+                    && next_word_starts_upper(tokens, j + 1))
+        }
+        TokenKind::Number => {
+            inner
+                && t.text.chars().count() == 4
+                && matches!(t.text.chars().next(), Some('1') | Some('2'))
+        }
+        _ => false,
+    }
+}
+
+/// The word token at `j` (after any dots) starts an author: a capitalised surname, a particle or
+/// the "al." of "et al.".
+fn next_word_starts_author(tokens: &[Token], mut j: usize) -> bool {
+    while tokens.get(j).is_some_and(|t| t.kind == TokenKind::Dot) {
+        j += 1;
+    }
+    tokens.get(j).is_some_and(|t| {
+        t.kind == TokenKind::Word
+            && (starts_upper(t) || token::is_particle(&t.text) || t.text == "al")
+    })
+}
+
+/// The word token at `j` (after any dots) starts with an upper-case letter.
+fn next_word_starts_upper(tokens: &[Token], mut j: usize) -> bool {
+    while tokens.get(j).is_some_and(|t| t.kind == TokenKind::Dot) {
+        j += 1;
+    }
+    tokens
+        .get(j)
+        .is_some_and(|t| t.kind == TokenKind::Word && starts_upper(t))
+}
+
+/// The `f` at `f_idx` is followed (past its dot) by an infraspecific rank marker, an `ex` or another
+/// author ("Hook.f. & Wilson var. pusillum", "Hook.f. et Thomson var.") — so it is the filius of
+/// the author before it.
+fn filius_before_marker_or_ex(tokens: &[Token], f_idx: usize) -> bool {
+    let mut k = f_idx + 1;
+    if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Dot) {
+        k += 1;
+    }
+    tokens.get(k).is_some_and(|t| match t.kind {
+        TokenKind::Ampersand | TokenKind::Comma => true,
+        TokenKind::Word => {
+            matches!(t.text.as_str(), "ex" | "et" | "and")
+                || (t.text != "f"
+                    && rank_markers::match_infraspecific_allow_notho(strip_dot(&t.text)).is_some())
+        }
+        _ => false,
+    })
 }
 
 /// Java `AuthorshipSplit.hasEpithetAfterMarker(List<Token>, int, int, boolean)`
@@ -744,6 +936,10 @@ fn has_epithet_after_marker(tokens: &[Token], marker_idx: usize, infrageneric: b
     let n = tokens.len();
     let mut k = marker_idx + 1;
     if k < n && tokens[k].kind == TokenKind::Dot {
+        k += 1;
+    }
+    // a hybrid sign before a nothotaxon's epithet ("subsp. ×medium")
+    if k < n && tokens[k].kind == TokenKind::HybridMark && k + 1 < n {
         k += 1;
     }
     if k >= n {
@@ -758,6 +954,17 @@ fn has_epithet_after_marker(tokens: &[Token], marker_idx: usize, infrageneric: b
     }
     if infrageneric {
         return starts_upper(t);
+    }
+    // A letter designation ("var. d Lecomte", "var. B Körn.") and a capitalised autonym epithet
+    // ("Nasa pteridophylla Weigend & Dostert ssp. Pteridophylla") stand in for the epithet too.
+    if single_letter_designation(tokens, k).is_some()
+        && (k + 1 == n
+            || (tokens[k + 1].kind != TokenKind::Dot && next_word_starts_upper(tokens, k + 1)))
+    {
+        return true;
+    }
+    if is_capitalised_autonym(tokens, k) {
+        return true;
     }
     if !starts_lower(t) {
         return false;
@@ -825,28 +1032,19 @@ fn skip_paren_author_block(tokens: &[Token], open_idx: usize) -> Option<usize> {
     }
     j += 1; // skip past the close paren
             // Walk over an author span (uppercase words, dots, particles) until a rank marker.
+    let from = j;
     while j < n {
+        if continues_author_span(tokens, j, from) {
+            j += 1;
+            continue;
+        }
         let t = &tokens[j];
         if t.kind == TokenKind::Word {
-            if starts_upper(t) {
-                j += 1;
-                continue;
-            }
-            if token::is_particle(&t.text) {
-                j += 1;
-                continue;
-            }
             let w = strip_dot(&t.text);
             let is_infra_marker = rank_markers::match_infraspecific_allow_notho(w).is_some();
             if is_infra_marker && has_epithet_after_marker(tokens, j, false) {
                 return Some(j);
             }
-            return None;
-        }
-        if t.kind == TokenKind::Dot || t.kind == TokenKind::Ampersand || t.kind == TokenKind::Comma
-        {
-            j += 1;
-            continue;
         }
         return None;
     }
@@ -941,7 +1139,6 @@ pub(crate) fn single_letter_designation(tokens: &[Token], i: usize) -> Option<us
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Rank;
     use crate::token::tokenize;
 
     fn ctx(requested_rank: Option<Rank>) -> ParseContext {

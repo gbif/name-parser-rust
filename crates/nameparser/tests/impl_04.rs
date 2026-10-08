@@ -77,10 +77,10 @@ fn todo_names() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 
-    // FIXME(review): the trailing dot is lost ("Dsgl", while "Cr?p." above keeps "Crp.")
+    // every "?" goes, even two sharing a letter, and the dot stays
     assert_name("Rosa alpestris D?s?gl.")
         .species("Rosa", "alpestris")
-        .comb_authors(None, &["Dsgl"])
+        .comb_authors(None, &["Dsgl."])
         .doubtful()
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
@@ -899,15 +899,7 @@ fn sensu_lato_not_eating_uppercase_initials() {
 /// a MISSING_GENUS warning. (A7)
 #[test]
 fn missing_genus_not_particle() {
-    // FIXME(review): an author name alone is no name at all — unparsable OTHER, not uninomial "Van"
-    assert_name("van Berg")
-        .monomial("Van")
-        .comb_authors(None, &["Berg"])
-        .nothing_else();
-    // FIXME(review): as above, not uninomial "Del"
-    assert_name("del Rosario Author")
-        .monomial("Del")
-        .comb_authors(None, &["Rosario"])
-        .warning(&[warnings::AUTHORSHIP_REMOVED])
-        .nothing_else();
+    // an author name alone is no name at all
+    assert_unparsable("van Berg", NameType::Other);
+    assert_unparsable("del Rosario Author", NameType::Other);
 }

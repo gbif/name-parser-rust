@@ -120,6 +120,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     // in the indet branch and the warning block near the end of this fn).
     let mut indet_bare = false;
     let mut cf_aff_qualifier: Option<String> = None;
+    // how many epithets came before the qualifier: it qualifies the next one, or the last if none
+    // follows ("Arctostaphylos preglauca cf.")
+    let mut qualifier_at = 0usize;
     // Tracks the most recently skipped mid-name author span so that, when a second
     // infraspecific marker overrides the first, we can describe the dropped middle
     // classification ("Intermediate classification removed: subsp.X Author") in a warning.
@@ -250,6 +253,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             && t.text == "?"
             && lower_epithets.len() < 2
         {
+            qualifier_at = lower_epithets.len();
             cf_aff_qualifier = Some("?".to_string());
             ctx.name.type_ = NameType::Informal;
             ctx.name.doubtful = true;
@@ -263,6 +267,15 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             // marker, or particle-starting authors like "d'Urv. subsp.") — silently
             // skipped so that downstream classification operates only on the structural
             // tokens.
+            // an epithet capitalised in the old style ("Delias Abnormis var. euryxantha")
+            if genus.is_some()
+                && lower_epithets.is_empty()
+                && authorship_split::is_capitalised_old_epithet(&ctx.tokens, i, genus.as_deref())
+            {
+                lower_epithets.push(t.text.to_lowercase());
+                i += 1;
+                continue;
+            }
             let can_start_author = starts_upper(t)
                 || (starts_lower(t)
                     && (token::is_particle(&t.text)
@@ -354,14 +367,27 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         }
                     }
                 }
-                // 1. cf./aff./near open-nomenclature qualifier
+                // 1a. "ex gr." (ex grege, of the species group of): the paleontologists' qualifier
+                if w == "ex" && is_ex_grege(ts, i) && lower_epithets.len() < 2 {
+                    qualifier_at = lower_epithets.len();
+                    cf_aff_qualifier = Some("ex gr.".to_string());
+                    ctx.name.type_ = NameType::Informal;
+                    i += 2;
+                    if i < ts.len() && ts[i].kind == TokenKind::Dot {
+                        i += 1;
+                    }
+                    continue;
+                }
+                // 1. cf./aff./near/nr. open-nomenclature qualifier
                 if (w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")
+                    || w.eq_ignore_ascii_case("nr")
                     || w.eq_ignore_ascii_case("near"))
                     && lower_epithets.len() < 2
                 {
                     // cf./aff. are abbreviations, rendered with a trailing dot ("cf."/"aff."); "near"
                     // is a full English word synonymous with aff., so it is stored verbatim, no dot.
+                    qualifier_at = lower_epithets.len();
                     cf_aff_qualifier = Some(if w.eq_ignore_ascii_case("near") {
                         w.to_string()
                     } else {
@@ -384,7 +410,20 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     if j < ts.len() && ts[j].kind == TokenKind::Dot {
                         j += 1;
                     }
-                    j < ts.len() && ts[j].kind == TokenKind::Number
+                    // a strain code, a digit-led word or a final capital letter is a designation
+                    // too: "Euxoa idahoensis sp. 1clay", "Abies alba sp. JGP0404", "… sp. E"
+                    let word = |k: usize| ts.get(k).filter(|t| t.kind == TokenKind::Word);
+                    j < ts.len()
+                        && (ts[j].kind == TokenKind::Number
+                            || word(j).is_some_and(|t| {
+                                t.text.starts_with(|c: char| c.is_ascii_digit())
+                                    || (starts_upper(t)
+                                        && (is_strain_code(&t.text)
+                                            || ts.get(j + 1).is_some_and(|nx| {
+                                                nx.kind == TokenKind::Number && j + 2 == ts.len()
+                                            })
+                                            || (t.text.chars().count() == 1 && j + 1 == ts.len())))
+                            }))
                 };
                 // …but `spec` is also a genuine published epithet ("Hemicloeina spec Platnick,
                 // 2002", "Lampona spec Platnick, 2000", "Gobiosoma spec (Ginsburg, 1939)"; COL
@@ -407,6 +446,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     && (!name_section_covers_all || separate_authorship)
                     && i + 1 == ts.len();
                 if (w.eq_ignore_ascii_case("sp")
+                    || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet"))
@@ -439,6 +479,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     // ("Aster indet." -> "Aster sp. indet."). Restrict the marker capture to
                     // sp/spec/species; "indet" falls through and renders via the synthesised rank.
                     let is_species_marker = w.eq_ignore_ascii_case("sp")
+                        || w.eq_ignore_ascii_case("spp")
                         || w.eq_ignore_ascii_case("spec")
                         || w.eq_ignore_ascii_case("species");
                     // A cultivar epithet (extracted upstream from "Genus sp. cv. 'Name'") is the
@@ -506,8 +547,12 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     {
                         // Single uppercase letter following sp. — informal phrase
                         // identifier ("Bryozoan sp. E"). Stored as phrase, leaves
-                        // indet=true.
-                        ctx.name.phrase = Some(ts[i].text.clone());
+                        // indet=true; after a species epithet with its marker.
+                        ctx.name.phrase = Some(if lower_epithets.is_empty() {
+                            ts[i].text.clone()
+                        } else {
+                            ctx.working[marker_start..ts[i].end].to_string()
+                        });
                         i += 1;
                     } else if i < ts.len()
                         && ts[i].kind == TokenKind::Word
@@ -529,7 +574,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             i += 1;
                         }
                         if is_strain_code(&code) {
-                            ctx.name.phrase = Some(code);
+                            // after a species epithet the marker stays in the phrase, as with a
+                            // number ("Euxoa idahoensis sp. 1clay")
+                            ctx.name.phrase = Some(if lower_epithets.is_empty() {
+                                code
+                            } else {
+                                ctx.working[marker_start..ts[i - 1].end].to_string()
+                            });
                         }
                     }
                     // 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): a supraspecific indet
@@ -559,7 +610,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 // 2b. "sp." between species and infraspecific epithet is almost always a
                 // misspelling of "ssp." (subspecies). Only triggers when there's already
                 // a species epithet and a lower epithet follows.
-                if w.eq_ignore_ascii_case("sp")
+                if (w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spp"))
                     && lower_epithets.len() == 1
                     && marker_idx_in_epithets < 0
                     && has_infraspecific_epithet_after(ts, i)
@@ -578,6 +629,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 // infraspecific epithet (which yielded INFRASPECIFIC_NAME with epithet
                 // "sp"). The sp.->ssp. case (2b) already handled a following epithet.
                 if (w.eq_ignore_ascii_case("sp")
+                    || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species"))
                     && !lower_epithets.is_empty()
@@ -596,7 +648,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 if let Some((rm_infra, notho_flag)) =
                     rank_markers::match_infraspecific_allow_notho(w)
                 {
-                    if has_infraspecific_epithet_after(ts, i) {
+                    // The capitalised final epithet of an autonym ("var. Tenuicaulis").
+                    let autonym_at = i
+                        + 1
+                        + usize::from(ts.get(i + 1).is_some_and(|t| t.kind == TokenKind::Dot));
+                    let capitalised_autonym = !lower_epithets.is_empty()
+                        && super::authorship_split::is_capitalised_autonym(ts, autonym_at);
+                    if has_infraspecific_epithet_after(ts, i) || capitalised_autonym {
                         // Second marker overriding the first: the previous
                         // classification (oldRank.epithet + author) was an intermediate
                         // level the model can't hold, so warn about the drop.
@@ -640,6 +698,11 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                                 i += 1;
                             }
                         }
+                        if capitalised_autonym {
+                            lower_epithets.push(ts[i].text.to_lowercase());
+                            i += 1;
+                            continue;
+                        }
                         // Informal infra epithet: a single letter immediately following the
                         // rank marker ("form A", "f. B", "var. a", "f. (a)") — consume it here
                         // so the normal lowercase-epithet path doesn't drop it as an "upper
@@ -655,6 +718,18 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             indet = true; // INFORMAL informal infra epithet
                             i += len;
                         }
+                    } else if inline_rank.is_some()
+                        && marker_idx_in_epithets == lower_epithets.len() as i32
+                        && ctx
+                            .tokens
+                            .get(i + 1)
+                            .is_none_or(|t| t.kind == TokenKind::Word && starts_upper(t))
+                    {
+                        // An undotted marker word where the previous marker's epithet belongs,
+                        // last or before its author, is that epithet ("Haliotis cracherodii var.
+                        // lusus Finlay, 1927"); a dotted one is a marker ("Abies alba subsp. var.").
+                        lower_epithets.push(w.to_lowercase());
+                        i += 1;
                     } else if !lower_epithets.is_empty() {
                         // Trailing rank marker with no following epithet = indetermined
                         // infraspecific
@@ -714,6 +789,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 }
                 // 4. infrageneric marker (with optional "notho-" prefix)
                 if let Some((rm_infragen, gnotho)) = rank_markers::match_infrageneric_allow_notho(w)
+                    .filter(|_| !authorship_split::is_epithet_before_dated_author(&ctx.tokens, i))
                 {
                     if lower_epithets.is_empty() && subgenus.is_none() && infragen_epithet.is_none()
                     {
@@ -921,12 +997,12 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         ctx.name.set_notho(NamePart::Infraspecific);
     }
     if let Some(q) = &cf_aff_qualifier {
-        // Qualifier applies to the specific or infraspecific epithet, whichever is the
-        // most-specific present.
-        let part = if infraspecific.is_some() {
-            NamePart::Infraspecific
-        } else {
+        // Qualifier applies to the epithet after it, or the last one when it trails them all.
+        let followed = lower_epithets.len() > qualifier_at;
+        let part = if infraspecific.is_none() || (qualifier_at == 0 && followed) {
             NamePart::Specific
+        } else {
+            NamePart::Infraspecific
         };
         ctx.name.set_epithet_qualifier(part, q);
     }
@@ -1036,27 +1112,18 @@ fn skip_paren_author_block(ts: &[Token], open_idx: usize) -> Option<usize> {
         return None;
     }
     j += 1; // skip past the close paren
+    let from = j;
     while j < n {
+        if authorship_split::continues_author_span(ts, j, from) {
+            j += 1;
+            continue;
+        }
         let t = &ts[j];
         if t.kind == TokenKind::Word {
-            if starts_upper(t) {
-                j += 1;
-                continue;
-            }
-            if token::is_particle(&t.text) {
-                j += 1;
-                continue;
-            }
             let w = strip_dot(&t.text);
             if rank_markers::match_infraspecific_allow_notho(w).is_some() {
                 return Some(j);
             }
-            return None;
-        }
-        if t.kind == TokenKind::Dot || t.kind == TokenKind::Ampersand || t.kind == TokenKind::Comma
-        {
-            j += 1;
-            continue;
         }
         return None;
     }
@@ -1168,6 +1235,16 @@ fn has_infraspecific_epithet_after(ts: &[Token], marker_idx: usize) -> bool {
     }
     // a numeral epithet ("var. 4-lineata") is an epithet too, not a designation
     nx.kind == TokenKind::Word && token::is_numeral_epithet(&nx.text)
+}
+
+/// The "ex" at `i` opens "ex gr." / "ex grege" ("Acastella ex gr. rouaulti") before an epithet.
+pub(crate) fn is_ex_grege(ts: &[Token], i: usize) -> bool {
+    let gr = ts.get(i + 1).filter(|t| t.kind == TokenKind::Word);
+    let gr_dot = usize::from(ts.get(i + 2).is_some_and(|t| t.kind == TokenKind::Dot));
+    gr.is_some_and(|t| t.text == "gr" || t.text == "grege")
+        && ts
+            .get(i + 2 + gr_dot)
+            .is_some_and(|t| t.kind == TokenKind::Word && starts_lower(t))
 }
 
 /// True for strain-code-shaped tokens — mixed letters and digits, no spaces, length >= 3

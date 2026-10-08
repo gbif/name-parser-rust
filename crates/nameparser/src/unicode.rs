@@ -156,6 +156,19 @@ static HOMOGLYPHS: LazyLock<HashMap<char, char>> = LazyLock::new(|| {
         if IGNORED_CANONICALS.contains(&canonical) {
             continue;
         }
+        // Rust-only: a digit row listing ASCII letters too ("0Oo…", "1Il…") folds a look-alike
+        // letter to the ASCII letter of its case, not to the digit — a Cyrillic "о" in
+        // "оleiformis" is an "o", and Java made it "0leiformis".
+        let letter = |upper: bool| {
+            line.chars()
+                .skip(1)
+                .find(|c| c.is_ascii_alphabetic() && c.is_ascii_uppercase() == upper)
+        };
+        let (upper_letter, lower_letter) = if canonical.is_ascii_digit() {
+            (letter(true), letter(false))
+        } else {
+            (None, None)
+        };
         for cp in line.chars().skip(1) {
             if (cp as u32) > 128
                 && cp != HYBRID_MARKER
@@ -163,7 +176,12 @@ static HOMOGLYPHS: LazyLock<HashMap<char, char>> = LazyLock::new(|| {
                 && !map.contains_key(&cp)
                 && !QUOTE_IGNORE.contains(&cp)
             {
-                map.insert(cp, canonical);
+                let folded = match (cp.is_uppercase(), cp.is_lowercase()) {
+                    (true, _) => upper_letter,
+                    (_, true) => lower_letter,
+                    _ => None,
+                };
+                map.insert(cp, folded.unwrap_or(canonical));
             }
         }
         if row > 175 || canonical == 'ɸ' {

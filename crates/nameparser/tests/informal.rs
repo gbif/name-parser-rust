@@ -603,33 +603,15 @@ fn molecular_provisional_species_keep_the_whole_biological_annotation_tail() {
     // NCBI / genetic-database style: everything after "sp." is a strain / pathovar / biovar /
     // serotype / host-association annotation, NOT nomenclature — so the whole verbatim tail
     // (marker included) becomes the phrase and the anchor stays the bare genus.
-    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
-    // species of the plant genus
-    assert_informal("Solanum sp. phytoplasma")
-        .taxon("Solanum")
-        .taxon_rank(Rank::Genus)
-        .rank(Rank::Species)
-        .phrase("sp. phytoplasma")
-        .nothing_else();
-    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
-    // species of the plant genus
-    assert_informal("Citrus sp. phytoplasma")
-        .taxon("Citrus")
-        .taxon_rank(Rank::Genus)
-        .rank(Rank::Species)
-        .phrase("sp. phytoplasma")
-        .nothing_else();
-    // "Alstroemeria sp. phytoplasma" is really a phytoplasma named by its host plant (host =
-    // Alstroemeria sp., organism = the phytoplasma), not a species of Alstroemeria — semantically
-    // distinct, but for now it parses as an Informal like the rest.
-    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
-    // species of the plant genus
-    assert_informal("Alstroemeria sp. phytoplasma")
-        .taxon("Alstroemeria")
-        .taxon_rank(Rank::Genus)
-        .rank(Rank::Species)
-        .phrase("sp. phytoplasma")
-        .nothing_else();
+    // A phytoplasma (a bacterium) named after its host plant is no species of the plant genus:
+    // the host is no anchor, as GNA has it.
+    for name in [
+        "Solanum sp. phytoplasma",
+        "Citrus sp. phytoplasma",
+        "Alstroemeria sp. phytoplasma",
+    ] {
+        assert_unparsable(name, NameType::Other);
+    }
     // pathovar
     assert_informal("Xanthomonas sp. pv. citri")
         .taxon("Xanthomonas")
@@ -778,23 +760,9 @@ fn infraspecific_indeterminate_stays_parsed() {
 
 #[test]
 fn binomial_with_a_trailing_annotation_currently_stays_parsed() {
-    // "Persea americana phytoplasma" is a complete binomial (the host plant) + a trailing organism
-    // annotation ("phytoplasma"). Ideally the annotation would be captured as a phrase like the
-    // "Genus sp. phytoplasma" cases above — but with no "sp." marker the complete binomial absorbs
-    // "phytoplasma" as an infraspecific epithet, so it stays SCIENTIFIC. DEFERRED: capturing a
-    // trailing annotation on a bare binomial needs annotation-term recognition; this locks the
-    // CURRENT behavior so the eventual change is visible in the diff.
-    // FIXME(review): a phytoplasma named after its host plant, not a trinomial with the epithet
-    // "phytoplasma"
-    assert_name("Persea americana phytoplasma")
-        .infra_species(
-            "Persea",
-            "americana",
-            Rank::InfraspecificName,
-            "phytoplasma",
-        )
-        .type_(NameType::Scientific)
-        .nothing_else();
+    // "Persea americana phytoplasma" is a phytoplasma named after its host plant (a complete
+    // binomial): no anchor, OTHER like the "Genus sp. phytoplasma" cases above.
+    assert_unparsable("Persea americana phytoplasma", NameType::Other);
 }
 
 #[test]
@@ -914,5 +882,29 @@ fn the_spec_epithet_rescue_needs_both_a_missing_dot_and_an_authorship() {
         .rank(Rank::Species)
         .phrase("sp Sharov, 1961")
         .taxon_rank(Rank::Genus)
+        .nothing_else();
+}
+
+#[test]
+fn a_designation_after_sp_behind_a_species_epithet_keeps_the_marker() {
+    // a digit-led word is a designation like a number, and the marker stays in the phrase
+    assert_name("Euxoa idahoensis sp. 1clay")
+        .species("Euxoa", "idahoensis")
+        .phrase("sp. 1clay")
+        .type_(NameType::Informal)
+        .nothing_else();
+}
+
+#[test]
+fn a_code_or_letter_after_sp_behind_a_species_epithet_is_its_phrase() {
+    assert_name("Abies alba sp. JGP0404")
+        .species("Abies", "alba")
+        .phrase("sp. JGP0404")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Bacillus cereus group sp. FL70")
+        .binomial("Bacillus", None, "cereus", Rank::SpeciesAggregate)
+        .phrase("sp. FL70")
+        .type_(NameType::Informal)
         .nothing_else();
 }

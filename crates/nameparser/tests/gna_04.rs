@@ -428,8 +428,7 @@ fn open_nomenclature_approximate_names() {
         .qualifiers(&[(NamePart::Infraspecific, "?")])
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
-    // FIXME(review): "nr." (near) is read as the species epithet
-    // skipped: Euxoa nr. idahoensis sp. 1clay
+    // "nr." (near) is a qualifier: near_is_a_qualifier
     assert_name("Acarinina aff. pentacamerata")
         .species("Acarinina", "pentacamerata")
         .qualifiers(&[(NamePart::Specific, "aff.")])
@@ -446,8 +445,10 @@ fn open_nomenclature_approximate_names() {
         .rank(Rank::Species)
         .phrase("sp. 37")
         .nothing_else();
-    // FIXME(review): "spp." is read as the infraspecific epithet
-    // skipped: Thryothorus leucotis spp. bogotensis
+    // "spp." between two epithets is a misspelt "ssp.", as "sp." is
+    assert_name("Thryothorus leucotis spp. bogotensis")
+        .infra_species("Thryothorus", "leucotis", Rank::Subspecies, "bogotensis")
+        .nothing_else();
     assert_informal("Endoxyla sp. GM-, 2003")
         .taxon("Endoxyla")
         .taxon_rank(Rank::Genus)
@@ -473,7 +474,7 @@ fn open_nomenclature_approximate_names() {
         .rank(Rank::Species)
         .phrase("sp. nr. subjuncta Bold:Aab, 0925")
         .nothing_else();
-    // FIXME(review): "nr." is read as the species epithet, and the BIN as a botanical author
+    // FIXME(review): the mangled BIN "Bold:Aab, 0925" is read as a botanical author sanctioned by Aab
     // skipped: Lacanobia nr. subjuncta Bold:Aab, 0925
     assert_name("Abturia cf. alabamensis (Morton )")
         .species("Abturia", "alabamensis")
@@ -494,15 +495,25 @@ fn open_nomenclature_approximate_names() {
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
-    // FIXME(review): named nothospecies (Daphnia ×krausi Flößner, 1993) are rejected as FORMULA
-    // "Aesculus cf. × hybrida" and "Daphnia (Daphnia) x krausi Flossner 1993" are
-    // currently classified as FORMULA hybrids — the cf./subgenus + × combination
-    // trips the hybrid-formula heuristic. Left as a known limitation.
+    // a named nothospecies after a qualifier or a subgenus is no formula
+    assert_name("Aesculus cf. × hybrida")
+        .species("Aesculus", "hybrida")
+        .notho(&[NamePart::Specific])
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a hybrid votes botanical, the year zoological: no code for the water flea
+    assert_name("Daphnia (Daphnia) x krausi Flossner 1993")
+        .species_ig("Daphnia", "Daphnia", "krausi")
+        .notho(&[NamePart::Specific])
+        .comb_authors(Some("1993"), &["Flossner"])
+        .nothing_else();
     assert_unparsable("Barbus cf macrotaenia × toppini", NameType::Formula);
-    // FIXME(review): the specimen code "NP-2008" becomes an author
+    // the specimen code is the phrase, no author
     assert_name("Gemmula cf. cosmoi NP-2008")
         .species("Gemmula", "cosmoi")
-        .comb_authors(None, &["Np-2008"])
+        .phrase("NP-2008")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
@@ -802,10 +813,12 @@ fn stray_ex_is_not_parsed_as_species() {
         .bas_authors(None, &["L."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "ex gr." is read as two epithets and "rouaulti" as the author
-    // "Acastella ex gr. rouaulti" — ex grege ("of the species-group of") is a
-    // paleontological qualifier that the parser doesn't recognise. The trailing
-    // "rouaulti" survives as authorship; the test is left as a TODO.
+    // "ex gr." — ex grege, "of the species group of" — is a paleontological qualifier like cf.
+    assert_name("Acastella ex gr. rouaulti")
+        .species("Acastella", "rouaulti")
+        .qualifiers(&[(NamePart::Specific, "ex gr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
 }
 
 #[test]
@@ -820,10 +833,10 @@ fn authorship_in_upper_case() {
 #[test]
 fn numbers_and_letters_separated_with_are_not_parsed_as_authors() {
     // group: Numbers and letters separated with '-' are not parsed as authors
-    // FIXME(review): the specimen code "OS-2017" becomes an author
+    // the specimen code is the phrase, no author
     assert_name("Astatotilapia cf. bloyeti OS-2017")
         .species("Astatotilapia", "bloyeti")
-        .comb_authors(None, &["Os-2017"])
+        .phrase("OS-2017")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
@@ -900,5 +913,15 @@ fn year_with_page_number() {
         .comb_authors(Some("1998"), &["Dash", "Viraktamath"])
         .published_in_page("29")
         .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn near_is_a_qualifier() {
+    // "nr." (near) qualifies like "aff."
+    assert_name("Abablemma nr. brimleyana")
+        .species("Abablemma", "brimleyana")
+        .qualifiers(&[(NamePart::Specific, "nr.")])
+        .type_(NameType::Informal)
         .nothing_else();
 }

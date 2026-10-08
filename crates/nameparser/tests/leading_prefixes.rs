@@ -83,14 +83,26 @@ fn organism_word_as_a_missing_genus_epithet_is_untouched() {
 }
 
 #[test]
-fn named_symbiont_with_a_genus_is_untouched() {
-    // not an identifier: the genus anchors it
-    // FIXME(review): "of Drosophila simulans" is no author — an informal Wolbachia with the phrase
-    // "endosymbiont of Drosophila simulans"
+fn named_symbiont_with_a_genus_is_informal() {
+    // not an identifier: the genus anchors it, and the host is its phrase, no author
     assert_name("Wolbachia endosymbiont of Drosophila simulans")
         .species("Wolbachia", "endosymbiont")
-        .comb_authors(None, &["of Drosophila simulans"])
+        .type_(NameType::Informal)
+        .phrase("of Drosophila simulans")
         .nothing_else();
+    // a strain code behind a higher taxon's "bacterium"
+    assert_name("Acidimicrobiales bacterium JGI 01_E13")
+        .species("Acidimicrobiales", "bacterium")
+        .type_(NameType::Informal)
+        .phrase("JGI 01_E13")
+        .nothing_else();
+    // with an author it is a real epithet: the diatom Navicula bacterium
+    assert_name("Navicula bacterium Frenguelli")
+        .species("Navicula", "bacterium")
+        .comb_authors(None, &["Frenguelli"])
+        .nothing_else();
+    // a symbiont named after its host has no anchor
+    assert_unparsable("Acyrthosiphon kondoi endosymbiont", NameType::Other);
 }
 
 #[test]

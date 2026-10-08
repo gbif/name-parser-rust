@@ -499,19 +499,15 @@ fn indet_names() {
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
 
-    // FIXME(review): a capitalised old epithet collapses these: the epithets vanish, the rank
-    // marker ends up in the authors, the ant is coded BOTANICAL (see the golden)
-    //    assertName("Aphaenogaster (Ichnomyrmex) Schwammerdami var. spinipes", "Aphaenogaster var. spinipes")
-    //        .infraSpecies("Aphaenogaster", null, Rank.VARIETY, "spinipes")
-    //        .infraGeneric("Ichnomyrmex")
-    //        .type(NameType.INFORMAL)
-    //        .nothingElse();
-    //
-    //    assertName("Ocymyrmex Weitzaeckeri subsp. arnoldi", "Ocymyrmex subsp. arnoldi")
-    //        .infraSpecies("Ocymyrmex", null, Rank.SUBSPECIES, "arnoldi")
-    //        .type(NameType.INFORMAL)
-    //        .nothingElse();
-    //
+    // an epithet capitalised in the old style is the species epithet, lower-cased (Java dropped it)
+    assert_name("Aphaenogaster (Ichnomyrmex) Schwammerdami var. spinipes")
+        .infra_species("Aphaenogaster", "schwammerdami", Rank::Variety, "spinipes")
+        .infrageneric("Ichnomyrmex")
+        .nothing_else();
+    assert_name("Ocymyrmex Weitzaeckeri subsp. arnoldi")
+        .infra_species("Ocymyrmex", "weitzaeckeri", Rank::Subspecies, "arnoldi")
+        .nothing_else();
+    // FIXME(review): a variety under a bare genus: the epithet "fasciata" is dropped silently
     //    assertName("Navicula var. fasciata", "Navicula var. fasciata")
     //        .infraSpecies("Navicula", null, Rank.VARIETY, "fasciata")
     //        .type(NameType.INFORMAL)

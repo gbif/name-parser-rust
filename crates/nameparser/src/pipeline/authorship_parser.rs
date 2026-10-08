@@ -90,6 +90,7 @@
 
 use crate::model::Authorship;
 use crate::pipeline::double_surnames;
+use crate::pipeline::rank_markers;
 use crate::token::{is_particle, Token, TokenKind};
 
 /// Java `AuthorshipParser.AUTHOR_SUFFIXES` — tokens that are filius/junior/etc.
@@ -151,7 +152,7 @@ const BRACKET_NOTE_WORDS: &[&str] = &[
 /// package-private in Java; kept `pub` here (the enclosing struct is already capped at
 /// `pub(crate)`, so this changes nothing about actual visibility, matching the interface
 /// contract this type was specified against).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct AuthState {
     pub combination: Authorship,
     pub basionym: Authorship,
@@ -164,6 +165,9 @@ pub(crate) struct AuthState {
     /// True when a combination author is written with dotted initials before the surname
     /// ("M.A. Curtis"), not behind it ("Lindberg H").
     pub combination_initials_first: bool,
+    /// An ex-author is a manuscript name another published ("Carpenter MS, Dall", `"Dall" Pils.`
+    /// rewritten so), zoology's usage as much as botany's: no botanical evidence.
+    pub manuscript_ex: bool,
     /// Java `int unparsedFrom = -1;` — kept as a sentinel `i32`, matching the established
     /// convention for this exact shape of field elsewhere in the port (see
     /// `ParseContext::mid_author_from`/`mid_author_to`).
@@ -181,6 +185,7 @@ impl Default for AuthState {
             has_filius: false,
             combination_year_after_comma: false,
             combination_initials_first: false,
+            manuscript_ex: false,
             unparsed_from: -1,
             unparsed_text: None,
         }
@@ -220,6 +225,7 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 let yr = parse_authors(tokens, bas_from, bas_end, &mut s.basionym);
                 s.year_range |= yr;
                 s.has_filius |= contains_filius_suffix(tokens, bas_from, bas_end);
+                s.manuscript_ex |= has_manuscript_ex(tokens, bas_from, bas_end);
                 s.basionym_present = true;
                 s.basionym.sanctioning_author = bas_sanctioning;
                 take_sanctioning_year(&tokens[bas_end..close], &mut s.basionym);
@@ -256,8 +262,23 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 }
             }
         }
+        // A lower-case word that no author carries ends the authorship: the rest is left unparsed
+        // ("Loranthus incanus Schumach. & Thonn. sessilis Sprague", "(L. f.) typica Rosent").
+        let mut sanctioning_from = comb_end;
+        if s.unparsed_from < 0 {
+            if let Some(k) = sentence_after_authorship(tokens, comb_from, comb_end)
+                .or_else(|| stray_lower_word(tokens, comb_from, comb_end, s.basionym_present))
+            {
+                s.unparsed_from = k as i32;
+                s.unparsed_text = Some(spaced_text(&tokens[k..n]));
+                comb_end = k;
+                comb_sanctioning = None;
+                sanctioning_from = n;
+            }
+        }
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
         s.year_range |= yr;
+        s.manuscript_ex |= has_manuscript_ex(tokens, comb_from, comb_end);
         s.combination_year_after_comma = (comb_from..comb_end)
             .find(|&k| is_year(&tokens[k]))
             .is_some_and(|k| k > comb_from && tokens[k - 1].kind == TokenKind::Comma);
@@ -281,7 +302,7 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         });
         s.has_filius |= contains_filius_suffix(tokens, comb_from, comb_end);
         s.combination.sanctioning_author = comb_sanctioning;
-        take_sanctioning_year(&tokens[comb_end..n], &mut s.combination);
+        take_sanctioning_year(&tokens[sanctioning_from..n], &mut s.combination);
         // Whether or not a sanctioning author was extracted, the entire trailing span
         // belongs to combination + sanctioning; nothing is unparsed afterwards.
         i = n;
@@ -298,6 +319,147 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         s.unparsed_text = Some(slice_text(tokens, first.start, last.end));
     }
     s
+}
+
+/// Lower-case words an author citation carries besides the particles and [`AUTHOR_SUFFIXES`]:
+/// connectors, particles the table lacks ("ver Steeg"), brothers, manuscript and herbarium marks.
+const LOWER_AUTHOR_WORDS: &[&str] = &[
+    "ex", "et", "and", "und", "den", "dem", "ver", "fils", "fratr", "frat", "fratt", "mss", "msc",
+    "mscr", "hort", "apud", "litt", "herb", "sched",
+];
+
+/// The first lower-case word of the combination span `tokens[from..to)` that no author carries — a
+/// misplaced epithet ("Schumach. & Thonn. sessilis Sprague"), an English phrase, a note — once an
+/// author has been read (`after_author`: a basionym came before the span). Only a whole word of
+/// three or more lower-case letters outside any bracket, after a dot, comma, ampersand, bracket or
+/// year, counts: a shorter one is an initial or a particle, and a fragment glued to its neighbour
+/// is a broken character (`KÃ¼tzing`).
+fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut seen_author = after_author;
+    for k in from..to {
+        let t = &tokens[k];
+        match t.kind {
+            TokenKind::OpenParen | TokenKind::OpenBracket => depth += 1,
+            TokenKind::CloseParen | TokenKind::CloseBracket => depth -= 1,
+            _ => {}
+        }
+        if depth != 0 || t.kind != TokenKind::Word {
+            continue;
+        }
+        if starts_upper(&t.text) {
+            seen_author = true;
+            continue;
+        }
+        // Right after another word it is a surname's tail: a lower-cased one ("De man") or one cut
+        // by a broken character ("Hal csy" for Halácsy).
+        let after_word = k > from && tokens[k - 1].kind == TokenKind::Word;
+        let glued_before = k > 0 && tokens[k - 1].end == t.start;
+        let glued_after = tokens.get(k + 1).is_some_and(|nx| {
+            nx.start == t.end && matches!(nx.kind, TokenKind::Word | TokenKind::Other)
+        });
+        let w = t.text.as_str();
+        // "of" before a lower-case word is English, no author's particle: "Natica of nidus",
+        // "Nassellarid genera of uncertain affinities" — "Trustees of the British Museum" stays
+        let next_lower = tokens.get(k + 1).filter(|nx| {
+            k + 1 < to
+                && nx.kind == TokenKind::Word
+                && nx.text.chars().count() >= 3
+                && nx.text.chars().all(|c| c.is_lowercase())
+                && !is_particle(&nx.text)
+                && nx.text != "the"
+        });
+        if w == "of" && next_lower.is_some() {
+            return Some(k);
+        }
+        // a rank marker in the authorship, after an author too: "Reeve var of cornea Linn"
+        if seen_author
+            && !glued_before
+            && w.chars().count() >= 3
+            && rank_markers::match_infraspecific(w).is_some()
+        {
+            return Some(k);
+        }
+        if seen_author
+            && !after_word
+            && !glued_before
+            && !glued_after
+            && w.chars().count() >= 3
+            && w.chars().all(|c| c.is_alphabetic() && c.is_lowercase())
+            && !is_particle(w)
+            && !AUTHOR_SUFFIXES.contains(&w)
+            && !LOWER_AUTHOR_WORDS.contains(&w)
+            && !ANON_WORDS.contains(&w)
+        {
+            return Some(k);
+        }
+    }
+    None
+}
+
+/// Where a new sentence or name starts in the combination span `tokens[from..to)`: at a leading "&",
+/// after the dot ending a
+/// year ("Barnes & McDunnough 1913. Next sentence", "Mello-Leitão 1918. Rev. Soc. Brasil. Sci."),
+/// or after the dot ending the epithet when prose follows, a capitalised word and a lower-case one
+/// ("Negalasa fumalis. Next sentence", not "Sphagnum contortulum. H. Crum, 1991"). What follows is
+/// a reference or prose, no author.
+fn sentence_after_authorship(tokens: &[Token], from: usize, to: usize) -> Option<usize> {
+    let word_at = |k: usize| k < to && tokens[k].kind == TokenKind::Word;
+    // an "&" leading the span before a genus and its epithet joins another name: "Mesalia zinkeni
+    // (Dunker 1851) & Promathildia turritella (Dunker 1851)", "Acanthopagrus butcheri & A. australis"
+    let lower_word_at = |k: usize| {
+        word_at(k)
+            && tokens[k].text.chars().all(|c| c.is_lowercase())
+            && !is_particle(&tokens[k].text)
+    };
+    let name_after_ampersand = tokens[from].kind == TokenKind::Ampersand
+        && word_at(from + 1)
+        && starts_upper(&tokens[from + 1].text)
+        && (lower_word_at(from + 2)
+            || (from + 2 < to
+                && tokens[from + 2].kind == TokenKind::Dot
+                && lower_word_at(from + 3)));
+    if name_after_ampersand {
+        return Some(from);
+    }
+    let epithet_before = from > 0 && {
+        let w = tokens[from - 1].text.as_str();
+        tokens[from - 1].kind == TokenKind::Word
+            && w.chars().count() >= 5
+            && w.chars().all(|c| c.is_lowercase())
+            && rank_markers::match_infraspecific_allow_notho(w).is_none()
+            && rank_markers::match_infrageneric_allow_notho(w).is_none()
+    };
+    let prose_after = word_at(from + 1)
+        && starts_upper(&tokens[from + 1].text)
+        && contains_lower(&tokens[from + 1].text)
+        && word_at(from + 2)
+        && tokens[from + 2].text.chars().all(|c| c.is_lowercase())
+        && !is_particle(&tokens[from + 2].text)
+        && !LOWER_AUTHOR_WORDS.contains(&tokens[from + 2].text.as_str());
+    if tokens[from].kind == TokenKind::Dot && epithet_before && prose_after {
+        return Some(from + 1);
+    }
+    let mut depth = 0i32;
+    for k in from..to {
+        match tokens[k].kind {
+            TokenKind::OpenParen | TokenKind::OpenBracket => depth += 1,
+            TokenKind::CloseParen | TokenKind::CloseBracket => depth -= 1,
+            _ => {}
+        }
+        // a dot or a semicolon after a year: another sentence or another citation ("Baird and
+        // Girard, 1852; H.B. Shaffer et al., 2004")
+        if depth == 0
+            && is_year(&tokens[k])
+            && tokens[k].text.chars().count() == 4
+            && k + 1 < to
+            && matches!(tokens[k + 1].kind, TokenKind::Dot | TokenKind::Semicolon)
+            && word_at(k + 2)
+        {
+            return Some(k + 2);
+        }
+    }
+    None
 }
 
 /// The basionym of a bracket opened at `tokens[open]` but never closed, as `(from, end)`, where the
@@ -492,6 +654,20 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             && tokens[i + 1].text.chars().count() == 4
         {
             i += 1;
+            continue;
+        }
+
+        // "Carpenter MS, Dall", "Arn. ms., Grunow": the name of a manuscript, published by the
+        // author after the comma — an ex citation
+        if let Some(len) = manuscript_ex_at(tokens, i, to) {
+            start_ex_authors(
+                &mut cur,
+                &mut authors,
+                &mut ex_authors,
+                &mut after_separator,
+                &mut ex_after_separator,
+            );
+            i += len;
             continue;
         }
 
@@ -744,7 +920,9 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                     // Filius / junior / etc. — case-sensitive: lowercase only. An
                     // uppercase "F" following a surname is an initial, not the filius
                     // suffix, so we don't collapse it here.
-                    if AUTHOR_SUFFIXES.contains(&nxt.as_str()) {
+                    if AUTHOR_SUFFIXES.contains(&nxt.as_str())
+                        && manuscript_ex_at(tokens, i, to).is_none()
+                    {
                         // abbreviated surname ends with '.': "Burm.f." — no separator needed
                         // full surname ends with a letter: "Hooker f." — use a space
                         if !cur.is_empty() && !cur.ends_with('.') {
@@ -833,6 +1011,21 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         // names with internal apostrophes ("L.'t Mannetje", "M'Coy", "d'Urv.", "'t Hart")
         // render verbatim. Glue to the preceding character when there's no whitespace
         // gap in the input ("d'Urv"); otherwise insert a space ("Henk 't").
+        // …but an apostrophe opening an author before a capitalised surname, and never closed, is
+        // a stray quote, no elision ("Nereidavus kulkovi 'Kulkov"); "'t Hart" keeps its "t".
+        if t.kind == TokenKind::Other
+            && t.text == "'"
+            && cur.is_empty()
+            && tokens.get(i + 1).is_some_and(|nx| {
+                nx.kind == TokenKind::Word && nx.start == t.end && starts_upper(&nx.text)
+            })
+            && !tokens[i + 1..to]
+                .iter()
+                .any(|q| q.kind == TokenKind::Other && q.text == "'")
+        {
+            i += 1;
+            continue;
+        }
         if t.kind == TokenKind::Other && t.text == "'" {
             let has_gap = !cur.is_empty() && i > 0 && tokens[i - 1].end < t.start;
             if has_gap {
@@ -921,6 +1114,15 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
         into.anonymous = true;
     }
 
+    // An "ex" with no author after it ("Capuron ex ?", "Mill. ex") leaves the authors before it
+    // as the only ones, instead of dropping them all; an anonymous one is an author ("Sw. ex
+    // anon.").
+    if authors.is_empty() && !into.anonymous {
+        if let Some(ex) = ex_authors.take() {
+            authors = ex;
+            after_separator = std::mem::take(&mut ex_after_separator);
+        }
+    }
     if !authors.is_empty() {
         into.authors = invert_all(&authors, &after_separator);
     }
@@ -1446,6 +1648,18 @@ fn slice_text(tokens: &[Token], start: usize, end: usize) -> String {
     sb
 }
 
+/// The tokens' text, with a space wherever the source had a gap between two of them.
+fn spaced_text(tokens: &[Token]) -> String {
+    let mut sb = String::new();
+    for (k, t) in tokens.iter().enumerate() {
+        if k > 0 && tokens[k - 1].end < t.start {
+            sb.push(' ');
+        }
+        sb.push_str(&t.text);
+    }
+    sb
+}
+
 /// Java `AuthorshipParser.hasUpperWord(List<Token>, int, int)`. True if any token in
 /// `[from, to)` is a WORD that starts with an upper-case letter — or, unlike Java, a surname
 /// behind an elided particle (`d'Orbigny`, `d'Urv.`, `l'Hér.`), which the tokenizer keeps as
@@ -1473,6 +1687,29 @@ fn has_anon_word(tokens: &[Token], from: usize, to: usize) -> bool {
     tokens[from..to]
         .iter()
         .any(|t| t.kind == TokenKind::Word && is_anon_word(&t.text))
+}
+
+/// A manuscript mark, its dot and the comma after it ("MS,", "ms.,", "Ms.,"), between an author and
+/// the one who published the name: its token count at `i`, else `None`.
+fn manuscript_ex_at(tokens: &[Token], i: usize, to: usize) -> Option<usize> {
+    let t = &tokens[i];
+    if t.kind != TokenKind::Word || !matches!(t.text.as_str(), "ms" | "MS" | "Ms" | "mss" | "MSS") {
+        return None;
+    }
+    let mut k = i + 1;
+    if k < to && tokens[k].kind == TokenKind::Dot {
+        k += 1;
+    }
+    let author_follows = k + 1 < to
+        && tokens[k].kind == TokenKind::Comma
+        && tokens[k + 1].kind == TokenKind::Word
+        && (starts_upper(&tokens[k + 1].text) || is_particle(&tokens[k + 1].text));
+    (i > 0 && author_follows).then_some(k + 1 - i)
+}
+
+/// The span `tokens[from..to)` cites a manuscript name as an ex-author ("Carpenter MS, Dall").
+pub(crate) fn has_manuscript_ex(tokens: &[Token], from: usize, to: usize) -> bool {
+    (from..to).any(|k| manuscript_ex_at(tokens, k, to).is_some())
 }
 
 /// "Everything collected so far becomes ex authors": the authors before an `ex`, or before the

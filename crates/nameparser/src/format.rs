@@ -47,7 +47,7 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// underscore-glued designations (`n_sp_NIWA_SO254`, `sp_JAVA`, `n_gen n_sp_…`): `\b` sees no
 /// boundary between `sp` and `_`, which rendered "Aulocalyx sp. n_sp_NIWA_SO254".
 static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?:(?:species|spec|sp)(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)).*$").unwrap()
+    Regex::new(r"(?i)^(?:(?:species|spec|spp|sp)(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)).*$").unwrap()
 });
 
 /// Java's inline author-tail pattern `(?U)[\p{Lu}](?:\.[\p{Lu}])*\..+`, tested with

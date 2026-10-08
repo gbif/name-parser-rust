@@ -187,7 +187,7 @@ static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
 // before it (`marine `, `delta `), group 2 = the remainder after it.
 static ORGANISM_LABEL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^((?:[a-z][a-z-]* ){0,4}?)[a-z]*(?:bacteri(?:um|a)|archae(?:on|a)|actinomycetes?|symbionts?|fung(?:us|al|i)|yeasts?|algae?|protists?|microorganisms?)(?: (.+))?$",
+        r"^((?:[a-z][a-z-]* ){0,4}?)[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|actinomycetes?|symbionts?|fung(?:us|al|i)|yeasts?|algae?|protists?|microorganisms?)(?: (.+))?$",
     )
     .unwrap()
 });
@@ -204,10 +204,68 @@ static CODE_LEAD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(?:enrichment culture )?(?:(?:clone|strain|str\.?|isolate|sp\.?) )?").unwrap()
 });
 
+/// A name string led by an author's lower-case particle and a capitalised surname.
+static PARTICLE_LED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:van|von|de|del|della|delle|dei|du|la|le|des|der|den|dos|da|di|zu|zur|ten|ter)\s+\p{Lu}",
+    )
+    .unwrap()
+});
+/// A taxon's environmental samples: group 1 = a "Candidatus" prefix, group 2 = the taxon, group 3
+/// = the label.
+static ENVIRONMENTAL_SAMPLES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(Candidatus )?(\p{Lu}\p{Ll}+) (environmental samples?)$").unwrap()
+});
+/// A phytoplasma anywhere, glued to its host too ("Allium ampeloprasumphytoplasma") — in lower
+/// case: the genus *Phytoplasma* is a name.
+static PHYTOPLASMA: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:^|\s)\p{Ll}*phytoplasmas?(?:\s|$)").unwrap());
+/// A symbiont after a two-word host or a quoted one: group 1 = the host's second word.
+static HOST_SYMBIONT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:\p{Lu}\p{Ll}+ (\p{Ll}+)\.?|'[^']+') (?:endo)?symbionts?(?:\s|$)").unwrap()
+});
+
+/// A phytoplasma, or a symbiont after its host binomial — but not after an organism label or an
+/// indet marker, which belong to the symbiont ("Enterobacterales bacterium endosymbiont of Trioza
+/// cinnamomi", "Wolbachia species endosymbiont of Delia platura").
+fn is_host_named_label(s: &str) -> bool {
+    if PHYTOPLASMA.is_match(s) {
+        return true;
+    }
+    HOST_SYMBIONT.captures(s).is_some_and(|caps| {
+        caps.get(1).is_none_or(|w| {
+            !matches!(w.as_str(), "sp" | "spp" | "species")
+                && !ORGANISM_LABEL_WORD.is_match(w.as_str())
+        })
+    })
+}
+/// A generic organism word, as [`ORGANISM_LABEL`] ends in.
+static ORGANISM_LABEL_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:bacteri(?:um|a)|archae(?:on|a|ote))$").unwrap());
+
+/// A capitalised English organism word opening the string: `Crenarchaeote`, `Euryarchaeote` —
+/// not the Latin `-bacterium` of genera such as *Mycobacterium*.
+static CAPITALISED_ORGANISM_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}[a-z]*archaeote(?:\s|$)").unwrap());
+
 /// [`ORGANISM_LABEL`]: `Some(Identifier)` when a strain/clone code follows the label, `Some(Other)`
 /// for any other label, `None` when it is no such label — or the label word is a real epithet
 /// with an authorship, its genus missing (`fungi Meigen, 1830`), left to the missing-genus path.
 fn classify_organism_label(s: &str) -> Option<NameType> {
+    // a capitalised English organism word is the same label ("Crenarchaeote enrichment culture
+    // clone OREC-B1022")
+    let lowered;
+    let s = if CAPITALISED_ORGANISM_WORD.is_match(s) {
+        let mut chars = s.chars();
+        let first = chars
+            .next()
+            .map(|c| c.to_lowercase().to_string())
+            .unwrap_or_default();
+        lowered = first + chars.as_str();
+        lowered.as_str()
+    } else {
+        s
+    };
     let caps = ORGANISM_LABEL.captures(s)?;
     let Some(rest) = caps.get(2).map(|m| m.as_str()) else {
         return Some(NameType::Other);
@@ -457,6 +515,26 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // used to come back as genus `?` + epithet `bacterium`, or as a SCIENTIFIC genus `marine`.
     if let Some(type_) = classify_organism_label(&s) {
         return Err(ParseError::new(type_, None, s));
+    }
+    // An author's name alone, its particle leading ("van Berg", "del Rosario Author"): no taxon.
+    if PARTICLE_LED_AUTHOR.is_match(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+    // A phytoplasma, or a symbiont named after its host ("Persea americana phytoplasma", "'Bois
+    // noir' phytoplasma", "Acyrthosiphon kondoi endosymbiont"): the plant or animal named is the
+    // host, no anchor — OTHER, as an anchorless label is.
+    if is_host_named_label(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
+    // A taxon's environmental samples ("Candidatus Anammoxoglobus environmental samples",
+    // "Haptophyta environmental samples"): an informal name anchored on the taxon.
+    if let Some(caps) = ENVIRONMENTAL_SAMPLES.captures(&s) {
+        if caps.get(1).is_some() {
+            ctx.name.candidatus = true;
+            ctx.name.code = ctx.name.code.or(Some(NomCode::Bacterial));
+        }
+        rescue_informal_group(ctx, &caps[2], &caps[3]);
+        return Ok(());
     }
 
     // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a single
@@ -725,7 +803,12 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
         if !right_ok {
             continue;
         }
-        if count_latin_words(left) >= 2 || has_author_abbrev(left) {
+        // A genus with only its subgenus or a qualifier before the cross is no binomial: the cross
+        // marks a named nothospecies ("Daphnia (Daphnia) x krausi Flossner 1993", "Aesculus cf. ×
+        // hybrida").
+        let genus_only = GENUS_WITH_SUBGENUS_OR_QUALIFIER.is_match(left)
+            && right.chars().next().is_some_and(char::is_lowercase);
+        if (count_latin_words(left) >= 2 && !genus_only) || has_author_abbrev(left) {
             return true;
         }
         // Graft-chimera formula: single genus on each side (e.g. "Crataegus + Mespilus").
@@ -743,6 +826,11 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
     }
     false
 }
+
+/// A genus with nothing but a bracketed subgenus or a cf./aff. qualifier after it.
+static GENUS_WITH_SUBGENUS_OR_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\p{Lu}\p{Ll}+(?:\s+\(\p{Lu}\p{Ll}+\))?(?:\s+(?:cf|aff)\.?)?$").unwrap()
+});
 
 fn count_latin_words(s: &str) -> usize {
     LATIN_WORD.find_iter(s).count()
