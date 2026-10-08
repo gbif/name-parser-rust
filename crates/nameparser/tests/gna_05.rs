@@ -224,20 +224,21 @@ fn names_that_contain_of() {
         )
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): an English phrase, not a binomial with the author "of uncertain affinities"
+    // "of" before a lower-case word is English, no author
+    // FIXME(review): an English phrase, not a binomial
     assert_name("Nassellarid genera of uncertain affinities")
         .species("Nassellarid", "genera")
-        .comb_authors(None, &["of uncertain affinities"])
+        .partial("of uncertain affinities")
         .nothing_else();
-    // FIXME(review): "of nidus" is no author
     assert_name("Natica of nidus")
         .monomial("Natica")
-        .comb_authors(None, &["of nidus"])
+        .partial("of nidus")
         .nothing_else();
-    // FIXME(review): "var of cornea Linn" (a variety of N. cornea L.) is no part of the author
+    // "var of cornea Linn" (a variety of N. cornea L.) is no part of the author
     assert_name("Neritina chemmoi Reeve var of cornea Linn")
         .species("Neritina", "chemmoi")
-        .comb_authors(None, &["Reeve var of cornea Linn"])
+        .comb_authors(None, &["Reeve"])
+        .partial("var of cornea Linn")
         .nothing_else();
 }
 

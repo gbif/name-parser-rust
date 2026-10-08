@@ -359,6 +359,27 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
             nx.start == t.end && matches!(nx.kind, TokenKind::Word | TokenKind::Other)
         });
         let w = t.text.as_str();
+        // "of" before a lower-case word is English, no author's particle: "Natica of nidus",
+        // "Nassellarid genera of uncertain affinities" — "Trustees of the British Museum" stays
+        let next_lower = tokens.get(k + 1).filter(|nx| {
+            k + 1 < to
+                && nx.kind == TokenKind::Word
+                && nx.text.chars().count() >= 3
+                && nx.text.chars().all(|c| c.is_lowercase())
+                && !is_particle(&nx.text)
+                && nx.text != "the"
+        });
+        if w == "of" && next_lower.is_some() {
+            return Some(k);
+        }
+        // a rank marker in the authorship, after an author too: "Reeve var of cornea Linn"
+        if seen_author
+            && !glued_before
+            && w.chars().count() >= 3
+            && rank_markers::match_infraspecific(w).is_some()
+        {
+            return Some(k);
+        }
         if seen_author
             && !after_word
             && !glued_before
