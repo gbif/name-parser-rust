@@ -61,6 +61,7 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // Java captures `ctx.requestedRank` into a local once here and reuses it through several
     // of the steps below (2, 4, 5, 6) — mirrored with a single `let` here too.
     let requested = ctx.requested_rank;
+    let mut authorship_dropped = false;
 
     // Step 2: caller-supplied rank wins when explicit (and not just UNRANKED) and the parsed
     // structure is compatible — here, specifically forwarding an explicit SPECIES_AGGREGATE
@@ -104,6 +105,14 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
             ctx.name.rank = req;
             ctx.name.type_ = NameType::Informal;
             ctx.name.add_warning(warnings::INDETERMINED);
+            // The authorship cited belongs to the genus, not to the undetermined species: like any
+            // informal name's trailing citation it goes into the phrase ("Cladoniicola" + "van den
+            // Boom, 2001"), and it says nothing about the code. Rust-only: Java dropped it, yet
+            // inferred a code from it.
+            if ctx.name.phrase.is_none() {
+                ctx.name.phrase = ctx.name.authorship_complete();
+            }
+            authorship_dropped = true;
             // Java `n.setCombinationAuthorship(null)`/`setBasionymAuthorship(null)`: these
             // fields are eagerly-initialized (never actually `null`) `Authorship` objects on
             // this port's `ParsedName` (see `model::name`'s module doc — "never omitted" on
@@ -247,7 +256,7 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // artefact. All code-setting heuristics live in `code_inference` (called only when the
     // name has no code yet).
     if ctx.name.code.is_none() {
-        code_inference::infer(ctx, auth_state);
+        code_inference::infer(ctx, auth_state.filter(|_| !authorship_dropped));
     }
 
     // Step 11: a virally-shaped name (ICTV rank suffix, Preflight-detected) with no other
