@@ -474,7 +474,7 @@ fn open_nomenclature_approximate_names() {
         .rank(Rank::Species)
         .phrase("sp. nr. subjuncta Bold:Aab, 0925")
         .nothing_else();
-    // FIXME(review): "nr." is read as the species epithet, and the BIN as a botanical author
+    // FIXME(review): the mangled BIN "Bold:Aab, 0925" is read as a botanical author sanctioned by Aab
     // skipped: Lacanobia nr. subjuncta Bold:Aab, 0925
     assert_name("Abturia cf. alabamensis (Morton )")
         .species("Abturia", "alabamensis")
@@ -510,10 +510,10 @@ fn open_nomenclature_approximate_names() {
         .comb_authors(Some("1993"), &["Flossner"])
         .nothing_else();
     assert_unparsable("Barbus cf macrotaenia × toppini", NameType::Formula);
-    // FIXME(review): the specimen code "NP-2008" becomes an author
+    // the specimen code is the phrase, no author
     assert_name("Gemmula cf. cosmoi NP-2008")
         .species("Gemmula", "cosmoi")
-        .comb_authors(None, &["Np-2008"])
+        .phrase("NP-2008")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
@@ -833,10 +833,10 @@ fn authorship_in_upper_case() {
 #[test]
 fn numbers_and_letters_separated_with_are_not_parsed_as_authors() {
     // group: Numbers and letters separated with '-' are not parsed as authors
-    // FIXME(review): the specimen code "OS-2017" becomes an author
+    // the specimen code is the phrase, no author
     assert_name("Astatotilapia cf. bloyeti OS-2017")
         .species("Astatotilapia", "bloyeti")
-        .comb_authors(None, &["Os-2017"])
+        .phrase("OS-2017")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();

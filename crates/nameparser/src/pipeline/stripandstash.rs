@@ -824,10 +824,12 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 /// single full stop closing the whole string is tolerated (`Prunus domestica 6.`) and left OUT of
 /// the captured phrase — it is sentence punctuation, not part of the code, and without the `\.?`
 /// that one character was enough to put the name back on the silent-truncation path. The guards
-/// below exempt a bare year and a numeral-prefixed epithet.
+/// below exempt a bare year and a numeral-prefixed epithet. Rust-only too: a qualifier may stand
+/// before the epithet ("Gemmula cf. cosmoi NP-2008", "Acalymma nr. blomorum JJG229") and a hyphen
+/// before the code's digits, where the code became an author.
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^([\p{Lu}][\p{Ll}]+\s+[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:]*\d[\p{L}\d_\-:]*|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$",
+        r"^([\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:\-]*\d[\p{L}\d_\-:]*|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$",
     )
     .unwrap()
 });
