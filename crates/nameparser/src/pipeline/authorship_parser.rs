@@ -151,7 +151,7 @@ const BRACKET_NOTE_WORDS: &[&str] = &[
 /// package-private in Java; kept `pub` here (the enclosing struct is already capped at
 /// `pub(crate)`, so this changes nothing about actual visibility, matching the interface
 /// contract this type was specified against).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct AuthState {
     pub combination: Authorship,
     pub basionym: Authorship,

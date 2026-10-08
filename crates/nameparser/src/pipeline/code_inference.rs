@@ -110,88 +110,12 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
 
     if let Some(auth_state) = auth_state {
-        // An anonymous author ("Anon., 1830", "(Fr.) anon.") votes like any other author.
-        let bas_year = auth_state.basionym_present
-            && auth_state.basionym.year.is_some()
-            && auth_state.basionym.has_authors_or_anon();
-        let comb_year =
-            auth_state.combination.year.is_some() && auth_state.combination.has_authors_or_anon();
-        let any_author_year = bas_year || comb_year;
-        // Authors who are all abbreviated with a dot ("Müll. Arg. 1887", "Henn. 1908") are
-        // botanical citation style: zoology spells its authors out, so their year is no zoological
-        // evidence. A filius suffix is no abbreviation ("Linnaeus f., 1789"). Nor is a year without
-        // the comma zoology puts before it, beside an author cited with leading initials ("Berk. &
-        // M.A. Curtis 1860", "U. Braun & Crous 2003").
-        let botanical_style_year =
-            !auth_state.combination_year_after_comma && auth_state.combination_initials_first;
-        let zoological_year = bas_year
-            || (comb_year
-                && !all_abbreviated(&auth_state.combination.authors)
-                && !botanical_style_year);
-
-        // --- botanical votes ---
-        // Sanctioning author (": Fr." / ": Pers.").
-        if auth_state.combination.sanctioning_author.is_some()
-            || ctx.name.combination_authorship.sanctioning_author.is_some()
-        {
-            votes.insert(NomCode::Botanical);
-        }
-        // "(Basionym) Recombination" — a parenthesised basionym plus a recombination author.
-        if auth_state.basionym_present && auth_state.combination.has_authors_or_anon() {
-            votes.insert(NomCode::Botanical);
-        }
-        // An ex-author ("Mart. ex DC.", "(Fr. ex Duby) Johanson"): the formal ex citation is
-        // botanical usage.
-        if !auth_state.combination.ex_authors.is_empty()
-            || !auth_state.basionym.ex_authors.is_empty()
-        {
-            votes.insert(NomCode::Botanical);
-        }
-        // Filius ("f." / "fil.") without any year.
-        if auth_state.has_filius && !any_author_year {
-            votes.insert(NomCode::Botanical);
-        }
-
-        // A year before 1758 predates zoological nomenclature (ICZN Art. 3.1); 1753 to 1757 lie
-        // within the botanical one only (ICN Art. 13.1): "Pteris longifolia fm. stipularis
-        // Linnaeus 1753". An implausible year ("Hall, 0000", flagged elsewhere) is no date at all.
-        let years = [&auth_state.combination.year, &auth_state.basionym.year];
-        let pre_zoological = years
-            .iter()
-            .filter_map(|y| y.as_deref().and_then(|y| y.get(..4)?.parse::<u32>().ok()))
-            .any(|y| (1500..1758).contains(&y));
-        if years
-            .iter()
-            .filter_map(|y| y.as_deref().and_then(|y| y.get(..4)?.parse::<u32>().ok()))
-            .any(|y| (1753..1758).contains(&y))
-        {
-            votes.insert(NomCode::Botanical);
-        }
-        // An unpublished combination ("(C. Chr.) comb. ined.", "(Ridl.) ined.") explains why the
-        // basionym has no recombination author: that is no zoological evidence.
-        let unpublished_combination = ctx
-            .name
-            .nomenclatural_note
-            .as_deref()
-            .is_some_and(|n| INED.is_match(n));
-
-        // --- zoological votes ---
-        // Basionym-only parenthesised recombination with no recombination author, "(Author)"
-        // or "(Author, year)" — the year is optional. Fires on a species recombination
-        // ("Abies alba (Smith)") and on a genus basionym with the year inside the parens
-        // ("Heptacyclus (Vasileyev, 1939)"). A trailing "(Subgenus) Author, year" is split
-        // into a subgenus + combination author by AuthorshipSplit, so its parens are not a
-        // basionym here.
-        if auth_state.basionym_present
-            && !auth_state.combination.has_authors_or_anon()
-            && !unpublished_combination
-        {
-            votes.insert(NomCode::Zoological);
-        }
-        // A year on an authored basionym or combination, unless every author is abbreviated.
-        if zoological_year && !pre_zoological {
-            votes.insert(NomCode::Zoological);
-        }
+        authorship_votes(ctx, auth_state, false, &mut votes);
+    }
+    // The species author standing before the rank marker of an infraspecific name votes too
+    // ("Acacia aneura F.Muell. ex Benth. var. latifolia J.M.Black": the ex citation is botanical).
+    if let Some(species) = ctx.species_code_state.take() {
+        authorship_votes(ctx, &species, true, &mut votes);
     }
 
     // An emendation ("Lee et al. 2011 emend. Yoon et al. 2014") is prokaryote and botanical usage,
@@ -215,6 +139,98 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
 
     if votes.len() == 1 {
         ctx.name.code = votes.into_iter().next();
+    }
+}
+
+/// The votes one parsed authorship casts (see [`infer`]). The bracketed author alone of a
+/// `species` author ("Alcea rosea (L.) var. nigra Cav.") casts no zoological vote: plant names
+/// abbreviate it so too.
+fn authorship_votes(
+    ctx: &ParseContext,
+    auth_state: &AuthState,
+    species: bool,
+    votes: &mut HashSet<NomCode>,
+) {
+    // An anonymous author ("Anon., 1830", "(Fr.) anon.") votes like any other author.
+    let bas_year = auth_state.basionym_present
+        && auth_state.basionym.year.is_some()
+        && auth_state.basionym.has_authors_or_anon();
+    let comb_year =
+        auth_state.combination.year.is_some() && auth_state.combination.has_authors_or_anon();
+    let any_author_year = bas_year || comb_year;
+    // Authors who are all abbreviated with a dot ("Müll. Arg. 1887", "Henn. 1908") are
+    // botanical citation style: zoology spells its authors out, so their year is no zoological
+    // evidence. A filius suffix is no abbreviation ("Linnaeus f., 1789"). Nor is a year without
+    // the comma zoology puts before it, beside an author cited with leading initials ("Berk. &
+    // M.A. Curtis 1860", "U. Braun & Crous 2003").
+    let botanical_style_year =
+        !auth_state.combination_year_after_comma && auth_state.combination_initials_first;
+    let zoological_year = bas_year
+        || (comb_year
+            && !all_abbreviated(&auth_state.combination.authors)
+            && !botanical_style_year);
+
+    // --- botanical votes ---
+    // Sanctioning author (": Fr." / ": Pers.").
+    if auth_state.combination.sanctioning_author.is_some()
+        || ctx.name.combination_authorship.sanctioning_author.is_some()
+    {
+        votes.insert(NomCode::Botanical);
+    }
+    // "(Basionym) Recombination" — a parenthesised basionym plus a recombination author.
+    if auth_state.basionym_present && auth_state.combination.has_authors_or_anon() {
+        votes.insert(NomCode::Botanical);
+    }
+    // An ex-author ("Mart. ex DC.", "(Fr. ex Duby) Johanson"): the formal ex citation is
+    // botanical usage.
+    if !auth_state.combination.ex_authors.is_empty() || !auth_state.basionym.ex_authors.is_empty() {
+        votes.insert(NomCode::Botanical);
+    }
+    // Filius ("f." / "fil.") without any year.
+    if auth_state.has_filius && !any_author_year {
+        votes.insert(NomCode::Botanical);
+    }
+
+    // A year before 1758 predates zoological nomenclature (ICZN Art. 3.1); 1753 to 1757 lie
+    // within the botanical one only (ICN Art. 13.1): "Pteris longifolia fm. stipularis
+    // Linnaeus 1753". An implausible year ("Hall, 0000", flagged elsewhere) is no date at all.
+    let years = [&auth_state.combination.year, &auth_state.basionym.year];
+    let pre_zoological = years
+        .iter()
+        .filter_map(|y| y.as_deref().and_then(|y| y.get(..4)?.parse::<u32>().ok()))
+        .any(|y| (1500..1758).contains(&y));
+    if years
+        .iter()
+        .filter_map(|y| y.as_deref().and_then(|y| y.get(..4)?.parse::<u32>().ok()))
+        .any(|y| (1753..1758).contains(&y))
+    {
+        votes.insert(NomCode::Botanical);
+    }
+    // An unpublished combination ("(C. Chr.) comb. ined.", "(Ridl.) ined.") explains why the
+    // basionym has no recombination author: that is no zoological evidence.
+    let unpublished_combination = ctx
+        .name
+        .nomenclatural_note
+        .as_deref()
+        .is_some_and(|n| INED.is_match(n));
+
+    // --- zoological votes ---
+    // Basionym-only parenthesised recombination with no recombination author, "(Author)"
+    // or "(Author, year)" — the year is optional. Fires on a species recombination
+    // ("Abies alba (Smith)") and on a genus basionym with the year inside the parens
+    // ("Heptacyclus (Vasileyev, 1939)"). A trailing "(Subgenus) Author, year" is split
+    // into a subgenus + combination author by AuthorshipSplit, so its parens are not a
+    // basionym here.
+    if auth_state.basionym_present
+        && !auth_state.combination.has_authors_or_anon()
+        && !unpublished_combination
+        && !(species && auth_state.basionym.year.is_none())
+    {
+        votes.insert(NomCode::Zoological);
+    }
+    // A year on an authored basionym or combination, unless every author is abbreviated.
+    if zoological_year && !pre_zoological {
+        votes.insert(NomCode::Zoological);
     }
 }
 

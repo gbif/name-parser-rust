@@ -709,6 +709,19 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
                 j += 1;
                 continue;
             }
+            // "ex" between two authors ("Nees ex Thwaites var. spiculis", "Baill. ex Baum.-Bod. f.
+            // intermedia") belongs to the span: the rank marker after it still ends the species
+            // author, instead of the whole tail becoming the ex-author's name.
+            if t.text == "ex" && j > from && next_word_starts_upper(tokens, j + 1) {
+                j += 1;
+                continue;
+            }
+            // A filius "f." right before another rank marker or an "ex" ("Hook.f. var. papillosum",
+            // "Hook.f. ex A.W.Benn. var.") is part of the author, not the forma marker.
+            if t.text == "f" && j > from && filius_before_marker_or_ex(tokens, j) {
+                j += 1;
+                continue;
+            }
             let w = strip_dot(&t.text);
             let is_infra_marker = rank_markers::match_infraspecific(w).is_some()
                 || rank_markers::match_infraspecific_allow_notho(w).is_some();
@@ -731,9 +744,44 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
             j += 1;
             continue;
         }
+        // The hyphen of an abbreviated double name ("Baum.-Bod.", "Buch.-Ham.").
+        if t.kind == TokenKind::Other
+            && t.text == "-"
+            && j > from
+            && tokens[j - 1].kind == TokenKind::Dot
+            && next_word_starts_upper(tokens, j + 1)
+        {
+            j += 1;
+            continue;
+        }
         return None;
     }
     None
+}
+
+/// The word token at `j` (after any dots) starts with an upper-case letter.
+fn next_word_starts_upper(tokens: &[Token], mut j: usize) -> bool {
+    while tokens.get(j).is_some_and(|t| t.kind == TokenKind::Dot) {
+        j += 1;
+    }
+    tokens
+        .get(j)
+        .is_some_and(|t| t.kind == TokenKind::Word && starts_upper(t))
+}
+
+/// The `f` at `f_idx` is followed (past its dot) by an infraspecific rank marker or an `ex` — so
+/// it is the filius of the author before it.
+fn filius_before_marker_or_ex(tokens: &[Token], f_idx: usize) -> bool {
+    let mut k = f_idx + 1;
+    if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Dot) {
+        k += 1;
+    }
+    tokens.get(k).is_some_and(|t| {
+        t.kind == TokenKind::Word
+            && (t.text == "ex"
+                || (t.text != "f"
+                    && rank_markers::match_infraspecific_allow_notho(strip_dot(&t.text)).is_some()))
+    })
 }
 
 /// Java `AuthorshipSplit.hasEpithetAfterMarker(List<Token>, int, int, boolean)`

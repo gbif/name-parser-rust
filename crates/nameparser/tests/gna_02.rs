@@ -429,6 +429,7 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(None, &["Bern."])
         .specific_authors(None, &["Willd."])
         .specific_bas_authors(None, &["Mill."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Cotoneaster (Pyracantha) rogersiana var.aurantiaca")
         .infra_species("Cotoneaster", "rogersiana", Rank::Variety, "aurantiaca")

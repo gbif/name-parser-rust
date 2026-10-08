@@ -591,6 +591,7 @@ fn binomials_with_authorship() {
         .comb_authors(None, &["L.'t Mannetje"])
         .specific_authors(None, &["Sw."])
         .specific_bas_authors(None, &["Aubl."])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Doxander vittatus entropi (Man in 't Veld & Visser, 1993)")

@@ -3,6 +3,7 @@
 //! across pipeline stages.
 
 use crate::model::{NomCode, ParsedName, Rank};
+use crate::pipeline::authorship_parser::AuthState;
 use crate::token::Token;
 
 /// Mutable per-parse state shared across pipeline stages. Faithful port of Java
@@ -104,6 +105,10 @@ pub(crate) struct ParseContext {
     /// The authorship coded its diacritics with a colon and a digit ("C. Mu:2ller"), as only
     /// bryophyte sources do — botanical evidence for code inference.
     pub coded_diacritics: bool,
+    /// The species author of an infraspecific name, standing before its rank marker ("Acacia
+    /// aneura F.Muell. ex Benth. var. latifolia J.M.Black"), when code inference reads another
+    /// authorship: its evidence votes too.
+    pub species_code_state: Option<AuthState>,
 }
 
 impl ParseContext {
@@ -148,6 +153,7 @@ impl ParseContext {
             preflight_complete: false,
             qualified_genus: false,
             approved_lists: false,
+            species_code_state: None,
             coded_diacritics: false,
         }
     }

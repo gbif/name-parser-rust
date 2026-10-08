@@ -236,17 +236,20 @@ pub fn run(
     }
     // Any other name keeps that mid-name span as the species' authorship ("Festuca ovina L. subsp.
     // guestfalica …" — it used to be dropped). The authorship after the infraspecific epithet is
-    // the name's own.
-    if ctx.mid_author_from >= 0 && !ctx.name.is_autonym() && ctx.name.specific_authorship.is_none()
+    // the name's own — on an autonym that carries one too ("Pilocarpus microphyllus Stapf ex
+    // Wardlew. var. microphyllus Rizzini").
+    let mut species_state: Option<AuthState> = None;
+    if ctx.mid_author_from >= 0 && autonym_state.is_none() && ctx.name.specific_authorship.is_none()
     {
         let from = ctx.mid_author_from as usize;
         let to = ctx.mid_author_to as usize;
         let st = authorship_parser::parse(&ctx.tokens[from..to], 0);
         if st.combination.exists() || st.basionym.exists() {
             ctx.name.specific_authorship = Some(CombinedAuthorship {
-                combination_authorship: st.combination,
-                basionym_authorship: st.basionym,
+                combination_authorship: st.combination.clone(),
+                basionym_authorship: st.basionym.clone(),
             });
+            species_state = Some(st);
         }
     }
     // So does a provisional infraspecific designation whose author stands before it ("Acacia
@@ -349,15 +352,21 @@ pub fn run(
     // string's own, else the autonym's species author. Java 4.2.0 consulted a separate
     // authorship only when the name string had none AND it carried a basionym with a year or a
     // combination author, so `Aus bus` + `L., 1758` got no code while `Aus bus L., 1758` was
-    // zoological — a deliberate change: both paths now infer alike.
+    // zoological — a deliberate change: both paths now infer alike. A name whose only authorship
+    // is the species author before its rank marker ("Orchis punctulata Steven ex Lindl. var.")
+    // infers from that one.
     let has_signal = |st: &&AuthState| !code_state_needs_fallback(Some(st));
     let code_state: Option<&AuthState> = extra_state
         .as_ref()
         .filter(has_signal)
         .or_else(|| auth_state.as_ref().filter(has_signal))
         .or(autonym_state.as_ref())
+        .or_else(|| species_state.as_ref().filter(has_signal))
         .or(auth_state.as_ref())
         .or(extra_state.as_ref());
+    if !code_state.is_some_and(|c| species_state.as_ref().is_some_and(|s| std::ptr::eq(c, s))) {
+        ctx.species_code_state = species_state.clone();
+    }
 
     // Year that came directly off the author span (e.g. "Linnaeus, 1771") is applied
     // BEFORE code inference because it IS the zoological author-year citation we want to
