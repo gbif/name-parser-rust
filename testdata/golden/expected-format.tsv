@@ -4637,7 +4637,7 @@ Acarospora cratericola cratericola Shenk 1974 group	true	Acarospora cratericola 
 Acarospora cratericola cratericola Shenk 1974 species group	true	Acarospora cratericola cratericola Shenk, 1974	Acarospora cratericola cratericola	Acarospora cratericola cratericola	Acarospora cratericola cratericola Shenk, 1974	Shenk, 1974
 Acarospora cratericola cratericola Shenk 1974 species complex	true	Acarospora cratericola cratericola Shenk, 1974	Acarospora cratericola cratericola	Acarospora cratericola cratericola	Acarospora cratericola cratericola Shenk, 1974	Shenk, 1974
 Parus caeruleus species complex	true	Parus caeruleus	Parus caeruleus	Parus caeruleus	Parus caeruleus	
-Crenarchaeote enrichment culture clone OREC-B1022	true	Crenarchaeote enrichment clone Orec-B1022	Crenarchaeote enrichment clone	Crenarchaeote enrichment clone	Crenarchaeote enrichment clone Orec-B1022	Orec-B1022
+Crenarchaeote enrichment culture clone OREC-B1022	false					
 Diodora dorsata  CF	true	Diodora dorsata CF	Diodora dorsata	Diodora dorsata	Diodora dorsata CF	CF
 Dasysyrphus intrudens complex sp. BBDCQ003-10	true	Dasysyrphus intrudens bbdcq003-10	Dasysyrphus intrudens bbdcq003-10	Dasysyrphus intrudens bbdcq003-10	Dasysyrphus intrudens bbdcq003-10	
 Lachenalia tricolor var. nelsonii (ht.) Baker	true	Lachenalia tricolor var. nelsonii Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii Baker	Baker
@@ -4690,15 +4690,15 @@ Incertaesedis obscuricornis Fairmaire LMH 1893	false
 Uropodoideaincertaesedis	true	Uropodoideaincertaesedis	Uropodoideaincertaesedis	Uropodoideaincertaesedis	Uropodoideaincertaesedis	
 Acidobacteria bacterium	true	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria bacterium	
 Oscillatoriales cyanobacterium PCC 10608	true	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium	Oscillatoriales cyanobacterium PCC 10608	
-Acidimicrobiales bacterium JGI 01_E13	true	Acidimicrobiales bacterium JGI E13	Acidimicrobiales bacterium	Acidimicrobiales bacterium	Acidimicrobiales bacterium JGI E13	JGI E13
+Acidimicrobiales bacterium JGI 01_E13	true	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium	Acidimicrobiales bacterium JGI 01_E13	
 Acidobacterium ailaaui Myers & King, 2016	true	Acidobacterium ailaaui Myers & King, 2016	Acidobacterium ailaaui	Acidobacterium ailaaui	Acidobacterium ailaaui Myers & King, 2016	Myers & King, 2016
-Candidatus Amesbacteria bacterium GW2011_GWC1_46_24	true	"Candidatus Amesbacteria bacterium" Gw2011_Gwc1_46_24	"Candidatus Amesbacteria bacterium"	"Candidatus Amesbacteria bacterium"	"Candidatus Amesbacteria bacterium" Gw2011_Gwc1_46_24	Gw2011_Gwc1_46_24
+Candidatus Amesbacteria bacterium GW2011_GWC1_46_24	true	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	"Candidatus Amesbacteria bacterium"	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	
 Candidatus Puniceispirillum Oh, Kwon, Kang, Kang, Lee, Kim & Cho, 2010	true	"Candidatus Puniceispirillum" Oh et al. 2010	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum" Oh et al. 2010	Oh et al. 2010
 Candidatus Halobonum	true	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	
 Candidatus Endomicrobium sp. MdDo-005	true	"Candidatus Endomicrobium" sp. MdDo-005	"Candidatus Endomicrobium" sp. MdDo-005	"Candidatus Endomicrobium"	"Candidatus Endomicrobium" sp. MdDo-005	
 Candidatus Abawacabacteria bacterium	true	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	
 Candidatus Accumulibacter phosphatis clade IIA str. UW-1	false					
-Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	
+Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus"	"Candidatus Anammoxoglobus" environmental samples	
 None recorded	false					
 NONE recorded	false					
 NoNe recorded	false					
@@ -4719,15 +4719,15 @@ PomaTomus	true	PomaTomus	PomaTomus	PomaTomus	PomaTomus
 DizygopUwa stosei	true	DizygopUwa stosei	DizygopUwa stosei	DizygopUwa stosei	DizygopUwa stosei	
 Oxytox[idae] Lindermann	true	Oxytox idae Lindermann	Oxytox	Oxytox	Oxytox idae Lindermann	idae Lindermann
 ScarabaeinGCsp.	true	ScarabaeinGCsp	ScarabaeinGCsp	ScarabaeinGCsp	ScarabaeinGCsp	
-Alfalfa witches'-broom phytoplasma	true	Alfalfa witches ' broom phytoplasma	Alfalfa witches	Alfalfa witches	Alfalfa witches ' broom phytoplasma	' broom phytoplasma
-Allium ampeloprasumphytoplasma	true	Allium ampeloprasumphytoplasma	Allium ampeloprasumphytoplasma	Allium ampeloprasumphytoplasma	Allium ampeloprasumphytoplasma	
-Alstroemeria sp. phytoplasma	true	Alstroemeria sp. phytoplasma	Alstroemeria sp. phytoplasma	Alstroemeria	Alstroemeria sp. phytoplasma	
-Alvinella pompejana symbiont	true	Alvinella pompejana symbiont	Alvinella pompejana symbiont	Alvinella pompejana symbiont	Alvinella pompejana symbiont	
-Acyrthosiphon kondoi endosymbiont	true	Acyrthosiphon kondoi endosymbiont	Acyrthosiphon kondoi endosymbiont	Acyrthosiphon kondoi endosymbiont	Acyrthosiphon kondoi endosymbiont	
+Alfalfa witches'-broom phytoplasma	false					
+Allium ampeloprasumphytoplasma	false					
+Alstroemeria sp. phytoplasma	false					
+Alvinella pompejana symbiont	false					
+Acyrthosiphon kondoi endosymbiont	false					
 Burkholderia sp. (Gigaspora margarita endosymbiont)	true	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia	Burkholderia sp. (Gigaspora margarita endosymbiont)	
 Dictyochloropsis symbiontica Tschermak-Woess	true	Dictyochloropsis symbiontica Tschermak-Woess	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica Tschermak-Woess	Tschermak-Woess
 Dylakosoma symbionticum var. valens Skuja	true	Dylakosoma symbionticum var. valens Skuja	Dylakosoma symbionticum var. valens	Dylakosoma symbionticum valens	Dylakosoma symbionticum var. valens Skuja	Skuja
-Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont	Wolbachia endosymbiont	Wolbachia endosymbiont of Leptogenys gracilis	of Leptogenys gracilis
+Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont	Wolbachia endosymbiont of Leptogenys gracilis	
 Lampona spec Platnick, 2000	true	Lampona spec Platnick, 2000	Lampona spec	Lampona spec	Lampona spec Platnick, 2000	Platnick, 2000
 Gobiosoma spec (Ginsburg, 1939)	true	Gobiosoma spec (Ginsburg, 1939)	Gobiosoma spec	Gobiosoma spec	Gobiosoma spec (Ginsburg, 1939)	(Ginsburg, 1939)
 Globigerina spec	true	Globigerina spec	Globigerina spec	Globigerina	Globigerina spec	
@@ -5956,7 +5956,7 @@ Acarospora cratericola cratericola Shenk 1974 group	true	Acarospora cratericola 
 Acarospora cratericola cratericola Shenk 1974 species group	true	Acarospora cratericola cratericola Shenk, 1974	Acarospora cratericola cratericola	Acarospora cratericola cratericola	Acarospora cratericola cratericola Shenk, 1974	Shenk, 1974
 Acarospora cratericola cratericola Shenk 1974 species complex	true	Acarospora cratericola cratericola Shenk, 1974	Acarospora cratericola cratericola	Acarospora cratericola cratericola	Acarospora cratericola cratericola Shenk, 1974	Shenk, 1974
 Parus caeruleus species complex	true	Parus caeruleus	Parus caeruleus	Parus caeruleus	Parus caeruleus	
-Crenarchaeote enrichment culture clone OREC-B1022	true	Crenarchaeote enrichment clone Orec-B1022	Crenarchaeote enrichment clone	Crenarchaeote enrichment clone	Crenarchaeote enrichment clone Orec-B1022	Orec-B1022
+Crenarchaeote enrichment culture clone OREC-B1022	false					
 Diodora dorsata  CF	true	Diodora dorsata CF	Diodora dorsata	Diodora dorsata	Diodora dorsata CF	CF
 Dasysyrphus intrudens complex sp. BBDCQ003-10	true	Dasysyrphus intrudens bbdcq003-10	Dasysyrphus intrudens bbdcq003-10	Dasysyrphus intrudens bbdcq003-10	Dasysyrphus intrudens bbdcq003-10	
 Lachenalia tricolor var. nelsonii (ht.) Baker	true	Lachenalia tricolor var. nelsonii Baker	Lachenalia tricolor var. nelsonii	Lachenalia tricolor nelsonii	Lachenalia tricolor var. nelsonii Baker	Baker
@@ -5997,7 +5997,7 @@ Candidatus	true	Candidatus	Candidatus	Candidatus	Candidatus
 Candidatus Puniceispirillum Oh, Kwon, Kang, Kang, Lee, Kim & Cho, 2010	true	"Candidatus Puniceispirillum" Oh et al. 2010	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum" Oh et al. 2010	Oh et al. 2010
 Candidatus Halobonum	true	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	
 Candidatus Accumulibacter phosphatis clade IIA str. UW-1	false					
-Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	"Candidatus Anammoxoglobus environmental samples"	
+Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus"	"Candidatus Anammoxoglobus" environmental samples	
 Notassigned	true	Notassigned	Notassigned	Notassigned	Notassigned	
 Dictyochloropsis symbiontica Tschermak-Woess	true	Dictyochloropsis symbiontica Tschermak-Woess	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica Tschermak-Woess	Tschermak-Woess
 Dylakosoma symbionticum var. valens Skuja	true	Dylakosoma symbionticum var. valens Skuja	Dylakosoma symbionticum var. valens	Dylakosoma symbionticum valens	Dylakosoma symbionticum var. valens Skuja	Skuja

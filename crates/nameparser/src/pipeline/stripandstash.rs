@@ -66,6 +66,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
+    s = stash_organism_label_tail(ctx, s);
     s = stash_trailing_strain_code(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
     s = stash_bracketed_annotation(ctx, s);
@@ -840,6 +841,61 @@ static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
 /// `combinationAuthorship.year=1888` exactly as before, while `Actinomycetota bacterium 4327`
 /// (not year-shaped) becomes the strain phrase it is.
 static TRAILING_YEAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?-u:[12]\d{3})$").unwrap());
+
+/// A taxon, a generic organism label as its epithet and whatever follows it ("Acidimicrobiales
+/// bacterium JGI 01_E13", "Wolbachia endosymbiont of Leptogenys gracilis", "Candidatus
+/// Abawacabacteria bacterium"). Group 1 = taxon + label, group 2 = the tail.
+static ORGANISM_LABEL_TAIL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^((?:Candidatus\s+)?\p{Lu}\p{Ll}+\s+\p{Ll}*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?:\s+(.+?))?\s*$",
+    )
+    .unwrap()
+});
+
+/// An [`ORGANISM_LABEL_TAIL`] is a provisional name, INFORMAL like the "Genus species CODE" of
+/// [`stash_trailing_strain_code`]: the label stays its epithet, the tail — a strain code, a host,
+/// several words — becomes the phrase. Java read the tail as authors ("JGI E13", "of Leptogenys
+/// gracilis") and the bare label as a species.
+fn stash_organism_label_tail(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = ORGANISM_LABEL_TAIL.captures(&s) else {
+        return s;
+    };
+    match caps.get(2) {
+        // an author behind it makes the label a real epithet: the diatom "Navicula bacterium
+        // Frenguelli"
+        Some(tail) if LABEL_TAIL_AUTHOR.is_match(tail.as_str()) => s,
+        Some(tail) => {
+            ctx.name.type_ = NameType::Informal;
+            ctx.name.phrase = Some(tail.as_str().to_string());
+            caps[1].to_string()
+        }
+        // alone, a symbiont, or a bacterium of a Candidatus or higher taxon ("Candidatus
+        // Abawacabacteria bacterium", "Acidimicrobiales bacterium"); "Navicula bacterium" is a
+        // species
+        None => {
+            if s.ends_with("symbiont")
+                || s.ends_with("symbionts")
+                || LABEL_HIGHER_ANCHOR.is_match(&s)
+            {
+                ctx.name.type_ = NameType::Informal;
+            }
+            s
+        }
+    }
+}
+
+/// An authorship behind an organism label: a capitalised surname, perhaps a team and a year.
+static LABEL_TAIL_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^\(?\p{Lu}\p{Ll}[\p{L}'.\-]*(?:(?:,? | & | et )\p{Lu}[\p{L}'.\-]+)*(?:,? (?:1[5-9]\d\d|20[0-2]\d))?\)?$",
+    )
+    .unwrap()
+});
+
+/// A Candidatus name or a taxon above the genus, by its ending, before an organism label.
+static LABEL_HIGHER_ANCHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:Candidatus\s+\p{Lu}\p{Ll}+|\p{Lu}\p{Ll}*(?:ales|aceae|ota|etes|ia|ae|mycetes|phyta))\s").unwrap()
+});
 
 /// Java `StripAndStash.stashTrailingStrainCode` (StripAndStash.java:750-768). A trailing
 /// strain-code suffix on a binomial ("Candida albicans RNA_CTR0-3", "Armillaria ostoyae

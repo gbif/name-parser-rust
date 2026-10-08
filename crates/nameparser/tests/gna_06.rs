@@ -51,9 +51,11 @@ fn misc_annotations() {
     assert_name("Parus caeruleus species complex")
         .binomial("Parus", None, "caeruleus", Rank::SpeciesAggregate)
         .nothing_else();
-    // FIXME(review): an environmental sample label parsed as a trinomial
-    // skipped: Crenarchaeote enrichment culture clone OREC-B1022
-    //   — env-sample annotation pattern not implemented (parses as messy trinomial)
+    // an English organism label with its clone code
+    assert_unparsable(
+        "Crenarchaeote enrichment culture clone OREC-B1022",
+        NameType::Identifier,
+    );
     // FIXME(review): the upper-case "CF" (cf.) is dropped without a qualifier
     // skipped: Diodora dorsata  CF
     //   — trailing 2-letter all-caps token parses as a short author surname
@@ -357,19 +359,14 @@ fn no_parsing_camelcase_genus_word() {
 
 #[test]
 fn no_parsing_phytoplasma() {
-    // group: No parsing -- phytoplasma
-    // FIXME(review): a phytoplasma label parsed as genus "Alfalfa"
-    // skipped: Alfalfa witches'-broom phytoplasma
-    // FIXME(review): a glued phytoplasma label parsed as a binomial
-    // skipped: Allium ampeloprasumphytoplasma
-    // FIXME(review): a phytoplasma (a bacterium) named after its host plant, not an indeterminate
-    // species of the plant genus
-    assert_informal("Alstroemeria sp. phytoplasma")
-        .taxon("Alstroemeria")
-        .taxon_rank(Rank::Genus)
-        .rank(Rank::Species)
-        .phrase("sp. phytoplasma")
-        .nothing_else();
+    // group: No parsing -- phytoplasma: a phytoplasma named after its host plant has no anchor
+    for name in [
+        "Alfalfa witches'-broom phytoplasma",
+        "Allium ampeloprasumphytoplasma",
+        "Alstroemeria sp. phytoplasma",
+    ] {
+        assert_unparsable(name, NameType::Other);
+    }
 }
 
 #[test]
