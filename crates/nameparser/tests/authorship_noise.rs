@@ -329,3 +329,25 @@ fn an_ex_with_no_author_after_it_keeps_the_authors_before() {
         .comb_authors(None, &["Nakai"])
         .nothing_else();
 }
+
+#[test]
+fn a_new_sentence_after_the_authorship_is_no_author() {
+    // after the dot ending a year: a reference or prose
+    assert_name("Gephyrella Mello-Leitão 1918. Rev. Soc. Brasil. Sci.")
+        .monomial("Gephyrella")
+        .comb_authors(Some("1918"), &["Mello-Leitão"])
+        .partial("Rev. Soc. Brasil. Sci.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // after the dot ending the epithet, prose
+    assert_name("Negalasa fumalis. Next sentence")
+        .species("Negalasa", "fumalis")
+        .partial("Next sentence")
+        .nothing_else();
+    // an author after the stray dot stays one
+    assert_name("Amphiporus microocelli. Kajihara et al,2008")
+        .species("Amphiporus", "microocelli")
+        .comb_authors(Some("2008"), &["Kajihara", "al"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

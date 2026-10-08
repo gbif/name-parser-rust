@@ -90,6 +90,7 @@
 
 use crate::model::Authorship;
 use crate::pipeline::double_surnames;
+use crate::pipeline::rank_markers;
 use crate::token::{is_particle, Token, TokenKind};
 
 /// Java `AuthorshipParser.AUTHOR_SUFFIXES` — tokens that are filius/junior/etc.
@@ -260,7 +261,9 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         // ("Loranthus incanus Schumach. & Thonn. sessilis Sprague", "(L. f.) typica Rosent").
         let mut sanctioning_from = comb_end;
         if s.unparsed_from < 0 {
-            if let Some(k) = stray_lower_word(tokens, comb_from, comb_end, s.basionym_present) {
+            if let Some(k) = sentence_after_authorship(tokens, comb_from, comb_end)
+                .or_else(|| stray_lower_word(tokens, comb_from, comb_end, s.basionym_present))
+            {
                 s.unparsed_from = k as i32;
                 s.unparsed_text = Some(spaced_text(&tokens[k..n]));
                 comb_end = k;
@@ -362,6 +365,51 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
             && !ANON_WORDS.contains(&w)
         {
             return Some(k);
+        }
+    }
+    None
+}
+
+/// Where a new sentence starts in the combination span `tokens[from..to)`: after the dot ending a
+/// year ("Barnes & McDunnough 1913. Next sentence", "Mello-Leitão 1918. Rev. Soc. Brasil. Sci."),
+/// or after the dot ending the epithet when prose follows, a capitalised word and a lower-case one
+/// ("Negalasa fumalis. Next sentence", not "Sphagnum contortulum. H. Crum, 1991"). What follows is
+/// a reference or prose, no author.
+fn sentence_after_authorship(tokens: &[Token], from: usize, to: usize) -> Option<usize> {
+    let word_at = |k: usize| k < to && tokens[k].kind == TokenKind::Word;
+    let epithet_before = from > 0 && {
+        let w = tokens[from - 1].text.as_str();
+        tokens[from - 1].kind == TokenKind::Word
+            && w.chars().count() >= 5
+            && w.chars().all(|c| c.is_lowercase())
+            && rank_markers::match_infraspecific_allow_notho(w).is_none()
+            && rank_markers::match_infrageneric_allow_notho(w).is_none()
+    };
+    let prose_after = word_at(from + 1)
+        && starts_upper(&tokens[from + 1].text)
+        && contains_lower(&tokens[from + 1].text)
+        && word_at(from + 2)
+        && tokens[from + 2].text.chars().all(|c| c.is_lowercase())
+        && !is_particle(&tokens[from + 2].text)
+        && !LOWER_AUTHOR_WORDS.contains(&tokens[from + 2].text.as_str());
+    if tokens[from].kind == TokenKind::Dot && epithet_before && prose_after {
+        return Some(from + 1);
+    }
+    let mut depth = 0i32;
+    for k in from..to {
+        match tokens[k].kind {
+            TokenKind::OpenParen | TokenKind::OpenBracket => depth += 1,
+            TokenKind::CloseParen | TokenKind::CloseBracket => depth -= 1,
+            _ => {}
+        }
+        if depth == 0
+            && is_year(&tokens[k])
+            && tokens[k].text.chars().count() == 4
+            && k + 1 < to
+            && tokens[k + 1].kind == TokenKind::Dot
+            && word_at(k + 2)
+        {
+            return Some(k + 2);
         }
     }
     None
