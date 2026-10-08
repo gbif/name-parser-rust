@@ -71,6 +71,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_bracketed_annotation(ctx, s);
     s = stash_underscore_designation(ctx, s);
     s = split_underscore_binomial(s);
+    s = GLUED_ABBREVIATED_AUTHOR.replace(&s, "$1 $2$3").into_owned();
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
@@ -988,6 +989,12 @@ static NEW_SPECIES_TAG: LazyLock<Regex> =
 /// splendens", "Oxalis_barrelieri ined.?"), which made one genus "Calopteryx_splendens".
 static UNDERSCORE_BINOMIAL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_(\p{Ll}{3,})(\s|$)").unwrap());
+
+/// An abbreviated author glued to the species epithet ("Pentapanax angelicifoliusGriseb.",
+/// "Caralluma praegracilisOberm."). Only with its abbreviation dot: an undotted capital inside an
+/// epithet is mostly a misread letter ("stimuUferum", "trulIaeformis").
+static GLUED_ABBREVIATED_AUTHOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+\s+\p{Ll}{4,})(\p{Lu}\p{Ll}+\.)(\s|$)").unwrap());
 
 /// Splits an [`UNDERSCORE_BINOMIAL`]; a family's "_gen"/"_genus" placeholder or a "_sp" tag is no
 /// epithet and stays.

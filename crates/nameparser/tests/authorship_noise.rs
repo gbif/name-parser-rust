@@ -351,3 +351,11 @@ fn a_new_sentence_after_the_authorship_is_no_author() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn an_abbreviated_author_glued_to_the_epithet() {
+    assert_name("Pentapanax angelicifoliusGriseb.")
+        .species("Pentapanax", "angelicifolius")
+        .comb_authors(None, &["Griseb."])
+        .nothing_else();
+}
