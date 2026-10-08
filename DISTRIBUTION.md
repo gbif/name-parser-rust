@@ -76,7 +76,7 @@ whole point of the FFM binding, and the basis for the Phase-5 backend cutover.
 
 **Release-readiness — done, and the versioning model:**
 
-- ✅ `name-parser-api` pinned to the released **`5.2.0`**; a GBIF Nexus `<repositories>` block
+- ✅ `name-parser-api` pinned to the released **`5.3.0`**; a GBIF Nexus `<repositories>` block
   resolves it (this standalone POM has no motherpom to supply it). The Java `name-parser`
   reference-impl / oracle was removed at 5.0.0 (api-only), so it is no longer a test dependency.
   The api is an independently versioned **dependency** — the stable contract — **not** this
@@ -242,7 +242,7 @@ repository.gbif.org and Maven Central:
 <dependency>
   <groupId>org.gbif</groupId>
   <artifactId>name-parser-api</artifactId>
-  <version>5.2.0</version>
+  <version>5.3.0</version>
 </dependency>
 ```
 
