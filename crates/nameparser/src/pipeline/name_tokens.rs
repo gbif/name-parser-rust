@@ -120,6 +120,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     // in the indet branch and the warning block near the end of this fn).
     let mut indet_bare = false;
     let mut cf_aff_qualifier: Option<String> = None;
+    // how many epithets came before the qualifier: it qualifies the next one, or the last if none
+    // follows ("Arctostaphylos preglauca cf.")
+    let mut qualifier_at = 0usize;
     // Tracks the most recently skipped mid-name author span so that, when a second
     // infraspecific marker overrides the first, we can describe the dropped middle
     // classification ("Intermediate classification removed: subsp.X Author") in a warning.
@@ -250,6 +253,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             && t.text == "?"
             && lower_epithets.len() < 2
         {
+            qualifier_at = lower_epithets.len();
             cf_aff_qualifier = Some("?".to_string());
             ctx.name.type_ = NameType::Informal;
             ctx.name.doubtful = true;
@@ -365,6 +369,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 }
                 // 1a. "ex gr." (ex grege, of the species group of): the paleontologists' qualifier
                 if w == "ex" && is_ex_grege(ts, i) && lower_epithets.len() < 2 {
+                    qualifier_at = lower_epithets.len();
                     cf_aff_qualifier = Some("ex gr.".to_string());
                     ctx.name.type_ = NameType::Informal;
                     i += 2;
@@ -381,6 +386,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 {
                     // cf./aff. are abbreviations, rendered with a trailing dot ("cf."/"aff."); "near"
                     // is a full English word synonymous with aff., so it is stored verbatim, no dot.
+                    qualifier_at = lower_epithets.len();
                     cf_aff_qualifier = Some(if w.eq_ignore_ascii_case("near") {
                         w.to_string()
                     } else {
@@ -964,12 +970,12 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         ctx.name.set_notho(NamePart::Infraspecific);
     }
     if let Some(q) = &cf_aff_qualifier {
-        // Qualifier applies to the specific or infraspecific epithet, whichever is the
-        // most-specific present.
-        let part = if infraspecific.is_some() {
-            NamePart::Infraspecific
-        } else {
+        // Qualifier applies to the epithet after it, or the last one when it trails them all.
+        let followed = lower_epithets.len() > qualifier_at;
+        let part = if infraspecific.is_none() || (qualifier_at == 0 && followed) {
             NamePart::Specific
+        } else {
+            NamePart::Infraspecific
         };
         ctx.name.set_epithet_qualifier(part, q);
     }

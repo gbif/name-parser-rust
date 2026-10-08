@@ -322,11 +322,11 @@ fn open_taxonomy_with_ranks_unfinished() {
         .type_(NameType::Informal)
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): the qualifier precedes the species epithet, so it is NamePart::Specific
+    // the qualifier precedes the species epithet, so it qualifies that one
     assert_name("Albinaria cf brevicollis sica Fuchs & Kaufel 1936")
         .infra_species("Albinaria", "brevicollis", Rank::Subspecies, "sica")
         .comb_authors(Some("1936"), &["Fuchs", "Kaufel"])
-        .qualifiers(&[(NamePart::Infraspecific, "cf.")])
+        .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .code(NomCode::Zoological)
         .nothing_else();
