@@ -256,6 +256,18 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 }
             }
         }
+        // A lower-case word that no author carries ends the authorship: the rest is left unparsed
+        // ("Loranthus incanus Schumach. & Thonn. sessilis Sprague", "(L. f.) typica Rosent").
+        let mut sanctioning_from = comb_end;
+        if s.unparsed_from < 0 {
+            if let Some(k) = stray_lower_word(tokens, comb_from, comb_end, s.basionym_present) {
+                s.unparsed_from = k as i32;
+                s.unparsed_text = Some(spaced_text(&tokens[k..n]));
+                comb_end = k;
+                comb_sanctioning = None;
+                sanctioning_from = n;
+            }
+        }
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
         s.year_range |= yr;
         s.combination_year_after_comma = (comb_from..comb_end)
@@ -281,7 +293,7 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         });
         s.has_filius |= contains_filius_suffix(tokens, comb_from, comb_end);
         s.combination.sanctioning_author = comb_sanctioning;
-        take_sanctioning_year(&tokens[comb_end..n], &mut s.combination);
+        take_sanctioning_year(&tokens[sanctioning_from..n], &mut s.combination);
         // Whether or not a sanctioning author was extracted, the entire trailing span
         // belongs to combination + sanctioning; nothing is unparsed afterwards.
         i = n;
@@ -298,6 +310,61 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         s.unparsed_text = Some(slice_text(tokens, first.start, last.end));
     }
     s
+}
+
+/// Lower-case words an author citation carries besides the particles and [`AUTHOR_SUFFIXES`]:
+/// connectors, particles the table lacks ("ver Steeg"), brothers, manuscript and herbarium marks.
+const LOWER_AUTHOR_WORDS: &[&str] = &[
+    "ex", "et", "and", "und", "den", "dem", "ver", "fils", "fratr", "frat", "fratt", "mss", "msc",
+    "mscr", "hort", "apud", "litt", "herb", "sched",
+];
+
+/// The first lower-case word of the combination span `tokens[from..to)` that no author carries — a
+/// misplaced epithet ("Schumach. & Thonn. sessilis Sprague"), an English phrase, a note — once an
+/// author has been read (`after_author`: a basionym came before the span). Only a whole word of
+/// three or more lower-case letters outside any bracket, after a dot, comma, ampersand, bracket or
+/// year, counts: a shorter one is an initial or a particle, and a fragment glued to its neighbour
+/// is a broken character (`KÃ¼tzing`).
+fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool) -> Option<usize> {
+    let mut depth = 0i32;
+    let mut seen_author = after_author;
+    for k in from..to {
+        let t = &tokens[k];
+        match t.kind {
+            TokenKind::OpenParen | TokenKind::OpenBracket => depth += 1,
+            TokenKind::CloseParen | TokenKind::CloseBracket => depth -= 1,
+            _ => {}
+        }
+        if depth != 0 || t.kind != TokenKind::Word {
+            continue;
+        }
+        if starts_upper(&t.text) {
+            seen_author = true;
+            continue;
+        }
+        // Right after another word it is a surname's tail: a lower-cased one ("De man") or one cut
+        // by a broken character ("Hal csy" for Halácsy).
+        let after_word = k > from && tokens[k - 1].kind == TokenKind::Word;
+        let glued_before = k > 0 && tokens[k - 1].end == t.start;
+        let glued_after = tokens.get(k + 1).is_some_and(|nx| {
+            nx.start == t.end && matches!(nx.kind, TokenKind::Word | TokenKind::Other)
+        });
+        let w = t.text.as_str();
+        if seen_author
+            && !after_word
+            && !glued_before
+            && !glued_after
+            && w.chars().count() >= 3
+            && w.chars().all(|c| c.is_alphabetic() && c.is_lowercase())
+            && !is_particle(w)
+            && !AUTHOR_SUFFIXES.contains(&w)
+            && !LOWER_AUTHOR_WORDS.contains(&w)
+            && !ANON_WORDS.contains(&w)
+        {
+            return Some(k);
+        }
+    }
+    None
 }
 
 /// The basionym of a bracket opened at `tokens[open]` but never closed, as `(from, end)`, where the
@@ -1442,6 +1509,18 @@ fn slice_text(tokens: &[Token], start: usize, end: usize) -> String {
         if t.start >= start && t.end <= end {
             sb.push_str(&t.text);
         }
+    }
+    sb
+}
+
+/// The tokens' text, with a space wherever the source had a gap between two of them.
+fn spaced_text(tokens: &[Token]) -> String {
+    let mut sb = String::new();
+    for (k, t) in tokens.iter().enumerate() {
+        if k > 0 && tokens[k - 1].end < t.start {
+            sb.push(' ');
+        }
+        sb.push_str(&t.text);
     }
     sb
 }
