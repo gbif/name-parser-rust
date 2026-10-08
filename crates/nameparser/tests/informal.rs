@@ -351,13 +351,10 @@ fn a_numbered_indeterminate_infraspecific_keeps_its_designation() {
 /// with nothing after it, and a marker followed by an author, are both untouched too.
 #[test]
 fn the_designation_capture_leaves_epithets_and_authors_alone() {
-    // FIXME(review): "4-lineata" is a real epithet (docs/non-scientific-names.md): type SCIENTIFIC,
-    // not INFORMAL
     assert_name("Benthogone rosea var. 4-lineata R. Perrier, 1896")
         .infra_species("Benthogone", "rosea", Rank::Variety, "4-lineata")
         .comb_authors(Some("1896"), &["R.Perrier"])
         .code(NomCode::Zoological)
-        .type_(NameType::Informal)
         .nothing_else();
     for (input, author) in [
         ("Abies alba var.", None),
@@ -811,12 +808,10 @@ fn binomial_with_a_species_n_tag_stays_parsed_keeping_the_phrase() {
         .type_(NameType::Informal)
         .phrase("species 12")
         .nothing_else();
-    // FIXME(review): the "sp." marker is lost from the phrase ("12"), while "species 12" above and
-    // "Allium sp. 1" keep it
     assert_name("Dichanthelium chrysopsidifolium sp. 12")
         .species("Dichanthelium", "chrysopsidifolium")
         .type_(NameType::Informal)
-        .phrase("12")
+        .phrase("sp. 12")
         .nothing_else();
 }
 

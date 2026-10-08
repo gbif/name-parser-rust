@@ -514,7 +514,6 @@ fn author_variations() {
             Some("2012"),
             &["Castellano", "S.L.Mill.", "L.Singh bis", "T.N.Lakh."],
         )
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Trichosporon cutaneum (Beurm., Gougerot & Vaucher bis) M. Ota")
@@ -556,6 +555,7 @@ fn author_variations() {
     assert_name("Modiola caroliniana L.f")
         .species("Modiola", "caroliniana")
         .comb_authors(None, &["L.f"])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Modiola caroliniana (L.) G. Don filius")

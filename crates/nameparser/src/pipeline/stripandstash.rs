@@ -73,6 +73,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_imprint_years(ctx, s);
     s = strip_null_between_epithets(ctx, s);
     s = normalise_hyphens(ctx, s);
+    s = split_hyphen_glued_author(ctx, s);
     s = replace_homoglyphs(ctx, s);
     s = repair_win1252_artefacts(ctx, s);
     s = normalise_double_underscores(ctx, s);
@@ -243,10 +244,11 @@ fn flag_uncertain_authorship(ctx: &mut ParseContext, mut s: String) -> String {
 /// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim. "Cordia
 /// (Adans.) Kuntze sect. Salimori" — authorship placed BEFORE an infrageneric rank marker.
 /// group(1)=genus, group(2)=author span (optional parenthesised basionym + combination
-/// author words), group(3)=marker + sectional epithet.
+/// author words), group(3)=marker + sectional epithet. Rust-only: the genus may carry its hybrid
+/// sign ("XAgroelymus Lapage sect. Agroelinelymus"), where Java lost the author.
 static INFRAGEN_AUTHOR_BEFORE_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(\p{Lu}[\p{Ll}]+)\s+((?:\(\s*[^()]*\)\s*)?\p{Lu}[\p{L}.'\-]*(?:\s+\p{Lu}[\p{L}.'\-]*)*)\s+((?:subg|subgen|subgenus|sect|subsect|supersect|ser|subser|superser|divisio|div)\.?\s+\p{Lu}[\p{Ll}]+)$",
+        r"^((?:[×xX]\s?)?\p{Lu}[\p{Ll}]+)\s+((?:\(\s*[^()]*\)\s*)?\p{Lu}[\p{L}.'\-]*(?:\s+\p{Lu}[\p{L}.'\-]*)*)\s+((?:subg|subgen|subgenus|sect|subsect|supersect|ser|subser|superser|divisio|div)\.?\s+\p{Lu}[\p{Ll}]+)$",
     )
     .unwrap()
 });
@@ -331,7 +333,7 @@ fn first_word(s: &str) -> &str {
 /// Missing-genus placeholder forms — the user-facing genus is replaced by "?":
 ///   `"denheyeri Eghbalian, …, 2017"`         -> `"? denheyeri Eghbalian, …, 2017"` (+ warning)
 ///   `"Missing penchinati Bourguignat, 1870"` -> `"? penchinati Bourguignat, 1870"` (no warning)
-///   `"\"? gryphoidis"`                       -> `"? gryphoidis"` (no warning)
+///   `"\"? gryphoidis"`, `"? alba Smith"`     -> `"? gryphoidis"`, `"? alba Smith"` (no warning)
 /// Emits `NameType::Placeholder` for all three forms; `Warnings::MISSING_GENUS` only for
 /// the inferred (third) form, since the other two carry an explicit "?"/"Missing" marker
 /// the user wrote on purpose — all three spot-checked against the Java CLI oracle. Skips
@@ -344,6 +346,14 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
     if s.starts_with("\"? ") || s.starts_with("\"?\t") {
         let rest: String = s.chars().skip(3).collect();
         missing = Some(format!("? {}", java_trim(&rest)));
+    } else if let Some(rest) = s
+        .strip_prefix('?')
+        .map(java_trim)
+        .filter(|r| r.chars().next().is_some_and(char::is_lowercase))
+    {
+        // "? alba Smith", "?alba": the same explicit mark without the quote. Rust-only: Java
+        // parsed a SCIENTIFIC name with the genus "?".
+        missing = Some(format!("? {rest}"));
     } else if s.starts_with("Missing ") {
         let rest: String = s.chars().skip(8).collect();
         if rest.chars().next().is_some_and(|c| c.is_lowercase()) {
@@ -1202,6 +1212,24 @@ fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
 static OCR_ZERO: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(^|[\s(\[,&])0(\p{Ll}+)([\s.,;)\]]|$)").unwrap());
 
+/// A genus with its author glued on by a hyphen, and nothing but the year after it: "Ambrysus-Stål,
+/// 1862", "Leptocysta-Stal, 1873", "Vesperides-Coues 1875". Rust-only: Java read one genus
+/// "Ambrysus-Stål" with a year and no author. Only on the name string — in an authorship the same
+/// shape is a hyphenated surname ("Saint-Hilaire, 1830").
+static HYPHEN_GLUED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)-(\p{Lu}[\p{L}'.]*,?(?-u:\s+)\(?(?-u:\d{4})\)?)$").unwrap()
+});
+
+fn split_hyphen_glued_author(_ctx: &mut ParseContext, s: String) -> String {
+    let s = HYPHEN_GLUED_AUTHOR.replace(&s, "$1 $2");
+    DASH_BEFORE_EPITHET.replace(&s, "$1 $2").into_owned()
+}
+
+/// A dash in front of the species epithet: "Abryna -petri Paiva, 1860", "Allotheronia -guttata
+/// Ashm." (61 ChecklistBank names). Dropped, as a dash after the epithet ("Abryna petri- Paiva")
+/// always was. Rust-only: Java read the epithet as an author ("petri Paiva").
+static DASH_BEFORE_EPITHET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)-(\p{Ll})").unwrap());
 // ---- Step 14: repairWin1252Artefacts (structural — no Pattern; shared w/ stripAuthorshipMarkers) ----
 
 /// Java `StripAndStash.repairWin1252Artefacts(ParsedName, String)`

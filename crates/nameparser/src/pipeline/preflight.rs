@@ -262,6 +262,10 @@ static MULTI_QUESTION_PREFIX: LazyLock<Regex> =
 /// (and the two literal `\.` after "N"/"n") untouched.
 static NN_PLACEHOLDER: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^N\.(?-u:\s*)[Nn]\.?(?:(?-u:\s*)\(.*\))?(?-u:\s*)$").unwrap());
+/// A record that names nothing: "None", "None recorded", "not recorded" (any case). Rust-only:
+/// Java parsed them as the genus "None" or "Not".
+static NO_NAME_RECORDED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:none|(?:none|not)(?-u:\s+)recorded)$").unwrap());
 // "Genus indet." / "Genus indet" patterns are INFORMAL, not PLACEHOLDER.
 /// Java: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 static INDET_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
@@ -425,6 +429,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // removes it later, with a warning.
     if (PLACEHOLDER_KEYWORDS.is_match(super::stripandstash::without_authorship_placeholder(&s))
         || NN_PLACEHOLDER.is_match(&s)
+        || NO_NAME_RECORDED.is_match(&s)
         || PLACEHOLDER_PREFIX.is_match(&s)
         || s.starts_with("[unassigned]")
         || s.eq_ignore_ascii_case("Unaccepted"))

@@ -471,9 +471,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     // full word "species" we keep it verbatim in the phrase ("Allium
                     // species 1" -> phrase "species 1") rather than collapsing it to the
                     // synthetic "sp." marker; the formatter then renders the phrase
-                    // as-is. Abbreviated "sp."/"spec." keep the number-only phrase.
+                    // as-is. Abbreviated "sp."/"spec." keep the number-only phrase on a
+                    // genus, where the formatter supplies the marker ("Allium sp. 1"), but not
+                    // after a species epithet, where nothing would: "Dichanthelium
+                    // chrysopsidifolium sp. 12" keeps "sp. 12" (Java rendered "… 12").
                     if i < ts.len() && ts[i].kind == TokenKind::Number {
                         let number = ts[i].text.clone();
+                        let number_end = ts[i].end;
                         i += 1;
                         // Rule: anything after "(sp|spec|species) N" belongs to the phrase — once a
                         // phrase starts it runs to the end of the input. So when tokens follow the
@@ -488,6 +492,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             i = ts.len();
                         } else if w.eq_ignore_ascii_case("species") {
                             ctx.name.phrase = Some(format!("species {number}"));
+                        } else if !lower_epithets.is_empty() {
+                            ctx.name.phrase =
+                                Some(ctx.working[marker_start..number_end].to_string());
                         } else {
                             ctx.name.phrase = Some(number);
                         }
@@ -799,10 +806,25 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     let mut infraspecific: Option<String> = None;
     let mut rank: Option<Rank> = None;
 
+    // A quadrinomial keeps the species and the last infraspecific epithet; one dropped in between
+    // is reported, as a second rank marker's is above ("Poa pratensis kewensis primula", "Acipenser
+    // gueldenstaedti colchicus natio danubicus"). Java dropped it silently.
+    let warn_dropped = |name: &mut crate::model::ParsedName, dropped: &[String]| {
+        if dropped.is_empty() || name.warnings.iter().any(|w| w == warnings::QUADRINOMIAL) {
+            return;
+        }
+        for epithet in dropped {
+            name.add_warning(&format!("{}{epithet}", warnings::REMOVED_PREFIX));
+        }
+        name.add_warning(warnings::QUADRINOMIAL);
+    };
     if marker_idx_in_epithets >= 0 {
         let midx = marker_idx_in_epithets as usize;
         if marker_idx_in_epithets >= 1 {
             specific = Some(lower_epithets[0].clone());
+        }
+        if midx >= 2 && midx <= lower_epithets.len() {
+            warn_dropped(&mut ctx.name, &lower_epithets[1..midx]);
         }
         if midx < lower_epithets.len() {
             infraspecific = Some(lower_epithets[midx].clone());
@@ -823,6 +845,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         specific = Some(lower_epithets[0].clone());
         if lower_epithets.len() >= 2 {
             infraspecific = Some(lower_epithets[lower_epithets.len() - 1].clone());
+            warn_dropped(&mut ctx.name, &lower_epithets[1..lower_epithets.len() - 1]);
             // A trinomial without a rank marker takes the caller's infraspecific rank hint
             // ("Abies alba alpina" + VARIETY): the source's rank column is all there is. A
             // cultivar rank needs a cultivar epithet, which a plain trinomial does not have.
@@ -1143,7 +1166,8 @@ fn has_infraspecific_epithet_after(ts: &[Token], marker_idx: usize) -> bool {
     if nx.kind == TokenKind::Word && nx.text.chars().count() == 1 && starts_upper(nx) {
         return true;
     }
-    false
+    // a numeral epithet ("var. 4-lineata") is an epithet too, not a designation
+    nx.kind == TokenKind::Word && token::is_numeral_epithet(&nx.text)
 }
 
 /// True for strain-code-shaped tokens — mixed letters and digits, no spaces, length >= 3

@@ -115,24 +115,18 @@ fn todo_names() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 
-    // FIXME(review): "comb. ined." explains the missing combination author: no zoological evidence
-    // (a plant)
     assert_name("Leucopogon veillonii (Virot) comb. ined.")
         .species("Leucopogon", "veillonii")
         .bas_authors(None, &["Virot"])
         .nom_note("comb. ined.")
         .manuscript()
-        .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): "comb. ined." explains the missing combination author: no zoological evidence
-    // (a plant)
     assert_name("Vernoniastrum musofense var. miamensis (S. Moore) comb. ined.")
         .infra_species("Vernoniastrum", "musofense", Rank::Variety, "miamensis")
         .bas_authors(None, &["S.Moore"])
         .nom_note("comb. ined.")
         .manuscript()
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Spermacoce tenuis Sess? & Moc., orth. var.")

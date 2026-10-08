@@ -60,6 +60,7 @@ fn binomials_with_basionym_and_combination_authors() {
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("2003"), &["U.Braun", "Crous"])
         .bas_authors(None, &["H.C.Burnett"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Pseudocercospora dendrobii(H.C.     Burnett, 1873)U. Braun & Crous     2003")
         .species("Pseudocercospora", "dendrobii")
@@ -187,6 +188,7 @@ fn infraspecies_without_rank_iczn() {
         )
         .comb_authors(Some("1961"), &["K.A.Harrison"])
         .bas_authors(None, &["Batsch"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Hydnellum scrobiculatum zonatum (Banker) D. Hall & D.E. Stuntz 1972")
         .infra_species(
@@ -197,6 +199,7 @@ fn infraspecies_without_rank_iczn() {
         )
         .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
         .bas_authors(None, &["Banker"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Hydnellum (Hydnellum) scrobiculatum zonatum (Banker) D. Hall & D.E. Stuntz 1972")
         .infra_species(
@@ -208,6 +211,7 @@ fn infraspecies_without_rank_iczn() {
         .infrageneric("Hydnellum")
         .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
         .bas_authors(None, &["Banker"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Hydnellum scrobiculatum zonatum")
         .infra_species(
@@ -256,13 +260,12 @@ fn infraspecies_without_rank_iczn() {
 fn legacy_iczn_names_with_rank() {
     // group: Legacy ICZN names with rank — quadrinomial: parser keeps the explicit
     // rank-marker (natio) + its trailing epithet (danubicus) and drops the middle
-    // "extra" epithet (colchicus).
-    // FIXME(review): "colchicus" is dropped without the QUADRINOMIAL warning the var./f.
-    // quadrinomials get
+    // "extra" epithet (colchicus) with a QUADRINOMIAL warning.
     assert_name("Acipenser gueldenstaedti colchicus natio danubicus Movchan, 1967")
         .infra_species("Acipenser", "gueldenstaedti", Rank::Natio, "danubicus")
         .comb_authors(Some("1967"), &["Movchan"])
         .code(NomCode::Zoological)
+        .warning(&["Removed: colchicus", warnings::QUADRINOMIAL])
         .nothing_else();
 }
 
@@ -349,17 +352,15 @@ fn infraspecies_with_rank_icn() {
         .bas_authors(None, &["Lojac."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): 1753 predates the ICZN (1758) and "fm." is a botanical rank: not ZOOLOGICAL
     assert_name("Pteris longifolia fm. stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
-        .code(NomCode::Zoological)
+        .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): 1753 predates the ICZN (1758) and "fm." is a botanical rank: not ZOOLOGICAL
     assert_name("Pteris longifolia fm stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
-        .code(NomCode::Zoological)
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Sphaerotheca    fuliginea    f.     dahliae    Movss.     1967")
         .infra_species("Sphaerotheca", "fuliginea", Rank::Form, "dahliae")
@@ -489,6 +490,7 @@ fn infraspecies_multiple_icn() {
     .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
     .bas_authors(None, &["Banker"])
     .warning(&["Removed: var. zonatum", warnings::QUADRINOMIAL])
+    .code(NomCode::Botanical)
     .nothing_else();
     assert_name("Senecio fuchsii C.C.Gmel. subsp. fuchsii var. expansus (Boiss. & Heldr.) Hayek")
         .infra_species("Senecio", "fuchsii", Rank::Variety, "expansus")
@@ -518,14 +520,17 @@ fn infraspecies_with_greek_letters_icn() {
     assert_name("Aristotelia fruticosa var. δ. microphylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "microphylla")
         .comb_authors(None, &["Hook.f."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Aristotelia fruticosa var. δ microphylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "microphylla")
         .comb_authors(None, &["Hook.f."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Aristotelia fruticosa var.δ.microphylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "microphylla")
         .comb_authors(None, &["Hook.f."])
+        .code(NomCode::Botanical)
         .nothing_else();
     // "var. δmicrophylla" — greek letter glued to the next epithet without a
     // separator is kept as-is (consistent with "var. βrigida" in
@@ -533,6 +538,7 @@ fn infraspecies_with_greek_letters_icn() {
     assert_name("Aristotelia fruticosa var. δmicrophylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "δmicrophylla")
         .comb_authors(None, &["Hook.f."])
+        .code(NomCode::Botanical)
         .nothing_else();
     // FIXME(review): "unr." (unranked) is read as the species epithet, the infrageneric name as an
     // author

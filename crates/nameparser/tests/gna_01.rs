@@ -32,23 +32,17 @@ fn uninomials_with_authorship() {
         .comb_authors(Some("2001"), &["Diederich", "van den Boom", "Aptroot"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Stagonospora polyspora M.T. Lucas & Sousa da Câmara 1934")
         .species("Stagonospora", "polyspora")
         .comb_authors(Some("1934"), &["M.T.Lucas", "Sousa da Câmara"])
-        .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Stagonospora polyspora M.T. Lucas et Sousa da Câmara 1934")
         .species("Stagonospora", "polyspora")
         .comb_authors(Some("1934"), &["M.T.Lucas", "Sousa da Câmara"])
-        .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii U. Braun & Crous 2003")
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("2003"), &["U.Braun", "Crous"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // FIXME(review): "Wang, Yuwen" is one person written surname-first (Yuwen Wang), as "Wang,
     // Y.-j." already is
@@ -360,25 +354,19 @@ fn binomials_with_authorship() {
         .code(NomCode::Botanical)
         .nothing_else();
 
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii Goh & W.H. Hsieh 1990")
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("1990"), &["Goh", "W.H.Hsieh"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii Goh and W.H. Hsieh 1990")
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("1990"), &["Goh", "W.H.Hsieh"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Pseudocercospora dendrobii Goh et W.H. Hsieh 1990")
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("1990"), &["Goh", "W.H.Hsieh"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Schottera nicaeënsis (J.V. Lamouroux ex Duby) Guiry & Hollenberg")
@@ -535,11 +523,9 @@ fn binomials_with_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Agaricus squamula Berk. & M.A. Curtis 1860")
         .species("Agaricus", "squamula")
         .comb_authors(Some("1860"), &["Berk.", "M.A.Curtis"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Peltula coriacea Büdel, Henssen & Wessels 1986")
@@ -548,11 +534,9 @@ fn binomials_with_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): a comma-less year after abbreviated, botanical-style authors is no zoological evidence (a fungus): code None
     assert_name("Tuber liui A S. Xu 1999")
         .species("Tuber", "liui")
         .comb_authors(Some("1999"), &["A.S.Xu"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Lecanora wetmorei Śliwa 2004")

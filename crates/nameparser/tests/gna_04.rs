@@ -93,11 +93,10 @@ fn authorship_with_filius_son_of() {
         .comb_authors(None, &["Hook.f."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): the same author as "Hook. f." above, which is BOTANICAL: the code must not
-    // depend on the space
     assert_name("Cerastium arvense var. fuegianum Hook.f.")
         .infra_species("Cerastium", "arvense", Rank::Variety, "fuegianum")
         .comb_authors(None, &["Hook.f."])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Jacquemontia spiciflora (Choisy) Hall. fil.")
         .species("Jacquemontia", "spiciflora")

@@ -149,9 +149,9 @@ fn named_hybrids() {
         .code(NomCode::Botanical)
         .nothing_else();
     // GNA reduces this to a bare monomial; GBIF retains the genus+infrageneric structure
-    // FIXME(review): the author "Lapage" vanishes without a trace (no authorship, not PARTIAL)
     assert_name("XAgroelymus Lapage sect. Agroelinelymus")
         .infrageneric_at("Agroelymus", Rank::SectionBotany, "Agroelinelymus")
+        .generic_authors(None, &["Lapage"])
         .notho(&[NamePart::Generic])
         .code(NomCode::Botanical)
         .nothing_else();
@@ -269,6 +269,7 @@ fn hybrid_formulae() {
         .species("Pseudocercospora", "broussonetiae")
         .comb_authors(Some("1989"), &["X.J.Liu", "Y.L.Guo"])
         .bas_authors(None, &["Chupp", "Linder"])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -392,14 +393,11 @@ fn genus_with_hyphen_allowed_by_icn() {
 
 #[test]
 fn misspelled_name() {
-    // group: Misspelled name — the trailing "Stål, 1862" is read as part of the
-    // hyphenated uninomial because the "-Stål" form looks like a single hyphenated
-    // genus token; case is preserved verbatim.
-    // FIXME(review): the author is glued into the genus and the year left authorless: Ambrysus
-    // Stål, 1862
+    // group: Misspelled name — the author is glued onto the genus by a hyphen: Ambrysus Stål, 1862
     assert_name("Ambrysus-Stål, 1862")
-        .monomial("Ambrysus-Stål")
-        .comb_authors(Some("1862"), &[])
+        .monomial("Ambrysus")
+        .comb_authors(Some("1862"), &["Stål"])
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -673,11 +671,13 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Glomopsis lonicerae Peck ex. C.J. Gould 1945")
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
+        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Acanthobasidium delicatum (Wakef.) Oberw. ex Jülich 1979")
         .species("Acanthobasidium", "delicatum")
