@@ -311,13 +311,11 @@ impl ParsedName {
 
     /// Java `ParsedName.setNotho(NamePart)` (`ParsedName.java:302-304`): REPLACES the
     /// whole notho set with a single-element set containing just `part` — an overwrite,
-    /// not an insert like [`Self::add_notho`]. This asymmetry is load-bearing:
-    /// `NameTokens`'s post-loop `if (inlineRankNotho) setNotho(INFRASPECIFIC)` erases any
-    /// earlier `addNotho(GENERIC)` recorded from a `HYBRID_MARK` token — reproduced
-    /// verbatim, not "fixed" into an add. (Java's signature takes a nullable `NamePart`
-    /// and folds a `null` argument to clearing the field entirely; every real call site —
-    /// including `NameTokens`'s own `setNotho(NamePart.INFRASPECIFIC)` — passes a
-    /// non-null literal, so this port's signature takes `part: NamePart` directly.)
+    /// not an insert like [`Self::add_notho`]. The parser itself only adds: Java's
+    /// `NameTokens` called this for a notho rank marker and so erased a hybrid sign before
+    /// the genus or species, which this port does not reproduce. (Java's signature takes a
+    /// nullable `NamePart` and folds a `null` argument to clearing the field entirely; this
+    /// port's signature takes `part: NamePart` directly.)
     pub fn set_notho(&mut self, part: NamePart) {
         self.notho = Some(vec![part]);
     }
@@ -692,8 +690,7 @@ mod tests {
         assert_eq!(
             pn.notho,
             Some(vec![NamePart::Infraspecific]),
-            "set_notho must REPLACE the whole set, erasing the earlier add_notho result — \
-             the load-bearing overwrite asymmetry"
+            "set_notho must REPLACE the whole set, erasing the earlier add_notho result"
         );
     }
 
