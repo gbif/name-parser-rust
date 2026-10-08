@@ -486,12 +486,18 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         } else {
                             None
                         };
-                        let trailing_is_epithet =
-                            next.is_some_and(|nx| {
+                        let epithet_at = |k: usize| {
+                            tokens.get(k).is_some_and(|nx| {
                                 nx.kind == TokenKind::Word
                                     && starts_lower(nx)
                                     && !token::is_particle(&nx.text)
-                            }) || is_capitalised_old_epithet(tokens, after_paren, genus_text);
+                            })
+                        };
+                        // a nothospecies' hybrid sign may stand before it: "Sorbus (Aria) × hybrida"
+                        let trailing_is_epithet = epithet_at(after_paren)
+                            || (next.is_some_and(|nx| nx.kind == TokenKind::HybridMark)
+                                && epithet_at(after_paren + 1))
+                            || is_capitalised_old_epithet(tokens, after_paren, genus_text);
                         let nominotypical =
                             genus_text.is_some_and(|g| eq_ignore_case(g, &tokens[j].text));
                         let rank_requests_infragen = ctx

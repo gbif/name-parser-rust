@@ -792,7 +792,12 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
         if !right_ok {
             continue;
         }
-        if count_latin_words(left) >= 2 || has_author_abbrev(left) {
+        // A genus with only its subgenus or a qualifier before the cross is no binomial: the cross
+        // marks a named nothospecies ("Daphnia (Daphnia) x krausi Flossner 1993", "Aesculus cf. ×
+        // hybrida").
+        let genus_only = GENUS_WITH_SUBGENUS_OR_QUALIFIER.is_match(left)
+            && right.chars().next().is_some_and(char::is_lowercase);
+        if (count_latin_words(left) >= 2 && !genus_only) || has_author_abbrev(left) {
             return true;
         }
         // Graft-chimera formula: single genus on each side (e.g. "Crataegus + Mespilus").
@@ -810,6 +815,11 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
     }
     false
 }
+
+/// A genus with nothing but a bracketed subgenus or a cf./aff. qualifier after it.
+static GENUS_WITH_SUBGENUS_OR_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\p{Lu}\p{Ll}+(?:\s+\(\p{Lu}\p{Ll}+\))?(?:\s+(?:cf|aff)\.?)?$").unwrap()
+});
 
 fn count_latin_words(s: &str) -> usize {
     LATIN_WORD.find_iter(s).count()

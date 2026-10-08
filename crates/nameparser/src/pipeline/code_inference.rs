@@ -70,7 +70,10 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // A hybrid is named under the botanical code — zoology names no hybrids — so a year beside
     // its author is no zoological evidence ("×Agropogon P. Fourn. 1934"). A cultivar hybrid's
     // rank already pinned the cultivated-plant code above.
-    if ctx.name.notho.as_ref().is_some_and(|n| !n.is_empty()) {
+    // With a bracketed subgenus, rarer in botany than in zoology, it is a vote only: the water flea
+    // "Daphnia (Daphnia) x krausi Flossner 1993" is no plant.
+    let hybrid = ctx.name.notho.as_ref().is_some_and(|n| !n.is_empty());
+    if hybrid && ctx.name.infrageneric_epithet.is_none() {
         ctx.name.code = Some(NomCode::Botanical);
         return;
     }
@@ -104,6 +107,9 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
 
     let mut votes: HashSet<NomCode> = HashSet::new();
+    if hybrid {
+        votes.insert(NomCode::Botanical);
+    }
 
     // Bacterial: a Candidatus name is a provisional prokaryote name.
     if ctx.name.candidatus {

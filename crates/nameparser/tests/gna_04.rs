@@ -494,10 +494,20 @@ fn open_nomenclature_approximate_names() {
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
         .nothing_else();
-    // FIXME(review): named nothospecies (Daphnia ×krausi Flößner, 1993) are rejected as FORMULA
-    // "Aesculus cf. × hybrida" and "Daphnia (Daphnia) x krausi Flossner 1993" are
-    // currently classified as FORMULA hybrids — the cf./subgenus + × combination
-    // trips the hybrid-formula heuristic. Left as a known limitation.
+    // a named nothospecies after a qualifier or a subgenus is no formula
+    assert_name("Aesculus cf. × hybrida")
+        .species("Aesculus", "hybrida")
+        .notho(&[NamePart::Specific])
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a hybrid votes botanical, the year zoological: no code for the water flea
+    assert_name("Daphnia (Daphnia) x krausi Flossner 1993")
+        .species_ig("Daphnia", "Daphnia", "krausi")
+        .notho(&[NamePart::Specific])
+        .comb_authors(Some("1993"), &["Flossner"])
+        .nothing_else();
     assert_unparsable("Barbus cf macrotaenia × toppini", NameType::Formula);
     // FIXME(review): the specimen code "NP-2008" becomes an author
     assert_name("Gemmula cf. cosmoi NP-2008")
