@@ -130,26 +130,20 @@ fn lower_case_names() {
 
 #[test]
 fn manuscript_names() {
-    // FIXME(review): "comb. ined." explains the missing combination author: no zoological evidence
-    // (a plant)
     assert_name("Abrodictyum caespifrons (C. Chr.) comb. ined.")
         .species("Abrodictyum", "caespifrons")
         .bas_authors(None, &["C.Chr."])
         .type_(NameType::Scientific)
         .nom_note("comb. ined.")
         .manuscript()
-        .code(NomCode::Zoological)
         .nothing_else();
 
-    // FIXME(review): "ined." explains the missing combination author: no zoological evidence (a
-    // plant)
     assert_name("Acranthera virescens (Ridl.) ined.")
         .species("Acranthera", "virescens")
         .bas_authors(None, &["Ridl."])
         .type_(NameType::Scientific)
         .nom_note("ined.")
         .manuscript()
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // real authorship is Siliç
