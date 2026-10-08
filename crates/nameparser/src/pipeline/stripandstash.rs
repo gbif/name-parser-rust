@@ -2138,7 +2138,7 @@ fn normalise_nom_note(raw: &str) -> String {
 /// scoping (not whole-wrap).
 static BRACKETED_NOM_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)[\[\(](?-u:\s*)((?:nom|nomen|comb|orth|typ)(?-u:\b)[^\]\)]*)[\]\)](?-u:\s*)$",
+        r"(?i)(?-u:\s*)[\[\(](?-u:\s*)((?:nom|nomen|comb|orth|typ|ined|in(?-u:\s+)sched)(?-u:\b)[^\]\)]*)[\]\)](?-u:\s*)$",
     )
     .unwrap()
 });
@@ -2153,6 +2153,10 @@ static BRACKETED_NOM_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = BRACKETED_NOM_NOTE.captures(&s) {
         let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        // "U. Braun (ined.)": unpublished, as the unbracketed "ined." is
+        if MANUSCRIPT_KEYWORD.is_match(&raw) {
+            ctx.name.manuscript = true;
+        }
         ctx.name.nomenclatural_note = Some(normalise_nom_note(&raw));
         let match_start = caps.get(0).unwrap().start();
         let mut kept = java_trim(&s[..match_start]).to_string();
@@ -2496,9 +2500,14 @@ fn strip_trailing_species_word(_ctx: &mut ParseContext, s: String) -> String {
 /// escaped) -> whole-wrap ASCII scope; the positive class `[A-Z]` sits inside the wrap
 /// too, so under `(?i)` it folds ASCII-only (matching Java's default CASE_INSENSITIVE,
 /// which is ASCII-only unless UNICODE_CASE is also set — it isn't here). No
-/// lookaround/backreference -> plain `regex` crate.
-static PRO_PARTE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)(?-u:\s*,\s*(?:pro\s+parte|p\.\s*p\.[A-Z]?)\s*)$").unwrap());
+/// lookaround/backreference -> plain `regex` crate. Rust-only: without the comma too ("Aconitum
+/// gracile Rchb. pro parte", "Rchb. p.p.") and as "pro max./maj./min. parte".
+static PRO_PARTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(?-u:(?:\s*,\s*|\s+)(?:pro(?:\s+(?:max|maj|min)\.?)?\s+parte|p\.\s*p\.[A-Z]?)\s*)$",
+    )
+    .unwrap()
+});
 
 /// Java `StripAndStash.stripProParte` (StripAndStash.java:1220-1229). A trailing ",
 /// pro parte" / ", p.p." (optionally suffixed by a single capital letter, e.g. "p.p.A")
@@ -2982,7 +2991,9 @@ fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
 /// foraminifera catalogues' abbreviated emend. (`Sigal Em. Moullade, 1966`); "vide" (see:
 /// `Meneghini in De Amicis, 1885 vide Neviani (1900)`); and "of" before the authors whose concept
 /// is meant, as WoRMS writes it (`Olsson of Looss, 1899`, `of authors`). [`find_tax_note`] guards
-/// the last two shapes against an author's initials and plain English.
+/// the last two shapes against an author's initials and plain English. Rust-only too: "sens. str." and
+/// "sens. lat." spelled out further than "s. str." (`Rubus fruticosus L. sens.str.`), and "ampl.",
+/// the amplified circumscription of `Cerastium octandrum Hochst. ex A.Rich. ampl. Möschl`.
 static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
@@ -3002,6 +3013,8 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|excl\.(?-u:\s+).*",
         r"|ss(?-u:\b)\.?(?-u:\s+).*",
         r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?)",
+        r"|(?-i:sens\.(?-u:\s*)(?:str|lat|l|ampl)\.?)",
+        r"|(?-i:ampl\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
         r")$",
     ))
     .unwrap()
@@ -4452,6 +4465,9 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // extract into nomenclaturalNote and drop from the string before tokenisation.
     if let Some(caps) = BRACKETED_NOM_NOTE.captures(&s) {
         let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+        if MANUSCRIPT_KEYWORD.is_match(&raw) {
+            name.manuscript = true;
+        }
         let norm = normalise_nom_note(&raw);
         name.add_nomenclatural_note(&norm);
         let match_start = caps.get(0).unwrap().start();

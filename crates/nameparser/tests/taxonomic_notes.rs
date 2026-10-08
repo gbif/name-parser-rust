@@ -279,3 +279,44 @@ fn nova_abbreviated_with_n_is_a_note() {
         .phrase("sp. n. AAA-2017")
         .nothing_else();
 }
+
+#[test]
+fn more_note_spellings() {
+    // pro parte without its comma, and as "pro max. parte": flagged doubtful only, as with it
+    assert_name("Aconitum gracile Rchb. pro parte")
+        .species("Aconitum", "gracile")
+        .comb_authors(None, &["Rchb."])
+        .doubtful()
+        .nothing_else();
+    assert_name("Collema alpinum Th.Fr. pro max. parte")
+        .species("Collema", "alpinum")
+        .comb_authors(None, &["Th.Fr."])
+        .doubtful()
+        .nothing_else();
+    // "sens. str." for "s. str."
+    assert_name("Rubus fruticosus L. sens.str.")
+        .species("Rubus", "fruticosus")
+        .comb_authors(None, &["L."])
+        .sensu("sens.str.")
+        .nothing_else();
+    // "ampl.", the amplified circumscription, like "emend."
+    assert_name("Cerastium octandrum Hochst. ex A.Rich. ampl. Möschl")
+        .species("Cerastium", "octandrum")
+        .comb_authors(None, &["A.Rich."])
+        .comb_ex_authors(&["Hochst."])
+        .sensu("ampl. Möschl")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // bracketed "ined." and "in sched." are nomenclatural notes
+    assert_name("Leveillula catalpae U. Braun (ined.)")
+        .species("Leveillula", "catalpae")
+        .comb_authors(None, &["U.Braun"])
+        .nom_note("ined.")
+        .manuscript()
+        .nothing_else();
+    assert_name("Crypsis alpicola Hochst. (in sched. rite publ.)")
+        .species("Crypsis", "alpicola")
+        .comb_authors(None, &["Hochst."])
+        .nom_note("in sched. rite publ.")
+        .nothing_else();
+}
