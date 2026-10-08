@@ -84,12 +84,20 @@ fn hybrids_with_notho_ranks() {
         .comb_authors(Some("1990"), &["Whalley", "Læssøe", "Kile"])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): a notho rank marker after an author span is swallowed into the authorship
-    // Skipped — nothosect./nothoser. after an author span (Aconitum W. Mucher
-    // nothosect. Acopellus), and notho-marker-after-author-span variants
-    // (Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii;
-    // Aconitum ×teppneri Mucher ex Starm. nothosubsp. goetzii) currently lose
-    // the notho marker.
+    // a notho rank marker after an author span
+    assert_name("Aconitum W. Mucher nothoser. Acotoxicum")
+        .infrageneric_at("Aconitum", Rank::SeriesBotany, "Acotoxicum")
+        .notho(&[NamePart::Infrageneric])
+        .generic_authors(None, &["W.Mucher"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Amaranthus ×ozanonii (Contré) Lambinon nothosubsp. ralletii")
+        .infra_species("Amaranthus", "ozanonii", Rank::Subspecies, "ralletii")
+        .notho(&[NamePart::Infraspecific])
+        .specific_authors(None, &["Lambinon"])
+        .specific_bas_authors(None, &["Contré"])
+        .code(NomCode::Botanical)
+        .nothing_else();
 }
 
 #[test]

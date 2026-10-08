@@ -666,6 +666,18 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             indet = true; // INFORMAL informal infra epithet
                             i += len;
                         }
+                    } else if inline_rank.is_some()
+                        && marker_idx_in_epithets == lower_epithets.len() as i32
+                        && ctx
+                            .tokens
+                            .get(i + 1)
+                            .is_none_or(|t| t.kind == TokenKind::Word && starts_upper(t))
+                    {
+                        // An undotted marker word where the previous marker's epithet belongs,
+                        // last or before its author, is that epithet ("Haliotis cracherodii var.
+                        // lusus Finlay, 1927"); a dotted one is a marker ("Abies alba subsp. var.").
+                        lower_epithets.push(w.to_lowercase());
+                        i += 1;
                     } else if !lower_epithets.is_empty() {
                         // Trailing rank marker with no following epithet = indetermined
                         // infraspecific

@@ -699,7 +699,7 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
             let w = strip_dot(&t.text);
             let is_infra_marker = rank_markers::match_infraspecific(w).is_some()
                 || rank_markers::match_infraspecific_allow_notho(w).is_some();
-            let is_infra_gen_marker = rank_markers::match_infrageneric(w).is_some();
+            let is_infra_gen_marker = rank_markers::match_infrageneric_allow_notho(w).is_some();
             if (is_infra_marker || is_infra_gen_marker)
                 && j > from
                 && has_epithet_after_marker(tokens, j, is_infra_gen_marker)

@@ -179,7 +179,7 @@ Centaurea gigantea Sch.Bip. ex Boiss.	true	Centaurea gigantea Sch.Bip. ex Boiss.
 Centaurea lainzii Fern.Casas	true	Centaurea lainzii Fern.Casas	Centaurea lainzii	Centaurea lainzii	Centaurea lainzii Fern.Casas	Fern.Casas
 Centaurea longepedunculata Sch.Bip. ex Boiss.	true	Centaurea longepedunculata Sch.Bip. ex Boiss.	Centaurea longepedunculata	Centaurea longepedunculata	Centaurea longepedunculata Sch.Bip. ex Boiss.	Sch.Bip. ex Boiss.
 Centaurea myriocephala Sch.Bip. ex Boiss.	true	Centaurea myriocephala Sch.Bip. ex Boiss.	Centaurea myriocephala	Centaurea myriocephala	Centaurea myriocephala Sch.Bip. ex Boiss.	Sch.Bip. ex Boiss.
-Centaurea subciliaris Boiss. & Heldr. sssp. acarnanica Matthas	true	Centaurea subciliaris Boiss. & Heldr.	Centaurea subciliaris	Centaurea subciliaris	Centaurea subciliaris Boiss. & Heldr.	Boiss. & Heldr.
+Centaurea subciliaris Boiss. & Heldr. sssp. acarnanica Matthas	true	Centaurea subciliaris subsp. acarnanica Matthas	Centaurea subciliaris subsp. acarnanica	Centaurea subciliaris acarnanica	Centaurea subciliaris Boiss. & Heldr. subsp. acarnanica Matthas	Matthas
 Ceramium diaphanum (Lightf.) Roth f. acrocarpum (Kütz.) Feldm.-Maz.	true	Ceramium diaphanum f. acrocarpum (Kütz.) Feldm.-Maz.	Ceramium diaphanum f. acrocarpum	Ceramium diaphanum acrocarpum	Ceramium diaphanum (Lightf.) Roth f. acrocarpum (Kütz.) Feldm.-Maz.	(Kütz.) Feldm.-Maz.
 Ceramium diaphanum (Lightf.) Roth var. elegans (Ducluz.) Feldm.-Maz.	true	Ceramium diaphanum var. elegans (Ducluz.) Feldm.-Maz.	Ceramium diaphanum var. elegans	Ceramium diaphanum elegans	Ceramium diaphanum (Lightf.) Roth var. elegans (Ducluz.) Feldm.-Maz.	(Ducluz.) Feldm.-Maz.
 Cerastium octandrum Hochst. ex A.Rich. ampl. Möschl	true	Cerastium octandrum Hochst. ex A.Rich.	Cerastium octandrum	Cerastium octandrum	Cerastium octandrum Hochst. ex A.Rich.	Hochst. ex A.Rich.
@@ -419,7 +419,7 @@ Hieracium balbisianum Arv.-Touv. & Briq.	true	Hieracium balbisianum Arv.-Touv. &
 Hieracium brachiatum ssp. villarsii (F.W.Schultz & Sch.Bip.) Nägeli & Peter	true	Hieracium brachiatum subsp. villarsii (F.W.Schultz & Sch.Bip.) Nägeli & Peter	Hieracium brachiatum subsp. villarsii	Hieracium brachiatum villarsii	Hieracium brachiatum subsp. villarsii (F.W.Schultz & Sch.Bip.) Nägeli & Peter	(F.W.Schultz & Sch.Bip.) Nägeli & Peter
 Hieracium chlorifolium Arv.-Touv.	true	Hieracium chlorifolium Arv.-Touv.	Hieracium chlorifolium	Hieracium chlorifolium	Hieracium chlorifolium Arv.-Touv.	Arv.-Touv.
 Hieracium doronicifolium Arv.-Touv.	true	Hieracium doronicifolium Arv.-Touv.	Hieracium doronicifolium	Hieracium doronicifolium	Hieracium doronicifolium Arv.-Touv.	Arv.-Touv.
-Hieracium laevigatum Willd. subsp. levigans var. levigans f. platyphyllum Zahn lusus scopiforme Schack & Zahn	true	Hieracium laevigatum f. platyphyllum Zahn lusus scopiforme Schack & Zahn	Hieracium laevigatum f. platyphyllum	Hieracium laevigatum platyphyllum	Hieracium laevigatum Willd. f. platyphyllum Zahn lusus scopiforme Schack & Zahn	Zahn lusus scopiforme Schack & Zahn
+Hieracium laevigatum Willd. subsp. levigans var. levigans f. platyphyllum Zahn lusus scopiforme Schack & Zahn	true	Hieracium laevigatum lusus scopiforme Schack & Zahn	Hieracium laevigatum lusus scopiforme	Hieracium laevigatum scopiforme	Hieracium laevigatum Willd. lusus scopiforme Schack & Zahn	Schack & Zahn
 Hieracium macrostolonum Gus.Schneid.	true	Hieracium macrostolonum Gus.Schneid.	Hieracium macrostolonum	Hieracium macrostolonum	Hieracium macrostolonum Gus.Schneid.	Gus.Schneid.
 Hieracium racemosum ssp. hervieri (Arv.-Touv. ex Dörfl.) Zahn	true	Hieracium racemosum subsp. hervieri (Arv.-Touv. ex Dörfl.) Zahn	Hieracium racemosum subsp. hervieri	Hieracium racemosum hervieri	Hieracium racemosum subsp. hervieri (Arv.-Touv. ex Dörfl.) Zahn	(Arv.-Touv. ex Dörfl.) Zahn
 Hieracium tolucanum Arv.-Touv.	true	Hieracium tolucanum Arv.-Touv.	Hieracium tolucanum	Hieracium tolucanum	Hieracium tolucanum Arv.-Touv.	Arv.-Touv.
@@ -638,10 +638,10 @@ Rochefortia acanthophora fo. microphylla Griseb.	true	Rochefortia acanthophora f
 Rondeletia venosa Wright ex. Griseb.	true	Rondeletia venosa Wright ex Griseb.	Rondeletia venosa	Rondeletia venosa	Rondeletia venosa Wright ex Griseb.	Wright ex Griseb.
 Rosa moyesii Hemsl. cv. 'Ina belder'	true	Rosa moyesii 'Ina belder'	Rosa moyesii 'Ina belder'	Rosa moyesii	Rosa moyesii Hemsl. 'Ina belder'	
 Rosa x rugotida Belder & Wijnands cv. 'Wageningen'	true	Rosa × rugotida 'Wageningen'	Rosa × rugotida 'Wageningen'	Rosa rugotida	Rosa × rugotida Belder & Wijnands 'Wageningen'	
-Rubus hirtus Rchb. microg pectinatus Sudre & Gavet	true	Rubus hirtus Rchb.	Rubus hirtus	Rubus hirtus	Rubus hirtus Rchb.	Rchb.
-Rubus infestus Hartm. microg holochlous Sudre	true	Rubus infestus Hartm.	Rubus infestus	Rubus infestus	Rubus infestus Hartm.	Hartm.
-Rubus macrostachys P.J.Müll. microg infrarugosus Sudre	true	Rubus macrostachys P.J.Müll.	Rubus macrostachys	Rubus macrostachys	Rubus macrostachys P.J.Müll.	P.J.Müll.
-Rubus rivularis P.J.Müll. microg leptobelus Sudre	true	Rubus rivularis P.J.Müll.	Rubus rivularis	Rubus rivularis	Rubus rivularis P.J.Müll.	P.J.Müll.
+Rubus hirtus Rchb. microg pectinatus Sudre & Gavet	true	Rubus hirtus pectinatus Sudre & Gavet	Rubus hirtus pectinatus	Rubus hirtus pectinatus	Rubus hirtus Rchb. pectinatus Sudre & Gavet	Sudre & Gavet
+Rubus infestus Hartm. microg holochlous Sudre	true	Rubus infestus holochlous Sudre	Rubus infestus holochlous	Rubus infestus holochlous	Rubus infestus Hartm. holochlous Sudre	Sudre
+Rubus macrostachys P.J.Müll. microg infrarugosus Sudre	true	Rubus macrostachys infrarugosus Sudre	Rubus macrostachys infrarugosus	Rubus macrostachys infrarugosus	Rubus macrostachys P.J.Müll. infrarugosus Sudre	Sudre
+Rubus rivularis P.J.Müll. microg leptobelus Sudre	true	Rubus rivularis leptobelus Sudre	Rubus rivularis leptobelus	Rubus rivularis leptobelus	Rubus rivularis P.J.Müll. leptobelus Sudre	Sudre
 Sagotia racemosa Baill. var. brachysepala Müll.Arg.	true	Sagotia racemosa var. brachysepala Müll.Arg.	Sagotia racemosa var. brachysepala	Sagotia racemosa brachysepala	Sagotia racemosa Baill. var. brachysepala Müll.Arg.	Müll.Arg.
 Salacia gabunensis f. teneriflora Loes. ms.	true	Salacia gabunensis f. teneriflora Loes.	Salacia gabunensis f. teneriflora	Salacia gabunensis teneriflora	Salacia gabunensis f. teneriflora Loes., ms.	Loes.
 Salacia pauciflora Loes. ms.	true	Salacia pauciflora Loes.	Salacia pauciflora	Salacia pauciflora	Salacia pauciflora Loes., ms.	Loes.
@@ -4047,10 +4047,10 @@ La Bleszynski 1966	true	La Bleszynski, 1966	La	La	La Bleszynski, 1966	Bleszynski
 Qu Durkoop	true	Qu Durkoop	Qu	Qu	Qu Durkoop	Durkoop
 As Slipinski 1982	true	As Slipinski, 1982	As	As	As Slipinski, 1982	Slipinski, 1982
 Ba Solem 1983	true	Ba Solem, 1983	Ba	Ba	Ba Solem, 1983	Solem, 1983
-Agaricus tr. Hypholoma Fr.	true	Agaricus tr Hypholoma Fr.	Agaricus tr	Agaricus tr	Agaricus tr Hypholoma Fr.	Hypholoma Fr.
-Agaricus tr Hypholoma Fr.	true	Agaricus tr Hypholoma Fr.	Agaricus tr	Agaricus tr	Agaricus tr Hypholoma Fr.	Hypholoma Fr.
-Agaricus subtr. Oesypii Fr.	true	Agaricus subtr Oesypii Fr.	Agaricus subtr	Agaricus subtr	Agaricus subtr Oesypii Fr.	Oesypii Fr.
-Agaricus subtr Oesypii Fr.	true	Agaricus subtr Oesypii Fr.	Agaricus subtr	Agaricus subtr	Agaricus subtr Oesypii Fr.	Oesypii Fr.
+Agaricus tr. Hypholoma Fr.	true	Agaricus infragen. Hypholoma Fr.	Agaricus infragen. Hypholoma	Hypholoma	Agaricus infragen. Hypholoma Fr.	Fr.
+Agaricus tr Hypholoma Fr.	true	Agaricus infragen. Hypholoma Fr.	Agaricus infragen. Hypholoma	Hypholoma	Agaricus infragen. Hypholoma Fr.	Fr.
+Agaricus subtr. Oesypii Fr.	true	Agaricus infragen. Oesypii Fr.	Agaricus infragen. Oesypii	Oesypii	Agaricus infragen. Oesypii Fr.	Fr.
+Agaricus subtr Oesypii Fr.	true	Agaricus infragen. Oesypii Fr.	Agaricus infragen. Oesypii	Oesypii	Agaricus infragen. Oesypii Fr.	Fr.
 Poaceae subtrib. Scolochloinae Soreng	true	Scolochloinae Soreng	Scolochloinae	Scolochloinae	Scolochloinae Soreng	Soreng
 Zygophyllaceae subfam. Tribuloideae D.M.Porter	true	Tribuloideae D.M.Porter	Tribuloideae	Tribuloideae	Tribuloideae D.M.Porter	D.M.Porter
 Cordia (Adans.) Kuntze sect. Salimori	true	Cordia sect. Salimori	Cordia sect. Salimori	Salimori	Cordia (Adans.) Kuntze sect. Salimori	
@@ -4229,7 +4229,7 @@ Senecio fuchsii C.C.Gmel. subsp. fuchsii var. expansus (Boiss. & Heldr.) Hayek	t
 Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii	true	Senecio fuchsii var. fuchsii C.C.Gmel.	Senecio fuchsii var. fuchsii	Senecio fuchsii fuchsii	Senecio fuchsii var. fuchsii C.C.Gmel.	C.C.Gmel.
 Euastrum divergens var. rhodesiense f. coronulum A.M. Scott & Prescott	true	Euastrum divergens f. coronulum A.M.Scott & Prescott	Euastrum divergens f. coronulum	Euastrum divergens coronulum	Euastrum divergens f. coronulum A.M.Scott & Prescott	A.M.Scott & Prescott
 Aristotelia fruticosa var. δ. microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
-Hieracium unr. Verbasciformia Arv.-Touv.	true	Hieracium unr Verbasciformia Arv.-Touv.	Hieracium unr	Hieracium unr	Hieracium unr Verbasciformia Arv.-Touv.	Verbasciformia Arv.-Touv.
+Hieracium unr. Verbasciformia Arv.-Touv.	true	Hieracium infragen. Verbasciformia Arv.-Touv.	Hieracium infragen. Verbasciformia	Verbasciformia	Hieracium infragen. Verbasciformia Arv.-Touv.	Arv.-Touv.
 Aristotelia fruticosa var. δ microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
 Aristotelia fruticosa var.δ.microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
 Aristotelia fruticosa var. δmicrophylla Hook.f.	true	Aristotelia fruticosa var. δmicrophylla Hook.f.	Aristotelia fruticosa var. δmicrophylla	Aristotelia fruticosa δmicrophylla	Aristotelia fruticosa var. δmicrophylla Hook.f.	Hook.f.
@@ -4238,8 +4238,8 @@ Henriksenopterix† paucistriata (Henriksen, 1922)	true	Henriksenopterix paucist
 Heteralocha acutirostris (Gould, 1837) Huia N E†	true	Heteralocha acutirostris (Gould, 1837) E.N.Huia	Heteralocha acutirostris	Heteralocha acutirostris	Heteralocha acutirostris (Gould, 1837) E.N.Huia	(Gould, 1837) E.N.Huia
 Oncorhynchus nerka (Walbaum, 1792) Sockeye salmon F A †?	true	Oncorhynchus nerka (Walbaum, 1792) A.F.Sockeye salmon	Oncorhynchus nerka	Oncorhynchus nerka	Oncorhynchus nerka (Walbaum, 1792) A.F.Sockeye salmon	(Walbaum, 1792) A.F.Sockeye salmon
 Crataegus curvisepala nvar. naviculiformis T. Petauer	true	Crataegus curvisepala nothovar. naviculiformis T.Petauer	Crataegus curvisepala nothovar. naviculiformis	Crataegus curvisepala naviculiformis	Crataegus curvisepala nothovar. naviculiformis T.Petauer	T.Petauer
-Aconitum W. Mucher nothosect. Acopellus	true	Aconitum W.Mucher nothosect.Acopellus	Aconitum	Aconitum	Aconitum W.Mucher nothosect.Acopellus	W.Mucher nothosect.Acopellus
-Aconitum W. Mucher nothoser. Acotoxicum	true	Aconitum W.Mucher nothoser.Acotoxicum	Aconitum	Aconitum	Aconitum W.Mucher nothoser.Acotoxicum	W.Mucher nothoser.Acotoxicum
+Aconitum W. Mucher nothosect. Acopellus	true	Aconitum nothosect. Acopellus	Aconitum nothosect. Acopellus	Acopellus	Aconitum W.Mucher nothosect. Acopellus	
+Aconitum W. Mucher nothoser. Acotoxicum	true	Aconitum nothoser. Acotoxicum	Aconitum nothoser. Acotoxicum	Acotoxicum	Aconitum W.Mucher nothoser. Acotoxicum	
 Abies masjoannis nothof. mesoides	true	Abies masjoannis nothof. mesoides	Abies masjoannis nothof. mesoides	Abies masjoannis mesoides	Abies masjoannis nothof. mesoides	
 Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	true	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	Aconitum berdaui nothosubsp. walasii	Aconitum berdaui walasii	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	(Mitka) Mitka
 Aconitum tauricum nothossp. hayekianum (Gáyer) Grintescu	true	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	Aconitum tauricum nothosubsp. hayekianum	Aconitum tauricum hayekianum	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	(Gáyer) Grintescu
@@ -5461,10 +5461,10 @@ La Bleszynski 1966	true	La Bleszynski, 1966	La	La	La Bleszynski, 1966	Bleszynski
 Qu Durkoop	true	Qu Durkoop	Qu	Qu	Qu Durkoop	Durkoop
 As Slipinski 1982	true	As Slipinski, 1982	As	As	As Slipinski, 1982	Slipinski, 1982
 Ba Solem 1983	true	Ba Solem, 1983	Ba	Ba	Ba Solem, 1983	Solem, 1983
-Agaricus tr. Hypholoma Fr.	true	Agaricus tr Hypholoma Fr.	Agaricus tr	Agaricus tr	Agaricus tr Hypholoma Fr.	Hypholoma Fr.
-Agaricus tr Hypholoma Fr.	true	Agaricus tr Hypholoma Fr.	Agaricus tr	Agaricus tr	Agaricus tr Hypholoma Fr.	Hypholoma Fr.
-Agaricus subtr. Oesypii Fr.	true	Agaricus subtr Oesypii Fr.	Agaricus subtr	Agaricus subtr	Agaricus subtr Oesypii Fr.	Oesypii Fr.
-Agaricus subtr Oesypii Fr.	true	Agaricus subtr Oesypii Fr.	Agaricus subtr	Agaricus subtr	Agaricus subtr Oesypii Fr.	Oesypii Fr.
+Agaricus tr. Hypholoma Fr.	true	Agaricus infragen. Hypholoma Fr.	Agaricus infragen. Hypholoma	Hypholoma	Agaricus infragen. Hypholoma Fr.	Fr.
+Agaricus tr Hypholoma Fr.	true	Agaricus infragen. Hypholoma Fr.	Agaricus infragen. Hypholoma	Hypholoma	Agaricus infragen. Hypholoma Fr.	Fr.
+Agaricus subtr. Oesypii Fr.	true	Agaricus infragen. Oesypii Fr.	Agaricus infragen. Oesypii	Oesypii	Agaricus infragen. Oesypii Fr.	Fr.
+Agaricus subtr Oesypii Fr.	true	Agaricus infragen. Oesypii Fr.	Agaricus infragen. Oesypii	Oesypii	Agaricus infragen. Oesypii Fr.	Fr.
 Zygophyllaceae subfam. Tribuloideae D.M.Porter	true	Tribuloideae D.M.Porter	Tribuloideae	Tribuloideae	Tribuloideae D.M.Porter	D.M.Porter
 Cordia (Adans.) Kuntze sect. Salimori	true	Cordia sect. Salimori	Cordia sect. Salimori	Salimori	Cordia (Adans.) Kuntze sect. Salimori	
 Cordia sect. Salimori (Adans.) Kuntz	true	Cordia sect. Salimori (Adans.) Kuntz	Cordia sect. Salimori	Salimori	Cordia sect. Salimori (Adans.) Kuntz	(Adans.) Kuntz
@@ -5639,7 +5639,7 @@ Senecio fuchsii C.C.Gmel. subsp. fuchsii var. expansus (Boiss. & Heldr.) Hayek	t
 Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii	true	Senecio fuchsii var. fuchsii C.C.Gmel.	Senecio fuchsii var. fuchsii	Senecio fuchsii fuchsii	Senecio fuchsii var. fuchsii C.C.Gmel.	C.C.Gmel.
 Euastrum divergens var. rhodesiense f. coronulum A.M. Scott & Prescott	true	Euastrum divergens f. coronulum A.M.Scott & Prescott	Euastrum divergens f. coronulum	Euastrum divergens coronulum	Euastrum divergens f. coronulum A.M.Scott & Prescott	A.M.Scott & Prescott
 Aristotelia fruticosa var. δ. microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
-Hieracium unr. Verbasciformia Arv.-Touv.	true	Hieracium unr Verbasciformia Arv.-Touv.	Hieracium unr	Hieracium unr	Hieracium unr Verbasciformia Arv.-Touv.	Verbasciformia Arv.-Touv.
+Hieracium unr. Verbasciformia Arv.-Touv.	true	Hieracium infragen. Verbasciformia Arv.-Touv.	Hieracium infragen. Verbasciformia	Verbasciformia	Hieracium infragen. Verbasciformia Arv.-Touv.	Arv.-Touv.
 Aristotelia fruticosa var. δ microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
 Aristotelia fruticosa var.δ.microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
 Aristotelia fruticosa var. δmicrophylla Hook.f.	true	Aristotelia fruticosa var. δmicrophylla Hook.f.	Aristotelia fruticosa var. δmicrophylla	Aristotelia fruticosa δmicrophylla	Aristotelia fruticosa var. δmicrophylla Hook.f.	Hook.f.
@@ -5648,8 +5648,8 @@ Henriksenopterix† paucistriata (Henriksen, 1922)	true	Henriksenopterix paucist
 Heteralocha acutirostris (Gould, 1837) Huia N E†	true	Heteralocha acutirostris (Gould, 1837) E.N.Huia	Heteralocha acutirostris	Heteralocha acutirostris	Heteralocha acutirostris (Gould, 1837) E.N.Huia	(Gould, 1837) E.N.Huia
 Oncorhynchus nerka (Walbaum, 1792) Sockeye salmon F A †?	true	Oncorhynchus nerka (Walbaum, 1792) A.F.Sockeye salmon	Oncorhynchus nerka	Oncorhynchus nerka	Oncorhynchus nerka (Walbaum, 1792) A.F.Sockeye salmon	(Walbaum, 1792) A.F.Sockeye salmon
 Crataegus curvisepala nvar. naviculiformis T. Petauer	true	Crataegus curvisepala nothovar. naviculiformis T.Petauer	Crataegus curvisepala nothovar. naviculiformis	Crataegus curvisepala naviculiformis	Crataegus curvisepala nothovar. naviculiformis T.Petauer	T.Petauer
-Aconitum W. Mucher nothosect. Acopellus	true	Aconitum W.Mucher nothosect.Acopellus	Aconitum	Aconitum	Aconitum W.Mucher nothosect.Acopellus	W.Mucher nothosect.Acopellus
-Aconitum W. Mucher nothoser. Acotoxicum	true	Aconitum W.Mucher nothoser.Acotoxicum	Aconitum	Aconitum	Aconitum W.Mucher nothoser.Acotoxicum	W.Mucher nothoser.Acotoxicum
+Aconitum W. Mucher nothosect. Acopellus	true	Aconitum nothosect. Acopellus	Aconitum nothosect. Acopellus	Acopellus	Aconitum W.Mucher nothosect. Acopellus	
+Aconitum W. Mucher nothoser. Acotoxicum	true	Aconitum nothoser. Acotoxicum	Aconitum nothoser. Acotoxicum	Acotoxicum	Aconitum W.Mucher nothoser. Acotoxicum	
 Abies masjoannis nothof. mesoides	true	Abies masjoannis nothof. mesoides	Abies masjoannis nothof. mesoides	Abies masjoannis mesoides	Abies masjoannis nothof. mesoides	
 Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	true	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	Aconitum berdaui nothosubsp. walasii	Aconitum berdaui walasii	Aconitum berdaui nothosubsp. walasii (Mitka) Mitka	(Mitka) Mitka
 Aconitum tauricum nothossp. hayekianum (Gáyer) Grintescu	true	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	Aconitum tauricum nothosubsp. hayekianum	Aconitum tauricum hayekianum	Aconitum tauricum nothosubsp. hayekianum (Gáyer) Grintescu	(Gáyer) Grintescu

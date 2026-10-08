@@ -541,9 +541,9 @@ fn infraspecies_with_greek_letters_icn() {
         .comb_authors(None, &["Hook.f."])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "unr." (unranked) is read as the species epithet, the infrageneric name as an
-    // author
-    // "Hieracium unr. Verbasciformia Arv.-Touv." — "unr." is an unknown rank
-    // marker the parser doesn't recognise, leaving "unr" as the species epithet.
-    // Skipped here.
+    // "unr." marks an unranked infrageneric name
+    assert_name("Hieracium unr. Verbasciformia Arv.-Touv.")
+        .infrageneric_at("Hieracium", Rank::InfragenericName, "Verbasciformia")
+        .comb_authors(None, &["Arv.-Touv."])
+        .nothing_else();
 }
