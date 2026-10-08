@@ -263,6 +263,15 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             // marker, or particle-starting authors like "d'Urv. subsp.") — silently
             // skipped so that downstream classification operates only on the structural
             // tokens.
+            // an epithet capitalised in the old style ("Delias Abnormis var. euryxantha")
+            if genus.is_some()
+                && lower_epithets.is_empty()
+                && authorship_split::is_capitalised_old_epithet(&ctx.tokens, i, genus.as_deref())
+            {
+                lower_epithets.push(t.text.to_lowercase());
+                i += 1;
+                continue;
+            }
             let can_start_author = starts_upper(t)
                 || (starts_lower(t)
                     && (token::is_particle(&t.text)

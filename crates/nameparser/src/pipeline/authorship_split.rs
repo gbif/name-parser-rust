@@ -410,6 +410,13 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 i += 1;
                 continue;
             }
+            if after_genus && !have_epithet && is_capitalised_old_epithet(tokens, i, genus_text) {
+                name_words += 1;
+                have_epithet = true;
+                after_subgenus = false;
+                i += 1;
+                continue;
+            }
             // Mid-name author span: an Author abbreviation between the genus (or
             // species epithet) and a following rank marker. e.g. "Centaurea L. subg.
             // Jacea" or "Festuca ovina L. subvar. gracilis Hackel". The author tokens
@@ -470,11 +477,12 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         } else {
                             None
                         };
-                        let trailing_is_epithet = next.is_some_and(|nx| {
-                            nx.kind == TokenKind::Word
-                                && starts_lower(nx)
-                                && !token::is_particle(&nx.text)
-                        });
+                        let trailing_is_epithet =
+                            next.is_some_and(|nx| {
+                                nx.kind == TokenKind::Word
+                                    && starts_lower(nx)
+                                    && !token::is_particle(&nx.text)
+                            }) || is_capitalised_old_epithet(tokens, after_paren, genus_text);
                         let nominotypical =
                             genus_text.is_some_and(|g| eq_ignore_case(g, &tokens[j].text));
                         let rank_requests_infragen = ctx
@@ -738,6 +746,28 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
         return None;
     }
     None
+}
+
+/// The word at `k`, in the species-epithet slot, is an epithet capitalised in the old style:
+/// undotted, no repetition of the genus, and followed by an infraspecific rank marker with its
+/// epithet ("Aphaenogaster (Ichnomyrmex) Schwammerdami var. spinipes", "Delias Abnormis var.
+/// euryxantha Honrath, 1892"). It used to be read as the species author, the species epithet lost.
+pub(crate) fn is_capitalised_old_epithet(tokens: &[Token], k: usize, genus: Option<&str>) -> bool {
+    let Some(t) = tokens.get(k) else {
+        return false;
+    };
+    let marker_at = k + 1;
+    t.kind == TokenKind::Word
+        && starts_upper(t)
+        && t.text.chars().count() >= 3
+        && t.text.chars().skip(1).all(|c| c.is_lowercase())
+        && !genus.is_some_and(|g| eq_ignore_case(g, &t.text))
+        && tokens.get(marker_at).is_some_and(|m| {
+            m.kind == TokenKind::Word
+                && m.text != "f"
+                && rank_markers::match_infraspecific_allow_notho(strip_dot(&m.text)).is_some()
+        })
+        && has_epithet_after_marker(tokens, marker_at, false)
 }
 
 /// The word at `k` repeats an earlier lower-case epithet with a capital initial: the capitalised
