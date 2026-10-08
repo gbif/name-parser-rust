@@ -320,3 +320,17 @@ fn more_note_spellings() {
         .nom_note("in sched. rite publ.")
         .nothing_else();
 }
+
+#[test]
+fn a_bracketed_quoted_spelling_is_a_nomenclatural_note() {
+    // the spelling it was published or also cited in, never part of the author
+    assert_name("Heterosperma depressa Griseb. (\"depressum\")")
+        .species("Heterosperma", "depressa")
+        .comb_authors(None, &["Griseb."])
+        .nom_note("\"depressum\"")
+        .nothing_else();
+    assert_name("Xerochlorella olmiae ('olmae')")
+        .species("Xerochlorella", "olmiae")
+        .nom_note("'olmae'")
+        .nothing_else();
+}

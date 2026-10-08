@@ -90,6 +90,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_doubtful_genus_brackets(ctx, s);
     s = strip_sic_and_corrig(ctx, s);
     s = stash_synonym_bracket(ctx, s);
+    s = strip_quoted_spelling_variant(ctx, s);
     s = strip_bracketed_nom_note(ctx, s);
     s = strip_nom_note(ctx, s);
     s = strip_not_validly_published(ctx, s);
@@ -2130,6 +2131,39 @@ fn normalise_nom_note(raw: &str) -> String {
 }
 
 // ---- Step 29: stripBracketedNomNote ----
+
+/// A bracketed, quoted lower-case word ending the name after its epithet or author: the spelling
+/// the name was published or also cited in (`Heterosperma depressa Griseb. ("depressum")`,
+/// `Xerochlorella olmiae ('olmae')`). Group 1 = the name before it, group 2 = the quoted word.
+static QUOTED_SPELLING_VARIANT: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(
+        r#"^(\S+\s+.*?(?:\p{Ll}{2}|\.|\p{Lu}\p{Ll}*))\s*\(\s*((['"])\p{Ll}[\p{Ll}-]+\3)\s*\)\s*$"#,
+    )
+    .unwrap()
+});
+
+/// [`QUOTED_SPELLING_VARIANT`] in a separately supplied authorship, behind its author or alone
+/// (`Griseb. ("depressum")`, `('olmae')`).
+static AUTHORSHIP_QUOTED_SPELLING: LazyLock<FancyRegex> = LazyLock::new(|| {
+    FancyRegex::new(r#"^(.*?)\s*\(\s*((['"])\p{Ll}[\p{Ll}-]+\3)\s*\)\s*$"#).unwrap()
+});
+
+/// Moves a [`QUOTED_SPELLING_VARIANT`] into the nomenclatural note, quotes kept; Java read it as
+/// part of the author ("Griseb.depressum"). Not after an indet marker ("Peltigera sp.
+/// ('boreorufescens')"), which makes it the provisional name's phrase.
+fn strip_quoted_spelling_variant(ctx: &mut ParseContext, s: String) -> String {
+    let Ok(Some(caps)) = QUOTED_SPELLING_VARIANT.captures(&s) else {
+        return s;
+    };
+    let before = caps.get(1).unwrap().as_str();
+    let last = before.split_whitespace().last().unwrap_or_default();
+    if matches!(last, "sp." | "spp." | "sp" | "spp" | "cf." | "aff.") {
+        return s;
+    }
+    ctx.name
+        .add_nomenclatural_note(caps.get(2).unwrap().as_str());
+    java_trim(before).to_string()
+}
 
 /// Java BRACKETED_NOM_NOTE (StripAndStash.java:61-63):
 /// `\s*[\[\(]\s*((?:nom|comb|orth|typ)\b[^\]\)]*)[\]\)]\s*$`, `Pattern.CASE_INSENSITIVE`, plus the
@@ -4459,6 +4493,12 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
         let whole = caps.get(0).unwrap();
         let (start, end) = (whole.start(), whole.end());
         s = java_trim(&format!("{}{}", &s[..start], &s[end..])).to_string();
+    }
+
+    // A bracketed quoted spelling after the author, as on the name string.
+    if let Ok(Some(caps)) = AUTHORSHIP_QUOTED_SPELLING.captures(&s) {
+        name.add_nomenclatural_note(caps.get(2).unwrap().as_str());
+        s = java_trim(caps.get(1).unwrap().as_str()).to_string();
     }
 
     // Bracketed nom-notes "(nom. nud.)"/"[nom. cons.]" in the auxiliary authorship —
