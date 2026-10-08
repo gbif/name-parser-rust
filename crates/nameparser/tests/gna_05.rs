@@ -129,8 +129,13 @@ fn possible_canonical() {
         .comb_authors(Some("1978"), &["Devriese", "al."])
         .code(NomCode::Zoological)
         .nothing_else();
-    // FIXME(review): "Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004" merges both
-    // author teams and makes 2004 an imprint year
+    // a semicolon after the year ends the citation: the second is left unparsed
+    assert_name("Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004")
+        .species("Rana", "aurora")
+        .comb_authors(Some("1852"), &["Baird", "Girard"])
+        .partial("H.B. Shaffer et al., 2004")
+        .code(NomCode::Zoological)
+        .nothing_else();
     // skipped:
     //   "Verpericola megasoma \"Dall\" Pils." — pinned in impl_05.rs (Dall ex Pils.).
     //   "Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967." —
@@ -138,9 +143,6 @@ fn possible_canonical() {
     //     bleeds into the author span.
     //   "Pyrobaculum neutrophilum V24Sta" — trailing alphanumeric strain code
     //     captured as informal phrase; expected was bare species.
-    //   "Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004" —
-    //     semicolon-separated dual authorship not recognised; parser merges
-    //     both author teams.
 }
 
 #[test]

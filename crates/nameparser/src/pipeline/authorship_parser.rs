@@ -447,11 +447,13 @@ fn sentence_after_authorship(tokens: &[Token], from: usize, to: usize) -> Option
             TokenKind::CloseParen | TokenKind::CloseBracket => depth -= 1,
             _ => {}
         }
+        // a dot or a semicolon after a year: another sentence or another citation ("Baird and
+        // Girard, 1852; H.B. Shaffer et al., 2004")
         if depth == 0
             && is_year(&tokens[k])
             && tokens[k].text.chars().count() == 4
             && k + 1 < to
-            && tokens[k + 1].kind == TokenKind::Dot
+            && matches!(tokens[k + 1].kind, TokenKind::Dot | TokenKind::Semicolon)
             && word_at(k + 2)
         {
             return Some(k + 2);
