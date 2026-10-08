@@ -71,3 +71,19 @@ fn a_provisional_infraspecific_designation_keeps_the_species_author_apart() {
         .type_(NameType::Informal)
         .nothing_else();
 }
+
+#[test]
+fn a_species_author_with_a_filius_in_a_team_ends_at_the_rank_marker() {
+    assert_name("Conostomum pusillum Hook.f. & Wilson var. pusillum")
+        .infra_species("Conostomum", "pusillum", Rank::Variety, "pusillum")
+        .comb_authors(None, &["Hook.f.", "Wilson"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Parnassia foliosa Hook.f. et Thomson var. japonica (Nakai) Ohwi")
+        .infra_species("Parnassia", "foliosa", Rank::Variety, "japonica")
+        .comb_authors(None, &["Ohwi"])
+        .bas_authors(None, &["Nakai"])
+        .specific_authors(None, &["Hook.f.", "Thomson"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}

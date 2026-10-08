@@ -813,18 +813,22 @@ fn next_word_starts_upper(tokens: &[Token], mut j: usize) -> bool {
         .is_some_and(|t| t.kind == TokenKind::Word && starts_upper(t))
 }
 
-/// The `f` at `f_idx` is followed (past its dot) by an infraspecific rank marker or an `ex` — so
-/// it is the filius of the author before it.
+/// The `f` at `f_idx` is followed (past its dot) by an infraspecific rank marker, an `ex` or another
+/// author ("Hook.f. & Wilson var. pusillum", "Hook.f. et Thomson var.") — so it is the filius of
+/// the author before it.
 fn filius_before_marker_or_ex(tokens: &[Token], f_idx: usize) -> bool {
     let mut k = f_idx + 1;
     if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Dot) {
         k += 1;
     }
-    tokens.get(k).is_some_and(|t| {
-        t.kind == TokenKind::Word
-            && (t.text == "ex"
+    tokens.get(k).is_some_and(|t| match t.kind {
+        TokenKind::Ampersand | TokenKind::Comma => true,
+        TokenKind::Word => {
+            matches!(t.text.as_str(), "ex" | "et" | "and")
                 || (t.text != "f"
-                    && rank_markers::match_infraspecific_allow_notho(strip_dot(&t.text)).is_some()))
+                    && rank_markers::match_infraspecific_allow_notho(strip_dot(&t.text)).is_some())
+        }
+        _ => false,
     })
 }
 
