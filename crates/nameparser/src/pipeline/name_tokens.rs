@@ -806,10 +806,25 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     let mut infraspecific: Option<String> = None;
     let mut rank: Option<Rank> = None;
 
+    // A quadrinomial keeps the species and the last infraspecific epithet; one dropped in between
+    // is reported, as a second rank marker's is above ("Poa pratensis kewensis primula", "Acipenser
+    // gueldenstaedti colchicus natio danubicus"). Java dropped it silently.
+    let warn_dropped = |name: &mut crate::model::ParsedName, dropped: &[String]| {
+        if dropped.is_empty() || name.warnings.iter().any(|w| w == warnings::QUADRINOMIAL) {
+            return;
+        }
+        for epithet in dropped {
+            name.add_warning(&format!("{}{epithet}", warnings::REMOVED_PREFIX));
+        }
+        name.add_warning(warnings::QUADRINOMIAL);
+    };
     if marker_idx_in_epithets >= 0 {
         let midx = marker_idx_in_epithets as usize;
         if marker_idx_in_epithets >= 1 {
             specific = Some(lower_epithets[0].clone());
+        }
+        if midx >= 2 && midx <= lower_epithets.len() {
+            warn_dropped(&mut ctx.name, &lower_epithets[1..midx]);
         }
         if midx < lower_epithets.len() {
             infraspecific = Some(lower_epithets[midx].clone());
@@ -830,6 +845,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         specific = Some(lower_epithets[0].clone());
         if lower_epithets.len() >= 2 {
             infraspecific = Some(lower_epithets[lower_epithets.len() - 1].clone());
+            warn_dropped(&mut ctx.name, &lower_epithets[1..lower_epithets.len() - 1]);
             // A trinomial without a rank marker takes the caller's infraspecific rank hint
             // ("Abies alba alpina" + VARIETY): the source's rank column is all there is. A
             // cultivar rank needs a cultivar epithet, which a plain trinomial does not have.

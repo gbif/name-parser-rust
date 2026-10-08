@@ -260,13 +260,12 @@ fn infraspecies_without_rank_iczn() {
 fn legacy_iczn_names_with_rank() {
     // group: Legacy ICZN names with rank — quadrinomial: parser keeps the explicit
     // rank-marker (natio) + its trailing epithet (danubicus) and drops the middle
-    // "extra" epithet (colchicus).
-    // FIXME(review): "colchicus" is dropped without the QUADRINOMIAL warning the var./f.
-    // quadrinomials get
+    // "extra" epithet (colchicus) with a QUADRINOMIAL warning.
     assert_name("Acipenser gueldenstaedti colchicus natio danubicus Movchan, 1967")
         .infra_species("Acipenser", "gueldenstaedti", Rank::Natio, "danubicus")
         .comb_authors(Some("1967"), &["Movchan"])
         .code(NomCode::Zoological)
+        .warning(&["Removed: colchicus", warnings::QUADRINOMIAL])
         .nothing_else();
 }
 

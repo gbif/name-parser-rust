@@ -155,16 +155,13 @@ fn ex_authors() {
 
 #[test]
 fn four_parted_names() {
-    // FIXME(review): "kewensis" is dropped without the QUADRINOMIAL warning the var./f.
-    // quadrinomials get
     assert_name("Poa pratensis kewensis primula (L.) Rouy, 1913")
         .infra_species("Poa", "pratensis", Rank::InfrasubspecificName, "primula")
         .comb_authors(Some("1913"), &["Rouy"])
         .bas_authors(None, &["L."])
+        .warning(&["Removed: kewensis", warnings::QUADRINOMIAL])
         .nothing_else();
 
-    // FIXME(review): "alticola" is dropped without the QUADRINOMIAL warning the var./f.
-    // quadrinomials get
     assert_name("Bombus sichelii alticola latofasciatus")
         .infra_species(
             "Bombus",
@@ -172,14 +169,14 @@ fn four_parted_names() {
             Rank::InfrasubspecificName,
             "latofasciatus",
         )
+        .warning(&["Removed: alticola", warnings::QUADRINOMIAL])
         .nothing_else();
 
-    // FIXME(review): "colchicus" is dropped without the QUADRINOMIAL warning the var./f.
-    // quadrinomials get
     assert_name("Acipenser gueldenstaedti colchicus natio danubicus Movchan, 1967")
         .infra_species("Acipenser", "gueldenstaedti", Rank::Natio, "danubicus")
         .comb_authors(Some("1967"), &["Movchan"])
         .code(NomCode::Zoological)
+        .warning(&["Removed: colchicus", warnings::QUADRINOMIAL])
         .nothing_else();
 
     assert_name("Cymbella cistula var. sinus regis")
