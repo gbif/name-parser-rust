@@ -198,7 +198,7 @@ Chrysophthalmum sternutatorium Sch.Bip.	true	Chrysophthalmum sternutatorium Sch.
 Cineraria abyssinica Sch.Bip. ex A.Rich.	true	Cineraria abyssinica Sch.Bip. ex A.Rich.	Cineraria abyssinica	Cineraria abyssinica	Cineraria abyssinica Sch.Bip. ex A.Rich.	Sch.Bip. ex A.Rich.
 Cineraria schimperi Sch.Bip. ex A.Rich.	true	Cineraria schimperi Sch.Bip. ex A.Rich.	Cineraria schimperi	Cineraria schimperi	Cineraria schimperi Sch.Bip. ex A.Rich.	Sch.Bip. ex A.Rich.
 Cinnamomum albiflorum Nees var. b	true	Cinnamomum albiflorum var. b	Cinnamomum albiflorum var. b	Cinnamomum albiflorum b	Cinnamomum albiflorum Nees var. b	
-Cinnamomum albiflorum Nees var. d Lecomte	true	Cinnamomum albiflorum Nees var.d Lecomte	Cinnamomum albiflorum	Cinnamomum albiflorum	Cinnamomum albiflorum Nees var.d Lecomte	Nees var.d Lecomte
+Cinnamomum albiflorum Nees var. d Lecomte	true	Cinnamomum albiflorum var. d Lecomte	Cinnamomum albiflorum var. d	Cinnamomum albiflorum d	Cinnamomum albiflorum Nees var. d Lecomte	Lecomte
 Cirsium abyssinicum Sch.Bip. ex A.Rich.	true	Cirsium abyssinicum Sch.Bip. ex A.Rich.	Cirsium abyssinicum	Cirsium abyssinicum	Cirsium abyssinicum Sch.Bip. ex A.Rich.	Sch.Bip. ex A.Rich.
 Cissus barbeyana var. pauciflora Mildbr. ms.	true	Cissus barbeyana var. pauciflora Mildbr.	Cissus barbeyana var. pauciflora	Cissus barbeyana pauciflora	Cissus barbeyana var. pauciflora Mildbr., ms.	Mildbr.
 Cissus brandtiana Gilg ms.	true	Cissus brandtiana Gilg	Cissus brandtiana	Cissus brandtiana	Cissus brandtiana Gilg, ms.	Gilg
@@ -337,8 +337,8 @@ Eremopanax angustata Baill. ex Baum.-Bod. f. intermedia Baum.-Bod.	true	Eremopan
 Eremopanax hederoides Baum.-Bod.	true	Eremopanax hederoides Baum.-Bod.	Eremopanax hederoides	Eremopanax hederoides	Eremopanax hederoides Baum.-Bod.	Baum.-Bod.
 Eremopanax schlechteri Harms f. gracilis Baum.-Bod.	true	Eremopanax schlechteri f. gracilis Baum.-Bod.	Eremopanax schlechteri f. gracilis	Eremopanax schlechteri gracilis	Eremopanax schlechteri Harms f. gracilis Baum.-Bod.	Baum.-Bod.
 Erigeron pazensis Sch.Bip. ex Rusby	true	Erigeron pazensis Sch.Bip. ex Rusby	Erigeron pazensis	Erigeron pazensis	Erigeron pazensis Sch.Bip. ex Rusby	Sch.Bip. ex Rusby
-Eriocaulon sexangulare L. var. B Körn.	true	Eriocaulon sexangulare L.var.B.Körn.	Eriocaulon sexangulare	Eriocaulon sexangulare	Eriocaulon sexangulare L.var.B.Körn.	L.var.B.Körn.
-Eriocaulon sexangulare L. var. C Körn.	true	Eriocaulon sexangulare L.var.C.Körn.	Eriocaulon sexangulare	Eriocaulon sexangulare	Eriocaulon sexangulare L.var.C.Körn.	L.var.C.Körn.
+Eriocaulon sexangulare L. var. B Körn.	true	Eriocaulon sexangulare var. B Körn.	Eriocaulon sexangulare var. B	Eriocaulon sexangulare B	Eriocaulon sexangulare L. var. B Körn.	Körn.
+Eriocaulon sexangulare L. var. C Körn.	true	Eriocaulon sexangulare var. C Körn.	Eriocaulon sexangulare var. C	Eriocaulon sexangulare C	Eriocaulon sexangulare L. var. C Körn.	Körn.
 Eriopus remotifolius Müll.Hal.	true	Eriopus remotifolius Müll.Hal.	Eriopus remotifolius	Eriopus remotifolius	Eriopus remotifolius Müll.Hal.	Müll.Hal.
 Erismanthus obliquus Wall. ex Müll.Arg.	true	Erismanthus obliquus Wall. ex Müll.Arg.	Erismanthus obliquus	Erismanthus obliquus	Erismanthus obliquus Wall. ex Müll.Arg.	Wall. ex Müll.Arg.
 Erlangea plumosa Sch.Bip.	true	Erlangea plumosa Sch.Bip.	Erlangea plumosa	Erlangea plumosa	Erlangea plumosa Sch.Bip.	Sch.Bip.
@@ -492,7 +492,7 @@ Mniadelphus montagneanus Müll.Hal. var.	true	Mniadelphus montagneanus var.	Mnia
 Montanoa karvinskii (DC.) Sch.Bip. ex C.Koch	true	Montanoa karvinskii (DC.) Sch.Bip. ex C.Koch	Montanoa karvinskii	Montanoa karvinskii	Montanoa karvinskii (DC.) Sch.Bip. ex C.Koch	(DC.) Sch.Bip. ex C.Koch
 Myodocarpus lanceolatus Dubard & R.Vig. f. brevipetiolata Baum.-Bod.	true	Myodocarpus lanceolatus f. brevipetiolata Baum.-Bod.	Myodocarpus lanceolatus f. brevipetiolata	Myodocarpus lanceolatus brevipetiolata	Myodocarpus lanceolatus Dubard & R.Vig. f. brevipetiolata Baum.-Bod.	Baum.-Bod.
 Myriactis cabrerae J.Kost. var.	true	Myriactis cabrerae var.	Myriactis cabrerae var.	Myriactis cabrerae	Myriactis cabrerae J.Kost. var.	
-Nasa pteridophylla Weigend & Dostert ssp. Pteridophylla	true	Nasa pteridophylla Weigend & Dostert ssp.Pteridophylla	Nasa pteridophylla	Nasa pteridophylla	Nasa pteridophylla Weigend & Dostert ssp.Pteridophylla	Weigend & Dostert ssp.Pteridophylla
+Nasa pteridophylla Weigend & Dostert ssp. Pteridophylla	true	Nasa pteridophylla subsp. pteridophylla Weigend & Dostert	Nasa pteridophylla subsp. pteridophylla	Nasa pteridophylla pteridophylla	Nasa pteridophylla subsp. pteridophylla Weigend & Dostert	Weigend & Dostert
 Navia jauana L.B.Sm., Steyerm. & H.Rob.	true	Navia jauana L.B.Sm., Steyerm. & H.Rob.	Navia jauana	Navia jauana	Navia jauana L.B.Sm., Steyerm. & H.Rob.	L.B.Sm., Steyerm. & H.Rob.
 Navia scirpiflora L.B.Sm., Steyerm. & H.Rob.	true	Navia scirpiflora L.B.Sm., Steyerm. & H.Rob.	Navia scirpiflora	Navia scirpiflora	Navia scirpiflora L.B.Sm., Steyerm. & H.Rob.	L.B.Sm., Steyerm. & H.Rob.
 Navicula acidobiontica Tosh.Watan.	true	Navicula acidobiontica Tosh.Watan.	Navicula acidobiontica	Navicula acidobiontica	Navicula acidobiontica Tosh.Watan.	Tosh.Watan.
@@ -558,7 +558,7 @@ Phyllanthus puncticulatus Jean F.Brunel	true	Phyllanthus puncticulatus Jean F.Br
 Phyllanthus pycnophyllus Müll.Arg.	true	Phyllanthus pycnophyllus Müll.Arg.	Phyllanthus pycnophyllus	Phyllanthus pycnophyllus	Phyllanthus pycnophyllus Müll.Arg.	Müll.Arg.
 Phyllanthus raynalii Jean F.Brunel & J.P.Roux	true	Phyllanthus raynalii Jean F.Brunel & J.P.Roux	Phyllanthus raynalii	Phyllanthus raynalii	Phyllanthus raynalii Jean F.Brunel & J.P.Roux	Jean F.Brunel & J.P.Roux
 Phyllanthus seydelii Jean F.Brunel	true	Phyllanthus seydelii Jean F.Brunel	Phyllanthus seydelii	Phyllanthus seydelii	Phyllanthus seydelii Jean F.Brunel	Jean F.Brunel
-Phyllanthus tenuicaulis Muell.-Arg. var. Tenuicaulis	true	Phyllanthus tenuicaulis Muell.-Arg.var.Tenuicaulis	Phyllanthus tenuicaulis	Phyllanthus tenuicaulis	Phyllanthus tenuicaulis Muell.-Arg.var.Tenuicaulis	Muell.-Arg.var.Tenuicaulis
+Phyllanthus tenuicaulis Muell.-Arg. var. Tenuicaulis	true	Phyllanthus tenuicaulis var. tenuicaulis Muell.-Arg.	Phyllanthus tenuicaulis var. tenuicaulis	Phyllanthus tenuicaulis tenuicaulis	Phyllanthus tenuicaulis var. tenuicaulis Muell.-Arg.	Muell.-Arg.
 Phyllanthus tukuyuanus Jean F.Brunel	true	Phyllanthus tukuyuanus Jean F.Brunel	Phyllanthus tukuyuanus	Phyllanthus tukuyuanus	Phyllanthus tukuyuanus Jean F.Brunel	Jean F.Brunel
 Phyllanthus virgulatus Müll.Arg.	true	Phyllanthus virgulatus Müll.Arg.	Phyllanthus virgulatus	Phyllanthus virgulatus	Phyllanthus virgulatus Müll.Arg.	Müll.Arg.
 Phyllanthus zollingeri Müll.Arg.	true	Phyllanthus zollingeri Müll.Arg.	Phyllanthus zollingeri	Phyllanthus zollingeri	Phyllanthus zollingeri Müll.Arg.	Müll.Arg.

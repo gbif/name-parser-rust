@@ -284,7 +284,9 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     // A single letter immediately after a rank marker is an informal infra
                     // epithet ("form A", "f. B", "var. a", "f. (a)"), not the start of
                     // authorship — a lowercase `a` would otherwise open an author particle.
-                    if let Some(len) = single_letter_designation(tokens, i) {
+                    if have_epithet && is_capitalised_autonym(tokens, i) {
+                        i += 1;
+                    } else if let Some(len) = single_letter_designation(tokens, i) {
                         i += len;
                         have_epithet = true;
                     } else if have_epithet && i < n && tokens[i].kind == TokenKind::Number {
@@ -759,6 +761,19 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
     None
 }
 
+/// The word at `k` repeats an earlier lower-case epithet with a capital initial: the capitalised
+/// final epithet of an autonym ("Phyllanthus tenuicaulis Muell.-Arg. var. Tenuicaulis").
+pub(crate) fn is_capitalised_autonym(tokens: &[Token], k: usize) -> bool {
+    tokens.get(k).is_some_and(|t| {
+        t.kind == TokenKind::Word
+            && starts_upper(t)
+            && t.text.chars().count() > 1
+            && tokens[..k].iter().any(|e| {
+                e.kind == TokenKind::Word && starts_lower(e) && eq_ignore_case(&e.text, &t.text)
+            })
+    })
+}
+
 /// The word token at `j` (after any dots) starts with an upper-case letter.
 fn next_word_starts_upper(tokens: &[Token], mut j: usize) -> bool {
     while tokens.get(j).is_some_and(|t| t.kind == TokenKind::Dot) {
@@ -806,6 +821,17 @@ fn has_epithet_after_marker(tokens: &[Token], marker_idx: usize, infrageneric: b
     }
     if infrageneric {
         return starts_upper(t);
+    }
+    // A letter designation ("var. d Lecomte", "var. B Körn.") and a capitalised autonym epithet
+    // ("Nasa pteridophylla Weigend & Dostert ssp. Pteridophylla") stand in for the epithet too.
+    if single_letter_designation(tokens, k).is_some()
+        && (k + 1 == n
+            || (tokens[k + 1].kind != TokenKind::Dot && next_word_starts_upper(tokens, k + 1)))
+    {
+        return true;
+    }
+    if is_capitalised_autonym(tokens, k) {
+        return true;
     }
     if !starts_lower(t) {
         return false;

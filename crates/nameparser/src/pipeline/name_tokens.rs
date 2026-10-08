@@ -596,7 +596,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 if let Some((rm_infra, notho_flag)) =
                     rank_markers::match_infraspecific_allow_notho(w)
                 {
-                    if has_infraspecific_epithet_after(ts, i) {
+                    // The capitalised final epithet of an autonym ("var. Tenuicaulis").
+                    let autonym_at = i
+                        + 1
+                        + usize::from(ts.get(i + 1).is_some_and(|t| t.kind == TokenKind::Dot));
+                    let capitalised_autonym = !lower_epithets.is_empty()
+                        && super::authorship_split::is_capitalised_autonym(ts, autonym_at);
+                    if has_infraspecific_epithet_after(ts, i) || capitalised_autonym {
                         // Second marker overriding the first: the previous
                         // classification (oldRank.epithet + author) was an intermediate
                         // level the model can't hold, so warn about the drop.
@@ -639,6 +645,11 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             if i < ts.len() && ts[i].kind == TokenKind::Dot {
                                 i += 1;
                             }
+                        }
+                        if capitalised_autonym {
+                            lower_epithets.push(ts[i].text.to_lowercase());
+                            i += 1;
+                            continue;
                         }
                         // Informal infra epithet: a single letter immediately following the
                         // rank marker ("form A", "f. B", "var. a", "f. (a)") — consume it here
