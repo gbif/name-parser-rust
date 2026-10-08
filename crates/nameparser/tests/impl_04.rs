@@ -77,10 +77,10 @@ fn todo_names() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 
-    // FIXME(review): the trailing dot is lost ("Dsgl", while "Cr?p." above keeps "Crp.")
+    // every "?" goes, even two sharing a letter, and the dot stays
     assert_name("Rosa alpestris D?s?gl.")
         .species("Rosa", "alpestris")
-        .comb_authors(None, &["Dsgl"])
+        .comb_authors(None, &["Dsgl."])
         .doubtful()
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();

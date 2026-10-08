@@ -700,6 +700,16 @@ static LETTER_QMARK_LETTER: LazyLock<Regex> =
 static QMARK_BETWEEN_LETTERS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(\p{L})\?(\p{L})").unwrap());
 
+/// Removes every "?" between two letters. Matches of [`QMARK_BETWEEN_LETTERS`] share their letters
+/// ("D?s?gl."), so one pass leaves every second one — Java's did, and a later step then took the
+/// rest of the word's punctuation with it ("Dsgl").
+fn remove_qmarks_between_letters(mut s: String) -> String {
+    while LETTER_QMARK_LETTER.is_match(&s) {
+        s = QMARK_BETWEEN_LETTERS.replace_all(&s, "$1$2").into_owned();
+    }
+    s
+}
+
 /// Java `StripAndStash.repairQuestionMarkInWord` (StripAndStash.java:739-748). A "?" inside
 /// a word is a transcription artefact for a missing letter ("Istv?nffi") — strips the "?"
 /// and glues the surrounding word parts directly together (no placeholder letter is
@@ -710,7 +720,7 @@ static QMARK_BETWEEN_LETTERS: LazyLock<Regex> =
 /// reusing the same static patterns.)
 fn repair_question_mark_in_word(ctx: &mut ParseContext, s: String) -> String {
     if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
-        let s = QMARK_BETWEEN_LETTERS.replace_all(&s, "$1$2").into_owned();
+        let s = remove_qmarks_between_letters(s);
         ctx.name.doubtful = true;
         ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
         return s;
@@ -4354,7 +4364,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // "?" inside a word — transcription artefact for a missing letter ("Istv?nffi"). Strip
     // the ? and glue the surrounding word parts; flag doubtful + warning.
     if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
-        s = QMARK_BETWEEN_LETTERS.replace_all(&s, "$1$2").into_owned();
+        s = remove_qmarks_between_letters(s);
         name.doubtful = true;
         name.add_warning(warnings::QUESTION_MARKS_REMOVED);
     }
