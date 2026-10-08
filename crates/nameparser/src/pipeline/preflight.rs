@@ -204,6 +204,13 @@ static CODE_LEAD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(?:enrichment culture )?(?:(?:clone|strain|str\.?|isolate|sp\.?) )?").unwrap()
 });
 
+/// A name string led by an author's lower-case particle and a capitalised surname.
+static PARTICLE_LED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:van|von|de|del|della|delle|dei|du|la|le|des|der|den|dos|da|di|zu|zur|ten|ter)\s+\p{Lu}",
+    )
+    .unwrap()
+});
 /// A taxon's environmental samples: group 1 = a "Candidatus" prefix, group 2 = the taxon, group 3
 /// = the label.
 static ENVIRONMENTAL_SAMPLES: LazyLock<Regex> = LazyLock::new(|| {
@@ -508,6 +515,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // used to come back as genus `?` + epithet `bacterium`, or as a SCIENTIFIC genus `marine`.
     if let Some(type_) = classify_organism_label(&s) {
         return Err(ParseError::new(type_, None, s));
+    }
+    // An author's name alone, its particle leading ("van Berg", "del Rosario Author"): no taxon.
+    if PARTICLE_LED_AUTHOR.is_match(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
     }
     // A phytoplasma, or a symbiont named after its host ("Persea americana phytoplasma", "'Bois
     // noir' phytoplasma", "Acyrthosiphon kondoi endosymbiont"): the plant or animal named is the
