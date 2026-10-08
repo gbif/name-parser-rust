@@ -87,6 +87,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
+    s = lower_shouted_qualifier(s);
     s = strip_rank_nova(ctx, s);
     s = strip_quoted_attributed_author(s);
     s = strip_quoted_cultivar(ctx, s);
@@ -1898,6 +1899,28 @@ static TRAILING_CV: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s+cv\.
 /// out (no ASCII mode in `fancy_regex`).
 static CV_MARKER: LazyLock<FancyRegex> =
     LazyLock::new(|| FancyRegex::new(r"[ \t\n\x0B\f\r]+cv\.?(?=[ \t\n\x0B\f\r]|$)").unwrap());
+
+/// An upper-case "CF"/"AFF" qualifier after the genus or an epithet, before an epithet or the end:
+/// "Diodora dorsata CF", "Diodora CF dorsata". Group 1 = the name before it, 2 = the qualifier, 3 =
+/// what follows.
+static SHOUTED_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?:\s+\p{Ll}+)?\s+)(CF|AFF)\.?(\s+\p{Ll}.*|\s*)$").unwrap()
+});
+
+/// Lower-cases a [`SHOUTED_QUALIFIER`], which was read as an author "Cf" — not after an indet marker,
+/// where it is a strain code ("Bacillus sp. CF"), nor among authors' initials ("Dubois, CF 1839").
+fn lower_shouted_qualifier(s: String) -> String {
+    match SHOUTED_QUALIFIER.captures(&s) {
+        Some(c)
+            if !c[1]
+                .split_whitespace()
+                .any(|w| matches!(w, "sp" | "spp" | "spec")) =>
+        {
+            format!("{}{}.{}", &c[1], c[2].to_lowercase(), &c[3])
+        }
+        _ => s,
+    }
+}
 
 /// An infraspecific rank marker with "n." (nova) before its epithet: "Acidalia remutaria ab. n.
 /// undularia", "Abies alba var. n. alpina". Group 1 = the marker, group 2 = the epithet.

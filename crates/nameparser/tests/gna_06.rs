@@ -3,7 +3,7 @@
 mod common;
 use common::*;
 use nameparser::model::warnings;
-use nameparser::model::{NameType, NomCode, Rank};
+use nameparser::model::{NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn misc_annotations() {
@@ -56,9 +56,12 @@ fn misc_annotations() {
         "Crenarchaeote enrichment culture clone OREC-B1022",
         NameType::Identifier,
     );
-    // FIXME(review): the upper-case "CF" (cf.) is dropped without a qualifier
-    // skipped: Diodora dorsata  CF
-    //   — trailing 2-letter all-caps token parses as a short author surname
+    // an upper-case "CF" is the cf. qualifier
+    assert_name("Diodora dorsata  CF")
+        .species("Diodora", "dorsata")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .nothing_else();
     // a BOLD sample id after "complex sp." is the phrase
     assert_name("Dasysyrphus intrudens complex sp. BBDCQ003-10")
         .binomial("Dasysyrphus", None, "intrudens", Rank::SpeciesAggregate)
