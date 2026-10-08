@@ -135,21 +135,21 @@ fn string_index_out_of_bounds_exception() {
         .bas_authors(None, &["S.S.Ying"])
         .code(NomCode::Botanical)
         .nothing_else();
-    // FIXME(review): "& amp" is an HTML entity residue, not part of an author
+    // an "&amp;" entity broken by a space, or missing its semicolon, is an ampersand too
     assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp  Y.H.Tseng ")
         .infra_species("Salix", "taiwanalpina", Rank::Variety, "chingshuishanensis")
-        .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "amp Y.H.Tseng"])
+        .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "Y.H.Tseng"])
         .bas_authors(None, &["S.S.Ying"])
         .code(NomCode::Botanical)
+        .warning(&[warnings::HTML_ENTITIES])
         .nothing_else();
-    // FIXME(review): "& amp;" is an HTML entity residue, not an author
     assert_name("Salix morrisonicola var. takasagoalpina (Koidz.) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp; Y.H.Tseng")
         .infra_species("Salix", "morrisonicola", Rank::Variety, "takasagoalpina")
-        .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "amp", "Y.H.Tseng"])
+        .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "Y.H.Tseng"])
         .bas_authors(None, &["Koidz."])
         .code(NomCode::Botanical)
+        .warning(&[warnings::HTML_ENTITIES])
         .nothing_else();
-    // FIXME(review): "& amp;" is an HTML entity residue, not an author
     assert_name(
         "Ficus ernanii Carauta, Pederneir., P.P.Souza, A.F.P.Machado, M.D.M.Vianna & amp; Romaniuc",
     )
@@ -162,11 +162,29 @@ fn string_index_out_of_bounds_exception() {
             "P.P.Souza",
             "A.F.P.Machado",
             "M.D.M.Vianna",
-            "amp",
             "Romaniuc",
         ],
     )
+    .warning(&[warnings::HTML_ENTITIES])
     .nothing_else();
+    // accented letters written as entities, often without the semicolon
+    assert_name("Billia rosea (Planch. &amp Linden) C.Ulloa &amp P.J&oslashrg.")
+        .species("Billia", "rosea")
+        .comb_authors(None, &["C.Ulloa", "P.Jørg."])
+        .bas_authors(None, &["Planch.", "Linden"])
+        .code(NomCode::Botanical)
+        .warning(&[warnings::HTML_ENTITIES])
+        .nothing_else();
+    assert_name("Salix breviserrata subsp. fontqueri T.E. D&iacute;az Gonz&aacute;lez, J.A. Fern&aacute;ndez Prieto &amp; H. Nava")
+        .infra_species("Salix", "breviserrata", Rank::Subspecies, "fontqueri")
+        .comb_authors(None, &["T.E.Díaz González", "J.A.Fernández Prieto", "H.Nava"])
+        .warning(&[warnings::HTML_ENTITIES])
+        .nothing_else();
+    assert_name("Abies alba O&#039;Brien")
+        .species("Abies", "alba")
+        .comb_authors(None, &["O'Brien"])
+        .warning(&[warnings::HTML_ENTITIES])
+        .nothing_else();
 }
 
 #[test]

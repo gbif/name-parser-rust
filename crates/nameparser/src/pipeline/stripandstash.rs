@@ -1465,6 +1465,72 @@ static HTML_TAG: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<[^>]+>").unwra
 /// -> whole-wrap.
 static MULTI_SPACE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s{2,})").unwrap());
 
+/// An `&amp;` entity broken by a space or missing its semicolon ("K.C.Lu & amp; Y.H.Tseng",
+/// "& amp  Y.H.Tseng"), which a plain entity decode misses.
+static BROKEN_AMP: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"&(?-u:\s*)amp(?-u:\b);?").unwrap());
+
+/// An accented-letter entity ("&eacute;", "&uuml;", "&Oslash;"), also without its semicolon as
+/// sources often write it ("Fern&aacutendez", "P.J&oslashrg."), and a numeric one ("&#246;",
+/// "&#x000FB;", "&#039;").
+static LETTER_ENTITY: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"&(?:([A-Za-z])(acute|grave|circ|uml|tilde|ring|cedil|slash|caron)",
+        r"|(szlig|aelig|AElig|oelig|OElig|eth|ETH|thorn|THORN|quot|apos)",
+        r"|#([0-9]{1,6})|#[xX]([0-9A-Fa-f]{1,6}));?"
+    ))
+    .unwrap()
+});
+
+/// Decodes the entities [`LETTER_ENTITY`] matches; an unknown or invalid one stays as it is.
+fn decode_letter_entities(s: &str) -> std::borrow::Cow<'_, str> {
+    LETTER_ENTITY.replace_all(s, |c: &regex::Captures| {
+        let decoded = if let (Some(letter), Some(mark)) = (c.get(1), c.get(2)) {
+            let base = letter.as_str().chars().next().unwrap_or(' ');
+            match (base, mark.as_str()) {
+                ('o', "slash") => Some('ø'),
+                ('O', "slash") => Some('Ø'),
+                (_, mark) => {
+                    let combining = match mark {
+                        "acute" => '\u{301}',
+                        "grave" => '\u{300}',
+                        "circ" => '\u{302}',
+                        "uml" => '\u{308}',
+                        "tilde" => '\u{303}',
+                        "ring" => '\u{30A}',
+                        "cedil" => '\u{327}',
+                        "caron" => '\u{30C}',
+                        _ => '\0',
+                    };
+                    unicode_normalization::char::compose(base, combining)
+                }
+            }
+        } else if let Some(name) = c.get(3) {
+            match name.as_str() {
+                "szlig" => Some('ß'),
+                "aelig" => Some('æ'),
+                "AElig" => Some('Æ'),
+                "oelig" => Some('œ'),
+                "OElig" => Some('Œ'),
+                "eth" => Some('ð'),
+                "ETH" => Some('Ð'),
+                "thorn" => Some('þ'),
+                "THORN" => Some('Þ'),
+                "quot" => Some('"'),
+                _ => Some('\''),
+            }
+        } else {
+            let code = match (c.get(4), c.get(5)) {
+                (Some(dec), _) => dec.as_str().parse::<u32>().ok(),
+                (_, Some(hex)) => u32::from_str_radix(hex.as_str(), 16).ok(),
+                _ => None,
+            };
+            code.and_then(char::from_u32).filter(|ch| !ch.is_control())
+        };
+        decoded.map_or_else(|| c[0].to_string(), String::from)
+    })
+}
+
 /// Java `StripAndStash.stripHtml` (StripAndStash.java:940-961). Strips HTML tags (keeping
 /// their text content, so "<i>sensu</i> Fabricius, 1780" becomes "sensu Fabricius, 1780"
 /// and is picked up as a taxonomic note by the normal note handling downstream) and decodes
@@ -1480,7 +1546,9 @@ fn strip_html(ctx: &mut ParseContext, s: String) -> String {
             ctx.name.add_warning(warnings::XML_TAGS);
         }
         let before_entities = s.clone();
-        s = s
+        s = BROKEN_AMP.replace_all(&s, "&").into_owned();
+        s = decode_letter_entities(&s)
+            .into_owned()
             .replace("&amp;", "&")
             .replace("&lt;", "<")
             .replace("&gt;", ">")
