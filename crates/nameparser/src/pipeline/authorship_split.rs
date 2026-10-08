@@ -690,43 +690,12 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
     }
     let mut j = from;
     while j < n {
+        if continues_author_span(tokens, j, from) {
+            j += 1;
+            continue;
+        }
         let t = &tokens[j];
         if t.kind == TokenKind::Word {
-            if starts_upper(t) {
-                j += 1;
-                continue;
-            }
-            if token::is_particle(&t.text) {
-                j += 1;
-                continue;
-            }
-            // Apostrophe-particle word ("d'Urv", "L'Hér") — keep walking.
-            if looks_like_apostrophe_particle(&t.text) {
-                j += 1;
-                continue;
-            }
-            // "al" / "al." inside an author span ("Boiss. & al. var. paryadrica") — the
-            // "et al." abbreviation. Keep walking.
-            if t.text.eq_ignore_ascii_case("al") {
-                j += 1;
-                continue;
-            }
-            // "ex", "et" or "and" between two authors ("Nees ex Thwaites var. spiculis", "Baill. ex
-            // Baum.-Bod. f. intermedia", "Hatus. et Ohwi var. minor") belongs to the span: the rank marker after it still ends the species
-            // author, instead of the whole tail becoming the ex-author's name.
-            if matches!(t.text.as_str(), "ex" | "et" | "and")
-                && j > from
-                && next_word_starts_upper(tokens, j + 1)
-            {
-                j += 1;
-                continue;
-            }
-            // A filius "f." right before another rank marker or an "ex" ("Hook.f. var. papillosum",
-            // "Hook.f. ex A.W.Benn. var.") is part of the author, not the forma marker.
-            if t.text == "f" && j > from && filius_before_marker_or_ex(tokens, j) {
-                j += 1;
-                continue;
-            }
             let w = strip_dot(&t.text);
             let is_infra_marker = rank_markers::match_infraspecific(w).is_some()
                 || rank_markers::match_infraspecific_allow_notho(w).is_some();
@@ -737,27 +706,6 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
             {
                 return Some(j);
             }
-            return None;
-        }
-        if t.kind == TokenKind::Dot || t.kind == TokenKind::Ampersand || t.kind == TokenKind::Comma
-        {
-            j += 1;
-            continue;
-        }
-        // Apostrophe inside an author (M'Coy, d'Urv., L'Hér.) — keep walking.
-        if t.kind == TokenKind::Other && t.text == "'" {
-            j += 1;
-            continue;
-        }
-        // The hyphen of an abbreviated double name ("Baum.-Bod.", "Buch.-Ham.").
-        if t.kind == TokenKind::Other
-            && t.text == "-"
-            && j > from
-            && tokens[j - 1].kind == TokenKind::Dot
-            && next_word_starts_upper(tokens, j + 1)
-        {
-            j += 1;
-            continue;
         }
         return None;
     }
@@ -774,6 +722,56 @@ pub(crate) fn is_capitalised_autonym(tokens: &[Token], k: usize) -> bool {
             && tokens[..k].iter().any(|e| {
                 e.kind == TokenKind::Word && starts_lower(e) && eq_ignore_case(&e.text, &t.text)
             })
+    })
+}
+
+/// Does `tokens[j]` continue an author span that began at `from`? A surname, a particle, the dot of
+/// an initial, a separator, an "et al.", an apostrophe (`M'Coy`), and — never as its first token —
+/// an "ex", "et" or "and" before the next author ("Nees ex Thwaites", "Pallas ex de Candolle",
+/// "Hatus. et Ohwi"), the hyphen of an abbreviated double name ("Baum.-Bod."), a filius right
+/// before a rank marker or an "ex" ("Hook.f. var.", "Hook.f. ex A.W.Benn.") and a year
+/// ("Günther, 1867 ssp. tanganica"). Shared by the walks that skip a species author standing
+/// before a rank marker.
+pub(crate) fn continues_author_span(tokens: &[Token], j: usize, from: usize) -> bool {
+    let t = &tokens[j];
+    let inner = j > from;
+    match t.kind {
+        TokenKind::Word => {
+            starts_upper(t)
+                || token::is_particle(&t.text)
+                || looks_like_apostrophe_particle(&t.text)
+                || t.text.eq_ignore_ascii_case("al")
+                || (inner
+                    && matches!(t.text.as_str(), "ex" | "et" | "and")
+                    && next_word_starts_author(tokens, j + 1))
+                || (inner && t.text == "f" && filius_before_marker_or_ex(tokens, j))
+        }
+        TokenKind::Dot | TokenKind::Ampersand | TokenKind::Comma => true,
+        TokenKind::Other => {
+            t.text == "'"
+                || (inner
+                    && t.text == "-"
+                    && tokens[j - 1].kind == TokenKind::Dot
+                    && next_word_starts_upper(tokens, j + 1))
+        }
+        TokenKind::Number => {
+            inner
+                && t.text.chars().count() == 4
+                && matches!(t.text.chars().next(), Some('1') | Some('2'))
+        }
+        _ => false,
+    }
+}
+
+/// The word token at `j` (after any dots) starts an author: a capitalised surname, a particle or
+/// the "al." of "et al.".
+fn next_word_starts_author(tokens: &[Token], mut j: usize) -> bool {
+    while tokens.get(j).is_some_and(|t| t.kind == TokenKind::Dot) {
+        j += 1;
+    }
+    tokens.get(j).is_some_and(|t| {
+        t.kind == TokenKind::Word
+            && (starts_upper(t) || token::is_particle(&t.text) || t.text == "al")
     })
 }
 
@@ -902,28 +900,19 @@ fn skip_paren_author_block(tokens: &[Token], open_idx: usize) -> Option<usize> {
     }
     j += 1; // skip past the close paren
             // Walk over an author span (uppercase words, dots, particles) until a rank marker.
+    let from = j;
     while j < n {
+        if continues_author_span(tokens, j, from) {
+            j += 1;
+            continue;
+        }
         let t = &tokens[j];
         if t.kind == TokenKind::Word {
-            if starts_upper(t) {
-                j += 1;
-                continue;
-            }
-            if token::is_particle(&t.text) {
-                j += 1;
-                continue;
-            }
             let w = strip_dot(&t.text);
             let is_infra_marker = rank_markers::match_infraspecific_allow_notho(w).is_some();
             if is_infra_marker && has_epithet_after_marker(tokens, j, false) {
                 return Some(j);
             }
-            return None;
-        }
-        if t.kind == TokenKind::Dot || t.kind == TokenKind::Ampersand || t.kind == TokenKind::Comma
-        {
-            j += 1;
-            continue;
         }
         return None;
     }

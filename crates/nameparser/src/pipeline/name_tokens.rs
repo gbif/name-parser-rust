@@ -1047,27 +1047,18 @@ fn skip_paren_author_block(ts: &[Token], open_idx: usize) -> Option<usize> {
         return None;
     }
     j += 1; // skip past the close paren
+    let from = j;
     while j < n {
+        if authorship_split::continues_author_span(ts, j, from) {
+            j += 1;
+            continue;
+        }
         let t = &ts[j];
         if t.kind == TokenKind::Word {
-            if starts_upper(t) {
-                j += 1;
-                continue;
-            }
-            if token::is_particle(&t.text) {
-                j += 1;
-                continue;
-            }
             let w = strip_dot(&t.text);
             if rank_markers::match_infraspecific_allow_notho(w).is_some() {
                 return Some(j);
             }
-            return None;
-        }
-        if t.kind == TokenKind::Dot || t.kind == TokenKind::Ampersand || t.kind == TokenKind::Comma
-        {
-            j += 1;
-            continue;
         }
         return None;
     }
