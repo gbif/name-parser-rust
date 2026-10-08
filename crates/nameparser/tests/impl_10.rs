@@ -647,3 +647,46 @@ fn hyphens() {
         .warning(&[warnings::HOMOGLYHPS])
         .nothing_else();
 }
+
+#[test]
+fn a_rank_or_code_hint_settles_a_bracketed_word_after_the_genus() {
+    let name = "Humiriastrum (Urban) Cuatrecasas, 1961";
+    // no hint: the year outside the bracket makes it the zoological subgenus
+    assert_name(name)
+        .infrageneric_at("Humiriastrum", Rank::Subgenus, "Urban")
+        .comb_authors(Some("1961"), &["Cuatrecasas"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a genus: Urban is the basionym author
+    assert_name_rank(name, Rank::Genus)
+        .monomial_rank("Humiriastrum", Rank::Genus)
+        .bas_authors(None, &["Urban"])
+        .comb_authors(Some("1961"), &["Cuatrecasas"])
+        .nothing_else();
+    // a subgenus: the zoological reading
+    assert_name_rank(name, Rank::Subgenus)
+        .infrageneric_at("Humiriastrum", Rank::Subgenus, "Urban")
+        .comb_authors(Some("1961"), &["Cuatrecasas"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // the botanical code: a genus with its basionym author, the year notwithstanding
+    assert_name_code(name, NomCode::Botanical)
+        .monomial("Humiriastrum")
+        .bas_authors(None, &["Urban"])
+        .comb_authors(Some("1961"), &["Cuatrecasas"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // the zoological code wins over a genus rank: zoological genera have no basionym author (the
+    // caller's rank is kept)
+    assert_name_hinted(name, None, Some(Rank::Genus), Some(NomCode::Zoological))
+        .infrageneric_at("Humiriastrum", Rank::Genus, "Urban")
+        .comb_authors(Some("1961"), &["Cuatrecasas"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // the zoological code: a subgenus, without a year too
+    assert_name_code("Kyphocarpa (Fenzl) Lopr.", NomCode::Zoological)
+        .infrageneric_at("Kyphocarpa", Rank::Subgenus, "Fenzl")
+        .comb_authors(None, &["Lopr."])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

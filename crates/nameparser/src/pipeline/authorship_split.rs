@@ -30,6 +30,7 @@
 //! Task 1 made the full `Rank` model the single source of truth, replacing this file's
 //! former ad-hoc `rank_is_infrageneric_strictly` free function.
 
+use crate::model::{NomCode, Rank};
 use crate::pipeline::rank_markers;
 use crate::pipeline::ParseContext;
 use crate::token::{self, Token, TokenKind};
@@ -508,15 +509,30 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         let rank_requests_infragen = ctx
                             .requested_rank
                             .is_some_and(|r| r.is_infrageneric_strictly());
+                        // Rust-only: a code or rank hint settles a single bracketed word before an
+                        // author, which the shape leaves open ("Humiriastrum (Urban) Cuatrecasas,
+                        // 1961" is a genus with its basionym author, or a zoological subgenus with
+                        // its author). The zoological code makes it the subgenus — genera have no
+                        // basionym authors there — the botanical code, or else a genus-or-higher
+                        // rank, the basionym author.
+                        let rank_requests_genus = ctx
+                            .requested_rank
+                            .is_some_and(|r| r == Rank::Genus || r.is_suprageneric());
+                        let code = ctx.requested_code;
                         let subgenus = if trailing_is_epithet {
                             true
                         } else if abbreviated {
                             false
+                        } else if !has_trailing
+                            || nominotypical
+                            || rank_requests_infragen
+                            || code == Some(NomCode::Zoological)
+                        {
+                            true
+                        } else if code == Some(NomCode::Botanical) || rank_requests_genus {
+                            false
                         } else {
-                            !has_trailing
-                                || nominotypical
-                                || rank_requests_infragen
-                                || has_year_token(tokens, after_paren, n)
+                            has_year_token(tokens, after_paren, n)
                         };
                         if subgenus {
                             i = after_paren;
@@ -1123,7 +1139,6 @@ pub(crate) fn single_letter_designation(tokens: &[Token], i: usize) -> Option<us
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Rank;
     use crate::token::tokenize;
 
     fn ctx(requested_rank: Option<Rank>) -> ParseContext {
