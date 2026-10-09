@@ -314,9 +314,15 @@ fn strip_quoted_monomial(ctx: &mut ParseContext, s: String) -> String {
 
 /// Java MISSING_GENUS_EPITHET (StripAndStash.java:341-342): `^[a-z][a-z\-]+\s+\p{Lu}.*`, no
 /// flags. Has `\s` and `\p{Lu}` -> only `\s` ASCII-scoped. Called via `.matches()` in Java
-/// -> trailing `$` added (the pattern already opens with `^`).
-static MISSING_GENUS_EPITHET: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z][a-z\-]+(?-u:\s+)\p{Lu}.*$").unwrap());
+/// -> trailing `$` added (the pattern already opens with `^`). Rust-only: the author may open
+/// with the basionym's bracket (`denisi (Arlé, 1939)`), when it holds a year, a comma, a dot or an
+/// ampersand — a bare word there is the subgenus of a lower-cased genus (`balea (Balea) swalesi`).
+static MISSING_GENUS_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[a-z][a-z\-]+(?-u:\s+)(?:\p{Lu}|\(\p{Lu}[^)]*[\d.,&][^)]*\)).*$").unwrap()
+});
+
+/// A lone epithet: `denisi`.
+static LONE_EPITHET: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z][a-z\-]+$").unwrap());
 
 /// Java MISSING_GENUS_NOTE_KEYWORD (StripAndStash.java:343-344):
 /// `^(?:non|nec|not|sensu|sec|auct|auctt|fide|emend|ss|s|cf|aff|hort)\b.*`, no flags. Has
@@ -370,7 +376,7 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
         }
     } else if s.chars().count() > 1
         && s.chars().next().is_some_and(|c| c.is_lowercase())
-        && MISSING_GENUS_EPITHET.is_match(&s)
+        && (MISSING_GENUS_EPITHET.is_match(&s) || lone_epithet_of_a_species(ctx, &s))
         && !MISSING_GENUS_NOTE_KEYWORD.is_match(&s)
         && !token::is_particle(first_word(&s))
     {
@@ -385,6 +391,18 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
         return missing;
     }
     s
+}
+
+/// A lone lower-case word is an epithet whose genus is missing when its author comes separately or
+/// the rank says species or below: `denisi` + `(Arlé, 1939)` + species. Rust-only: it was made the
+/// genus of an informal name, "Denisi sp.".
+fn lone_epithet_of_a_species(ctx: &ParseContext, s: &str) -> bool {
+    LONE_EPITHET.is_match(s)
+        && (ctx
+            .authorship_input
+            .as_deref()
+            .is_some_and(|a| !java_trim(a).is_empty())
+            || ctx.requested_rank.is_some_and(|r| r.is_species_or_below()))
 }
 
 /// A qualifier in front of a capitalised genus: a question mark, glued or spaced (`?Sydonia alba`,
