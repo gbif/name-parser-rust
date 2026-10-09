@@ -232,10 +232,8 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 take_sanctioning_year(&tokens[bas_end..close], &mut s.basionym);
             } else {
                 // Park the whole "(...)" span as unparsed and skip past it.
-                let open_tok = &tokens[i];
-                let close_tok = &tokens[close];
                 s.unparsed_from = i as i32;
-                s.unparsed_text = Some(slice_text(tokens, open_tok.start, close_tok.end));
+                s.unparsed_text = Some(unparsed_text(&tokens[i..=close]));
             }
             i = close + 1;
         } else if let Some((bas_from, bas_end)) = unclosed_basionym(tokens, i) {
@@ -314,10 +312,8 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
     // going in; so by this point `i == n` on every path. Ported verbatim regardless (see
     // the module doc comment) rather than dropped as "dead code".
     if i < n {
-        let first = &tokens[i];
-        let last = &tokens[n - 1];
         s.unparsed_from = i as i32;
-        s.unparsed_text = Some(slice_text(tokens, first.start, last.end));
+        s.unparsed_text = Some(unparsed_text(&tokens[i..n]));
     }
     s
 }
@@ -1657,24 +1653,29 @@ fn normalise_author_case(s: &str) -> String {
     b
 }
 
-/// Java `AuthorshipParser.sliceText(List<Token>, int, int)`. Iterates the FULL token list
-/// (not just a sub-range by index) filtering by absolute character-offset containment —
-/// matches the Java source's own (slightly unusual but harmless) structure.
-fn slice_text(tokens: &[Token], start: usize, end: usize) -> String {
-    let mut sb = String::new();
-    for t in tokens {
-        if t.start >= start && t.end <= end {
-            sb.push_str(&t.text);
-        }
-    }
-    sb
-}
-
 /// The tokens' text, with a space wherever the source had a gap between two of them.
 fn spaced_text(tokens: &[Token]) -> String {
     let mut sb = String::new();
     for (k, t) in tokens.iter().enumerate() {
         if k > 0 && tokens[k - 1].end < t.start {
+            sb.push(' ');
+        }
+        sb.push_str(&t.text);
+    }
+    sb
+}
+
+/// The unparsed text of `tokens`: [`spaced_text`], but without a space just inside a bracket, so
+/// `( ilic)` reads `(ilic)` while `(swamp variant)` keeps its words apart. Java glued all tokens
+/// together (`(swampvariant)`).
+fn unparsed_text(tokens: &[Token]) -> String {
+    let mut sb = String::new();
+    for (k, t) in tokens.iter().enumerate() {
+        if k > 0
+            && tokens[k - 1].end < t.start
+            && !matches!(tokens[k - 1].text.as_str(), "(" | "[")
+            && !matches!(t.text.as_str(), ")" | "]")
+        {
             sb.push(' ');
         }
         sb.push_str(&t.text);
