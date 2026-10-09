@@ -2986,6 +2986,7 @@ static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// Smith [auctt. misspelling for Eunoe]" -> `taxonomicNote="auctt. misspelling for
 /// Eunoe"`, authors=["Smith"].
 fn strip_bracketed_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    let s = move_homonym_note_behind_year(&s);
     if let Some(caps) = BRACKETED_TAX_NOTE.captures(&s) {
         let trimmed = java_trim(caps.get(1).unwrap().as_str());
         let collapsed = WHITESPACE.replace_all(trimmed, " ");
@@ -3272,6 +3273,37 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// F.europaeus" IS collapsed.
 static INITIAL_DOT_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:\b)(\p{Lu})\.(?-u:\s+)([\p{Ll}][\p{Ll}]{3,})").unwrap());
+
+/// A bracketed homonym note between the author and the year: `Lea (non Faust), 1913`,
+/// `Lea [non Faust] 1913`. Rust-only: it was read as part of the author, "Lea non Faust".
+static HOMONYM_NOTE_BEFORE_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(\S)(?-u:\s*)([(\[](?:nec|non|not)(?-u:\s+)[^()\[\]]+[)\]])(?-u:\s*)(,?(?-u:\s*)(?-u:\d{4})[a-z]?)(?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+/// Moves a [`HOMONYM_NOTE_BEFORE_YEAR`] behind the year, where the trailing bracketed note steps
+/// take it: `Lea (non Faust), 1913` -> `Lea, 1913 (non Faust)`, `Christ (non Wall.)1897` -> `Christ 1897
+/// (non Wall.)`.
+fn move_homonym_note_behind_year(s: &str) -> String {
+    match HOMONYM_NOTE_BEFORE_YEAR.captures(s) {
+        Some(c) => {
+            // the year keeps the separator it had: a comma before a year is zoological usage
+            let year = java_trim(&c[3]);
+            let whole = c.get(0).unwrap();
+            let head = format!("{}{}", &s[..whole.start()], &c[1]);
+            let note = collapse_whitespace(&c[2]);
+            if year.starts_with(',') {
+                // "Tutt, (nec Treitschke), 1905": one comma
+                format!("{}{year} {note}", head.trim_end_matches(','))
+            } else {
+                format!("{head} {year} {note}")
+            }
+        }
+        None => s.to_string(),
+    }
+}
 
 /// A note keyword alone in brackets, followed by its author: "[sensu] Schmidt, 1878". Rust-only.
 static KEYWORD_ONLY_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
@@ -4722,6 +4754,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // ("Focke [non Salisb.]"). A lone bracketed keyword is first unwrapped ("[sensu] Schmidt,
     // 1878").
     s = unwrap_keyword_only_bracket(&s);
+    s = move_homonym_note_behind_year(&s);
     loop {
         let caps = match BRACKETED_TAX_NOTE.captures(&s) {
             Some(c) => c,
