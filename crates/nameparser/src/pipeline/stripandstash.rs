@@ -1281,14 +1281,31 @@ fn normalise_hyphens(ctx: &mut ParseContext, s: String) -> String {
     }
     // A numeral epithet written with a dot for its hyphen ("Rhynchophorus 13.punctatus Herbst",
     // "Curculio 4.maculatus Villers"), which split into a number and an author.
-    DOTTED_NUMERAL_EPITHET
-        .replace_all(&s, "$1$2-$3$4")
-        .into_owned()
+    let s = DOTTED_NUMERAL_EPITHET.replace_all(&s, "$1$2-$3$4");
+    // ...or with a space ("Sphex 2 punctata", "Episyron rufipes 7. maculatus"), which lost the
+    // number or the whole epithet
+    SPACED_NUMERAL_EPITHET.replace(&s, "$1 $2-$3").into_owned()
 }
 
 /// A one- or two-digit number, a dot and a lower-case word: [`normalise_hyphens`].
 static DOTTED_NUMERAL_EPITHET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(\s)(\d{1,2})\.(\p{Ll}{4,})(\s|$)").unwrap());
+
+/// A one- or two-digit number and a numeral epithet's word, spaced apart, right after the genus
+/// (and subgenus) or the species: `Sphex 2 punctata`, `Coccinella 12 guttata`, `Episyron rufipes
+/// 7. maculatus`. Only the words such numbers count (spots, bands, teeth, …): a number before any
+/// other word is a strain, a virus or a numbered form (`Bovine herpesvirus 5 strain N569`).
+/// Rust-only (35 ChecklistBank names): Java dropped the number or the epithet.
+static SPACED_NUMERAL_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"^(\p{Lu}\p{Ll}+(?:(?-u:\s)\(\p{Lu}\p{Ll}+\))?(?:(?-u:\s)\p{Ll}[\p{Ll}-]*)?)",
+        r"(?-u:\s)(\d{1,2})\.?(?-u:\s+)",
+        r"((?:punctat|maculat|guttat|lineat|notat|fasciat|pustulat|dentat|spinos|striat|signat|",
+        r"costat|cinct|vittat|plagiat|sulcat|carinat|tuberculat|radiat|nodos|annulat|ocellat|",
+        r"stigmat|cornut|foveolat|marginat|lobat|virgat|mucronat|color)\p{Ll}*)\b",
+    ))
+    .unwrap()
+});
 
 // ---- Step 13: replaceHomoglyphs ----
 

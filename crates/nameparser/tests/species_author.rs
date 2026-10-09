@@ -107,3 +107,36 @@ fn more_species_author_shapes_before_the_rank_marker() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+/// A numeral epithet with a space for its hyphen: `Sphex 2 punctata` lost its number and
+/// `Episyron rufipes 7. maculatus` its whole epithet (ChecklistBank dataset 2141).
+#[test]
+fn a_spaced_numeral_epithet() {
+    assert_name("Sphex 2 punctata Fabricius, 1793")
+        .species("Sphex", "2-punctata")
+        .comb_authors(Some("1793"), &["Fabricius"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Coccinella 12 guttata Poda, 1761")
+        .species("Coccinella", "12-guttata")
+        .comb_authors(Some("1761"), &["Poda"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Episyron rufipes 7. maculatus")
+        .infra_species(
+            "Episyron",
+            "rufipes",
+            Rank::InfraspecificName,
+            "7-maculatus",
+        )
+        .nothing_else();
+    assert_name("Compsosoma (Compsosoma) 5 notatum")
+        .species_ig("Compsosoma", "Compsosoma", "5-notatum")
+        .nothing_else();
+    // a number before any other word is no numeral epithet
+    if let nameparser::ParseResult::Parsed(p) =
+        nameparser::parse("Bilimbia sphaeroides 1 muscorum", None, None, None)
+    {
+        assert_ne!(p.infraspecific_epithet.as_deref(), Some("1-muscorum"));
+    }
+}
