@@ -420,3 +420,21 @@ fn a_bracketed_remark_with_a_homonym_note() {
     .code(NomCode::Zoological)
     .nothing_else();
 }
+
+/// Two alternative (sub)genera in the bracket after the genus are a note, never the basionym
+/// author and never a subgenus.
+#[test]
+fn alternative_subgenera_in_brackets_are_a_note() {
+    assert_name("Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852")
+        .species("Cyclostoma", "thersites")
+        .comb_authors(Some("1852"), &["Shuttleworth"])
+        .sensu("Cyclophorus vel Leptopoma")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // one word stays the subgenus
+    assert_name("Cyclostoma (Cyclophorus) thersites Shuttleworth 1852")
+        .species_ig("Cyclostoma", "Cyclophorus", "thersites")
+        .comb_authors(Some("1852"), &["Shuttleworth"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

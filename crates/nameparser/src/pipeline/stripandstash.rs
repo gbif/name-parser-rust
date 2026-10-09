@@ -110,6 +110,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_glued_et_al(ctx, s);
     s = strip_colon_concept_reference(ctx, s);
     s = strip_bracketed_tax_note(ctx, s);
+    s = strip_alternative_subgenera(ctx, s);
     s = strip_paren_tax_note(ctx, s);
     s = strip_sensu_lato_remainder(ctx, s);
     s = strip_sensu_stricto_ss(ctx, s);
@@ -3104,6 +3105,25 @@ static PAREN_HOMONYM_THEN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// "(auct.) auct.": the bracketed note only repeats the one that follows.
 static PAREN_AUCT_REPEATED: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\s\(\s*(?i:auctt?\.?|auctorum)\s*\)\s*((?i:auct))").unwrap());
+
+/// Two alternative (sub)genera in the bracket after the genus, "Cyclostoma (Cyclophorus vel
+/// Leptopoma) thersites Shuttleworth 1852": group 1 = the genus, group 2 = the alternatives,
+/// group 3 = the rest from the epithet on.
+static ALTERNATIVE_SUBGENERA: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)\s+\((\p{Lu}\p{Ll}+(?:\s+vel\s+\p{Lu}\p{Ll}+)+)\)\s+(\p{Ll}.*)$")
+        .unwrap()
+});
+
+/// See [`ALTERNATIVE_SUBGENERA`]: the bracket is a taxonomic note, not the subgenus it would be
+/// with one word, and not the basionym author it was read as.
+fn strip_alternative_subgenera(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = ALTERNATIVE_SUBGENERA.captures(&s) else {
+        return s;
+    };
+    ctx.name
+        .add_taxonomic_note(&WHITESPACE.replace_all(&caps[2], " "));
+    format!("{} {}", &caps[1], &caps[3])
+}
 
 fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = PAREN_SENSU_STRICTO.captures(&s) {
