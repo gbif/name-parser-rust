@@ -3231,6 +3231,8 @@ fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
 /// the last two shapes against an author's initials and plain English. Rust-only too: "sens. str." and
 /// "sens. lat." spelled out further than "s. str." (`Rubus fruticosus L. sens.str.`), and "ampl.",
 /// the amplified circumscription of `Cerastium octandrum Hochst. ex A.Rich. ampl. Möschl`.
+/// "non"/"not" may be followed by an "of" (`not of Rafinesque, 1819`), which otherwise left "not"
+/// behind as an author, and a stray closing comma is no part of the note (`auctt.,`).
 static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
@@ -3239,8 +3241,8 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|sensu\.?(?:(?-u:\s).*)?",
         r"|sec\.?(?:(?-u:\s).*)?",
         r"|nec(?-u:\b)(?:(?-u:\s).*)?",
-        r"|nonn?\.?(?-u:\s+)\(?\p{Lu}.*",
-        r"|not(?-u:\s+)\(?(?-i:\p{Lu}(?:\p{Ll}|\.|\p{Lu}\.)).*",
+        r"|nonn?\.?(?-u:\s+)(?:(?-i:of)(?-u:\s+))?\(?\p{Lu}.*",
+        r"|not(?-u:\s+)(?:(?-i:of)(?-u:\s+))?\(?(?-i:\p{Lu}(?:\p{Ll}|\.|\p{Lu}\.)).*",
         r"|emend(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
         r"|(?-i:[Ee]m\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
         r"|fide(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
@@ -3252,7 +3254,7 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?)",
         r"|(?-i:sens\.(?-u:\s*)(?:str|lat|l|ampl)\.?)",
         r"|(?-i:ampl\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
-        r")$",
+        r")(?-u:\s*),?$",
     ))
     .unwrap()
 });
@@ -3469,7 +3471,8 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
     let Some((match_start, note_start)) = find_tax_note(&s, false) else {
         return s;
     };
-    let raw = java_trim(&s[note_start..]).to_string();
+    // a stray comma closing the string is no part of the note ("auctt.,")
+    let raw = java_trim(java_trim(&s[note_start..]).trim_end_matches(',')).to_string();
     if raw.is_empty() {
         return s;
     }
@@ -4819,7 +4822,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // above).
     let padded_tax = format!(" {}", lift_bracketed_notes(&s));
     if let Some((_, group1_start)) = find_tax_note(&padded_tax, true) {
-        let raw = java_trim(&padded_tax[group1_start..]).to_string();
+        let raw = java_trim(java_trim(&padded_tax[group1_start..]).trim_end_matches(',')).to_string();
         if !raw.is_empty() {
             let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
             notes.push(normalise_leading_auct(&with_dots));
