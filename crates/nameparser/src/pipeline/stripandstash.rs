@@ -2223,9 +2223,15 @@ static SIC_WITH_COMMENT: LazyLock<Regex> =
 /// (x4), no `\p{...}`, no unescaped wildcard, and the custom classes `[(\[]`/`[)\]]` are
 /// POSITIVE (list specific ASCII literals, not negated) so they're safe inside a
 /// `(?-u:…)` group (unlike `SIC_WITH_COMMENT`'s negated class above) -> whole-pattern
-/// ASCII-scope.
-static SIC: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?-u:\s*[(\[]\s*sic\s*!?\s*[)\]])").unwrap());
+/// ASCII-scope. Rust-only: a dot after "sic" ("[sic.]"), and a bare "sic." closing the string
+/// after a year or an abbreviated author ("AANDRES, 1881 sic.", not "subsp. sic") — group 1 keeps
+/// what it follows.
+static SIC: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?-u:\s*[(\[]\s*sic\.?\s*!?\s*[)\]])|(\d|\p{Lu}\p{L}*\.)(?-u:\s*)sic\.?!?(?-u:\s*)$",
+    )
+    .unwrap()
+});
 
 /// Java CORRIG (StripAndStash.java:35-36):
 /// `\s*[\(\[]\s*corrig\.?\s*[\)\]]|(?<=\s)corrig\.?(?=\s|$)`, no flags. The bracketed
@@ -2237,12 +2243,21 @@ static SIC: LazyLock<Regex> =
 /// self-contained like every other pattern in this file, and because `regexes::SIC`/
 /// `CORRIG` are NOT ASCII-scoped per this port's flag rule (they predate it), so reusing
 /// them directly would introduce a `\s`-scope divergence from Java.
+/// Rust-only: before a comma too ("Smith corrig., 1900"), and glued to the next author
+/// ("corrig.Yoon et al. 2001").
 static CORRIG: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"[ \t\n\x0B\f\r]*[(\[][ \t\n\x0B\f\r]*corrig\.?[ \t\n\x0B\f\r]*[)\]]|(?<=[ \t\n\x0B\f\r])corrig\.?(?=[ \t\n\x0B\f\r]|$)",
+        r"[ \t\n\x0B\f\r]*[(\[][ \t\n\x0B\f\r]*corrig\.?[ \t\n\x0B\f\r]*[)\]]|(?<=[ \t\n\x0B\f\r])corrig\.?(?=[ \t\n\x0B\f\r,]|$)|(?<=[ \t\n\x0B\f\r])corrig\.(?=\p{Lu})",
     )
     .unwrap()
 });
+
+/// `s` without the [`SIC`] match, keeping the year digit or dot a trailing bare "sic." follows.
+fn remove_sic(s: &str, caps: &regex::Captures<'_>) -> String {
+    let whole = caps.get(0).unwrap();
+    let kept = caps.get(1).map_or("", |m| m.as_str());
+    format!("{}{kept}{}", &s[..whole.start()], &s[whole.end()..])
+}
 
 /// Java `StripAndStash.stripSicAndCorrig` (StripAndStash.java:1101-1124). Three
 /// SEQUENTIAL checks (not else-if — each runs against the possibly-already-updated `s`,
@@ -2269,10 +2284,9 @@ fn strip_sic_and_corrig(ctx: &mut ParseContext, mut s: String) -> String {
         let (start, end) = (whole.start(), whole.end());
         s = format!("{}{}", &s[..start], &s[end..]);
     }
-    if let Some(m) = SIC.find(&s) {
+    if let Some(caps) = SIC.captures(&s) {
         ctx.name.original_spelling = Some(true);
-        let (start, end) = (m.start(), m.end());
-        s = format!("{}{}", &s[..start], &s[end..]);
+        s = remove_sic(&s, &caps);
     }
     let padded = format!(" {s}");
     if let Ok(Some(_)) = CORRIG.find(&padded) {
@@ -4812,9 +4826,9 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
         name.original_spelling = Some(true);
         s = format!("{}{}", &s[..m.start()], &s[m.end()..]);
     }
-    if let Some(m) = SIC.find(&s) {
+    if let Some(caps) = SIC.captures(&s) {
         name.original_spelling = Some(true);
-        s = format!("{}{}", &s[..m.start()], &s[m.end()..]);
+        s = remove_sic(&s, &caps);
     }
     {
         let padded = format!(" {s}");

@@ -408,3 +408,38 @@ fn an_unparsed_bracket_keeps_its_spaces() {
         .partial("(appressed hair variant)")
         .nothing_else();
 }
+
+/// More spellings of sic and corrig.: a dot after sic, a bare trailing "sic.", and corrig. before
+/// a comma or glued to the next author.
+#[test]
+fn sic_and_corrig_spellings_in_a_separate_authorship() {
+    assert_name_auth("Bunodeopsis strumosa", "AANDRES, 1881 sic.")
+        .species("Bunodeopsis", "strumosa")
+        .comb_authors(Some("1881"), &["Aandres"])
+        .code(NomCode::Zoological)
+        .sic()
+        .nothing_else();
+    assert_name_auth("Stephanauge nexilis", "(Verril, 1883) [sic.]")
+        .species("Stephanauge", "nexilis")
+        .bas_authors(Some("1883"), &["Verril"])
+        .code(NomCode::Zoological)
+        .sic()
+        .nothing_else();
+    assert_name_auth("Anemonia pelagica", "Quoy et Gaymard [sic.]")
+        .species("Anemonia", "pelagica")
+        .comb_authors(None, &["Quoy", "Gaymard"])
+        .sic()
+        .nothing_else();
+    assert_name_auth("Abies alba", "Smith corrig., 1900")
+        .species("Abies", "alba")
+        .comb_authors(Some("1900"), &["Smith"])
+        .code(NomCode::Zoological)
+        .corrig()
+        .nothing_else();
+    assert_name_auth("Aus bus", "corrig.Yoon et al. 2001")
+        .species("Aus", "bus")
+        .comb_authors(Some("2001"), &["Yoon", "al."])
+        .code(NomCode::Zoological)
+        .corrig()
+        .nothing_else();
+}
