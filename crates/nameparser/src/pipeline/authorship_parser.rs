@@ -554,6 +554,8 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     let mut after_separator: Vec<usize> = Vec::new();
     let mut ex_after_separator: Vec<usize> = Vec::new();
     let mut cur = String::new();
+    // inside the run of all-capital particles that opens an author ("VAN DER WULP")
+    let mut particle_run = false;
     let mut year_range = false;
     let mut bracketed_year: Option<String> = None;
     let mut i = from;
@@ -898,7 +900,19 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                 }
             }
             // If full ALL-CAPS author name (e.g. FISCHER) length > 1, normalise to title case
-            let text = normalise_author_case(&t.text);
+            // an all-capital particle opening an author takes its usual case, and a short surname
+            // after it is no initials: "DE VIS" -> "de Vis". In the middle of a name ("NIETO-MONTES
+            // DE OCA") it is left to the initials reading.
+            let opens = cur.is_empty() || only_initials(&cur);
+            let particle = (opens || particle_run) && is_shouted_particle(tokens, i, to);
+            let text = if particle {
+                shouted_particle_case(&t.text, opens)
+            } else if particle_run {
+                title_case_shouted(&t.text)
+            } else {
+                normalise_author_case(&t.text)
+            };
+            particle_run = particle;
             append_space(&mut cur);
             cur.push_str(&text);
             i += 1;
@@ -1629,10 +1643,73 @@ fn append_author_words(tokens: &[Token], from: usize, to: usize, sb: &mut String
     }
 }
 
+/// An all-capital particle before an all-capital surname, perhaps after more particles: "DE
+/// SAUSSURE", "VAN DER WULP". Alone or before a mixed-case surname ("DE Saussure") it may be
+/// initials and is left as it is; so are a single letter and the connectors "IN", "OF", "UND".
+fn is_shouted_particle(tokens: &[Token], i: usize, to: usize) -> bool {
+    let particle = |t: &Token| {
+        t.kind == TokenKind::Word
+            && is_all_upper(&t.text)
+            && t.text.chars().count() > 1
+            && is_particle(&t.text)
+            && !matches!(t.text.as_str(), "IN" | "OF" | "UND")
+    };
+    if i >= to || !particle(&tokens[i]) {
+        return false;
+    }
+    let mut k = i + 1;
+    while k < to && particle(&tokens[k]) {
+        k += 1;
+    }
+    k < to
+        && tokens[k].kind == TokenKind::Word
+        && is_all_upper(&tokens[k].text)
+        && tokens[k].text.chars().count() >= 3
+}
+
+/// A [`is_shouted_particle`] in its usual case: lower case ("de Saussure", "van der Wulp"), but
+/// capitalised the Italian ones ("Di Iorio", "Dalla Torre") and the French article opening the
+/// name ("Le Conte", "La Ferté").
+fn shouted_particle_case(s: &str, opens_name: bool) -> String {
+    let lower = s.to_lowercase();
+    let capitalised = matches!(
+        lower.as_str(),
+        "di" | "dal"
+            | "dalla"
+            | "dalle"
+            | "dallo"
+            | "degli"
+            | "dei"
+            | "della"
+            | "delle"
+            | "delli"
+            | "dello"
+            | "lo"
+    ) || (opens_name && matches!(lower.as_str(), "le" | "la"));
+    if capitalised {
+        title_case_shouted(s)
+    } else {
+        lower
+    }
+}
+
+/// Only initials so far, "E.C." of "E.C. VAN DYKE": the author's name has not begun.
+fn only_initials(cur: &str) -> bool {
+    let cur = cur.trim();
+    !cur.is_empty()
+        && cur.ends_with('.')
+        && cur
+            .split('.')
+            .filter(|p| !p.is_empty())
+            .all(|p| p.chars().count() == 1 && p.chars().all(char::is_uppercase))
+}
+
 /// Java `AuthorshipParser.normaliseAuthorCase(String)`. Normalises an ALL-CAPS author word
 /// to title case ("FISCHER" → "Fischer"). Short all-caps tokens (< 4 chars) are kept
 /// as-is — they are likely initials ("MA", "DC"). Package-private in Java (widened
-/// visibility); no caller outside this module in this port, so kept private here.
+/// visibility); no caller outside this module in this port, so kept private here. Unlike Java,
+/// the letter after a "Mc" is a capital again ("MCCORD" → "McCord"); "Mac" is left alone, it is
+/// both "Macdonald" and "MacDonald".
 fn normalise_author_case(s: &str) -> String {
     if s.chars().count() < 4 {
         return s.to_string();
@@ -1641,6 +1718,14 @@ fn normalise_author_case(s: &str) -> String {
     if !all_upper {
         return s.to_string();
     }
+    title_case_shouted(s)
+}
+
+/// The title case of an all-capital word, whatever its length: every letter after the first of
+/// each hyphen- or apostrophe-separated part lower case ("ST-HILAIRE" -> "St-Hilaire",
+/// "O'BRIEN" -> "O'Brien"), and the letter after a "Mc" a capital again when a syllable follows
+/// ("MCCORD" -> "McCord", not the acronym "MCCS").
+fn title_case_shouted(s: &str) -> String {
     let mut b = String::with_capacity(s.len());
     let mut first = true;
     for c in s.chars() {
@@ -1654,6 +1739,16 @@ fn normalise_author_case(s: &str) -> String {
         } else {
             b.push(c);
             first = true;
+        }
+    }
+    if let Some(rest) = b.strip_prefix("Mc") {
+        let syllable = rest.chars().count() >= 3
+            && rest
+                .chars()
+                .any(|c| matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'y'));
+        let mut chars = rest.chars();
+        if let Some(c) = chars.next().filter(|c| c.is_lowercase() && syllable) {
+            b = format!("Mc{}{}", c.to_uppercase(), chars.as_str());
         }
     }
     b
@@ -2614,6 +2709,34 @@ mod tests {
         let s = parse_str("FISCHER 1885");
         assert_eq!(s.combination.authors, vec!["Fischer".to_string()]);
         assert_eq!(s.combination.year, Some("1885".to_string()));
+    }
+
+    #[test]
+    fn all_caps_mc_surname_keeps_its_second_capital() {
+        let s = parse_str("WILSON & MCCRANIE 1982");
+        assert_eq!(authors(&s), &["Wilson".to_string(), "McCranie".to_string()]);
+        // an acronym is no Mc name; Mac is left alone, it is both Macdonald and MacDonald
+        assert_eq!(authors(&parse_str("MACDONALD")), &["Macdonald".to_string()]);
+    }
+
+    #[test]
+    fn all_caps_particle_takes_its_usual_case() {
+        for (raw, author) in [
+            ("DE SAUSSURE", "de Saussure"),
+            ("VAN DER WULP", "van der Wulp"),
+            ("DE VIS", "de Vis"),
+            ("DI IORIO", "Di Iorio"),
+            ("DE DALLA TORRE", "de Dalla Torre"),
+            ("LE CONTE", "Le Conte"),
+            ("DE LA TORRE", "de la Torre"),
+        ] {
+            assert_eq!(authors(&parse_str(raw)), &[author.to_string()], "{raw}");
+        }
+        // before a mixed-case surname it may be initials
+        assert_eq!(
+            authors(&parse_str("DE Saussure")),
+            &["DE Saussure".to_string()]
+        );
     }
 
     #[test]
