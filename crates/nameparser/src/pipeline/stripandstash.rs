@@ -216,8 +216,13 @@ static INED_QMARK: LazyLock<Regex> =
 /// lookahead's content instead of merely peeking at it is unobservable: existence of a
 /// match is identical either way. (Same restructuring class as Preflight's
 /// `PURE_ALPHANUM`.)
-static UNCERTAIN_AUTHOR_QMARK: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\p{L}\?\s*(?:$|[&,])").unwrap());
+///
+/// Rust-only, also before a year when the word is capitalised: `Barovski? 1926`, `Rondot? 1887?`,
+/// which Java dropped silently (#80). A lower-case word before the year is an epithet, not an
+/// author.
+static UNCERTAIN_AUTHOR_QMARK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\p{L}\?\s*(?:$|[&,])|(?:^|[\s(])\p{Lu}[\p{L}'.\-]*\?\s+\d{4}").unwrap()
+});
 
 /// Java UNCERTAIN_AUTHOR_OR (StripAndStash.java:304-305): `\p{Lu}\p{L}*\s+or\s+\p{Lu}`,
 /// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.

@@ -1175,6 +1175,22 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             if i < to && tokens[i].kind == TokenKind::Word {
                 cur.push_str(&tokens[i].text);
                 i += 1;
+            } else if is_lone_initial(&cur)
+                && after_separator.last() == Some(&authors.len())
+                && tokens[i..to].first().is_none_or(|q| {
+                    matches!(
+                        q.kind,
+                        TokenKind::Number
+                            | TokenKind::Comma
+                            | TokenKind::Ampersand
+                            | TokenKind::Semicolon
+                    )
+                })
+            {
+                // "Chrysanthus & F? 1967": a doubted author of its own, no initial of the one
+                // before the "&" (`Redtenbacher, W?, 1842` is); the mark keeps [`invert_all`] from
+                // joining them and is dropped after it (#80)
+                cur.push('?');
             }
             continue;
         }
@@ -1253,15 +1269,29 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             after_separator = std::mem::take(&mut ex_after_separator);
         }
     }
+    let unmark = |list: Vec<String>| -> Vec<String> {
+        list.into_iter()
+            .map(|a| match a.strip_suffix('?') {
+                Some(lone) if is_lone_initial(lone) => lone.to_string(),
+                _ => a,
+            })
+            .collect()
+    };
     if !authors.is_empty() {
-        into.authors = invert_all(&authors, &after_separator);
+        into.authors = unmark(invert_all(&authors, &after_separator));
     }
     if let Some(ex) = ex_authors {
         if !ex.is_empty() {
-            into.ex_authors = invert_all(&ex, &ex_after_separator);
+            into.ex_authors = unmark(invert_all(&ex, &ex_after_separator));
         }
     }
     year_range
+}
+
+/// A single capital letter and its dot: an initial, or an author cut short (`F?`).
+fn is_lone_initial(s: &str) -> bool {
+    let mut cs = s.chars();
+    cs.next().is_some_and(char::is_uppercase) && cs.next() == Some('.') && cs.next().is_none()
 }
 
 /// Java `AuthorshipParser.invertAll(List<String>)`. Walks the author list applying two
