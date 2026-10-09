@@ -551,9 +551,10 @@ fn binomials_with_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 
+    // the letter tells apart works of the same year and stays part of it
     assert_name("Platypus bicaudatulus Schedl (1935h)")
         .species("Platypus", "bicaudatulus")
-        .comb_authors(Some("1935"), &["Schedl"])
+        .comb_authors(Some("1935h"), &["Schedl"])
         .code(NomCode::Zoological)
         .nothing_else();
 
@@ -571,7 +572,7 @@ fn binomials_with_authorship() {
 
     assert_name("Platypus bicaudatulus Schedl, 1935h")
         .species("Platypus", "bicaudatulus")
-        .comb_authors(Some("1935"), &["Schedl"])
+        .comb_authors(Some("1935h"), &["Schedl"])
         .code(NomCode::Zoological)
         .nothing_else();
 

@@ -629,14 +629,26 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                     }
                 }
             }
-            // Drop a single trailing lowercase-letter year disambiguator ("1935h" / "1935 h",
-            // or "193k7" where the k is an OCR/typo artifact followed by digits).
+            // A single letter glued to the year tells apart works of the same author(s) in the
+            // same year ("Browne, 1961a") and stays part of it; spaced ("1935 h") or followed by
+            // digits ("193k7", an OCR artefact) it is dropped.
             if i < to {
                 let nx = &tokens[i];
                 if nx.kind == TokenKind::Word
                     && starts_lower(&nx.text)
                     && is_year_disambiguator(&nx.text)
                 {
+                    let glued = nx.start == tokens[i - 1].end
+                        && nx.text.chars().count() == 1
+                        && nx.text.chars().all(|c| c.is_ascii_lowercase());
+                    if glued {
+                        for y in [&mut into.year, &mut into.imprint_year] {
+                            if y.as_deref() == Some(tokens[i - 1].text.as_str()) {
+                                y.as_mut().expect("just matched").push_str(&nx.text);
+                                break;
+                            }
+                        }
+                    }
                     i += 1;
                 }
             }
@@ -1496,9 +1508,9 @@ fn format_initials(s: &str) -> String {
 }
 
 /// Java `AuthorshipParser.isYearDisambiguator(String)`. True when the token text looks
-/// like a year-disambiguator suffix that should be dropped after a year token: a single
-/// lowercase letter optionally followed by all-digit characters — e.g. "h" (from
-/// "1935h"), "k7" (OCR-garbled year-suffix artifact in "193k7").
+/// like a year-disambiguator suffix after a year token: a single lowercase letter optionally
+/// followed by all-digit characters — e.g. "h" (from "1935h", kept with the year when glued to
+/// it), "k7" (OCR-garbled year-suffix artifact in "193k7", dropped).
 fn is_year_disambiguator(s: &str) -> bool {
     let mut chars = s.chars();
     match chars.next() {
@@ -2576,10 +2588,15 @@ mod tests {
     }
 
     #[test]
-    fn trailing_year_disambiguator_letter_is_dropped() {
+    fn trailing_year_disambiguator_letter_stays_with_the_year() {
         let s = parse_str("Smith, 1935h");
-        assert_eq!(s.combination.year, Some("1935".to_string()));
+        assert_eq!(s.combination.year, Some("1935h".to_string()));
         assert_eq!(s.combination.authors, vec!["Smith".to_string()]);
+        // spaced it is dropped, as is the OCR artefact "193k7"
+        assert_eq!(
+            parse_str("Smith, 1935 h").combination.year,
+            Some("1935".to_string())
+        );
     }
 
     #[test]
