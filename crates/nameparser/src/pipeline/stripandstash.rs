@@ -4058,6 +4058,14 @@ static IPNI_EMBEDDED_NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
 static IPNI_YEAR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:\((\d{4})\)\s*\.?\s*)$").unwrap());
 
+/// An [`IPNI_CITATION`] "reference" of nothing but years: `1909 (1910)`, `1860-1862 (1859)`.
+static YEARS_ONLY: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?-u:\s*\d{4})[a-z]?(?:(?-u:\s*)[-\x{2013}](?-u:\s*\d{4})[a-z]?)?(?-u:\s*\(\d{4}\)\s*)$",
+    )
+    .unwrap()
+});
+
 /// Java `StripAndStash.stripIpniCitation` (StripAndStash.java:1464-1490). An IPNI-style
 /// citation ("Kirchn., Annals and Magazine of Natural History (1988).") — an author span,
 /// comma, then a publication title ending in a parenthesised year — OVERWRITES `publishedIn`
@@ -4078,6 +4086,12 @@ fn strip_ipni_citation(ctx: &mut ParseContext, s: String) -> String {
         _ => return strip_page_year_citation(ctx, s),
     };
     let group1 = caps.get(1).unwrap();
+    // A citation has a title: "Broun, 1909 (1910)" is a year with its imprint year in brackets
+    // (ICZN Rec. 22A.2.3), whose "reference" `1909 (1910)` lost the actual year to the bracketed
+    // one. Rust-only.
+    if YEARS_ONLY.is_match(group1.as_str()) {
+        return s;
+    }
     let mut reference = java_trim(group1.as_str()).to_string();
     if let Ok(Some(nm)) = IPNI_EMBEDDED_NOM_NOTE.captures(&reference) {
         let note_match = nm.get(1).unwrap();
