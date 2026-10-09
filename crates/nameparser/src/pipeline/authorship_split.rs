@@ -290,7 +290,9 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     continue;
                 }
                 // Infraspecific rank marker (incl. "notho" prefix variants)
-                if rank_markers::match_infraspecific_allow_notho(w).is_some() {
+                if rank_markers::match_infraspecific_allow_notho(w).is_some()
+                    && (have_epithet || !rank_markers::needs_species_epithet(w))
+                {
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;

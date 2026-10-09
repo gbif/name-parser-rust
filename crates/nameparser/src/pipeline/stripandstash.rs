@@ -61,6 +61,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_rank_lineage(ctx, s);
     s = strip_leading_species_label(ctx, s);
+    s = strip_stray_qmark_after_marker(s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
@@ -596,6 +597,22 @@ static STAR_MARKER: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(r"(?<=\p{Ll})[ \t\n\x0B\f\r]+\*+[ \t\n\x0B\f\r]+(?=\p{Ll})").unwrap()
 });
 
+/// A "?." standing between a rank marker's abbreviation and the epithet, "Phalaris canariensis L.
+/// m. ?. bracteata Jansen & Wacht.": an OCR artefact or a garbled second marker. Group 1 = the
+/// marker, group 2 = the epithet's first letter.
+static STRAY_QMARK_AFTER_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\s\p{Ll}{1,12}\.)(?-u:\s+)\?\.((?-u:\s+)\p{Ll})").unwrap());
+
+/// See [`STRAY_QMARK_AFTER_MARKER`]: dropped, so the marker reaches its epithet. Rust-only.
+fn strip_stray_qmark_after_marker(s: String) -> String {
+    if !s.contains("?.") {
+        return s;
+    }
+    STRAY_QMARK_AFTER_MARKER
+        .replace_all(&s, "$1$2")
+        .into_owned()
+}
+
 /// Java `StripAndStash.stripInfraRankLetters` (StripAndStash.java:703-717). Strips
 /// Greek-like single-letter rank markers (α, β, …, and the APL-alpha lookalike U+237A) and
 /// informal "***" markers sitting between two lowercase epithets — fungal rank markers
@@ -687,6 +704,12 @@ const KNOWN_INFRASPECIFIC_MARKERS: &[&str] = &[
     "strain",
     "str",
     "st",
+    "m",
+    "morpha",
+    "monstr",
+    "mod",
+    "modif",
+    "modificatio",
     "*",
 ];
 
@@ -1028,7 +1051,10 @@ fn stash_trailing_rank_marker_code(ctx: &mut ParseContext, s: String) -> String 
         return s;
     };
     let marker = caps.get(2).unwrap();
-    if is_indet_species_marker(marker.as_str()) || !is_rank_marker_word(marker.as_str()) {
+    if is_indet_species_marker(marker.as_str())
+        || !is_rank_marker_word(marker.as_str())
+        || super::rank_markers::needs_species_epithet(marker.as_str())
+    {
         return s;
     }
     // The phrase is the verbatim source text from the marker to the end of the code, so the
