@@ -133,3 +133,14 @@ fn spec_with_a_separate_authorship_is_the_published_epithet() {
         .phrase("spec. Platnick, 2002")
         .nothing_else();
 }
+
+/// What a separate authorship leaves unparsed is added to what the name string left unparsed,
+/// not put in its place.
+#[test]
+fn the_unparsed_rest_of_both_columns_is_kept() {
+    assert_name_auth("Abies alba Mill. foo 1234 bar", "L. foo bar baz")
+        .species("Abies", "alba")
+        .comb_authors(None, &["L."])
+        .partial("foo 1234 bar foo bar baz")
+        .nothing_else();
+}

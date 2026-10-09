@@ -466,7 +466,14 @@ fn parse_separate_authorship(ctx: &mut ParseContext, authorship: String) -> Opti
         apply_authorship(&mut ctx.name, &st);
         if st.unparsed_from >= 0 {
             ctx.name.state = State::Partial;
-            ctx.name.unparsed = st.unparsed_text.clone();
+            // added to what the name string left unparsed, not in its place
+            if let Some(rest) = st.unparsed_text.clone() {
+                ctx.name.unparsed = Some(match ctx.name.unparsed.take() {
+                    Some(own) if contains_ignoring_punctuation(&own, &rest) => own,
+                    Some(own) => format!("{own} {rest}"),
+                    None => rest,
+                });
+            }
         }
         return Some(st);
     }
