@@ -11,7 +11,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NomCode, Rank};
+use nameparser::model::{warnings, NomCode, Rank};
 
 #[test]
 fn anon_is_normalised_in_both_paths() {
@@ -94,5 +94,26 @@ fn an_in_citation_of_an_anonymous_work() {
         .comb_authors(Some("1837"), &["Swainson"])
         .published_in("anon. 1837")
         .published_in_year(Some(1837))
+        .nothing_else();
+}
+
+/// A question mark glued to the manuscript marker is doubt, like a free-standing one; it kept the
+/// marker from being read, and "ined" became an infraspecific epithet.
+#[test]
+fn a_question_mark_glued_to_the_manuscript_marker() {
+    assert_name("Oxalis_barrelieri ined.?")
+        .species("Oxalis", "barrelieri")
+        .nom_note("ined.")
+        .manuscript()
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+    assert_name("Betula pubescens subsp. suecica Gunnarss. ined.?")
+        .infra_species("Betula", "pubescens", Rank::Subspecies, "suecica")
+        .comb_authors(None, &["Gunnarss."])
+        .nom_note("ined.")
+        .manuscript()
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 }

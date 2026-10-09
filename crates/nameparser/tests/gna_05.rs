@@ -102,7 +102,7 @@ fn possible_canonical() {
     // group: Possible canonical. Various trailing junk forms recoverable to
     // the core canonical name. Gibberish trailing digit strings are dropped,
     // stray opening parens are closed, a quoted "Dall" is the attributed author,
-    // botanical " ined.?" tentative-publication markers leave a PARTIAL state,
+    // a botanical " ined.?" tentative-publication marker is a doubtful manuscript name,
     // "(Approved Lists YYYY)" bacterial-code annotations are stripped.
     assert_name("Morea (Morea) burtius 2342343242 23424322342 23424234")
         .species_ig("Morea", "Morea", "burtius")
@@ -122,7 +122,10 @@ fn possible_canonical() {
         .nothing_else();
     assert_name("Agropyron pectiniforme var. karabaljikji ined.?")
         .infra_species("Agropyron", "pectiniforme", Rank::Variety, "karabaljikji")
-        .partial("ined")
+        .nom_note("ined.")
+        .manuscript()
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
     assert_name("Staphylococcus hyicus chromogenes Devriese et al. 1978")
         .infra_species("Staphylococcus", "hyicus", Rank::Subspecies, "chromogenes")

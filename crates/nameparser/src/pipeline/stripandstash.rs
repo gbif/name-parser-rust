@@ -199,6 +199,11 @@ fn fancy_replace_all(
 /// `\p{...}`, no unescaped wildcard -> whole pattern ASCII-scoped (trailing `$` left
 /// outside the wrap, per convention — anchors aren't `u`-sensitive either way).
 static TRAILING_QMARK: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s\?\s*)$").unwrap());
+/// A question mark glued to a closing manuscript marker, "Oxalis_barrelieri ined.?": doubtful like
+/// a free-standing one. Without the space it kept the marker from being read, and "ined" became an
+/// infraspecific epithet. Rust-only.
+static INED_QMARK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\bined\.?)(\?(?-u:\s*))$").unwrap());
 
 /// Java UNCERTAIN_AUTHOR_QMARK (StripAndStash.java:302-303):
 /// `\p{L}\?(?=\s*(?:$|[&,]))`, `Pattern.UNICODE_CHARACTER_CLASS` (keep default Unicode
@@ -236,6 +241,10 @@ fn flag_uncertain_authorship(ctx: &mut ParseContext, mut s: String) -> String {
         ctx.name.doubtful = true;
         ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
         s = java_trim(&TRAILING_QMARK.replace_all(&s, "")).to_string();
+    } else if let Some(qmark) = INED_QMARK.captures(&s).and_then(|c| c.get(1)) {
+        ctx.name.doubtful = true;
+        ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+        s.truncate(qmark.start());
     }
     if UNCERTAIN_AUTHOR_QMARK.is_match(&s)
         || UNCERTAIN_AUTHOR_OR.is_match(&s)
