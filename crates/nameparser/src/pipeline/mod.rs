@@ -315,6 +315,9 @@ pub fn run(
             .as_ref()
             .or(autonym_state.as_ref())
             .filter(|st| st.combination.exists() || st.basionym.exists());
+        // a name string ending in its cultivar epithet holds only the species author, the column
+        // the cultivar's own: no conflict ("Acer campestre L. cv. 'Elsrijk'" + "Broerse")
+        let may_conflict = !ends_in_cultivar;
         let repeated = own.is_some()
             && !letters(&authorship).is_empty()
             && contains_ignoring_punctuation(&trimmed, &authorship);
@@ -331,6 +334,13 @@ pub fn run(
                     if same_authorship(own, &st) {
                         apply_authorship(&mut ctx.name, &st);
                         extra_state = Some(st);
+                    } else if may_conflict
+                        && !holds_less(&st, own, ctx.name.published_in.as_deref())
+                    {
+                        // the column names the authorship of another part of the name: the
+                        // species author of "Cyprinus carpio Linnaeus, 1758 ssp. murgo Dybowski,
+                        // 1869" + "Linnaeus, 1758"
+                        ctx.name.add_warning(warnings::AUTHORSHIP_CONFLICT);
                     }
                 }
             }
@@ -341,7 +351,41 @@ pub fn run(
                     ctx.name.nomenclatural_note.clone(),
                     ctx.name.taxonomic_note.clone(),
                 );
+                // A separate authorship that wins replaces the name string's whole authorship,
+                // so two citations are not mixed ("Aus bus (L.) Smith" + "Mill." kept the
+                // basionym author L.); kept when the column holds none.
+                let replaced = own.map(|_| {
+                    (
+                        std::mem::take(&mut ctx.name.combination_authorship),
+                        std::mem::take(&mut ctx.name.basionym_authorship),
+                    )
+                });
                 extra_state = parse_separate_authorship(&mut ctx, authorship);
+                let column = extra_state
+                    .as_ref()
+                    .filter(|st| st.combination.exists() || st.basionym.exists());
+                // Holding less than the name string, the column is no conflict; it leaves the
+                // name string's authorship in place when that carries a year or brackets it lacks,
+                // as a repeated one does ("(Valenciennes, 1826)" + "Achille Valenciennes"), and
+                // wins when it only spells the same authors out ("John Erikss" + "John Eriksson").
+                let less = match (own, column) {
+                    (Some(own), Some(column)) => Some((
+                        holds_less(column, own, ctx.name.published_in.as_deref()),
+                        carries_more(own, column),
+                    )),
+                    _ => None,
+                };
+                match (less, column.is_some(), replaced) {
+                    (Some((true, true)), _, Some((combination, basionym)))
+                    | (_, false, Some((combination, basionym))) => {
+                        ctx.name.combination_authorship = combination;
+                        ctx.name.basionym_authorship = basionym;
+                    }
+                    (Some((false, _)), _, _) if may_conflict => {
+                        ctx.name.add_warning(warnings::AUTHORSHIP_CONFLICT);
+                    }
+                    _ => {}
+                }
                 drop_repeated_note(&mut ctx.name.nomenclatural_note, notes.0);
                 drop_repeated_note(&mut ctx.name.taxonomic_note, notes.1);
             }
@@ -492,6 +536,62 @@ fn drop_repeated_note(note: &mut Option<String>, before: Option<String>) {
             }
         }
     }
+}
+
+/// The separately supplied authorship `column` holds no more than the name string's `own`: each of
+/// its authors is one of `own`'s, abbreviated or not, with fewer or more initials, and each of its
+/// years one of `own`'s, brackets or not ("Dumbletonius Dugdale, 1986" + "Dugdale", "(Bloch,
+/// 1792)" + "Bloch 1792"); or an author or year of the work the name string cites with "in"
+/// ("Tong & Li in Tong, Li & Bian, 2020" + "Tong, Li & Bian 2020"). Spelling is compared without
+/// diacritics ("Linnæus", "Linnaeus"). Anything else is a conflict — unless the name string's
+/// authorship names no one at all ("(?)").
+fn holds_less(column: &AuthState, own: &AuthState, published_in: Option<&str>) -> bool {
+    let key = |s: &str| letters(&crate::format::fold_to_ascii(s)).to_lowercase();
+    let names = |st: &AuthState| -> Vec<String> {
+        [&st.combination, &st.basionym]
+            .into_iter()
+            .flat_map(|a| a.authors.iter().chain(&a.ex_authors))
+            .map(|a| key(a))
+            .filter(|a| !a.is_empty())
+            .collect()
+    };
+    let years = |st: &AuthState| -> Vec<String> {
+        [&st.combination, &st.basionym]
+            .into_iter()
+            .filter_map(|a| a.year.clone())
+            .collect()
+    };
+    // an abbreviation is a prefix ("L." of "Linnaeus"), initials come in front ("J.Smith"), but a
+    // lone letter is no surname ("Mill." is not "L.")
+    let same = |a: &str, b: &str| {
+        let (short, long) = if a.len() <= b.len() { (a, b) } else { (b, a) };
+        long.starts_with(short) || (short.chars().count() >= 3 && long.ends_with(short))
+    };
+    let (own_names, own_years) = (names(own), years(own));
+    if own_names.is_empty() && own_years.is_empty() {
+        return true;
+    }
+    let cited = published_in.map(key).unwrap_or_default();
+    let cited_text = published_in.unwrap_or_default();
+    names(column).iter().all(|c| {
+        own_names.iter().any(|o| same(c, o)) || (!cited.is_empty() && cited.contains(c.as_str()))
+    }) && years(column)
+        .iter()
+        .all(|y| own_years.contains(y) || cited_text.contains(y.as_str()))
+}
+
+/// `own` carries a year or an authorship part (combination or basionym) that `column` lacks.
+fn carries_more(own: &AuthState, column: &AuthState) -> bool {
+    let years = |st: &AuthState| {
+        [&st.combination, &st.basionym]
+            .into_iter()
+            .filter_map(|a| a.year.clone())
+            .collect::<Vec<_>>()
+    };
+    let column_years = years(column);
+    years(own).iter().any(|y| !column_years.contains(y))
+        || (own.basionym.exists() && !column.basionym.exists())
+        || (own.combination.exists() && !column.combination.exists())
 }
 
 /// `a` and `b` name the same combination and basionym authors, ex-authors and years, regardless of

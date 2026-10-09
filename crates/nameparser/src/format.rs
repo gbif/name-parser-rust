@@ -673,7 +673,7 @@ static MARK: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\p{M}").unwrap());
 /// Java `UnicodeUtils.foldToAscii(String)` — `replaceSpecialCases`, then Unicode NFD (which
 /// splits accented letters into base + combining mark), then drop all `\p{M}` marks, leaving
 /// the ascii base letters.
-fn fold_to_ascii(x: &str) -> String {
+pub(crate) fn fold_to_ascii(x: &str) -> String {
     let x = replace_special_cases(x);
     let nfd: String = x.nfd().collect();
     MARK.replace_all(&nfd, "").into_owned()

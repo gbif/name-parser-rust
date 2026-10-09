@@ -1154,6 +1154,9 @@ pub mod warnings {
     /// NB: trailing space before the closing quote is verbatim from the Java source.
     pub const REMOVED_PREFIX: &str = "Removed: ";
     pub const LONG_NAME: &str = "unusually long name";
+    /// Rust-only so far (name-parser-api has no constant for it yet): a separately supplied
+    /// authorship differs from the one in the name string beyond holding less of it.
+    pub const AUTHORSHIP_CONFLICT: &str = "separate authorship differs from the name string's";
 }
 
 #[cfg(test)]
