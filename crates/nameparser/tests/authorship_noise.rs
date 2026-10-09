@@ -63,6 +63,7 @@ fn an_approved_lists_citation_with_a_comma_is_bacterial_too() {
     .monomial("Enterobacter")
     .comb_authors(Some("1960"), &["Hormaeche", "Edwards"])
     .code(NomCode::Bacterial)
+    .nom_note("Approved Lists 1980")
     .nothing_else();
 }
 
@@ -248,6 +249,7 @@ fn an_approved_lists_citation_before_an_emendation() {
     .comb_authors(Some("1970"), &["Lechevalier", "Lechevalier"])
     .sensu("emend. Nouioui et al. 2018")
     .code(NomCode::Bacterial)
+    .nom_note("Approved Lists 1980")
     .nothing_else();
 }
 

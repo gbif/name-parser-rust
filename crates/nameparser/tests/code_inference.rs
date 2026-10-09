@@ -30,6 +30,7 @@ fn an_approved_lists_citation_is_bacterial() {
         .species("Mycoplasma", "cynos")
         .comb_authors(Some("1973"), &["Rosendal"])
         .code(NomCode::Bacterial)
+        .nom_note("Approved Lists 1980")
         .nothing_else();
 }
 

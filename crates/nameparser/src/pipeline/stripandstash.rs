@@ -2856,20 +2856,23 @@ fn strip_pro_sp_annotation(_ctx: &mut ParseContext, s: String) -> String {
 /// (`(Approved Lists, 1980)`, 273 ChecklistBank rows), and an emendation after it (`Lee et al. 1979
 /// (Approved Lists 1980) emend. Kim 2000`, 301 rows), which Java left for the authors.
 static APPROVED_LISTS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\s*\(\s*Approved\s+Lists,?\s+\d{4}\s*\)\s*\.?\s*)(?:,?(?-u:\s*)(emend(?-u:\b).*))?$")
+    Regex::new(r"(?i)(?-u:\s*\(\s*Approved\s+Lists,?\s+(\d{4})\s*\)\s*\.?\s*)(?:,?(?-u:\s*)(emend(?-u:\b).*))?$")
         .unwrap()
 });
 
 /// Java `StripAndStash.stripApprovedLists` (StripAndStash.java:1241-1249). A trailing "
-/// (Approved Lists YYYY)" bacterial-code annotation is stripped silently, working-string
-/// only — spot-checked: "Aus bus Smith (Approved Lists 1980)" -> authors=["Smith"], no
-/// other side effect.
+/// (Approved Lists YYYY)" bacterial-code annotation is stripped from the working string. Java
+/// dropped it silently; it says the name is validly published by its inclusion in the Approved
+/// Lists of Bacterial Names (ICNP Rule 24a), so it is kept as the nomenclatural note "Approved
+/// Lists 1980".
 fn strip_approved_lists(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = APPROVED_LISTS.captures(&s) {
         ctx.approved_lists = true;
+        ctx.name
+            .add_nomenclatural_note(&format!("Approved Lists {}", &caps[1]));
         let before = java_trim(&s[..caps.get(0).unwrap().start()]);
         // the emendation that follows is left to the taxonomic-note step
-        return match caps.get(1) {
+        return match caps.get(2) {
             Some(emend) => format!("{before} {}", emend.as_str()),
             None => before.to_string(),
         };
@@ -6588,10 +6591,14 @@ mod tests {
     // ---- Step 35: stripApprovedLists ----
 
     #[test]
-    fn approved_lists_annotation_is_stripped_silently() {
+    fn approved_lists_annotation_becomes_the_nomenclatural_note() {
         let mut c = ctx("x");
         let out = strip_approved_lists(&mut c, "Aus bus Smith (Approved Lists 1980)".to_string());
         assert_eq!(out, "Aus bus Smith");
+        assert_eq!(
+            c.name.nomenclatural_note.as_deref(),
+            Some("Approved Lists 1980")
+        );
     }
 
     #[test]
