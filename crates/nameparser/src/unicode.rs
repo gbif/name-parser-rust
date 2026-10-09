@@ -280,11 +280,13 @@ pub fn normalize_spaces(x: &str) -> Cow<'_, str> {
 /// removed — zero-width space and joiners U+200B–U+200D, the word joiner U+2060 and the byte order
 /// mark U+FEFF (the first cell of a UTF-8 file with a BOM) — and the fullwidth ASCII forms
 /// U+FF01–U+FF5E folded to ASCII, as East Asian keyboards type them (`（Tubangui，1928）`). The
-/// homoglyph table cannot do the latter: it maps fullwidth `ｌ` and `Ｉ` to the digit `1`. Not the
-/// soft hyphen U+00AD: in the data it is mostly half of the Windows-1252 mojibake `Ã\u{ad}` for
-/// `í`, repaired later, or a stand-in for a real hyphen (`Miranda\u{ad}Ribeiro`). Decomposed
-/// letters are composed (NFC): a combining accent after its letter (`Za\u{301}gors\u{30c}ek`)
-/// otherwise splits the word, and Java read `Za gors ek`. Borrows when there is nothing to change.
+/// homoglyph table cannot do the latter: it maps fullwidth `ｌ` and `Ｉ` to the digit `1`. The soft
+/// hyphen U+00AD only marks where a word may break: it is dropped (`novae\u{ad}zelandiae`,
+/// `Ramí\u{ad}rez`), except between a lower-case and a capital letter, where it stands for a real
+/// hyphen (`Miranda\u{ad}Ribeiro`), and after `Ã`, where it is half of the Windows-1252 mojibake
+/// `Ã\u{ad}` for `í`, repaired later. Decomposed letters are composed (NFC): a combining accent
+/// after its letter (`Za\u{301}gors\u{30c}ek`) otherwise splits the word, and Java read
+/// `Za gors ek`. Borrows when there is nothing to change.
 pub fn normalize_input(x: &str) -> Cow<'_, str> {
     let x: Cow<'_, str> = if x
         .chars()
@@ -296,25 +298,39 @@ pub fn normalize_input(x: &str) -> Cow<'_, str> {
     };
     if !x
         .chars()
-        .any(|c| is_unicode_space(c) || is_invisible(c) || is_fullwidth(c))
+        .any(|c| is_unicode_space(c) || is_invisible(c) || is_fullwidth(c) || c == SOFT_HYPHEN)
     {
         return x;
     }
-    Cow::Owned(
-        x.chars()
-            .filter(|&c| !is_invisible(c))
-            .map(|c| {
-                if is_unicode_space(c) {
-                    ' '
-                } else if is_fullwidth(c) {
-                    char::from_u32(c as u32 - 0xFEE0).unwrap_or(c)
-                } else {
-                    c
-                }
-            })
-            .collect(),
-    )
+    let chars: Vec<char> = x.chars().collect();
+    let mut out = String::with_capacity(x.len());
+    for (i, &c) in chars.iter().enumerate() {
+        if is_invisible(c) {
+            continue;
+        }
+        if c == SOFT_HYPHEN {
+            let prev = i.checked_sub(1).map(|k| chars[k]);
+            let next = chars.get(i + 1).copied();
+            if prev == Some('Ã') {
+                out.push(c);
+            } else if prev.is_some_and(char::is_lowercase) && next.is_some_and(char::is_uppercase) {
+                out.push('-');
+            }
+            continue;
+        }
+        out.push(if is_unicode_space(c) {
+            ' '
+        } else if is_fullwidth(c) {
+            char::from_u32(c as u32 - 0xFEE0).unwrap_or(c)
+        } else {
+            c
+        });
+    }
+    Cow::Owned(out)
 }
+
+/// U+00AD, see [`normalize_input`].
+const SOFT_HYPHEN: char = '\u{AD}';
 
 /// A fullwidth ASCII form, U+FF01–U+FF5E: `！` … `～`.
 pub fn is_fullwidth(c: char) -> bool {
@@ -471,8 +487,12 @@ mod tests {
         assert_eq!(normalize_input("Ｍｉｌｌ．"), "Mill.");
         assert_eq!(normalize_input("Za\u{301}gors\u{30c}ek"), "Zágoršek");
         assert!(matches!(normalize_input("Abies alba L."), Cow::Borrowed(_)));
-        // the soft hyphen stays: mojibake for `í`, or a stand-in for a hyphen
+        // the soft hyphen stays in the mojibake for `í`, stands for a hyphen before a capital and
+        // is dropped elsewhere
         assert_eq!(normalize_input("Ort\u{c3}\u{ad}z"), "Ort\u{c3}\u{ad}z");
+        assert_eq!(normalize_input("Miranda\u{ad}Ribeiro"), "Miranda-Ribeiro");
+        assert_eq!(normalize_input("novae\u{ad}zelandiae"), "novaezelandiae");
+        assert_eq!(normalize_input("D.\u{ad}Hawksw."), "D.Hawksw.");
     }
 
     #[test]
