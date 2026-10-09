@@ -109,6 +109,7 @@ fn bracketed_authors_of_an_anonymous_work() {
         .species("Aus", "bus")
         .comb_anon(Some("1806"), &["Hübner"])
         .code(NomCode::Zoological)
+        .bracketed_year()
         .nothing_else();
 }
 

@@ -42,10 +42,13 @@ use nameparser::model::{NameType, NomCode, ParseError, Rank};
 /// `Authorship` (name-parser-api 5.2): string slot 12 becomes
 /// [`layout::SLOT_SANCTIONING_AUTHOR_COMB`], a new slot 17 ([`layout::SLOT_SANCTIONING_AUTHOR_BAS`])
 /// carries the basionym's, and a present nested group gains a sixth string ref — an older decoder
-/// would misread the string table's size and every offset after it.
+/// would misread the string table's size and every offset after it. **Version 7** carries
+/// `Authorship.bracketedYear` (name-parser-api 5.4) in two more bits of the authorship flags
+/// ([`layout::BRACKETED_YEAR_COMBINATION_BIT`], [`layout::BRACKETED_YEAR_BASIONYM_BIT`]): the layout
+/// is unchanged, but an older decoder would silently drop them.
 #[no_mangle]
 pub extern "C" fn np_abi_version() -> u32 {
-    std::panic::catch_unwind(|| 6u32).unwrap_or(0)
+    std::panic::catch_unwind(|| 7u32).unwrap_or(0)
 }
 
 /// SAFETY: `p` must be either null or a valid, NUL-terminated C string for the duration of
@@ -190,8 +193,8 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn np_abi_version_is_5() {
-        assert_eq!(np_abi_version(), 6);
+    fn np_abi_version_is_7() {
+        assert_eq!(np_abi_version(), 7);
     }
 
     #[test]

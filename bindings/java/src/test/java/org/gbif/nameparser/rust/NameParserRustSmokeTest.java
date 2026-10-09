@@ -88,6 +88,23 @@ class NameParserRustSmokeTest {
   }
 
   @Test
+  void bracketedYearsCrossTheWire() throws UnparsableNameException {
+    // ABI 7: Authorship.bracketedYear, a year from external evidence (ICZN Rec. 22A.2.3)
+    ParsedName pn = parser.parse("Phyllomacromia", "Westwood, [1851]", null, null).orElseThrow();
+    assertTrue(pn.getCombinationAuthorship().isBracketedYear());
+    assertEquals("1851", pn.getCombinationAuthorship().getYear());
+    assertEquals("Westwood, [1851]", pn.authorshipComplete());
+
+    ParsedName bas = parser.parse("Acleris aspersana (Hübner, [1819])", null, null, null).orElseThrow();
+    assertTrue(bas.getBasionymAuthorship().isBracketedYear());
+    assertEquals("(Hübner, [1819])", bas.authorshipComplete());
+
+    ParsedName imprint = parser.parse("Ctenotus alacer Storr, 1970 [1969]", null, null, null).orElseThrow();
+    assertFalse(imprint.getCombinationAuthorship().isBracketedYear());
+    assertEquals("1969", imprint.getCombinationAuthorship().getImprintYear());
+  }
+
+  @Test
   void sanctioningAuthorsCrossTheWireOnEachAuthorship() throws UnparsableNameException {
     // ABI 6: the basionym's sanctioning author is kept inside its brackets (ICN Art. 15)
     ParsedName pn = parser.parse("Merulius lacrimans (Wulfen : Fr.) Schum.", null, null, null).orElseThrow();

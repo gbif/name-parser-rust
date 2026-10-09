@@ -421,6 +421,10 @@ enum Np {
     ImprintYear,
     /// The basionym authorship's imprint year.
     BasImprintYear,
+    /// The combination authorship's year in square brackets.
+    BracketedYear,
+    /// The basionym authorship's year in square brackets.
+    BasBracketedYear,
     Doubtful,
     State,
     Code,
@@ -871,6 +875,25 @@ impl NameAssertion {
         self.mark(&[Np::BasImprintYear])
     }
 
+    /// The combination authorship's year is established from external evidence, cited in square
+    /// brackets ("Westwood, [1851]").
+    pub fn bracketed_year(self) -> Self {
+        assert!(
+            self.n.combination_authorship.bracketed_year,
+            "expected a bracketed combination year"
+        );
+        self.mark(&[Np::BracketedYear])
+    }
+
+    /// The basionym authorship's year is in square brackets ("(Hübner, [1819])").
+    pub fn bas_bracketed_year(self) -> Self {
+        assert!(
+            self.n.basionym_authorship.bracketed_year,
+            "expected a bracketed basionym year"
+        );
+        self.mark(&[Np::BasBracketedYear])
+    }
+
     pub fn nom_note(self, nom_note: &str) -> Self {
         assert_eq!(self.n.nomenclatural_note.as_deref(), Some(nom_note));
         self.mark(&[Np::NomNote])
@@ -1011,6 +1034,7 @@ impl NameAssertion {
             untested(Np::Auth),
             untested(Np::ExAuth),
             untested(Np::ImprintYear),
+            untested(Np::BracketedYear),
             untested(Np::Sanct),
         );
         check_authorship_default(
@@ -1019,6 +1043,7 @@ impl NameAssertion {
             untested(Np::Bas),
             untested(Np::ExBas),
             untested(Np::BasImprintYear),
+            untested(Np::BasBracketedYear),
             untested(Np::BasSanct),
         );
 
@@ -1108,6 +1133,7 @@ fn check_authorship_default(
     main_untested: bool,
     ex_untested: bool,
     imprint_untested: bool,
+    bracketed_untested: bool,
     sanct_untested: bool,
 ) {
     let Authorship {
@@ -1115,9 +1141,13 @@ fn check_authorship_default(
         ex_authors,
         year,
         imprint_year,
+        bracketed_year,
         anonymous,
         sanctioning_author,
     } = a;
+    if bracketed_untested {
+        assert!(!bracketed_year, "unexpected bracketed {label} year");
+    }
     if sanct_untested {
         assert!(
             sanctioning_author.is_none(),
@@ -1181,6 +1211,7 @@ fn check_combined_authorship_default(
             a,
             untested,
             ex_untested,
+            true,
             true,
             true,
         );

@@ -159,11 +159,11 @@ fn parse_stdin_to_stdout_matches_a_verified_java_cli_transcript() {
 
     assert_eq!(
         lines[0],
-        r#"{"line":1,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}"#
+        r#"{"line":1,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}"#
     );
     assert_eq!(
         lines[1],
-        r#"{"line":2,"input":"Vulpes vulpes silaceus Miller, 1907","parsed":{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}"#
+        r#"{"line":2,"input":"Vulpes vulpes silaceus Miller, 1907","parsed":{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}"#
     );
     assert_eq!(
         lines[2],
@@ -213,7 +213,7 @@ fn parse_three_way_emits_a_distinct_informal_row_with_canonical() {
     // scientific -> the same `parsed` object the default (oracle) mode emits
     assert_eq!(
         lines[0],
-        r#"{"line":1,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}"#
+        r#"{"line":1,"input":"Abies alba Mill.","parsed":{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}"#
     );
     // semistructured -> a distinct `informal` object with its flat anchor + canonical
     assert_eq!(

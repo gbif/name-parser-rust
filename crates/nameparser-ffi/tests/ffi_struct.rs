@@ -117,6 +117,7 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
             ex_authors: exauthors_comb,
             year: year_comb,
             imprint_year: imprint_year_comb,
+            bracketed_year: flags & layout::BRACKETED_YEAR_COMBINATION_BIT != 0,
             anonymous: flags & layout::ANON_COMBINATION_BIT != 0,
             sanctioning_author: sanctioning_author_comb,
         },
@@ -125,6 +126,7 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
             ex_authors: exauthors_bas,
             year: year_bas,
             imprint_year: imprint_year_bas,
+            bracketed_year: flags & layout::BRACKETED_YEAR_BASIONYM_BIT != 0,
             anonymous: flags & layout::ANON_BASIONYM_BIT != 0,
             sanctioning_author: sanctioning_author_bas,
         },
@@ -299,6 +301,16 @@ fn assert_decoded_matches(name: &str, decoded: &Decoded, pn: &ParsedName) {
         decoded.header.authorship_flags & layout::ANON_BASIONYM_BIT != 0,
         pn.basionym_authorship.anonymous,
         "{name}: basionym anonymous"
+    );
+    assert_eq!(
+        decoded.header.authorship_flags & layout::BRACKETED_YEAR_COMBINATION_BIT != 0,
+        pn.combination_authorship.bracketed_year,
+        "{name}: combination bracketed year"
+    );
+    assert_eq!(
+        decoded.header.authorship_flags & layout::BRACKETED_YEAR_BASIONYM_BIT != 0,
+        pn.basionym_authorship.bracketed_year,
+        "{name}: basionym bracketed year"
     );
 
     let expected_original_spelling = match pn.original_spelling {
@@ -927,6 +939,32 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
 }
 
 #[test]
-fn np_abi_version_is_5() {
-    assert_eq!(nameparser_ffi::np_abi_version(), 6);
+fn np_abi_version_is_7() {
+    assert_eq!(nameparser_ffi::np_abi_version(), 7);
+}
+
+// ---- bracketed years (ABI 7) ----
+
+#[test]
+fn bracketed_years_ride_the_authorship_flags() {
+    for name in [
+        "Phyllomacromia Guenée, [1858]",
+        "Acleris aspersana (Hübner, [1819])",
+        "Ctenotus alacer Storr, 1970 [1969]",
+    ] {
+        let buf = parse_struct_success(name);
+        let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
+        let decoded = decode(&buf);
+        assert_decoded_matches(name, &decoded, &pn);
+    }
+    let decoded = decode(&parse_struct_success("Phyllomacromia Guenée, [1858]"));
+    assert_ne!(
+        decoded.header.authorship_flags & layout::BRACKETED_YEAR_COMBINATION_BIT,
+        0
+    );
+    let decoded = decode(&parse_struct_success("Acleris aspersana (Hübner, [1819])"));
+    assert_ne!(
+        decoded.header.authorship_flags & layout::BRACKETED_YEAR_BASIONYM_BIT,
+        0
+    );
 }

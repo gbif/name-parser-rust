@@ -55,15 +55,20 @@ out[, c("scientificName", "parsed", "rank", "genus", "specificEpithet",
 `authorship`, `rank`, `code` (the parser's `SCREAMING_SNAKE_CASE` enum names, e.g.
 `"SPECIES"`, `"ZOOLOGICAL"`).
 
-All 45 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
+All 47 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
 `taxonRank`, `rank`, `code`, `uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`,
 `infraspecificEpithet`, `cultivarEpithet`, `phrase`, `candidatus`, `notho`, `originalSpelling`,
 `epithetQualifier`, `extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`,
 `publishedInYear`, `publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`,
-`combinationAuthors`, `combinationExAuthors`, `combinationYear`, `combinationAnonymous`,
-`combinationSanctioningAuthor`, `basionymAuthors`, `basionymExAuthors`, `basionymYear`,
-`basionymAnonymous`, `basionymSanctioningAuthor`, `warnings`, `canonical`, `canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`,
+`combinationAuthors`, `combinationExAuthors`, `combinationYear`, `combinationBracketedYear`,
+`combinationAnonymous`, `combinationSanctioningAuthor`, `basionymAuthors`, `basionymExAuthors`,
+`basionymYear`, `basionymBracketedYear`, `basionymAnonymous`, `basionymSanctioningAuthor`,
+`warnings`, `canonical`, `canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`,
 `authorshipComplete`.
+
+`combinationBracketedYear` / `basionymBracketedYear` are `TRUE` when the year is not given in the
+work itself but established from external evidence, cited in square brackets (`Westwood, [1851]`,
+ICZN Recommendation 22A.2.3).
 
 `combinationAnonymous` / `basionymAnonymous` are `TRUE` when the work was published anonymously
 ("Anon.", "Anonymous"); the authors, if any, are then attributed from external evidence and

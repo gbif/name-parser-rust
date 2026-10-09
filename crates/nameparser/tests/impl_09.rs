@@ -798,5 +798,6 @@ fn year_variations() {
         .infra_species("Deudorix", "epijarbas", Rank::Subspecies, "turbo")
         .comb_authors(Some("1912"), &["Fruhstorfer"])
         .code(NomCode::Zoological)
+        .bracketed_year()
         .nothing_else();
 }

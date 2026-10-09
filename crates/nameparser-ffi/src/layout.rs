@@ -47,7 +47,7 @@
 //! | 27 | 1 | u8  | `extinct` | 0/1 |
 //! | 28 | 1 | u8  | `original_spelling` | [`ORIGINAL_SPELLING_FALSE`]/[`_TRUE`]/[`_UNKNOWN`] (0/1/2) |
 //! | 29 | 1 | u8  | `notho_bits` | bitset, bit `i` = `NamePart` ordinal `i` present in the notho set |
-//! | 30 | 1 | u8  | `authorship_flags` | bit 0 = `combination_authorship.anonymous`, bit 1 = `basionym_authorship.anonymous` (ABI 5) |
+//! | 30 | 1 | u8  | `authorship_flags` | bit 0 = `combination_authorship.anonymous`, bit 1 = `basionym_authorship.anonymous` (ABI 5), bit 2 = `combination_authorship.bracketed_year`, bit 3 = `basionym_authorship.bracketed_year` (ABI 7) |
 //! | 31 | 1 | —   | *(padding)* | reserved, always zero, keeps `published_in_year` 4-aligned |
 //! | 32 | 4 | i32 | `published_in_year` | -1 if absent |
 //!
@@ -154,8 +154,9 @@
 //!
 //! - `u32 present` — [`GROUP_ABSENT`] (0) or [`GROUP_PRESENT`] (1). **If absent, that 4-byte
 //!   flag is the whole group** (the common case costs 4 bytes and is unambiguous). If present:
-//! - `u32 flags` — the anonymous bits of its two inner authorships, laid out like the header's
-//!   `authorship_flags` ([`ANON_COMBINATION_BIT`], [`ANON_BASIONYM_BIT`]; ABI 5);
+//! - `u32 flags` — the anonymous and bracketed-year bits of its two inner authorships, laid out
+//!   like the header's `authorship_flags` ([`ANON_COMBINATION_BIT`], [`ANON_BASIONYM_BIT`]; ABI 5;
+//!   [`BRACKETED_YEAR_COMBINATION_BIT`], [`BRACKETED_YEAR_BASIONYM_BIT`]; ABI 7);
 //! - four run-slot tables (each a `u32 count` then `count` × 8-byte string refs), in this order:
 //!   its `combination_authorship.authors`, `combination_authorship.ex_authors`,
 //!   `basionym_authorship.authors`, `basionym_authorship.ex_authors`;
@@ -231,9 +232,10 @@ pub const OFF_MANUSCRIPT: usize = 26;
 pub const OFF_EXTINCT: usize = 27;
 pub const OFF_ORIGINAL_SPELLING: usize = 28;
 pub const OFF_NOTHO_BITS: usize = 29;
-/// The anonymous flags of the two base authorships, see [`ANON_COMBINATION_BIT`] /
-/// [`ANON_BASIONYM_BIT`]. Offset 31 is 1 byte of reserved padding (keeps `published_in_year`
-/// 4-aligned).
+/// The anonymous and bracketed-year flags of the two base authorships, see
+/// [`ANON_COMBINATION_BIT`] / [`ANON_BASIONYM_BIT`] / [`BRACKETED_YEAR_COMBINATION_BIT`] /
+/// [`BRACKETED_YEAR_BASIONYM_BIT`]. Offset 31 is 1 byte of reserved padding (keeps
+/// `published_in_year` 4-aligned).
 pub const OFF_AUTHORSHIP_FLAGS: usize = 30;
 pub const OFF_PUBLISHED_IN_YEAR: usize = 32;
 
@@ -241,6 +243,10 @@ pub const OFF_PUBLISHED_IN_YEAR: usize = 32;
 pub const ANON_COMBINATION_BIT: u8 = 1;
 /// `authorship_flags` bit: `basionym_authorship.anonymous`.
 pub const ANON_BASIONYM_BIT: u8 = 2;
+/// `authorship_flags` bit: `combination_authorship.bracketed_year` (ABI 7).
+pub const BRACKETED_YEAR_COMBINATION_BIT: u8 = 4;
+/// `authorship_flags` bit: `basionym_authorship.bracketed_year` (ABI 7).
+pub const BRACKETED_YEAR_BASIONYM_BIT: u8 = 8;
 
 /// The `authorship_flags` byte of a combination + basionym authorship pair (the header's, and a
 /// nested group's `flags` word).
@@ -251,6 +257,12 @@ fn authorship_flags(combination: &Authorship, basionym: &Authorship) -> u8 {
     }
     if basionym.anonymous {
         flags |= ANON_BASIONYM_BIT;
+    }
+    if combination.bracketed_year {
+        flags |= BRACKETED_YEAR_COMBINATION_BIT;
+    }
+    if basionym.bracketed_year {
+        flags |= BRACKETED_YEAR_BASIONYM_BIT;
     }
     flags
 }

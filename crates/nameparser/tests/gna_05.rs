@@ -14,16 +14,19 @@ fn year_in_square_brackets() {
         .monomial("Anthoscopus")
         .comb_authors(Some("1851"), &["Cabanis"])
         .code(NomCode::Zoological)
+        .bracketed_year()
         .nothing_else();
     assert_name("Anthoscopus Cabanis [185?]")
         .monomial("Anthoscopus")
         .comb_authors(Some("185?"), &["Cabanis"])
         .code(NomCode::Zoological)
+        .bracketed_year()
         .nothing_else();
     assert_name("Anthoscopus Cabanis [1851?]")
         .monomial("Anthoscopus")
         .comb_authors(Some("1851?"), &["Cabanis"])
         .code(NomCode::Zoological)
+        .bracketed_year()
         .nothing_else();
     assert_name("Trismegistia monodii Ando, 1973 [1974]")
         .species("Trismegistia", "monodii")
@@ -35,6 +38,7 @@ fn year_in_square_brackets() {
         .species("Zygaena", "witti")
         .comb_authors(Some("1973"), &["Wiegel"])
         .code(NomCode::Zoological)
+        .bracketed_year()
         .nothing_else();
     assert_name("Deyeuxia coarctata Kunth, 1815 [1816]")
         .species("Deyeuxia", "coarctata")

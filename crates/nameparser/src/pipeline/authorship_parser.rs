@@ -626,6 +626,16 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                     if nx.kind == TokenKind::Number && (1..=4).contains(&nx.text.chars().count()) {
                         year_range = true;
                         i += 2;
+                        // a bracketed range is established from external evidence too:
+                        // "(Hübner, [1819-1822])"
+                        if in_brackets_initial
+                            && i < to
+                            && tokens[i].kind == TokenKind::CloseBracket
+                            && into.year.as_deref() == Some(tokens[i - 3].text.as_str())
+                        {
+                            into.bracketed_year = true;
+                            i += 1;
+                        }
                     }
                 }
             }
@@ -1127,6 +1137,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     if let Some(year) = bracketed_year {
         if into.year.is_none() {
             into.year = Some(year);
+            into.bracketed_year = true;
         } else if into.imprint_year.is_none() {
             into.imprint_year = Some(year);
         }
@@ -2557,7 +2568,15 @@ mod tests {
         let s = parse_str("Fruhstorfer, [1912]");
         assert_eq!(s.combination.authors, vec!["Fruhstorfer".to_string()]);
         assert_eq!(s.combination.year, Some("1912".to_string()));
+        assert!(s.combination.bracketed_year);
         assert_eq!(s.combination.imprint_year, None);
+        // a plain year is not bracketed, nor is the one an imprint year follows
+        assert!(!parse_str("Fruhstorfer, 1912").combination.bracketed_year);
+        assert!(!parse_str("Storr, 1970 [1969]").combination.bracketed_year);
+        // a bracketed range keeps its first year, bracketed
+        let s = parse_str("(Hübner, [1819-1822])");
+        assert_eq!(s.basionym.year, Some("1819".to_string()));
+        assert!(s.basionym.bracketed_year);
     }
 
     #[test]
