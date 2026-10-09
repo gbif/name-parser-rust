@@ -91,6 +91,19 @@ static INFRASPECIFIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         ("lus", Rank::Lusus),
         // Sudre's microgène (Rubus), a rank below the species
         ("microg", Rank::InfraspecificName),
+        // Below the subspecies, in older literature: "m." is ambiguous — the zoologists' morpha
+        // (Breuning's "Eunidia simplex m. bifuscomaculata"), the botanists' monstrositas or
+        // modificatio below the forma ("Phalaris canariensis L. m. bracteata Jansen & Wacht.") —
+        // so it gets the rank they share; monstrositas and modificatio have none of their own.
+        // Not INFRASPECIFIC_NAME, which a zoological name turns into a subspecies. Not "mon" or
+        // "monstrositas", which are epithets too ("Euchroeus mon", "Chordeuma pallidum
+        // monstrositas Rothenbühler, 1899"); see [`needs_species_epithet`] for "m".
+        ("m", Rank::InfrasubspecificName),
+        ("morpha", Rank::Morph),
+        ("monstr", Rank::InfrasubspecificName),
+        ("mod", Rank::InfrasubspecificName),
+        ("modif", Rank::InfrasubspecificName),
+        ("modificatio", Rank::InfrasubspecificName),
         // "st." used in some old fungal works as a generic infraspecific marker.
         ("st", Rank::InfraspecificName),
         // "*" between two lowercase epithets is an old infraspecific separator.
@@ -122,6 +135,12 @@ static INFRAGENERIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         ("unr", Rank::InfragenericName),
     ])
 });
+
+/// A marker only once the species epithet is there: right after the genus "m." is the species
+/// epithet abbreviated ("Albana m. subsp. griseum Iablokoff, 1950", "Acaeroplastes m. sardous").
+pub fn needs_species_epithet(word: &str) -> bool {
+    word.eq_ignore_ascii_case("m")
+}
 
 /// Java `RankMarkers.matchInfraspecific(String)` (`RankMarkers.java:132-134`): plain
 /// (non-notho) lookup, case-insensitive.

@@ -395,6 +395,29 @@ fn alpha_beta_theta_names() {
         .code(NomCode::Botanical)
         .nothing_else();
 
+    // a digitised `ß` for β is the same marker, but only as a word of its own
+    assert_name("Capitularia pyxidata ß longipes Floerke")
+        .infra_species(
+            "Capitularia",
+            "pyxidata",
+            Rank::InfraspecificName,
+            "longipes",
+        )
+        .comb_authors(None, &["Floerke"])
+        .nothing_else();
+    assert_name("Capitularia pyxidata ß. longipes")
+        .infra_species(
+            "Capitularia",
+            "pyxidata",
+            Rank::InfraspecificName,
+            "longipes",
+        )
+        .nothing_else();
+    assert_name("Abies alba Weiß")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Weiß"])
+        .nothing_else();
+
     assert_name("Cyclotus amethystinus var. β Guppy, 1868")
         .infra_species("Cyclotus", "amethystinus", Rank::Variety, "β")
         .comb_authors(Some("1868"), &["Guppy"])

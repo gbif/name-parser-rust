@@ -61,6 +61,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_rank_lineage(ctx, s);
     s = strip_leading_species_label(ctx, s);
+    s = strip_stray_qmark_after_marker(s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
@@ -110,6 +111,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_glued_et_al(ctx, s);
     s = strip_colon_concept_reference(ctx, s);
     s = strip_bracketed_tax_note(ctx, s);
+    s = strip_alternative_subgenera(ctx, s);
     s = strip_paren_tax_note(ctx, s);
     s = strip_sensu_lato_remainder(ctx, s);
     s = strip_sensu_stricto_ss(ctx, s);
@@ -198,6 +200,11 @@ fn fancy_replace_all(
 /// `\p{...}`, no unescaped wildcard -> whole pattern ASCII-scoped (trailing `$` left
 /// outside the wrap, per convention — anchors aren't `u`-sensitive either way).
 static TRAILING_QMARK: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\s\?\s*)$").unwrap());
+/// A question mark glued to a closing manuscript marker, "Oxalis_barrelieri ined.?": doubtful like
+/// a free-standing one. Without the space it kept the marker from being read, and "ined" became an
+/// infraspecific epithet. Rust-only.
+static INED_QMARK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\bined\.?)(\?(?-u:\s*))$").unwrap());
 
 /// Java UNCERTAIN_AUTHOR_QMARK (StripAndStash.java:302-303):
 /// `\p{L}\?(?=\s*(?:$|[&,]))`, `Pattern.UNICODE_CHARACTER_CLASS` (keep default Unicode
@@ -235,6 +242,10 @@ fn flag_uncertain_authorship(ctx: &mut ParseContext, mut s: String) -> String {
         ctx.name.doubtful = true;
         ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
         s = java_trim(&TRAILING_QMARK.replace_all(&s, "")).to_string();
+    } else if let Some(qmark) = INED_QMARK.captures(&s).and_then(|c| c.get(1)) {
+        ctx.name.doubtful = true;
+        ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+        s.truncate(qmark.start());
     }
     if UNCERTAIN_AUTHOR_QMARK.is_match(&s)
         || UNCERTAIN_AUTHOR_OR.is_match(&s)
@@ -537,10 +548,14 @@ fn strip_leading_species_label(ctx: &mut ParseContext, s: String) -> String {
 /// `\p{Ll}` -> only `\s` ASCII-scoped. Called via `.matches()` on a `.*CORE.*` pattern —
 /// equivalent to an unanchored `is_match` on CORE alone (dropping the `.*` bookends) since
 /// `.` matches any non-newline char and no name string embeds a newline — restructured to
-/// the core-only form.
+/// the core-only form. Extended beyond Java with the German `ß` (U+00DF), which digitised floras
+/// print for β ("Capitularia pyxidata ß longipes"), but only as a word of its own: glued to a
+/// letter it is the one in a surname (`Weiß`).
 static GREEK_MARKER_TEST: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"[\p{Ll}.](?-u:\s*)[\x{03B1}-\x{03C9}\x{237A}](?:(?-u:\s+)|\.(?-u:\s*))\p{Ll}")
-        .unwrap()
+    Regex::new(
+        r"[\p{Ll}.](?:(?-u:\s*)[\x{03B1}-\x{03C9}\x{237A}]|(?-u:\s+)\x{00DF})(?:(?-u:\s+)|\.(?-u:\s*))\p{Ll}",
+    )
+    .unwrap()
 });
 
 /// Java STAR_MARKER_TEST (StripAndStash.java:318-319): `.*\p{Ll}\s+\*+\s+\p{Ll}.*`, no
@@ -565,10 +580,10 @@ static STAR_MARKER_TEST: LazyLock<Regex> =
 /// it, unconditionally (`fancy_regex::parse`'s flag parser rejects `-u` outright, unlike the
 /// `regex` crate) — so ASCII-only `\s` is spelled out here as the literal Java ASCII
 /// whitespace set `[ \t\n\x0B\f\r]` (space/tab/LF/VT/FF/CR) instead of the `\s` shorthand,
-/// rather than attempting to scope it.
+/// rather than attempting to scope it. The `ß` lookalike for β as in [`GREEK_MARKER_TEST`].
 static GREEK_MARKER: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"([\p{Ll}.])[ \t\n\x0B\f\r]*[\x{03B1}-\x{03C9}\x{237A}](?:[ \t\n\x0B\f\r]+|\.[ \t\n\x0B\f\r]*)(?=[\p{Ll}])",
+        r"([\p{Ll}.])(?:[ \t\n\x0B\f\r]*[\x{03B1}-\x{03C9}\x{237A}]|[ \t\n\x0B\f\r]+\x{00DF})(?:[ \t\n\x0B\f\r]+|\.[ \t\n\x0B\f\r]*)(?=[\p{Ll}])",
     )
     .unwrap()
 });
@@ -581,6 +596,22 @@ static GREEK_MARKER: LazyLock<FancyRegex> = LazyLock::new(|| {
 static STAR_MARKER: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(r"(?<=\p{Ll})[ \t\n\x0B\f\r]+\*+[ \t\n\x0B\f\r]+(?=\p{Ll})").unwrap()
 });
+
+/// A "?." standing between a rank marker's abbreviation and the epithet, "Phalaris canariensis L.
+/// m. ?. bracteata Jansen & Wacht.": an OCR artefact or a garbled second marker. Group 1 = the
+/// marker, group 2 = the epithet's first letter.
+static STRAY_QMARK_AFTER_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\s\p{Ll}{1,12}\.)(?-u:\s+)\?\.((?-u:\s+)\p{Ll})").unwrap());
+
+/// See [`STRAY_QMARK_AFTER_MARKER`]: dropped, so the marker reaches its epithet. Rust-only.
+fn strip_stray_qmark_after_marker(s: String) -> String {
+    if !s.contains("?.") {
+        return s;
+    }
+    STRAY_QMARK_AFTER_MARKER
+        .replace_all(&s, "$1$2")
+        .into_owned()
+}
 
 /// Java `StripAndStash.stripInfraRankLetters` (StripAndStash.java:703-717). Strips
 /// Greek-like single-letter rank markers (α, β, …, and the APL-alpha lookalike U+237A) and
@@ -673,6 +704,12 @@ const KNOWN_INFRASPECIFIC_MARKERS: &[&str] = &[
     "strain",
     "str",
     "st",
+    "m",
+    "morpha",
+    "monstr",
+    "mod",
+    "modif",
+    "modificatio",
     "*",
 ];
 
@@ -866,53 +903,60 @@ static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
 /// (not year-shaped) becomes the strain phrase it is.
 static TRAILING_YEAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?-u:[12]\d{3})$").unwrap());
 
-/// A taxon, a generic organism label as its epithet and whatever follows it ("Acidimicrobiales
-/// bacterium JGI 01_E13", "Wolbachia endosymbiont of Leptogenys gracilis", "Candidatus
-/// Abawacabacteria bacterium"). Group 1 = taxon + label, group 2 = the tail.
+/// A taxon, a generic organism label and whatever follows it ("Acidimicrobiales bacterium JGI
+/// 01_E13", "Wolbachia endosymbiont of Leptogenys gracilis", "Candidatus Abawacabacteria
+/// bacterium"). Group 1 = the taxon, group 2 = the label, group 3 = the tail. Not `archaea`: after
+/// a genus that is the Latin epithet "ancient" (`Rinodina archaea`, `Russula archaea R. Heim`), and
+/// ChecklistBank has it as a label only in `Asgard archaea`.
 static ORGANISM_LABEL_TAIL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^((?:Candidatus\s+)?\p{Lu}\p{Ll}+\s+\p{Ll}*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?:\s+(.+?))?\s*$",
+        r"^((?:Candidatus\s+)?\p{Lu}\p{Ll}+)\s+(\p{Ll}*(?:bacteri(?:um|a)|archae(?:on|ote)|symbionts?))(?:\s+(.+?))?\s*$",
     )
     .unwrap()
 });
 
-/// An [`ORGANISM_LABEL_TAIL`] is a provisional name, INFORMAL like the "Genus species CODE" of
-/// [`stash_trailing_strain_code`]: the label stays its epithet, the tail — a strain code, a host,
-/// several words — becomes the phrase. Java read the tail as authors ("JGI E13", "of Leptogenys
-/// gracilis") and the bare label as a species.
+/// An [`ORGANISM_LABEL_TAIL`] is a provisional name of an unnamed species of the taxon, INFORMAL
+/// like `Burkholderia sp. (Gigaspora margarita endosymbiont)`: the label opens the phrase and the
+/// tail — a strain code, a host, several words — runs on in it. Java read the tail as authors
+/// ("JGI E13", "of Leptogenys gracilis") and the bare label as a species; keeping the label as the
+/// epithet made a pseudo-species "Wolbachia endosymbiont" of every Wolbachia endosymbiont of every
+/// host.
 fn stash_organism_label_tail(ctx: &mut ParseContext, s: String) -> String {
     let Some(caps) = ORGANISM_LABEL_TAIL.captures(&s) else {
         return s;
     };
-    match caps.get(2) {
-        // an author behind it makes the label a real epithet: the diatom "Navicula bacterium
-        // Frenguelli"
-        Some(tail) if LABEL_TAIL_AUTHOR.is_match(tail.as_str()) => s,
-        Some(tail) => {
-            ctx.name.type_ = NameType::Informal;
-            ctx.name.phrase = Some(tail.as_str().to_string());
-            caps[1].to_string()
-        }
+    let phrase = match caps.get(3) {
+        // an author or an infraspecific name behind it makes the label a real epithet: the diatom
+        // "Navicula bacterium Frenguelli", "Allochromatium phaeobacterium Srinivas et al., 2009"
+        Some(tail) if LABEL_TAIL_NAME.is_match(tail.as_str()) => return s,
+        Some(tail) => format!("{} {}", &caps[2], tail.as_str()),
         // alone, a symbiont, or a bacterium of a Candidatus or higher taxon ("Candidatus
         // Abawacabacteria bacterium", "Acidimicrobiales bacterium"); "Navicula bacterium" is a
         // species
-        None => {
-            if s.ends_with("symbiont")
-                || s.ends_with("symbionts")
-                || LABEL_HIGHER_ANCHOR.is_match(&s)
-            {
-                ctx.name.type_ = NameType::Informal;
-            }
-            s
+        None if s.ends_with("symbiont")
+            || s.ends_with("symbionts")
+            || LABEL_HIGHER_ANCHOR.is_match(&s) =>
+        {
+            caps[2].to_string()
         }
-    }
+        None => return s,
+    };
+    ctx.name.type_ = NameType::Informal;
+    ctx.name.rank = Rank::Species;
+    ctx.name.phrase = Some(phrase);
+    caps[1].to_string()
 }
 
-/// An authorship behind an organism label: a capitalised surname, perhaps a team and a year.
-static LABEL_TAIL_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"^\(?\p{Lu}\p{Ll}[\p{L}'.\-]*(?:(?:,? | & | et )\p{Lu}[\p{L}'.\-]+)*(?:,? (?:1[5-9]\d\d|20[0-2]\d))?\)?$",
-    )
+/// What makes an organism label a real epithet when it follows: an authorship — a capitalised
+/// surname, perhaps with initials, a team, `et al.` and a year, perhaps after a basionym's
+/// bracket ("R. Heim 1938", "Riedel and Sanfilippo, 1970", "(Ach.) Arnold") — or an infraspecific
+/// epithet, after a rank marker or before an author ("f. cinerascens", "hitomiae Houart & Moe,
+/// 2011"). A strain code carries a digit or an underscore, a host follows `of`.
+static LABEL_TAIL_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    const AUTHOR: &str = r"(?:\p{Lu}\.\s?)*\p{Lu}\p{Ll}[\p{L}'.\-]*(?:(?:,? | & | et | and )(?:\p{Lu}\.\s?)*\p{Lu}[\p{L}'.\-]+)*(?: et al\.?)?(?:,? (?:1[5-9]\d\d|20[0-2]\d))?";
+    Regex::new(&format!(
+        r"^(?:\(?{AUTHOR}\)?|\({AUTHOR}\) {AUTHOR}|(?:f|fo|forma|var|subvar|subsp|ssp|subf|ab|morph)\.?\s+\p{{Ll}}.*|\p{{Ll}}{{3,}}(?:\s+\(?{AUTHOR}\)?|\s+\({AUTHOR}\) {AUTHOR}))$"
+    ))
     .unwrap()
 });
 
@@ -1007,7 +1051,10 @@ fn stash_trailing_rank_marker_code(ctx: &mut ParseContext, s: String) -> String 
         return s;
     };
     let marker = caps.get(2).unwrap();
-    if is_indet_species_marker(marker.as_str()) || !is_rank_marker_word(marker.as_str()) {
+    if is_indet_species_marker(marker.as_str())
+        || !is_rank_marker_word(marker.as_str())
+        || super::rank_markers::needs_species_epithet(marker.as_str())
+    {
         return s;
     }
     // The phrase is the verbatim source text from the marker to the end of the code, so the
@@ -3093,6 +3140,25 @@ static PAREN_HOMONYM_THEN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// "(auct.) auct.": the bracketed note only repeats the one that follows.
 static PAREN_AUCT_REPEATED: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\s\(\s*(?i:auctt?\.?|auctorum)\s*\)\s*((?i:auct))").unwrap());
+
+/// Two alternative (sub)genera in the bracket after the genus, "Cyclostoma (Cyclophorus vel
+/// Leptopoma) thersites Shuttleworth 1852": group 1 = the genus, group 2 = the alternatives,
+/// group 3 = the rest from the epithet on.
+static ALTERNATIVE_SUBGENERA: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)\s+\((\p{Lu}\p{Ll}+(?:\s+vel\s+\p{Lu}\p{Ll}+)+)\)\s+(\p{Ll}.*)$")
+        .unwrap()
+});
+
+/// See [`ALTERNATIVE_SUBGENERA`]: the bracket is a taxonomic note, not the subgenus it would be
+/// with one word, and not the basionym author it was read as.
+fn strip_alternative_subgenera(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = ALTERNATIVE_SUBGENERA.captures(&s) else {
+        return s;
+    };
+    ctx.name
+        .add_taxonomic_note(&WHITESPACE.replace_all(&caps[2], " "));
+    format!("{} {}", &caps[1], &caps[3])
+}
 
 fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = PAREN_SENSU_STRICTO.captures(&s) {

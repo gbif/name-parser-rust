@@ -290,7 +290,9 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     continue;
                 }
                 // Infraspecific rank marker (incl. "notho" prefix variants)
-                if rank_markers::match_infraspecific_allow_notho(w).is_some() {
+                if rank_markers::match_infraspecific_allow_notho(w).is_some()
+                    && (have_epithet || !rank_markers::needs_species_epithet(w))
+                {
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
@@ -450,6 +452,14 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 i = after_author;
                 continue;
             }
+            // ... or between the species epithet and an unmarked infraspecific one ("Loranthus
+            // incanus Schumach. & Thonn. sessilis Sprague").
+            if have_epithet && name_words == 2 {
+                if let Some(epithet) = unmarked_infraspecific_after_author(tokens, i) {
+                    i = epithet;
+                    continue;
+                }
+            }
             // All-caps multi-letter word in epithet position only counts as an
             // upper-cased epithet when the genus itself was all-caps (so the whole
             // input is shouted) and it isn't followed by an abbreviation dot (ELEV. →
@@ -561,6 +571,12 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 if let Some(after_span) = skip_paren_author_block(tokens, i) {
                     i = after_span;
                     continue;
+                }
+                if name_words == 2 {
+                    if let Some(epithet) = unmarked_infraspecific_after_author(tokens, i) {
+                        i = epithet;
+                        continue;
+                    }
                 }
             }
             return i;
@@ -796,6 +812,202 @@ fn consume_mid_name_author(tokens: &[Token], from: usize) -> Option<usize> {
         return None;
     }
     None
+}
+
+/// Lower-case words that open a note or a citation after an author, never an epithet.
+const NOTE_WORDS: &[&str] = &[
+    "non",
+    "nec",
+    "not",
+    "auct",
+    "auctt",
+    "auctorum",
+    "sensu",
+    "sec",
+    "secundum",
+    "emend",
+    "emd",
+    "excl",
+    "incl",
+    "pro",
+    "partim",
+    "pars",
+    "nom",
+    "nomen",
+    "comb",
+    "stat",
+    "nov",
+    "fide",
+    "teste",
+    "vide",
+    "ined",
+    "sic",
+    "corr",
+    "orth",
+    "err",
+    "lapsus",
+    "descr",
+    "ampl",
+    "mut",
+    "nud",
+    "illeg",
+    "inval",
+    "cons",
+    "rej",
+    "superfl",
+    "syn",
+    "olim",
+    "nunc",
+    "cit",
+    "loc",
+    "tab",
+    "fig",
+    "det",
+    "leg",
+    "coll",
+    "the",
+    "for",
+    "from",
+    "with",
+    "was",
+    "see",
+    "also",
+    "emended",
+    "nach",
+    "after",
+    "according",
+    "per",
+    "vel",
+    "aut",
+    "seu",
+    "sive",
+    "variant",
+    "race",
+    "population",
+    "ecotype",
+    "hybrid",
+    "male",
+    "female",
+    "generic",
+    "nee",
+    "neo",
+];
+
+/// After the species epithet, a species author starting at `from` — a surname, or a basionym
+/// bracket with or without a combination author — followed by an unmarked infraspecific epithet
+/// and that epithet's own author: "Loranthus incanus Schumach. & Thonn. sessilis Sprague",
+/// "Polypodium pectinatum (L. f.) typica Rosent". Returns the epithet's index. The epithet is a
+/// whole lower-case word of three or more letters set off by spaces that no author carries and
+/// that opens no note; the species author before it ends on a dot, a bracket or a year, the author
+/// after it is a capitalised word or a basionym bracket.
+pub(crate) fn unmarked_infraspecific_after_author(tokens: &[Token], from: usize) -> Option<usize> {
+    let n = tokens.len();
+    // not after a rank marker: there the epithet is still to come ("var. (?) pubescens Benth.")
+    let mut before = from;
+    while before > 0 && tokens[before - 1].kind == TokenKind::Dot {
+        before -= 1;
+    }
+    if before > 0
+        && rank_markers::match_infraspecific_allow_notho(strip_dot(&tokens[before - 1].text))
+            .is_some()
+    {
+        return None;
+    }
+    let mut j = from;
+    match tokens.get(from)?.kind {
+        TokenKind::OpenParen => {
+            // a basionym bracket holds an author ("(L. f.)"), not "(?)", "(beta)" or "( , 1818)"
+            let mut depth = 0i32;
+            let mut author = false;
+            loop {
+                let t = tokens.get(j)?;
+                match t.kind {
+                    TokenKind::OpenParen => depth += 1,
+                    TokenKind::CloseParen => depth -= 1,
+                    TokenKind::Word => author |= starts_upper(t),
+                    _ => {}
+                }
+                j += 1;
+                if depth == 0 {
+                    break;
+                }
+            }
+            // nor the genus repeated as a subgenus ("Janthina janthina (Janthina) janthina")
+            let repeated_genus = j == from + 3
+                && tokens[from + 1].kind == TokenKind::Word
+                && tokens[from + 1].text == tokens[0].text;
+            if !author || repeated_genus {
+                return None;
+            }
+        }
+        TokenKind::Word if starts_upper(&tokens[from]) => {}
+        _ => return None,
+    }
+    let span_from = j;
+    while j < n && continues_author_span(tokens, j, span_from) {
+        // a capitalised rank marker is no author ("Eburodacrys mexicana Var. interrupta"); a
+        // single capital is an initial ("F.Muell.")
+        if tokens[j].kind == TokenKind::Word
+            && tokens[j].text.chars().count() > 1
+            && rank_markers::match_infraspecific_allow_notho(&tokens[j].text).is_some()
+        {
+            return None;
+        }
+        j += 1;
+    }
+    // the species author ends on an abbreviation dot, its bracket or a year: after a plain
+    // capitalised word the lower-case one may be a second name's epithet ("Mesalia zinkeni (Dunker
+    // 1851) & Promathildia turritella (Dunker 1851)")
+    if j <= from
+        || !matches!(
+            tokens[j - 1].kind,
+            TokenKind::Dot | TokenKind::CloseParen | TokenKind::Number
+        )
+    {
+        return None;
+    }
+    // after two initials the lower-case word is a surname ("G.B. sowerby II"); a lone capital is
+    // an abbreviated author ("Rumex pulcher L. woodsii (De Not.) Arcang.")
+    let initial = |k: usize| {
+        tokens[k].kind == TokenKind::Word
+            && tokens[k].text.chars().count() == 1
+            && tokens[k + 1].kind == TokenKind::Dot
+    };
+    if j >= 4 && initial(j - 2) && initial(j - 4) {
+        return None;
+    }
+    let t = tokens.get(j)?;
+    let w = t.text.as_str();
+    let spaced =
+        tokens[j - 1].end < t.start && tokens.get(j + 1).is_some_and(|nx| t.end < nx.start);
+    let epithet = t.kind == TokenKind::Word
+        && spaced
+        && w.chars().count() >= 3
+        && w.chars().all(|c| c.is_alphabetic() && c.is_lowercase())
+        && !crate::pipeline::authorship_parser::is_lower_author_word(w)
+        && !NOTE_WORDS.contains(&w)
+        && rank_markers::match_infraspecific_allow_notho(w).is_none()
+        && rank_markers::match_infrageneric_allow_notho(w).is_none()
+        && !matches!(
+            w,
+            "sp" | "spp"
+                | "spec"
+                | "species"
+                | "cf"
+                | "aff"
+                | "indet"
+                | "agg"
+                | "group"
+                | "complex"
+        );
+    let author_follows = match tokens.get(j + 1) {
+        Some(nx) if nx.kind == TokenKind::Word => starts_upper(nx),
+        Some(nx) if nx.kind == TokenKind::OpenParen => tokens
+            .get(j + 2)
+            .is_some_and(|a| a.kind == TokenKind::Word && starts_upper(a)),
+        _ => false,
+    };
+    (epithet && author_follows).then_some(j)
 }
 
 /// The marker word "ser" or "subser" at `i` — real epithets too — is undotted and followed by an

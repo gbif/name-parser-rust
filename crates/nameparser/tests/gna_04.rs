@@ -701,10 +701,12 @@ fn name_strings_with_rna() {
     // group: Name-strings with RNA
     // FIXME(review): a molecule type parsed as a uninomial
     // skipped: ssRNA
-    assert_name("Alpha proteobacterium RNA12")
-        .species("Alpha", "proteobacterium")
-        .phrase("RNA12")
-        .type_(NameType::Informal)
+    // the organism label opens the phrase; "Alpha" is the Greek letter of Alphaproteobacteria
+    assert_informal("Alpha proteobacterium RNA12")
+        .taxon("Alpha")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("proteobacterium RNA12")
         .nothing_else();
     assert_unparsable_code(
         "Ustilaginoidea virens RNA virus",

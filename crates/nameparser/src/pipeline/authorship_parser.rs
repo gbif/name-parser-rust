@@ -325,6 +325,15 @@ const LOWER_AUTHOR_WORDS: &[&str] = &[
     "mscr", "hort", "apud", "litt", "herb", "sched",
 ];
 
+/// A lower-case word an author citation carries: a particle, a filius or other suffix, a connector,
+/// a manuscript or herbarium mark, an anonymous author.
+pub(crate) fn is_lower_author_word(w: &str) -> bool {
+    is_particle(w)
+        || AUTHOR_SUFFIXES.contains(&w)
+        || LOWER_AUTHOR_WORDS.contains(&w)
+        || ANON_WORDS.contains(&w)
+}
+
 /// The first lower-case word of the combination span `tokens[from..to)` that no author carries — a
 /// misplaced epithet ("Schumach. & Thonn. sessilis Sprague"), an English phrase, a note — once an
 /// author has been read (`after_author`: a basionym came before the span). Only a whole word of
@@ -383,10 +392,7 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
             && !glued_after
             && w.chars().count() >= 3
             && w.chars().all(|c| c.is_alphabetic() && c.is_lowercase())
-            && !is_particle(w)
-            && !AUTHOR_SUFFIXES.contains(&w)
-            && !LOWER_AUTHOR_WORDS.contains(&w)
-            && !ANON_WORDS.contains(&w)
+            && !is_lower_author_word(w)
         {
             return Some(k);
         }

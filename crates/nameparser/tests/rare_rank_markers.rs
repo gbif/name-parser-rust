@@ -34,6 +34,64 @@ fn rare_infraspecific_markers() {
         .nothing_else();
 }
 
+/// Markers below the subspecies in older literature: `m.` (morpha, monstrositas or modificatio),
+/// `monstr.`, `mod.`, `morpha`. `m.` used to be glued onto the species author as an initial or
+/// read as the epithet, the real epithet as an author.
+#[test]
+fn infrasubspecific_markers_of_older_literature() {
+    // the stray "?." is dropped
+    assert_name("Phalaris canariensis L. m. ?. bracteata Jansen & Wacht.")
+        .infra_species(
+            "Phalaris",
+            "canariensis",
+            Rank::InfrasubspecificName,
+            "bracteata",
+        )
+        .specific_authors(None, &["L."])
+        .comb_authors(None, &["Jansen", "Wacht."])
+        .nothing_else();
+    // Breuning's morphae: not turned into a subspecies by the zoological code
+    assert_name("Eunidia simplex m. bifuscomaculata Breuning, 1957")
+        .infra_species(
+            "Eunidia",
+            "simplex",
+            Rank::InfrasubspecificName,
+            "bifuscomaculata",
+        )
+        .comb_authors(Some("1957"), &["Breuning"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.")
+        .infra_species(
+            "Aquilegia",
+            "vulgaris",
+            Rank::InfrasubspecificName,
+            "corniculata",
+        )
+        .comb_authors(None, &["Graebn.", "P.Graebn."])
+        .bas_authors(None, &["Vill."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Cladonia gracilis mod. albinea Sandst.")
+        .infra_species(
+            "Cladonia",
+            "gracilis",
+            Rank::InfrasubspecificName,
+            "albinea",
+        )
+        .comb_authors(None, &["Sandst."])
+        .nothing_else();
+    assert_name("Arvicola terrestris morpha subalpina")
+        .infra_species("Arvicola", "terrestris", Rank::Morph, "subalpina")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a capital M. stays an initial
+    assert_name("Abies alba M. Smith")
+        .species("Abies", "alba")
+        .comb_authors(None, &["M.Smith"])
+        .nothing_else();
+}
+
 #[test]
 fn rare_infrageneric_markers() {
     // Fries's tribus within a genus

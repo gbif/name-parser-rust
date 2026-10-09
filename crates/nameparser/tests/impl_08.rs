@@ -423,10 +423,12 @@ fn r_na_names() {
         .type_(NameType::Informal)
         .nothing_else();
 
-    assert_name("Alpha proteobacterium RNA12")
-        .species("Alpha", "proteobacterium")
-        .phrase("RNA12")
-        .type_(NameType::Informal)
+    // the organism label opens the phrase
+    assert_informal("Alpha proteobacterium RNA12")
+        .taxon("Alpha")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("proteobacterium RNA12")
         .nothing_else();
 
     assert_name("Armillaria ostoyae RNA1")

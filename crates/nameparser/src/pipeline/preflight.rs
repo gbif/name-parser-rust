@@ -322,6 +322,14 @@ static MULTI_QUESTION_PREFIX: LazyLock<Regex> =
 /// (and the two literal `\.` after "N"/"n") untouched.
 static NN_PLACEHOLDER: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^N\.(?-u:\s*)[Nn]\.?(?:(?-u:\s*)\(.*\))?(?-u:\s*)$").unwrap());
+/// The word "genus" abbreviated in front, a genus not named (yet): "Gen. et n. sp. Kaimatira Pumice
+/// Sand", "Genn. et n. sp.", "gen. nov.", "Gen. (AQ520454) sp. (Iron Range L.J.Brass 19119)", "Gen
+/// et sp non descr". Rust-only: Java took "Gen." for an abbreviated genus, the "et" after it for
+/// the epithet and a locality for the authorship. Undotted, only before "et"/"nov"/"n.", so the
+/// genus-like "Gen 1" or "Gen nilotica Simon 1906" is left alone.
+static GENUS_WORD_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))").unwrap()
+});
 /// A record that names nothing: "None", "None recorded", "not recorded" (any case). Rust-only:
 /// Java parsed them as the genus "None" or "Not".
 static NO_NAME_RECORDED: LazyLock<Regex> =
@@ -495,6 +503,9 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         || s.eq_ignore_ascii_case("Unaccepted"))
         && !INDET_SPECIES.is_match(&s)
     {
+        return Err(ParseError::new(NameType::Placeholder, None, original));
+    }
+    if GENUS_WORD_PLACEHOLDER.is_match(&s) {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
 
@@ -1090,9 +1101,9 @@ mod tests {
     }
 
     #[test]
-    fn bare_gen_nov_is_other() {
+    fn bare_gen_nov_is_placeholder() {
         let err = check("Gen.nov.").unwrap_err();
-        assert_eq!(err.type_, NameType::Other);
+        assert_eq!(err.type_, NameType::Placeholder);
     }
 
     #[test]

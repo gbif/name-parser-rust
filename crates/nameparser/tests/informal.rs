@@ -264,9 +264,6 @@ fn a_digit_leading_strain_code_on_a_binomial_is_the_phrase() {
         // microbial strain designations, the bulk of the band in the verbatim corpus
         ("Escherichia coli 18-41", "18-41"),
         ("Acinetobacter baumannii 1237893", "1237893"),
-        ("Actinomycetota bacterium 4327", "4327"),
-        ("Bacteroidetes bacterium 20/6", "20/6"),
-        ("Lachnospiraceae bacterium 47-T17", "47-T17"),
     ] {
         let pn = match nameparser::parse(input, None, None, None) {
             ParseResult::Parsed(pn) => pn,
@@ -280,6 +277,31 @@ fn a_digit_leading_strain_code_on_a_binomial_is_the_phrase() {
             "no authorship should be invented for {input:?}, got {:?}",
             pn.combination_authorship
         );
+    }
+    // behind a higher taxon's organism label the label opens the phrase: no epithet "bacterium"
+    for (input, taxon, phrase) in [
+        (
+            "Actinomycetota bacterium 4327",
+            "Actinomycetota",
+            "bacterium 4327",
+        ),
+        (
+            "Bacteroidetes bacterium 20/6",
+            "Bacteroidetes",
+            "bacterium 20/6",
+        ),
+        (
+            "Lachnospiraceae bacterium 47-T17",
+            "Lachnospiraceae",
+            "bacterium 47-T17",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
     }
 }
 

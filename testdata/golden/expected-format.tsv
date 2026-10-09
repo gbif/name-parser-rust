@@ -275,7 +275,7 @@ Cyanopis hypoleuca Sch.Bip.	true	Cyanopis hypoleuca Sch.Bip.	Cyanopis hypoleuca	
 Cyanopsis leopoldii Sch.Bip.	true	Cyanopsis leopoldii Sch.Bip.	Cyanopsis leopoldii	Cyanopsis leopoldii	Cyanopsis leopoldii Sch.Bip.	Sch.Bip.
 Cyanotis schliebenii Mildbr. ms.	true	Cyanotis schliebenii Mildbr.	Cyanotis schliebenii	Cyanotis schliebenii	Cyanotis schliebenii Mildbr., ms.	Mildbr.
 Cyclanthera boliviensis Mart.Crov.	true	Cyclanthera boliviensis Mart.Crov.	Cyclanthera boliviensis	Cyclanthera boliviensis	Cyclanthera boliviensis Mart.Crov.	Mart.Crov.
-Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852	true	Cyclostoma (Cyclophorus vel Leptopoma)	Cyclostoma	Cyclostoma	Cyclostoma (Cyclophorus vel Leptopoma)	(Cyclophorus vel Leptopoma)
+Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852	true	Cyclostoma thersites Shuttleworth, 1852	Cyclostoma thersites	Cyclostoma thersites	Cyclostoma thersites Shuttleworth, 1852 Cyclophorus vel Leptopoma	Shuttleworth, 1852
 Cyclotella polymorpha Bar.Mey. & Håk.	true	Cyclotella polymorpha Bar.Mey. & Håk.	Cyclotella polymorpha	Cyclotella polymorpha	Cyclotella polymorpha Bar.Mey. & Håk.	Bar.Mey. & Håk.
 Cymbella mendosa VanLand.	true	Cymbella mendosa VanLand.	Cymbella mendosa	Cymbella mendosa	Cymbella mendosa VanLand.	VanLand.
 Cymbella mendosa f. apiculata (Hust.) VanLand.	true	Cymbella mendosa f. apiculata (Hust.) VanLand.	Cymbella mendosa f. apiculata	Cymbella mendosa apiculata	Cymbella mendosa f. apiculata (Hust.) VanLand.	(Hust.) VanLand.
@@ -460,7 +460,7 @@ Lichenostigma gracilis Calat., Nav.-Ros. & Hafellner	true	Lichenostigma gracilis
 Linsia vernonioides Sch.Bip.	true	Linsia vernonioides Sch.Bip.	Linsia vernonioides	Linsia vernonioides	Linsia vernonioides Sch.Bip.	Sch.Bip.
 Lomaria vestita Blume var. b.	true	Lomaria vestita var. b	Lomaria vestita var. b	Lomaria vestita b	Lomaria vestita Blume var. b	
 Lopadium arthonioides Müll.Arg.	true	Lopadium arthonioides Müll.Arg.	Lopadium arthonioides	Lopadium arthonioides	Lopadium arthonioides Müll.Arg.	Müll.Arg.
-Loranthus incanus Schumach. & Thonn.  sessilis Sprague	true	Loranthus incanus Schumach. & Thonn.	Loranthus incanus	Loranthus incanus	Loranthus incanus Schumach. & Thonn.	Schumach. & Thonn.
+Loranthus incanus Schumach. & Thonn.  sessilis Sprague	true	Loranthus incanus sessilis Sprague	Loranthus incanus sessilis	Loranthus incanus sessilis	Loranthus incanus Schumach. & Thonn. sessilis Sprague	Sprague
 Loranthus mirabilis Van Heurck & Müll.Arg.	true	Loranthus mirabilis Van Heurck & Müll.Arg.	Loranthus mirabilis	Loranthus mirabilis	Loranthus mirabilis Van Heurck & Müll.Arg.	Van Heurck & Müll.Arg.
 Lychnophora tomentosa (Mart. ex DC.) Sch.Bip.	true	Lychnophora tomentosa (Mart. ex DC.) Sch.Bip.	Lychnophora tomentosa	Lychnophora tomentosa	Lychnophora tomentosa (Mart. ex DC.) Sch.Bip.	(Mart. ex DC.) Sch.Bip.
 Lychnophora uniflora Sch.Bip.	true	Lychnophora uniflora Sch.Bip.	Lychnophora uniflora	Lychnophora uniflora	Lychnophora uniflora Sch.Bip.	Sch.Bip.
@@ -535,14 +535,14 @@ Phaeographina pudica Müll. Arg.	true	Phaeographina pudica Müll.Arg.	Phaeograph
 Phaeographis bicolor Müll.Arg.	true	Phaeographis bicolor Müll.Arg.	Phaeographis bicolor	Phaeographis bicolor	Phaeographis bicolor Müll.Arg.	Müll.Arg.
 Phagnalon abyssinicum Sch.Bip. ex A.Rich.	true	Phagnalon abyssinicum Sch.Bip. ex A.Rich.	Phagnalon abyssinicum	Phagnalon abyssinicum	Phagnalon abyssinicum Sch.Bip. ex A.Rich.	Sch.Bip. ex A.Rich.
 Phagnalon kotschyi Sch.Bip. ex Boiss.	true	Phagnalon kotschyi Sch.Bip. ex Boiss.	Phagnalon kotschyi	Phagnalon kotschyi	Phagnalon kotschyi Sch.Bip. ex Boiss.	Sch.Bip. ex Boiss.
-Phalaris canariensis L. m. ?. bracteata Jansen & Wacht.	true	Phalaris canariensis L.m.	Phalaris canariensis	Phalaris canariensis	Phalaris canariensis L.m.	L.m.
-Phalaris minor Retz. m. ?. bracteata Jansen & Wacht.	true	Phalaris minor Retz.m.	Phalaris minor	Phalaris minor	Phalaris minor Retz.m.	Retz.m.
+Phalaris canariensis L. m. ?. bracteata Jansen & Wacht.	true	Phalaris canariensis bracteata Jansen & Wacht.	Phalaris canariensis bracteata	Phalaris canariensis bracteata	Phalaris canariensis L. bracteata Jansen & Wacht.	Jansen & Wacht.
+Phalaris minor Retz. m. ?. bracteata Jansen & Wacht.	true	Phalaris minor bracteata Jansen & Wacht.	Phalaris minor bracteata	Phalaris minor bracteata	Phalaris minor Retz. bracteata Jansen & Wacht.	Jansen & Wacht.
 Phascum occultum Müll.Hal.	true	Phascum occultum Müll.Hal.	Phascum occultum	Phascum occultum	Phascum occultum Müll.Hal.	Müll.Hal.
 Phaseolus lunatus L. cv. 'Didessa Mosaic'	true	Phaseolus lunatus 'Didessa Mosaic'	Phaseolus lunatus 'Didessa Mosaic'	Phaseolus lunatus	Phaseolus lunatus L. 'Didessa Mosaic'	
 Phaulopsis inaequalis Pic.Serm.	true	Phaulopsis inaequalis Pic.Serm.	Phaulopsis inaequalis	Phaulopsis inaequalis	Phaulopsis inaequalis Pic.Serm.	Pic.Serm.
 Phebalium viridiflorum Peter G.Wilson	true	Phebalium viridiflorum Peter G.Wilson	Phebalium viridiflorum	Phebalium viridiflorum	Phebalium viridiflorum Peter G.Wilson	Peter G.Wilson
 Phoma schneiderae Boerema, Gruyter & van de Graaf	true	Phoma schneiderae Boerema, Gruyter & van de Graaf	Phoma schneiderae	Phoma schneiderae	Phoma schneiderae Boerema, Gruyter & van de Graaf	Boerema, Gruyter & van de Graaf
-Phormidium corium Kütz. y. inaequale Kütz.	true	Phormidium corium Kütz.	Phormidium corium	Phormidium corium	Phormidium corium Kütz.	Kütz.
+Phormidium corium Kütz. y. inaequale Kütz.	true	Phormidium corium inaequale Kütz.	Phormidium corium inaequale	Phormidium corium inaequale	Phormidium corium Kütz. inaequale Kütz.	Kütz.
 Phyllanthus adscendens Bojer ms.	true	Phyllanthus adscendens Bojer	Phyllanthus adscendens	Phyllanthus adscendens	Phyllanthus adscendens Bojer, ms.	Bojer
 Phyllanthus caliodiscus Jean F.Brunel	true	Phyllanthus caliodiscus Jean F.Brunel	Phyllanthus caliodiscus	Phyllanthus caliodiscus	Phyllanthus caliodiscus Jean F.Brunel	Jean F.Brunel
 Phyllanthus emarginatus Willd. ms.	true	Phyllanthus emarginatus Willd.	Phyllanthus emarginatus	Phyllanthus emarginatus	Phyllanthus emarginatus Willd., ms.	Willd.
@@ -4214,8 +4214,8 @@ Polypodium pectinatum L.f. typica Rosenst.	true	Polypodium pectinatum f. typica 
 Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	true	Polypodium lineare f. caudatoattenuatum Takeda	Polypodium lineare f. caudatoattenuatum	Polypodium lineare caudatoattenuatum	Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	Takeda
 Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	true	Rhododendron weyrichii f. albiflorum T.Yamaz.	Rhododendron weyrichii f. albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	T.Yamaz.
 Armeria maaritima (Mill.) Willd. fma. originaria Bern.	true	Armeria maaritima f. originaria Bern.	Armeria maaritima f. originaria	Armeria maaritima originaria	Armeria maaritima (Mill.) Willd. f. originaria Bern.	Bern.
-Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
-Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
+Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii fakeepithet	Rhododendron weyrichii Maxim. f. fakeepithet	
+Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii albiflorum (T.Yamaz.f.)	Rhododendron weyrichii albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. albiflorum (T.Yamaz.f.)	(T.Yamaz.f.)
 Cotoneaster (Pyracantha) rogersiana var.aurantiaca	true	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana aurantiaca	Cotoneaster (Pyracantha) rogersiana var. aurantiaca	
 Poa annua fo varia	true	Poa annua f. varia	Poa annua f. varia	Poa annua varia	Poa annua f. varia	
 Physarum globuliferum forma. flavum Leontyev & Dudka	true	Physarum globuliferum f. flavum Leontyev & Dudka	Physarum globuliferum f. flavum	Physarum globuliferum flavum	Physarum globuliferum f. flavum Leontyev & Dudka	Leontyev & Dudka
@@ -4371,7 +4371,7 @@ Racomitrium canescens f. ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium c
 Racomitrium canescens forma ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	Racomitrium canescens f. ericoides	Racomitrium canescens ericoides	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	(F.Weber ex Brid.) Mönk.
 Polypodium pectinatum L. f., Rosenst.	true	Polypodium pectinatum L.f. & Rosenst.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f. & Rosenst.	L.f. & Rosenst.
 Polypodium pectinatum L. f.	true	Polypodium pectinatum L.f.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f.	L.f.
-Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum (L.f.)	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum (L.f.)	(L.f.)
+Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum typica Rosent	Polypodium pectinatum typica	Polypodium pectinatum typica	Polypodium pectinatum (L.f.) typica Rosent	Rosent
 Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	Pfennig, 1968
 Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	Pfennig, 1968
 Morea (Morea) Burt 2342343242 23424322342 23424234	true	Morea infragen. Morea Burt	Morea infragen. Morea	Morea	Morea infragen. Morea Burt	Burt
@@ -4483,7 +4483,7 @@ Escherichia coli bacteriophage	false
 Betasatellites	false					
 Satellite Nucleic Acids (Subviral DNA-ssDNA)	false					
 ssRNA	true	ssRNA	ssRNA	ssRNA	ssRNA	
-Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha proteobacterium	Alpha proteobacterium RNA12	
+Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha	Alpha proteobacterium RNA12	
 Ustilaginoidea virens RNA virus	false					
 Candida albicans RNA_CTR0-3	true	Candida albicans RNA_CTR0-3	Candida albicans RNA_CTR0-3	Candida albicans	Candida albicans RNA_CTR0-3	
 Carabus satyrus satyrus KURNAKOV, 1962	true	Carabus satyrus satyrus Kurnakov, 1962	Carabus satyrus satyrus	Carabus satyrus satyrus	Carabus satyrus satyrus Kurnakov, 1962	Kurnakov, 1962
@@ -4551,7 +4551,7 @@ Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata (L.f.) Klatt	Moraea spat
 Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia micrantha (Chun) Sealy, 1967	Stewartia micrantha	Stewartia micrantha	Stewartia micrantha (Chun) Sealy, 1967	(Chun) Sealy, 1967
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
 Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004	true	Rana aurora Baird & Girard, 1852	Rana aurora	Rana aurora	Rana aurora Baird & Girard, 1852	Baird & Girard, 1852
-Agropyron pectiniforme var. karabaljikji ined.?	true	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme karabaljikji	Agropyron pectiniforme var. karabaljikji	
+Agropyron pectiniforme var. karabaljikji ined.?	true	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme karabaljikji	Agropyron pectiniforme var. karabaljikji, ined.	
 Staphylococcus hyicus chromogenes Devriese et al. 1978 (Approved Lists 1980).	true	Staphylococcus hyicus chromogenes Devriese et al. 1978	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes Devriese et al. 1978	Devriese et al. 1978
 Adonis cyllenea Boiss. & al.	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
 Adonis cyllenea Boiss. & al	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
@@ -4678,8 +4678,8 @@ Ictavirus ictaluridallo1	true	Ictavirus ictaluridallo1	Ictavirus ictaluridallo1	
 Aghbyvirus ISAO8	false					
 Mahavira	true	Mahavira	Mahavira	Mahavira	Mahavira	
 Mom.alpium (Osbeck, 1778)	true	Mom. alpium (Osbeck, 1778)	Mom. alpium	Mom. alpium	Mom. alpium (Osbeck, 1778)	(Osbeck, 1778)
-Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma	true	Gen. et Kaimatira Pumice Sand, N.Marton & Ma	Gen. et	Gen. et	Gen. et Kaimatira Pumice Sand, N.Marton & Ma, n. sp.	Kaimatira Pumice Sand, N.Marton & Ma
-Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma	true	Genn. et Kaimatira Pumice Sand, N.Marton & Ma	Genn. et	Genn. et	Genn. et Kaimatira Pumice Sand, N.Marton & Ma, n. sp.	Kaimatira Pumice Sand, N.Marton & Ma
+Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma	false					
+Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma	false					
 Incertae sedis	false					
 </i>Hipponicidae<i> incertae sedis</i>	false					
 incertae sedis	false					
@@ -4688,15 +4688,15 @@ inc.sed.	false
 inc.   sed.	false					
 Incertaesedis obscuricornis Fairmaire LMH 1893	false					
 Uropodoideaincertaesedis	false					
-Acidobacteria bacterium	true	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria bacterium	
-Oscillatoriales cyanobacterium PCC 10608	true	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium	Oscillatoriales cyanobacterium PCC 10608	
-Acidimicrobiales bacterium JGI 01_E13	true	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium	Acidimicrobiales bacterium JGI 01_E13	
+Acidobacteria bacterium	true	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria	Acidobacteria bacterium	
+Oscillatoriales cyanobacterium PCC 10608	true	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales	Oscillatoriales cyanobacterium PCC 10608	
+Acidimicrobiales bacterium JGI 01_E13	true	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales	Acidimicrobiales bacterium JGI 01_E13	
 Acidobacterium ailaaui Myers & King, 2016	true	Acidobacterium ailaaui Myers & King, 2016	Acidobacterium ailaaui	Acidobacterium ailaaui	Acidobacterium ailaaui Myers & King, 2016	Myers & King, 2016
-Candidatus Amesbacteria bacterium GW2011_GWC1_46_24	true	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	"Candidatus Amesbacteria bacterium"	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	
+Candidatus Amesbacteria bacterium GW2011_GWC1_46_24	true	"Candidatus Amesbacteria" bacterium GW2011_GWC1_46_24	"Candidatus Amesbacteria" bacterium GW2011_GWC1_46_24	"Candidatus Amesbacteria"	"Candidatus Amesbacteria" bacterium GW2011_GWC1_46_24	
 Candidatus Puniceispirillum Oh, Kwon, Kang, Kang, Lee, Kim & Cho, 2010	true	"Candidatus Puniceispirillum" Oh et al. 2010	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum" Oh et al. 2010	Oh et al. 2010
 Candidatus Halobonum	true	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	
 Candidatus Endomicrobium sp. MdDo-005	true	"Candidatus Endomicrobium" sp. MdDo-005	"Candidatus Endomicrobium" sp. MdDo-005	"Candidatus Endomicrobium"	"Candidatus Endomicrobium" sp. MdDo-005	
-Candidatus Abawacabacteria bacterium	true	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	
+Candidatus Abawacabacteria bacterium	true	"Candidatus Abawacabacteria" bacterium	"Candidatus Abawacabacteria" bacterium	"Candidatus Abawacabacteria"	"Candidatus Abawacabacteria" bacterium	
 Candidatus Accumulibacter phosphatis clade IIA str. UW-1	false					
 Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus"	"Candidatus Anammoxoglobus" environmental samples	
 None recorded	false					
@@ -4727,7 +4727,7 @@ Acyrthosiphon kondoi endosymbiont	false
 Burkholderia sp. (Gigaspora margarita endosymbiont)	true	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia	Burkholderia sp. (Gigaspora margarita endosymbiont)	
 Dictyochloropsis symbiontica Tschermak-Woess	true	Dictyochloropsis symbiontica Tschermak-Woess	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica Tschermak-Woess	Tschermak-Woess
 Dylakosoma symbionticum var. valens Skuja	true	Dylakosoma symbionticum var. valens Skuja	Dylakosoma symbionticum var. valens	Dylakosoma symbionticum valens	Dylakosoma symbionticum var. valens Skuja	Skuja
-Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont	Wolbachia endosymbiont of Leptogenys gracilis	
+Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia	Wolbachia endosymbiont of Leptogenys gracilis	
 Lampona spec Platnick, 2000	true	Lampona spec Platnick, 2000	Lampona spec	Lampona spec	Lampona spec Platnick, 2000	Platnick, 2000
 Gobiosoma spec (Ginsburg, 1939)	true	Gobiosoma spec (Ginsburg, 1939)	Gobiosoma spec	Gobiosoma spec	Gobiosoma spec (Ginsburg, 1939)	(Ginsburg, 1939)
 Globigerina spec	true	Globigerina spec	Globigerina spec	Globigerina	Globigerina spec	
@@ -4741,7 +4741,7 @@ Velutina haliotoides (Linnaeus, 1758), <i>sensu</i> Fabricius, 1780	true	Velutin
 Quadrella steyermarkii (Standl.) Iltis &amp; Cornejo	true	Quadrella steyermarkii (Standl.) Iltis & Cornejo	Quadrella steyermarkii	Quadrella steyermarkii	Quadrella steyermarkii (Standl.) Iltis & Cornejo	(Standl.) Iltis & Cornejo
 Torymus bangalorensis (Mani &amp; Kurian, 1953)	true	Torymus bangalorensis (Mani & Kurian, 1953)	Torymus bangalorensis	Torymus bangalorensis	Torymus bangalorensis (Mani & Kurian, 1953)	(Mani & Kurian, 1953)
 Oxalis_barrelieri	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	
-Oxalis_barrelieri ined.?	true	Oxalis barrelieri ined	Oxalis barrelieri ined	Oxalis barrelieri ined	Oxalis barrelieri ined	
+Oxalis_barrelieri ined.?	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri, ined.	
 Pseudocercospora__dendrobii	true	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii	
 Oxalis barrelieri XXZ_21243	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	
 Ameiva plei Rosicky, 1955	true	Ameiva plei Rosicky, 1955	Ameiva plei	Ameiva plei	Ameiva plei Rosicky, 1955	Rosicky, 1955
@@ -5236,7 +5236,7 @@ Calathus (Lindrothius) KURNAKOV 1961	true	Calathus (Lindrothius) Kurnakov, 1961	
 Ustilaginoidea virens RNA virus	false					
 Rhizoctonia solani dsRNA virus 2	false					
 Candida albicans RNA_CTR0-3	true	Candida albicans RNA_CTR0-3	Candida albicans RNA_CTR0-3	Candida albicans	Candida albicans RNA_CTR0-3	
-Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha proteobacterium	Alpha proteobacterium RNA12	
+Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha	Alpha proteobacterium RNA12	
 Armillaria ostoyae RNA1	true	Armillaria ostoyae RNA1	Armillaria ostoyae RNA1	Armillaria ostoyae	Armillaria ostoyae RNA1	
 Trametes spec.	true	Trametes spec.	Trametes spec.	Trametes	Trametes spec.	
 Trametes indet.	true	Trametes sp.	Trametes sp.	Trametes	Trametes sp.	
@@ -5624,8 +5624,8 @@ Polypodium pectinatum L.f. typica Rosenst.	true	Polypodium pectinatum f. typica 
 Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	true	Polypodium lineare f. caudatoattenuatum Takeda	Polypodium lineare f. caudatoattenuatum	Polypodium lineare caudatoattenuatum	Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	Takeda
 Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	true	Rhododendron weyrichii f. albiflorum T.Yamaz.	Rhododendron weyrichii f. albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	T.Yamaz.
 Armeria maaritima (Mill.) Willd. fma. originaria Bern.	true	Armeria maaritima f. originaria Bern.	Armeria maaritima f. originaria	Armeria maaritima originaria	Armeria maaritima (Mill.) Willd. f. originaria Bern.	Bern.
-Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
-Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
+Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii fakeepithet	Rhododendron weyrichii Maxim. f. fakeepithet	
+Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii albiflorum (T.Yamaz.f.)	Rhododendron weyrichii albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. albiflorum (T.Yamaz.f.)	(T.Yamaz.f.)
 Cotoneaster (Pyracantha) rogersiana var.aurantiaca	true	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana aurantiaca	Cotoneaster (Pyracantha) rogersiana var. aurantiaca	
 Poa annua fo varia	true	Poa annua f. varia	Poa annua f. varia	Poa annua varia	Poa annua f. varia	
 Physarum globuliferum forma. flavum Leontyev & Dudka	true	Physarum globuliferum f. flavum Leontyev & Dudka	Physarum globuliferum f. flavum	Physarum globuliferum flavum	Physarum globuliferum f. flavum Leontyev & Dudka	Leontyev & Dudka
@@ -5775,7 +5775,7 @@ Racomitrium canescens f. ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium c
 Racomitrium canescens forma ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	Racomitrium canescens f. ericoides	Racomitrium canescens ericoides	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	(F.Weber ex Brid.) Mönk.
 Polypodium pectinatum L. f., Rosenst.	true	Polypodium pectinatum L.f. & Rosenst.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f. & Rosenst.	L.f. & Rosenst.
 Polypodium pectinatum L. f.	true	Polypodium pectinatum L.f.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f.	L.f.
-Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum (L.f.)	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum (L.f.)	(L.f.)
+Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum typica Rosent	Polypodium pectinatum typica	Polypodium pectinatum typica	Polypodium pectinatum (L.f.) typica Rosent	Rosent
 Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	Pfennig, 1968
 Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	Pfennig, 1968
 Morea (Morea) Burt 2342343242 23424322342 23424234	true	Morea infragen. Morea Burt	Morea infragen. Morea	Morea	Morea infragen. Morea Burt	Burt
@@ -5882,7 +5882,7 @@ Moraea spathulata ( (L. f. Klatt	true	Moraea spathulata (L.f.) Klatt	Moraea spat
 Stewartia micrantha (Chun) Sealy, Bot. Mag. 176: t. 510. 1967.	true	Stewartia micrantha (Chun) Sealy, 1967	Stewartia micrantha	Stewartia micrantha	Stewartia micrantha (Chun) Sealy, 1967	(Chun) Sealy, 1967
 Pyrobaculum neutrophilum V24Sta	true	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum V24Sta	Pyrobaculum neutrophilum	Pyrobaculum neutrophilum V24Sta	
 Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004	true	Rana aurora Baird & Girard, 1852	Rana aurora	Rana aurora	Rana aurora Baird & Girard, 1852	Baird & Girard, 1852
-Agropyron pectiniforme var. karabaljikji ined.?	true	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme karabaljikji	Agropyron pectiniforme var. karabaljikji	
+Agropyron pectiniforme var. karabaljikji ined.?	true	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme var. karabaljikji	Agropyron pectiniforme karabaljikji	Agropyron pectiniforme var. karabaljikji, ined.	
 Staphylococcus hyicus chromogenes Devriese et al. 1978 (Approved Lists 1980).	true	Staphylococcus hyicus chromogenes Devriese et al. 1978	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes	Staphylococcus hyicus chromogenes Devriese et al. 1978	Devriese et al. 1978
 Adonis cyllenea Boiss. & al.	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
 Adonis cyllenea Boiss. & al	true	Adonis cyllenea Boiss. et al.	Adonis cyllenea	Adonis cyllenea	Adonis cyllenea Boiss. et al.	Boiss. et al.
