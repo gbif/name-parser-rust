@@ -1631,14 +1631,22 @@ static SEROVAR_BARE: LazyLock<Regex> = LazyLock::new(|| {
 /// "Aggregatibacter actinomycetemcomitans" (both spot-checked against the Java CLI oracle:
 /// clean binomials, no warnings). `SEROVAR_PAREN` and `SEROVAR_BARE` both run in sequence
 /// (not else-if), the second against the (possibly already-shortened) result of the first.
-fn strip_serovar_serotype(_ctx: &mut ParseContext, mut s: String) -> String {
+///
+/// Rust-only: what is removed is named in a warning, `Removed: serovar Typhimurium` — Java dropped
+/// it silently, leaving nothing to tell the serovars of one species apart (#81).
+fn strip_serovar_serotype(ctx: &mut ParseContext, mut s: String) -> String {
     if SEROVAR_TEST.is_match(&s) {
-        if let Some(m) = SEROVAR_PAREN.find(&s) {
-            s = java_trim(&s[..m.start()]).to_string();
-        }
-        if let Some(m) = SEROVAR_BARE.find(&s) {
-            s = java_trim(&s[..m.start()]).to_string();
-        }
+        let mut strip = |re: &Regex, s: String| match re.find(&s) {
+            Some(m) => {
+                let removed = java_trim(m.as_str()).trim_end_matches('.').trim_end();
+                ctx.name
+                    .add_warning(&format!("{}{removed}", warnings::REMOVED_PREFIX));
+                java_trim(&s[..m.start()]).to_string()
+            }
+            None => s,
+        };
+        s = strip(&SEROVAR_PAREN, s);
+        s = strip(&SEROVAR_BARE, s);
     }
     s
 }
@@ -5938,12 +5946,12 @@ mod tests {
     // ---- Step 17: stripSerovarSerotype ----
 
     #[test]
-    fn bare_serovar_annotation_is_stripped_silently() {
+    fn bare_serovar_annotation_is_stripped_with_a_warning() {
         let mut c = ctx("x");
         let out =
             strip_serovar_serotype(&mut c, "Leptospira interrogans serovar Fugis".to_string());
         assert_eq!(out, "Leptospira interrogans");
-        assert!(c.name.warnings.is_empty());
+        assert_eq!(c.name.warnings, ["Removed: serovar Fugis"]);
     }
 
     #[test]
@@ -5962,6 +5970,7 @@ mod tests {
         let out =
             strip_serovar_serotype(&mut c, "Streptococcus pyogenes (serotype M18)".to_string());
         assert_eq!(out, "Streptococcus pyogenes");
+        assert_eq!(c.name.warnings, ["Removed: (serotype M18)"]);
     }
 
     #[test]
