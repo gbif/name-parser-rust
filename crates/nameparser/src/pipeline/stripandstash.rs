@@ -119,6 +119,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_aggregate_suffix(ctx, s);
     s = strip_published_page(ctx, s);
     s = strip_in_press(ctx, s);
+    s = strip_bracketed_manuscript(ctx, s);
     s = strip_in_author_citations(ctx, s);
     s = strip_ipni_citation(ctx, s);
     s = strip_period_separated_reference(ctx, s);
@@ -4307,6 +4308,63 @@ static MANUSCRIPT_MARKER_BEFORE_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     ))
     .unwrap()
 });
+
+/// A manuscript marker of an author inside a bracket, closing it or before the bracket's "in"
+/// citation: "(Parreyss, MS.)", "(Kuroda MS in Kira, 1959)". Java read "MS" as the initials of
+/// "M.S.Parreyss". Group 1 = the author or year before it, group 2 = the marker with its
+/// separator, group 3 = the marker, group 4 = what follows it.
+static BRACKETED_MANUSCRIPT_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"([\p{Lu}\d][\p{L}\d.'\-]*)((?-u:\s*,?\s+)((?i:ms|msc|ined)\.?))((?-u:\s*)\)|(?-u:\s+)in(?-u:\s))",
+    )
+    .unwrap()
+});
+
+/// An "ex" in a bracket: "(ex Kirby MS)", "(? ex Dej. MS)", "(ex. Sol. MS)".
+static EX_WORD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\bex\b)").unwrap());
+
+/// See [`BRACKETED_MANUSCRIPT_MARKER`]: the marker is dropped from inside its bracket and sets
+/// `manuscript` with the lower-cased marker as the note, as a trailing one does. Rust-only.
+pub(crate) fn strip_bracketed_manuscript_marker(s: &str, name: &mut ParsedName) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut last = 0;
+    for caps in BRACKETED_MANUSCRIPT_MARKER.captures_iter(s) {
+        let marker = caps.get(2).unwrap();
+        let before = &s[..marker.start()];
+        let Some(open_at) = before.rfind('(') else {
+            continue;
+        };
+        // inside the bracket, which opens the authorship or follows the epithet: not one between
+        // an author and the year ("Doubleday (Boisd. MS) 1844"), nor an "(ex Kirby MS)", whose
+        // ex-author reading is still open (#66)
+        let inside = before.matches('(').count() > before.matches(')').count();
+        let after_author = s[..open_at]
+            .split_whitespace()
+            .next_back()
+            .is_some_and(|w| w.starts_with(|c: char| c.is_uppercase()));
+        if !inside || after_author || EX_WORD.is_match(&s[open_at..marker.start()]) {
+            continue;
+        }
+        out.push_str(&s[last..marker.start()]);
+        out.push_str(&caps[4]);
+        last = caps.get(4).unwrap().end();
+        name.manuscript = true;
+        let tag = caps[3].to_lowercase();
+        if !name
+            .nomenclatural_note
+            .as_deref()
+            .is_some_and(|existing| contains_words(existing, &tag))
+        {
+            name.add_nomenclatural_note(&tag);
+        }
+    }
+    out.push_str(&s[last..]);
+    out
+}
+
+fn strip_bracketed_manuscript(ctx: &mut ParseContext, s: String) -> String {
+    strip_bracketed_manuscript_marker(&s, &mut ctx.name)
+}
 
 /// Java `StripAndStash.stripManuscriptMarker` (StripAndStash.java:1542-1555). A trailing
 /// manuscript marker ("ined."/"ms."/"msc."/"unpublished", any case, with an optional leading

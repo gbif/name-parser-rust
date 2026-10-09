@@ -452,6 +452,8 @@ fn parse_separate_authorship(ctx: &mut ParseContext, authorship: String) -> Opti
             .published_in
             .clone()
             .map(|r| (r, ctx.name.published_in_year));
+        let auth_clean =
+            stripandstash::strip_bracketed_manuscript_marker(&auth_clean, &mut ctx.name);
         let auth_clean = stripandstash::strip_in_author_citations(ctx, auth_clean);
         let auth_clean = stripandstash::strip_authorship_reference_steps(ctx, auth_clean);
         // after the in-citation, as on the name string: "Busk ms in Chimonides, 1987"
