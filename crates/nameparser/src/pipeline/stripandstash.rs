@@ -1322,7 +1322,7 @@ fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
         Cow::Borrowed(_) => s,
     };
     if crate::unicode::contains_homoglyphs(&s) {
-        let repl = crate::unicode::replace_homoglyphs(&s);
+        let repl = crate::unicode::replace_homoglyphs_in_name(&s);
         if repl != s {
             ctx.name.add_warning(warnings::HOMOGLYHPS);
             return repl;
