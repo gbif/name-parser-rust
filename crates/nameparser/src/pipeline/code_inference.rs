@@ -93,8 +93,9 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         ctx.name.code = Some(NomCode::Botanical);
         return;
     }
-    // The 1980 Approved Lists of Bacterial Names exist under the prokaryote code only.
-    if ctx.approved_lists {
+    // The 1980 Approved Lists of Bacterial Names exist under the prokaryote code only, and so does
+    // the citation of a revived name, "(ex Choukévitch 1911) Nakamura 1984" (ICNP Rule 28a).
+    if ctx.approved_lists || auth_state.is_some_and(|st| st.revived_name) {
         ctx.name.code = Some(NomCode::Bacterial);
         return;
     }

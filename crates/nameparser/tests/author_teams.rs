@@ -12,7 +12,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::NomCode;
+use nameparser::model::{NomCode, Rank};
 
 #[test]
 fn a_spanish_y_joins_the_two_surnames_of_one_person() {
@@ -193,5 +193,47 @@ fn a_chain_of_ex_authors_keeps_them_all() {
         .comb_authors(None, &["Steudel"])
         .comb_ex_authors(&["Sieber"])
         .code(NomCode::Botanical)
+        .nothing_else();
+}
+
+/// A bracket opening with "ex" names the ex-authors: whose manuscript name the author before it
+/// published ("Stephens (ex Kirby MS) 1828", zoology), or the earlier proposer of a revived
+/// prokaryote name ("(ex Choukévitch 1911) Nakamura 1984", ICNP Rule 28a, its year dropped). Read
+/// as "Kirby ex Stephens", never as a basionym, and the "MS" is no manuscript name.
+#[test]
+fn a_bracket_opening_with_ex_holds_the_ex_authors() {
+    assert_name("Harpalus notatus Stephens (ex Kirby MS) 1828")
+        .species("Harpalus", "notatus")
+        .comb_authors(Some("1828"), &["Stephens"])
+        .comb_ex_authors(&["Kirby"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Phila obtusa", "v. Mochulski (? ex Dej. MS) 1850")
+        .species("Phila", "obtusa")
+        .comb_authors(Some("1850"), &["v.Mochulski"])
+        .comb_ex_authors(&["Dej."])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // the revived name is the prokaryote code's
+    assert_name_auth(
+        "Bacillus amylolyticus",
+        "(ex Choukévitch 1911) Nakamura 1984",
+    )
+    .species("Bacillus", "amylolyticus")
+    .comb_authors(Some("1984"), &["Nakamura"])
+    .comb_ex_authors(&["Choukévitch"])
+    .code(NomCode::Bacterial)
+    .nothing_else();
+    assert_name_auth("Argythamnia humilis var. laevis", "(ex Torr.) Shinners")
+        .infra_species("Argythamnia", "humilis", Rank::Variety, "laevis")
+        .comb_authors(None, &["Shinners"])
+        .comb_ex_authors(&["Torr."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // nobody after them: they are the authors
+    assert_name_auth("Alicyclobacillus mali", "(ex Matsubara et al. 2002)")
+        .species("Alicyclobacillus", "mali")
+        .comb_authors(Some("2002"), &["Matsubara", "al."])
+        .code(NomCode::Bacterial)
         .nothing_else();
 }

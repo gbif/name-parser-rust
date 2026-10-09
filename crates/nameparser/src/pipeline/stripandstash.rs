@@ -119,6 +119,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_aggregate_suffix(ctx, s);
     s = strip_published_page(ctx, s);
     s = strip_in_press(ctx, s);
+    s = manuscript_in_as_ex(&s);
     s = strip_bracketed_manuscript(ctx, s);
     s = strip_in_author_citations(ctx, s);
     s = strip_ipni_citation(ctx, s);
@@ -4309,6 +4310,23 @@ static MANUSCRIPT_MARKER_BEFORE_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+/// A manuscript name another author published: "Kuroda MS in Kira, 1959", "(Busk ms in
+/// Chimonides, 1987)". A plain "A in B" makes A the author, published within B's work; the
+/// manuscript mark says A never published it, B did — the ex relation, "Kuroda ex Kira, 1959". Group
+/// 1 = the author's last character, group 2 = the publisher's first letter.
+static MANUSCRIPT_IN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"([\p{L}.])(?-u:\s*,?\s+)(?:MS|ms|Ms|msc|MSC|ined)\.?(?-u:\s+)in(?-u:\s+)(\p{Lu})")
+        .unwrap()
+});
+
+/// See [`MANUSCRIPT_IN`]: rewritten to the form the authorship parser reads as an ex citation of a
+/// manuscript name, "A MS, B" ("Carpenter MS, Dall"), so neither the manuscript flag nor the
+/// in-citation is set — the name is published — and the ex-author casts no botanical vote.
+/// Rust-only; run on the name string and a separate authorship.
+pub(crate) fn manuscript_in_as_ex(s: &str) -> String {
+    MANUSCRIPT_IN.replace_all(s, "${1} MS, ${2}").into_owned()
+}
+
 /// A manuscript marker of an author inside a bracket, closing it or before the bracket's "in"
 /// citation: "(Parreyss, MS.)", "(Kuroda MS in Kira, 1959)". Java read "MS" as the initials of
 /// "M.S.Parreyss". Group 1 = the author or year before it, group 2 = the marker with its
@@ -7876,17 +7894,17 @@ mod tests {
     // ---- Batch 2d cross-step interaction (full `run()`) ----
 
     #[test]
-    fn full_run_strips_both_in_author_citation_and_manuscript_marker_in_order() {
-        // Oracle-verified end-to-end (StripAndStash's own contribution): "Aus bus Busk ms in
-        // Chimonides, 1987" must have the in-author tail stripped first (step 48), leaving
-        // "Aus bus Busk ms" for the manuscript marker (step 52) to finish.
+    fn full_run_reads_a_manuscript_name_published_in_another_work_as_ex() {
+        // "Busk ms in Chimonides, 1987": Busk's manuscript name, published by Chimonides — no
+        // in-citation, no manuscript flag, but the ex citation the authorship parser reads
+        // ("Carpenter MS, Dall"). Java (and Rust before #67) stripped the in-author tail first and
+        // left "Busk ms" for the manuscript marker.
         let mut c = ctx("Aus bus Busk ms in Chimonides, 1987");
         run(&mut c);
-        assert_eq!(c.working, "Aus bus Busk");
-        assert!(c.name.manuscript);
-        assert_eq!(c.name.nomenclatural_note, Some("ms".to_string()));
-        assert_eq!(c.name.published_in, Some("Chimonides, 1987".to_string()));
-        assert_eq!(c.name.published_in_year, Some(1987));
+        assert_eq!(c.working, "Aus bus Busk MS, Chimonides, 1987");
+        assert!(!c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, None);
+        assert_eq!(c.name.published_in, None);
     }
 
     // ---- Step 53: stripSupraRankPrefix ----

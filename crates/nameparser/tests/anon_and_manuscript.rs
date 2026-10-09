@@ -129,13 +129,17 @@ fn a_manuscript_marker_inside_a_bracket() {
         .manuscript()
         .code(NomCode::Zoological)
         .nothing_else();
+    // a manuscript name another author published is an ex citation, not unpublished
     assert_name("Haustellum kiiensis (Kuroda MS in Kira, 1959)")
         .species("Haustellum", "kiiensis")
-        .bas_authors(Some("1959"), &["Kuroda"])
-        .published_in("Kira, 1959")
-        .published_in_year(Some(1959))
-        .nom_note("ms")
-        .manuscript()
+        .bas_authors(Some("1959"), &["Kira"])
+        .bas_ex_authors(Some("1959"), &["Kuroda"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Haustellum kiiensis", "Kuroda MS in Kira, 1959")
+        .species("Haustellum", "kiiensis")
+        .comb_authors(Some("1959"), &["Kira"])
+        .comb_ex_authors(&["Kuroda"])
         .code(NomCode::Zoological)
         .nothing_else();
     // a provisional name's phrase keeps it verbatim

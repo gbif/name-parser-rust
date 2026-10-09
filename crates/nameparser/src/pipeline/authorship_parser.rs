@@ -169,6 +169,9 @@ pub(crate) struct AuthState {
     /// An ex-author is a manuscript name another published ("Carpenter MS, Dall", `"Dall" Pils.`
     /// rewritten so), zoology's usage as much as botany's: no botanical evidence.
     pub manuscript_ex: bool,
+    /// The bacteriologists' revived name, "(ex Choukévitch 1911) Nakamura 1984" (ICNP Rule 28a): a
+    /// leading bracket of dated ex-authors, which only the prokaryote code uses.
+    pub revived_name: bool,
     /// Java `int unparsedFrom = -1;` — kept as a sentinel `i32`, matching the established
     /// convention for this exact shape of field elsewhere in the port (see
     /// `ParseContext::mid_author_from`/`mid_author_to`).
@@ -187,6 +190,7 @@ impl Default for AuthState {
             combination_year_after_comma: false,
             combination_initials_first: false,
             manuscript_ex: false,
+            revived_name: false,
             unparsed_from: -1,
             unparsed_text: None,
         }
@@ -199,6 +203,18 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
     let mut s = AuthState::default();
     let mut i = from;
     let n = tokens.len();
+
+    // A leading bracket opening with "ex" holds no basionym but the combination's ex-authors: the
+    // revived bacterial name "(ex Choukévitch 1911) Nakamura 1984", "(ex Torr.) Shinners". The
+    // year of the earlier proposal has no place in the model and is dropped.
+    let mut leading_ex: Option<Authorship> = None;
+    if let Some((inner_from, inner_end, close)) = bracketed_ex(tokens, i, n) {
+        let mut inner = Authorship::default();
+        parse_authors(tokens, inner_from, inner_end, &mut inner);
+        s.revived_name = inner.year.is_some();
+        leading_ex = Some(inner);
+        i = close + 1;
+    }
 
     // Phase A: leading "(...)" basionym candidate.
     if i < n && tokens[i].kind == TokenKind::OpenParen {
@@ -314,6 +330,16 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
     if i < n {
         s.unparsed_from = i as i32;
         s.unparsed_text = Some(unparsed_text(&tokens[i..n]));
+    }
+    if let Some(mut ex) = leading_ex {
+        if s.combination.authors.is_empty() && !s.combination.anonymous {
+            // nobody published it after them ("(ex Wang et al. 2025)"): they are the authors
+            s.combination.authors = ex.authors;
+            s.combination.year = s.combination.year.take().or(ex.year);
+        } else {
+            ex.authors.append(&mut s.combination.ex_authors);
+            s.combination.ex_authors = ex.authors;
+        }
     }
     s
 }
@@ -536,6 +562,58 @@ fn find_close(tokens: &[Token], open_idx: usize) -> Option<usize> {
     None
 }
 
+/// A bracket opening with "ex": "(ex Kirby MS)", "(? ex Dej. MS)", "(ex. Sol.)", "(ex Choukévitch
+/// 1911)". The authors in it proposed the name and someone else published it — the ex-authors,
+/// as in "Kirby ex Stephens": "Stephens (ex Kirby MS) 1828", the bacteriologists' revived name
+/// "(ex Choukévitch 1911) Nakamura 1984" (ICNP Rule 28a). Returns `(inner_from, inner_end, close)`:
+/// the span of its authors, without a closing manuscript mark ("MS", which "ex" already says), and
+/// the closing bracket, which must lie before `to`.
+fn bracketed_ex(tokens: &[Token], open: usize, to: usize) -> Option<(usize, usize, usize)> {
+    if tokens.get(open)?.kind != TokenKind::OpenParen {
+        return None;
+    }
+    let mut k = open + 1;
+    if tokens
+        .get(k)
+        .is_some_and(|t| t.kind == TokenKind::Other && t.text == "?")
+    {
+        k += 1;
+    }
+    if !tokens
+        .get(k)
+        .is_some_and(|t| t.kind == TokenKind::Word && t.text == "ex")
+    {
+        return None;
+    }
+    k += 1;
+    if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Dot) {
+        k += 1;
+    }
+    let close = find_close(tokens, open).filter(|&c| c < to)?;
+    let is_ms =
+        |t: &Token| t.kind == TokenKind::Word && matches!(t.text.as_str(), "MS" | "ms" | "Ms");
+    let mut end = close;
+    if end > k + 1 && tokens[end - 1].kind == TokenKind::Dot && is_ms(&tokens[end - 2]) {
+        end -= 2;
+    } else if end > k && is_ms(&tokens[end - 1]) {
+        end -= 1;
+    }
+    if end > k && tokens[end - 1].kind == TokenKind::Comma {
+        end -= 1;
+    }
+    // authors, not a host it was isolated from ("(ex Procavia capensis)") nor a former family
+    // ("(ex Chenopodiaceae)")
+    let no_author = tokens[k..end].iter().any(|t| {
+        t.kind == TokenKind::Word
+            && ((t.text.chars().count() > 3
+                && t.text.chars().all(char::is_lowercase)
+                && !is_lower_author_word(&t.text))
+                || t.text.ends_with("aceae")
+                || t.text.ends_with("idae"))
+    });
+    (end > k && !no_author && has_upper_word(tokens, k, end)).then_some((k, end, close))
+}
+
 /// Java `AuthorshipParser.parseAuthors(List<Token>, int, int, Authorship, AuthState)`.
 /// The `AuthState state` parameter is accepted but never read anywhere in the Java method
 /// body (verified against the source) — dropped here rather than carried as an unused Rust
@@ -571,6 +649,18 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     let brackets = BracketedAuthors::read(tokens, from, to);
 
     while i < to {
+        // "Stephens (ex Kirby MS) 1828": the bracket names the ex-author whose manuscript name the
+        // author before it published; that author stays the author
+        if let Some((inner_from, inner_end, close)) = bracketed_ex(tokens, i, to) {
+            flush(&mut cur, &mut authors);
+            let mut inner = Authorship::default();
+            parse_authors(tokens, inner_from, inner_end, &mut inner);
+            ex_authors
+                .get_or_insert_with(Vec::new)
+                .extend(inner.authors);
+            i = close + 1;
+            continue;
+        }
         // "Anonymous [Bennett]": the anonymous word gives way to the attributed authors
         if brackets.skip.is_some_and(|(start, _)| i == start) {
             i = brackets.skip.expect("just checked").1;
@@ -1854,9 +1944,11 @@ fn manuscript_ex_at(tokens: &[Token], i: usize, to: usize) -> Option<usize> {
     (i > 0 && author_follows).then_some(k + 1 - i)
 }
 
-/// The span `tokens[from..to)` cites a manuscript name as an ex-author ("Carpenter MS, Dall").
+/// The span `tokens[from..to)` cites a manuscript name as an ex-author ("Carpenter MS, Dall",
+/// "Stephens (ex Kirby MS) 1828").
 pub(crate) fn has_manuscript_ex(tokens: &[Token], from: usize, to: usize) -> bool {
-    (from..to).any(|k| manuscript_ex_at(tokens, k, to).is_some())
+    (from..to)
+        .any(|k| manuscript_ex_at(tokens, k, to).is_some() || bracketed_ex(tokens, k, to).is_some())
 }
 
 /// "Everything collected so far becomes ex authors": the authors before an `ex`, or before the
