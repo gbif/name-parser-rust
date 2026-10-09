@@ -3743,7 +3743,11 @@ static PUBLISHED_PAGE: LazyLock<Regex> = LazyLock::new(|| {
 /// `strip_in_author_citation` (step 48) so a "Smith, 1900: 12 in Editor" tail strips both
 /// cleanly (Java's own comment).
 fn strip_published_page(ctx: &mut ParseContext, s: String) -> String {
-    if let Some(caps) = PUBLISHED_PAGE.captures(&s) {
+    let s = strip_bracketed_page(ctx, s);
+    if let Some(caps) = PUBLISHED_PAGE
+        .captures(&s)
+        .or_else(|| ABBREVIATED_PAGE.captures(&s))
+    {
         let whole = caps.get(0).unwrap();
         // 5.0.0 divergence: a page reference is the tail of a PUBLICATION citation, so it must
         // follow a year — `Linnaeus, 1758: 228`, `LAZELL 1964: 377`, `Thor 1933:54`,
@@ -3780,6 +3784,48 @@ static TRAILING_YEAR_CITATION: LazyLock<Regex> =
 
 fn ends_with_year_citation(prefix: &str) -> bool {
     TRAILING_YEAR_CITATION.is_match(prefix)
+}
+
+/// A trailing page citation written with `p.`/`pp.` instead of a colon: `Girault 1913, p.244`,
+/// `Smith, 1900, pp. 12-14`, `(Wilson, 1855) p. 999`. Read like [`PUBLISHED_PAGE`], and only after
+/// a year, which [`strip_published_page`] checks: without that guard the `p.` became an author and
+/// the page number a second year, the imprint year (`Girault & p., 1913 [244]`).
+static ABBREVIATED_PAGE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?-u:\s*)[,:]?(?-u:\s*)pp?\.(?-u:\s*)((?-u:\d+)(?:(?-u:\s*)[-\x{2013}](?-u:\s*)(?-u:\d+))?)(?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+/// A page cited inside brackets, after a year. In the basionym's brackets, `(McMurrich 1889, p.
+/// 111)`, it is the page of the original description, no page of the name's own publication, so it
+/// is removed as the colon form there already is (`(McMurrich 1889: 111)`). In brackets holding
+/// nothing but the year, `Dahlst. (1894a p. 250)`, it is the page of the name's publication. Left
+/// in, the `p.` became an author and the page an imprint year. A bracket nesting another is left
+/// alone: `sp. 4 (cf. Eunotia intermedia (Krasske ex Hustedt) Nörpel et al. 1993: p. 32)`.
+static BRACKETED_PAGE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"\(([^()]*?)((?-u:\b\d{4})[a-z]?)(?-u:\s*)[,:]?(?-u:\s*)pp?\.(?-u:\s*)((?-u:\d+)(?:(?-u:\s*)[-\x{2013}](?-u:\s*)(?-u:\d+))?)(?-u:\s*)\)",
+    )
+    .unwrap()
+});
+
+fn strip_bracketed_page(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = BRACKETED_PAGE.captures(&s) else {
+        return s;
+    };
+    let whole = caps.get(0).unwrap();
+    let before = &caps[1];
+    if before.trim().is_empty() && ctx.name.published_in_page.is_none() {
+        ctx.name.published_in_page = Some(caps[3].to_string());
+    }
+    format!(
+        "{}({}{}){}",
+        &s[..whole.start()],
+        before,
+        &caps[2],
+        &s[whole.end()..]
+    )
 }
 
 // ---- Step 46: stripInPress ----
@@ -7329,6 +7375,30 @@ mod tests {
         let out = strip_published_page(&mut c, "Foo bar Author, 1900: 12\u{2013}18".to_string());
         assert_eq!(out, "Foo bar Author, 1900");
         assert_eq!(c.name.published_in_page, Some("12\u{2013}18".to_string()));
+    }
+
+    #[test]
+    fn published_page_with_p_dot_after_a_year() {
+        let mut c = ctx("x");
+        let out = strip_published_page(&mut c, "Aus bus Girault 1913, p.244".to_string());
+        assert_eq!(out, "Aus bus Girault 1913");
+        assert_eq!(c.name.published_in_page, Some("244".to_string()));
+        let mut c = ctx("x");
+        let out = strip_published_page(&mut c, "Aus bus Smith p. 44".to_string());
+        assert_eq!(out, "Aus bus Smith p. 44");
+        assert_eq!(c.name.published_in_page, None);
+    }
+
+    #[test]
+    fn page_in_brackets_is_dropped_or_the_page_by_what_the_brackets_hold() {
+        let mut c = ctx("x");
+        let out = strip_published_page(&mut c, "Aus bus (McMurrich 1889, p. 111)".to_string());
+        assert_eq!(out, "Aus bus (McMurrich 1889)");
+        assert_eq!(c.name.published_in_page, None);
+        let mut c = ctx("x");
+        let out = strip_published_page(&mut c, "Aus bus Hyl. (1943 p. 155)".to_string());
+        assert_eq!(out, "Aus bus Hyl. (1943)");
+        assert_eq!(c.name.published_in_page, Some("155".to_string()));
     }
 
     #[test]

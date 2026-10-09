@@ -445,3 +445,64 @@ fn sic_and_corrig_spellings_in_a_separate_authorship() {
         .corrig()
         .nothing_else();
 }
+
+#[test]
+fn a_page_after_the_year_is_the_page() {
+    // #78: 77 CLB authorships cite a page with "p." after the year; the "p." became an author and
+    // the page a second year, the imprint year ("Girault & p., 1913 [244]")
+    assert_name("Trichaporoidella margiventris Girault 1913, p.244")
+        .species("Trichaporoidella", "margiventris")
+        .comb_authors(Some("1913"), &["Girault"])
+        .published_in_page("244")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Aus bus", "Smith, 1900, pp. 12-14")
+        .species("Aus", "bus")
+        .comb_authors(Some("1900"), &["Smith"])
+        .published_in_page("12-14")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth(
+        "Parhabdocidaris",
+        "Thiery in Thiery Cuenot & Lambert 1928, p. 123",
+    )
+    .monomial("Parhabdocidaris")
+    .comb_authors(Some("1928"), &["Thiery"])
+    .published_in("Thiery Cuenot & Lambert 1928")
+    .published_in_year(Some(1928))
+    .published_in_page("123")
+    .nothing_else();
+    // brackets holding only the year are the name's own citation
+    assert_name("Hieracium kolthoffianum Hyl. (1943 p. 155)")
+        .species("Hieracium", "kolthoffianum")
+        .comb_authors(Some("1943"), &["Hyl."])
+        .published_in_page("155")
+        .nothing_else();
+    // no year, no page
+    assert_name("Aus bus Smith p. 44")
+        .species("Aus", "bus")
+        .comb_authors(None, &["Smith p."])
+        .nothing_else();
+}
+
+#[test]
+fn a_page_in_the_basionym_brackets_is_dropped() {
+    // #78: the page of the original description is no page of the name's publication; dropped as
+    // the colon form in the brackets is
+    for authorship in [
+        "(McMurrich 1889, p. 111)",
+        "(McMurrich 1889 p. 111)",
+        "(McMurrich 1889: 111)",
+    ] {
+        assert_name_auth("Actinia bermudensis", authorship)
+            .species("Actinia", "bermudensis")
+            .bas_authors(Some("1889"), &["McMurrich"])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    assert_name("Actinia bermudensis (McMurrich 1889, p. 111)")
+        .species("Actinia", "bermudensis")
+        .bas_authors(Some("1889"), &["McMurrich"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
