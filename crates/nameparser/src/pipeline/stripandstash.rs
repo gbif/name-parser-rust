@@ -107,6 +107,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_approved_lists(ctx, s);
     s = strip_mihi(ctx, s);
     s = normalise_anon(ctx, s);
+    s = normalise_glued_et_al(ctx, s);
     s = strip_colon_concept_reference(ctx, s);
     s = strip_bracketed_tax_note(ctx, s);
     s = strip_paren_tax_note(ctx, s);
@@ -2859,6 +2860,22 @@ fn normalise_anon_str(s: &str) -> String {
     fancy_replace_all(&ANON_LOWER, &s, |_| "anon.".to_string())
 }
 
+/// "et al." glued into one word: `etal`, `Etal`, `etal.` (`Bianchi etal. 2015`, `Ahrens, Bazzato,
+/// Lopez, etal, 2026`, `Fang & etal, 2007`). Whole word only, so `Étallon` stays a surname.
+/// Rust-only: Java read it as a surname of its own or stopped parsing at it (30 ChecklistBank rows).
+static GLUED_ET_AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\s)[Ee]tal\b\.?").unwrap());
+
+/// Spell a glued [`GLUED_ET_AL`] as "et al.", which the authorship parser reads as the closing
+/// "al." author — the "&"/"and" some sources put in front of it is then read as the "et".
+fn normalise_glued_et_al(_ctx: &mut ParseContext, s: String) -> String {
+    normalise_glued_et_al_str(&s)
+}
+
+/// [`normalise_glued_et_al`] for any string — also run on a separately supplied authorship.
+fn normalise_glued_et_al_str(s: &str) -> String {
+    GLUED_ET_AL.replace_all(s, "${1}et al.").into_owned()
+}
+
 // ---- Step 38: stripColonConceptReference ----
 
 /// Java COLON_CONCEPT_REFERENCE (StripAndStash.java:238-240):
@@ -4681,9 +4698,13 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // Deliberately omits `CV_EX`/`HT_MARKER` (see the section doc comment).
     s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
     s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
-    // "Anon"/"anon" -> "anon.", as on the name string (step 37). Padded: its patterns need
-    // whitespace before the word, and here it often starts the string ("Anon. 1837").
-    s = java_trim(&normalise_anon_str(&format!(" {s}"))).to_string();
+    // "Anon"/"anon" -> "anon." and a glued "etal" -> "et al.", as on the name string (step 37).
+    // Padded: their patterns need whitespace before the word, and here it often starts the
+    // string ("Anon. 1837").
+    s = java_trim(&normalise_glued_et_al_str(&normalise_anon_str(&format!(
+        " {s}"
+    ))))
+    .to_string();
 
     // The notes this authorship carries are collected in source order and added once, at the
     // end, so the whole of it can be checked against the note the name string already gave:
