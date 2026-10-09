@@ -1,0 +1,195 @@
+# Source of docs/parsing-examples.md, rendered by tools/parsing_examples.py.
+# "## Title" starts a section, "> text" is its introduction (markdown), every other non-empty line
+# is an example: the name, optionally a TAB and an authorship given separately (as ChecklistBank
+# passes it), optionally "  # " and a short remark.
+
+## Genera and higher taxa
+> A single word is a `uninomial`; its rank stays `UNRANKED` unless a suffix makes it certain (`-aceae` is always a family) or a rank is given as a hint.
+Abies
+Abies Mill.
+Asteraceae
+Carabidae Latreille, 1802
+Lepidoptera Linnaeus, 1758
+Pinus	L.
+
+## Species
+> A genus with a lower-case epithet is a species. The authorship is split into the combination authorship and, in brackets, the basionym authorship (the author of the original combination). A year with a comma and a bracketed original author are typical of zoology, a recombining author after the bracket of botany; both become evidence for the nomenclatural `code`.
+Abies alba Mill.
+Quercus robur L.
+Homo sapiens Linnaeus, 1758
+Puma concolor (Linnaeus, 1771)
+Bellis perennis L.
+Picea abies (L.) H.Karst.
+Felis silvestris Schreber, 1777
+Taraxacum officinale F.H.Wigg.
+Abies alba	Mill.
+Puma concolor	(Linnaeus, 1771)
+
+## Infraspecific names
+> A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. Without a marker, zoological trinomials are subspecies; otherwise the rank stays the generic `INFRASPECIFIC_NAME`. The author of the species, standing before the marker, is kept apart as the `specificAuthorship`. An autonym repeats the species epithet and has no author of its own.
+Vulpes vulpes silaceus Miller, 1907
+Poa pratensis subsp. angustifolia (L.) Lej.
+Abies alba var. nana Carrière
+Rosa canina f. dumetorum (Thuill.) Rouy
+Festuca ovina L. subsp. guestfalica (Boenn. ex Rchb.) K.Richt.
+Abies alba Mill. var. alba
+Brassica oleracea var. capitata L.
+Loranthus incanus Schumach. & Thonn. sessilis Sprague  # no rank marker
+Hydnellum scrobiculatum var. zonatum f. parvum (Banker) D. Hall & D.E. Stuntz 1972  # the middle rank is dropped, with a warning
+Agaricus collinitus β mucosus (Bull.) Fr.  # a Greek letter as an informal marker
+
+## Rarer rank markers
+Scilla vindobonensis lus. alba (Beck) Kereszty
+Eunidia simplex m. bifuscomaculata Breuning, 1957  # m. = morpha, monstrositas or modificatio
+Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.
+Arvicola terrestris morpha subalpina
+Acidalia remutaria ab. n. undularia  # aberratio nova
+Pseudomonas syringae pv. tomato
+Salmonella enterica subsp. enterica serovar Typhimurium  # a serovar is no part of the scientific name
+Fusarium oxysporum f. sp. lycopersici
+Rubus hirtus Rchb. microg pectinatus Sudre & Gavet
+
+## Subgenera and other infrageneric names
+> A capitalised word in brackets after the genus is a subgenus. Infrageneric rank markers (`sect.`, `subg.`, `ser.`) work like the infraspecific ones; an author before the marker is the genus author.
+Carabus (Carabus) auronitens Fabricius, 1792
+Phalium (Semicassis) vector R. T. Abbott, 1993
+Astragalus sect. Phaca
+Centaurea L. subg. Jacea
+Cordia (Adans.) Kuntze sect. Salimori
+Hieracium unr. Verbasciformia  # unranked
+
+## Hybrids
+> The hybrid sign `×` marks the part of the name that is a nothotaxon (`notho`). A formula naming two parents is no name of its own.
+Mentha × piperita L.
+×Triticosecale Wittm.
+Salix × rubens Schrank
+Aconitum ×teppneri Mucher ex Starm. nothosubsp. goetzii Starm.
+Salix alba × Salix fragilis
+
+## Cultivars
+Acer campestre L. cv. 'Elsrijk' Broerse
+Acer platanoides 'Crimson King'
+Symphoricarpos sp. cv. 'mother of pearl'
+Rhododendron Loderi Group
+
+## Authors
+> Authors are kept as written, with spacing around initials and dots normalised. Ex-authors proposed a name someone else published, an `in` citation goes to `publishedIn`. Particles, filius and all-capital names get their usual form.
+Acacia aneura F.Muell. ex Benth.
+Festuca pachyphylla	Degen ex Nyár. ex Csürös, Gergely & Pop  # a chain of ex-authors
+Pisania billehousti Souverbie, in Souverbie and Montrouzier, 1864
+Conus textile Linnaeus, 1758
+Rotalina cultrata d'Orb. 1840
+Oxyporus Fabricius, 1775
+Linnaea borealis L. f.
+Clarkia unguiculata Lindl. f. pallida (Jeps.) H.Lewis & M.E.Lewis
+Bryum argenteum Hedw. var. lanatum (P.Beauv.) Hampe
+Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje
+Chitra chitra javanensis	MCCORD & PRITCHARD, 2003  # all-capital authors
+Eumenes elegans	DE SAUSSURE 1852
+Homo naledi Berger et al., 2015
+Ablepharus budaki	Poulakakis Et Al., 2005  # "et al." in any case
+Fissidentalium zelandicum	G.B. Sowerby II  # a generation suffix
+
+## Sanctioned fungal names
+> In mycology, Fries and Persoon "sanctioned" names, cited after a colon; inside a basionym's brackets for a sanctioned basionym.
+Boletus edulis Bull. : Fr.
+Merulius lacrimans (Wulfen : Fr.) Schum.
+Russula sanguinea (Bull. : Pers.) Fr. : Fr.
+
+## Years
+> The year is kept as written in the citation: a letter telling apart works of the same year, a question mark. A year in square brackets on its own was established from external evidence (`bracketedYear`); next to a plain year it is the year printed on the work, the imprint year.
+Xyleborus muasi Browne, 1961a
+Acalles giraudi Mulsant, 1875?
+Phyllomacromia	Westwood, [1851]
+Acleris aspersana (Hübner, [1814-1817])
+Ctenotus alacer Storr, 1970 [1969]
+Anomalopus truncatus (Peters, 1876 [1877])
+Acleris logiana (Clerck, 1759 "1758")
+
+## Anonymous authors
+> An anonymously published work is `anonymous`; authors attributed to it from other evidence are cited in square brackets.
+Rhinobatos typus (Anonymous [Bennett], 1830)
+Apatura ilia ([Denis & Schiffermüller], 1775)
+Physalospora rubiginosa (Fr.) anon.
+Lupinus [Tourn.] L.  # a pre-Linnaean author, as ex-author
+
+## Manuscript names and other ex citations
+> A name taken from someone's manuscript (`MS`) and published by another author is an ex citation. A name that was never published (`ined.`, `ms.`) is a `manuscript` name.
+Harpalus notatus Stephens (ex Kirby MS) 1828
+Haustellum kiiensis Kuroda MS in Kira, 1959
+Bacillus amylolyticus (ex Choukévitch 1911) Nakamura 1984  # a revived bacterial name
+Eucnidoideae ined.
+Abies alba Mill. ined.
+Acosmeta	Moeschler, MS.
+Oxalis barrelieri ined.?
+
+## Nomenclatural notes
+> Notes on nomenclatural status are moved out of the authorship into `nomenclaturalNote`. A status that exists in one code only also sets the code.
+Schedonorus arundinaceus (Schreb.) Dumort., nom. cons.
+Spermacoce hyssopifolia Sm., nom. rej.
+Lobelia parvifolia R.Br., nom. illeg.
+Brachistus caracasanus Pittier, nom. nud.
+Santarosamyia erecta (Coquillett, 1902) comb. nov.
+Mycena subulata Z. W. Liu, Y. P. Ge & Q. Na, sp. nov.
+Nocardia asteroides (Eppinger 1891) Blanchard 1896 (Approved Lists 1980)
+Stephanauge nexilis	(Verril, 1883) [sic.]  # spelled so in the original
+
+## Taxonomic notes and references
+> Concepts (`sensu`, `auct.`, `non`, `s.l.`) go to `taxonomicNote`; a citation of the publication to `publishedIn`, with its year in `publishedInYear`.
+Vitis champanii auct. non Planch.
+Umbrina littoralis auct. non Holbrook, 1847
+Trilepisium madagascariense auct. non DC., sensu Friedmann (1994)
+Centaurea nigra L. s. l.
+Andropogon saccharoides Sw. sensu lato
+Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852
+Batesia	Spruce ex Benth., Gen. Pl. 1: 563. 1865.
+Recilia truncatus Dash & Viraktamath, 1998a: 29
+
+## Qualifiers and doubtful names
+> Open nomenclature (`cf.`, `aff.`, `?`) qualifies an epithet; such a name is `INFORMAL` and the qualifier sits in `epithetQualifier`.
+Abies cf. alba
+Pomatoschistus aff. pictus (Malm, 1865)
+Ferganoconcha? oblonga
+Buteo borealis ? ventralis
+Sorex cf. S. shinto
+Ammonia ex gr. beccarii
+
+## Provisional and informal names
+> A taxon carrying a provisional designation but no epithet of its own is an `Informal` result: the anchor taxon, the rank the designation stands for and the designation itself, verbatim, as the `phrase`.
+Abies sp.
+Bacillus sp. 1
+Rhizobium sp. RMCC TR1811
+Serratia sp. RE1-2a
+Prostanthera sp. Wollemi (W.Jacobs 6421)
+Acacia sp. Kalgoorlie (A.Smith 123)
+Cantuaria sp. Forster, 1968
+Formicidae cf.
+Wolbachia endosymbiont of Leptogenys gracilis
+Acidimicrobiales bacterium JGI 01_E13
+Escherichia coli 18-41  # a strain designation on a species
+Aquimarina muelleri DSM 19832
+
+## Bacteria
+Candidatus Liberibacter asiaticus
+Candidatus Phytoplasma mali
+Streptomyces griseus subsp. griseus (Krainsky 1914) Waksman and Henrici 1948 (Approved Lists 1980)
+
+## Extinct taxa
+Tyrannosaurus rex Osborn, 1905
+†Ammonites bucklandi Sowerby, 1816
+†Pteranodon
+
+## Unparsable names
+> Some strings are no scientific names: they come back as an unparsable result that still says what they are (`type`) and, where known, the code.
+Tobacco mosaic virus
+Influenza A virus
+Escherichia phage T4
+Incertae sedis
+Biota incertae sedis
+unidentified Rosaceae
+uncultured bacterium
+Gen. nov.
+N.N.
+BOLD:AAA0001
+SH1234567.08FU
+bacterium DSM 6505
