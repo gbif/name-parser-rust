@@ -866,53 +866,60 @@ static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
 /// (not year-shaped) becomes the strain phrase it is.
 static TRAILING_YEAR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?-u:[12]\d{3})$").unwrap());
 
-/// A taxon, a generic organism label as its epithet and whatever follows it ("Acidimicrobiales
-/// bacterium JGI 01_E13", "Wolbachia endosymbiont of Leptogenys gracilis", "Candidatus
-/// Abawacabacteria bacterium"). Group 1 = taxon + label, group 2 = the tail.
+/// A taxon, a generic organism label and whatever follows it ("Acidimicrobiales bacterium JGI
+/// 01_E13", "Wolbachia endosymbiont of Leptogenys gracilis", "Candidatus Abawacabacteria
+/// bacterium"). Group 1 = the taxon, group 2 = the label, group 3 = the tail. Not `archaea`: after
+/// a genus that is the Latin epithet "ancient" (`Rinodina archaea`, `Russula archaea R. Heim`), and
+/// ChecklistBank has it as a label only in `Asgard archaea`.
 static ORGANISM_LABEL_TAIL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^((?:Candidatus\s+)?\p{Lu}\p{Ll}+\s+\p{Ll}*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?:\s+(.+?))?\s*$",
+        r"^((?:Candidatus\s+)?\p{Lu}\p{Ll}+)\s+(\p{Ll}*(?:bacteri(?:um|a)|archae(?:on|ote)|symbionts?))(?:\s+(.+?))?\s*$",
     )
     .unwrap()
 });
 
-/// An [`ORGANISM_LABEL_TAIL`] is a provisional name, INFORMAL like the "Genus species CODE" of
-/// [`stash_trailing_strain_code`]: the label stays its epithet, the tail — a strain code, a host,
-/// several words — becomes the phrase. Java read the tail as authors ("JGI E13", "of Leptogenys
-/// gracilis") and the bare label as a species.
+/// An [`ORGANISM_LABEL_TAIL`] is a provisional name of an unnamed species of the taxon, INFORMAL
+/// like `Burkholderia sp. (Gigaspora margarita endosymbiont)`: the label opens the phrase and the
+/// tail — a strain code, a host, several words — runs on in it. Java read the tail as authors
+/// ("JGI E13", "of Leptogenys gracilis") and the bare label as a species; keeping the label as the
+/// epithet made a pseudo-species "Wolbachia endosymbiont" of every Wolbachia endosymbiont of every
+/// host.
 fn stash_organism_label_tail(ctx: &mut ParseContext, s: String) -> String {
     let Some(caps) = ORGANISM_LABEL_TAIL.captures(&s) else {
         return s;
     };
-    match caps.get(2) {
-        // an author behind it makes the label a real epithet: the diatom "Navicula bacterium
-        // Frenguelli"
-        Some(tail) if LABEL_TAIL_AUTHOR.is_match(tail.as_str()) => s,
-        Some(tail) => {
-            ctx.name.type_ = NameType::Informal;
-            ctx.name.phrase = Some(tail.as_str().to_string());
-            caps[1].to_string()
-        }
+    let phrase = match caps.get(3) {
+        // an author or an infraspecific name behind it makes the label a real epithet: the diatom
+        // "Navicula bacterium Frenguelli", "Allochromatium phaeobacterium Srinivas et al., 2009"
+        Some(tail) if LABEL_TAIL_NAME.is_match(tail.as_str()) => return s,
+        Some(tail) => format!("{} {}", &caps[2], tail.as_str()),
         // alone, a symbiont, or a bacterium of a Candidatus or higher taxon ("Candidatus
         // Abawacabacteria bacterium", "Acidimicrobiales bacterium"); "Navicula bacterium" is a
         // species
-        None => {
-            if s.ends_with("symbiont")
-                || s.ends_with("symbionts")
-                || LABEL_HIGHER_ANCHOR.is_match(&s)
-            {
-                ctx.name.type_ = NameType::Informal;
-            }
-            s
+        None if s.ends_with("symbiont")
+            || s.ends_with("symbionts")
+            || LABEL_HIGHER_ANCHOR.is_match(&s) =>
+        {
+            caps[2].to_string()
         }
-    }
+        None => return s,
+    };
+    ctx.name.type_ = NameType::Informal;
+    ctx.name.rank = Rank::Species;
+    ctx.name.phrase = Some(phrase);
+    caps[1].to_string()
 }
 
-/// An authorship behind an organism label: a capitalised surname, perhaps a team and a year.
-static LABEL_TAIL_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r"^\(?\p{Lu}\p{Ll}[\p{L}'.\-]*(?:(?:,? | & | et )\p{Lu}[\p{L}'.\-]+)*(?:,? (?:1[5-9]\d\d|20[0-2]\d))?\)?$",
-    )
+/// What makes an organism label a real epithet when it follows: an authorship — a capitalised
+/// surname, perhaps with initials, a team, `et al.` and a year, perhaps after a basionym's
+/// bracket ("R. Heim 1938", "Riedel and Sanfilippo, 1970", "(Ach.) Arnold") — or an infraspecific
+/// epithet, after a rank marker or before an author ("f. cinerascens", "hitomiae Houart & Moe,
+/// 2011"). A strain code carries a digit or an underscore, a host follows `of`.
+static LABEL_TAIL_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    const AUTHOR: &str = r"(?:\p{Lu}\.\s?)*\p{Lu}\p{Ll}[\p{L}'.\-]*(?:(?:,? | & | et | and )(?:\p{Lu}\.\s?)*\p{Lu}[\p{L}'.\-]+)*(?: et al\.?)?(?:,? (?:1[5-9]\d\d|20[0-2]\d))?";
+    Regex::new(&format!(
+        r"^(?:\(?{AUTHOR}\)?|\({AUTHOR}\) {AUTHOR}|(?:f|fo|forma|var|subvar|subsp|ssp|subf|ab|morph)\.?\s+\p{{Ll}}.*|\p{{Ll}}{{3,}}(?:\s+\(?{AUTHOR}\)?|\s+\({AUTHOR}\) {AUTHOR}))$"
+    ))
     .unwrap()
 });
 

@@ -6,7 +6,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NameType, Rank};
+use nameparser::model::{NameType, NomCode, Rank};
 
 // ---- unclassified ------------------------------------------------------------------------------
 
@@ -84,17 +84,36 @@ fn organism_word_as_a_missing_genus_epithet_is_untouched() {
 
 #[test]
 fn named_symbiont_with_a_genus_is_informal() {
-    // not an identifier: the genus anchors it, and the host is its phrase, no author
-    assert_name("Wolbachia endosymbiont of Drosophila simulans")
-        .species("Wolbachia", "endosymbiont")
-        .type_(NameType::Informal)
-        .phrase("of Drosophila simulans")
+    // not an identifier: the genus anchors an unnamed species, like `Burkholderia sp. (Gigaspora
+    // margarita endosymbiont)`; the label is no epithet, it opens the phrase with the host
+    assert_informal("Wolbachia endosymbiont of Drosophila simulans")
+        .taxon("Wolbachia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("endosymbiont of Drosophila simulans")
+        .nothing_else();
+    assert_informal("Wolbachia endosymbiont")
+        .taxon("Wolbachia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("endosymbiont")
         .nothing_else();
     // a strain code behind a higher taxon's "bacterium"
-    assert_name("Acidimicrobiales bacterium JGI 01_E13")
-        .species("Acidimicrobiales", "bacterium")
-        .type_(NameType::Informal)
-        .phrase("JGI 01_E13")
+    assert_informal("Acidimicrobiales bacterium JGI 01_E13")
+        .taxon("Acidimicrobiales")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("bacterium JGI 01_E13")
+        .nothing_else();
+    assert_informal("Acidimicrobiales bacterium")
+        .taxon("Acidimicrobiales")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("bacterium")
+        .nothing_else();
+    // without an author "Navicula bacterium" is a species too
+    assert_name("Navicula bacterium")
+        .species("Navicula", "bacterium")
         .nothing_else();
     // with an author it is a real epithet: the diatom Navicula bacterium
     assert_name("Navicula bacterium Frenguelli")
@@ -103,6 +122,38 @@ fn named_symbiont_with_a_genus_is_informal() {
         .nothing_else();
     // a symbiont named after its host has no anchor
     assert_unparsable("Acyrthosiphon kondoi endosymbiont", NameType::Other);
+}
+
+#[test]
+fn organism_label_word_before_an_author_or_infraspecific_name_is_a_real_epithet() {
+    assert_name("Russula archaea R. Heim")
+        .species("Russula", "archaea")
+        .comb_authors(None, &["R.Heim"])
+        .nothing_else();
+    assert_name("Rinodina archaea (Ach.) Arnold")
+        .species("Rinodina", "archaea")
+        .comb_authors(None, &["Arnold"])
+        .bas_authors(None, &["Ach."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Rinodina archaea f. cinerascens H. Magn.")
+        .infra_species("Rinodina", "archaea", Rank::Form, "cinerascens")
+        .comb_authors(None, &["H.Magn."])
+        .nothing_else();
+    assert_name("Orania archaea hitomiae Houart & Moe, 2011")
+        .infra_species("Orania", "archaea", Rank::Subspecies, "hitomiae")
+        .comb_authors(Some("2011"), &["Houart", "Moe"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Lithochytris archaea Riedel and Sanfilippo, 1970")
+        .species("Lithochytris", "archaea")
+        .comb_authors(Some("1970"), &["Riedel", "Sanfilippo"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // `archaea` after a genus is the Latin "ancient", no label
+    assert_name("Neoschoengastia archaea")
+        .species("Neoschoengastia", "archaea")
+        .nothing_else();
 }
 
 #[test]

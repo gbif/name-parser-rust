@@ -4483,7 +4483,7 @@ Escherichia coli bacteriophage	false
 Betasatellites	false					
 Satellite Nucleic Acids (Subviral DNA-ssDNA)	false					
 ssRNA	true	ssRNA	ssRNA	ssRNA	ssRNA	
-Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha proteobacterium	Alpha proteobacterium RNA12	
+Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha	Alpha proteobacterium RNA12	
 Ustilaginoidea virens RNA virus	false					
 Candida albicans RNA_CTR0-3	true	Candida albicans RNA_CTR0-3	Candida albicans RNA_CTR0-3	Candida albicans	Candida albicans RNA_CTR0-3	
 Carabus satyrus satyrus KURNAKOV, 1962	true	Carabus satyrus satyrus Kurnakov, 1962	Carabus satyrus satyrus	Carabus satyrus satyrus	Carabus satyrus satyrus Kurnakov, 1962	Kurnakov, 1962
@@ -4688,15 +4688,15 @@ inc.sed.	false
 inc.   sed.	false					
 Incertaesedis obscuricornis Fairmaire LMH 1893	false					
 Uropodoideaincertaesedis	false					
-Acidobacteria bacterium	true	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria bacterium	
-Oscillatoriales cyanobacterium PCC 10608	true	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium	Oscillatoriales cyanobacterium PCC 10608	
-Acidimicrobiales bacterium JGI 01_E13	true	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium	Acidimicrobiales bacterium JGI 01_E13	
+Acidobacteria bacterium	true	Acidobacteria bacterium	Acidobacteria bacterium	Acidobacteria	Acidobacteria bacterium	
+Oscillatoriales cyanobacterium PCC 10608	true	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales cyanobacterium PCC 10608	Oscillatoriales	Oscillatoriales cyanobacterium PCC 10608	
+Acidimicrobiales bacterium JGI 01_E13	true	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales bacterium JGI 01_E13	Acidimicrobiales	Acidimicrobiales bacterium JGI 01_E13	
 Acidobacterium ailaaui Myers & King, 2016	true	Acidobacterium ailaaui Myers & King, 2016	Acidobacterium ailaaui	Acidobacterium ailaaui	Acidobacterium ailaaui Myers & King, 2016	Myers & King, 2016
-Candidatus Amesbacteria bacterium GW2011_GWC1_46_24	true	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	"Candidatus Amesbacteria bacterium"	"Candidatus Amesbacteria bacterium" GW2011_GWC1_46_24	
+Candidatus Amesbacteria bacterium GW2011_GWC1_46_24	true	"Candidatus Amesbacteria" bacterium GW2011_GWC1_46_24	"Candidatus Amesbacteria" bacterium GW2011_GWC1_46_24	"Candidatus Amesbacteria"	"Candidatus Amesbacteria" bacterium GW2011_GWC1_46_24	
 Candidatus Puniceispirillum Oh, Kwon, Kang, Kang, Lee, Kim & Cho, 2010	true	"Candidatus Puniceispirillum" Oh et al. 2010	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum"	"Candidatus Puniceispirillum" Oh et al. 2010	Oh et al. 2010
 Candidatus Halobonum	true	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	"Candidatus Halobonum"	
 Candidatus Endomicrobium sp. MdDo-005	true	"Candidatus Endomicrobium" sp. MdDo-005	"Candidatus Endomicrobium" sp. MdDo-005	"Candidatus Endomicrobium"	"Candidatus Endomicrobium" sp. MdDo-005	
-Candidatus Abawacabacteria bacterium	true	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	"Candidatus Abawacabacteria bacterium"	
+Candidatus Abawacabacteria bacterium	true	"Candidatus Abawacabacteria" bacterium	"Candidatus Abawacabacteria" bacterium	"Candidatus Abawacabacteria"	"Candidatus Abawacabacteria" bacterium	
 Candidatus Accumulibacter phosphatis clade IIA str. UW-1	false					
 Candidatus Anammoxoglobus environmental samples	true	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus" environmental samples	"Candidatus Anammoxoglobus"	"Candidatus Anammoxoglobus" environmental samples	
 None recorded	false					
@@ -4727,7 +4727,7 @@ Acyrthosiphon kondoi endosymbiont	false
 Burkholderia sp. (Gigaspora margarita endosymbiont)	true	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia sp. (Gigaspora margarita endosymbiont)	Burkholderia	Burkholderia sp. (Gigaspora margarita endosymbiont)	
 Dictyochloropsis symbiontica Tschermak-Woess	true	Dictyochloropsis symbiontica Tschermak-Woess	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica	Dictyochloropsis symbiontica Tschermak-Woess	Tschermak-Woess
 Dylakosoma symbionticum var. valens Skuja	true	Dylakosoma symbionticum var. valens Skuja	Dylakosoma symbionticum var. valens	Dylakosoma symbionticum valens	Dylakosoma symbionticum var. valens Skuja	Skuja
-Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont	Wolbachia endosymbiont of Leptogenys gracilis	
+Wolbachia endosymbiont of Leptogenys gracilis	true	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia endosymbiont of Leptogenys gracilis	Wolbachia	Wolbachia endosymbiont of Leptogenys gracilis	
 Lampona spec Platnick, 2000	true	Lampona spec Platnick, 2000	Lampona spec	Lampona spec	Lampona spec Platnick, 2000	Platnick, 2000
 Gobiosoma spec (Ginsburg, 1939)	true	Gobiosoma spec (Ginsburg, 1939)	Gobiosoma spec	Gobiosoma spec	Gobiosoma spec (Ginsburg, 1939)	(Ginsburg, 1939)
 Globigerina spec	true	Globigerina spec	Globigerina spec	Globigerina	Globigerina spec	
@@ -5236,7 +5236,7 @@ Calathus (Lindrothius) KURNAKOV 1961	true	Calathus (Lindrothius) Kurnakov, 1961	
 Ustilaginoidea virens RNA virus	false					
 Rhizoctonia solani dsRNA virus 2	false					
 Candida albicans RNA_CTR0-3	true	Candida albicans RNA_CTR0-3	Candida albicans RNA_CTR0-3	Candida albicans	Candida albicans RNA_CTR0-3	
-Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha proteobacterium	Alpha proteobacterium RNA12	
+Alpha proteobacterium RNA12	true	Alpha proteobacterium RNA12	Alpha proteobacterium RNA12	Alpha	Alpha proteobacterium RNA12	
 Armillaria ostoyae RNA1	true	Armillaria ostoyae RNA1	Armillaria ostoyae RNA1	Armillaria ostoyae	Armillaria ostoyae RNA1	
 Trametes spec.	true	Trametes spec.	Trametes spec.	Trametes	Trametes spec.	
 Trametes indet.	true	Trametes sp.	Trametes sp.	Trametes	Trametes sp.	
