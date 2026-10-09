@@ -218,6 +218,33 @@ pub fn replace_homoglyphs(s: &str) -> String {
         .collect()
 }
 
+/// [`replace_homoglyphs`], except that a Turkish dotless ı (U+0131) stays in a capitalised word
+/// other than the first: the surnames `Altıner`, `Yıldırım`. In the genus or an epithet it is a
+/// look-alike of `i` all the same. Rust-only: Java folded it everywhere (`Altiner`).
+pub fn replace_homoglyphs_in_name(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut at_word_start = true;
+    let mut surname = false;
+    for (i, c) in s.char_indices() {
+        if c.is_whitespace() {
+            at_word_start = true;
+            surname = false;
+            out.push(c);
+            continue;
+        }
+        if at_word_start && !matches!(c, '(' | '[' | '"' | '\'') {
+            surname = i > 0 && c.is_uppercase();
+            at_word_start = false;
+        }
+        if c == '\u{0131}' && surname {
+            out.push(c);
+        } else {
+            out.push(*HOMOGLYPHS.get(&c).unwrap_or(&c));
+        }
+    }
+    out
+}
+
 /// Faithful port of Java `String.trim()`: strips only leading/trailing chars whose
 /// codepoint is <= U+0020 (NOT the full Unicode White_Space set that Rust's str::trim uses).
 /// Use this everywhere the Java source calls `.trim()`.

@@ -314,9 +314,15 @@ fn strip_quoted_monomial(ctx: &mut ParseContext, s: String) -> String {
 
 /// Java MISSING_GENUS_EPITHET (StripAndStash.java:341-342): `^[a-z][a-z\-]+\s+\p{Lu}.*`, no
 /// flags. Has `\s` and `\p{Lu}` -> only `\s` ASCII-scoped. Called via `.matches()` in Java
-/// -> trailing `$` added (the pattern already opens with `^`).
-static MISSING_GENUS_EPITHET: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^[a-z][a-z\-]+(?-u:\s+)\p{Lu}.*$").unwrap());
+/// -> trailing `$` added (the pattern already opens with `^`). Rust-only: the author may open
+/// with the basionym's bracket (`denisi (Arlé, 1939)`), when it holds a year, a comma, a dot or an
+/// ampersand — a bare word there is the subgenus of a lower-cased genus (`balea (Balea) swalesi`).
+static MISSING_GENUS_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[a-z][a-z\-]+(?-u:\s+)(?:\p{Lu}|\(\p{Lu}[^)]*[\d.,&][^)]*\)).*$").unwrap()
+});
+
+/// A lone epithet: `denisi`.
+static LONE_EPITHET: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z][a-z\-]+$").unwrap());
 
 /// Java MISSING_GENUS_NOTE_KEYWORD (StripAndStash.java:343-344):
 /// `^(?:non|nec|not|sensu|sec|auct|auctt|fide|emend|ss|s|cf|aff|hort)\b.*`, no flags. Has
@@ -370,7 +376,7 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
         }
     } else if s.chars().count() > 1
         && s.chars().next().is_some_and(|c| c.is_lowercase())
-        && MISSING_GENUS_EPITHET.is_match(&s)
+        && (MISSING_GENUS_EPITHET.is_match(&s) || lone_epithet_of_a_species(ctx, &s))
         && !MISSING_GENUS_NOTE_KEYWORD.is_match(&s)
         && !token::is_particle(first_word(&s))
     {
@@ -385,6 +391,18 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
         return missing;
     }
     s
+}
+
+/// A lone lower-case word is an epithet whose genus is missing when its author comes separately or
+/// the rank says species or below: `denisi` + `(Arlé, 1939)` + species. Rust-only: it was made the
+/// genus of an informal name, "Denisi sp.".
+fn lone_epithet_of_a_species(ctx: &ParseContext, s: &str) -> bool {
+    LONE_EPITHET.is_match(s)
+        && (ctx
+            .authorship_input
+            .as_deref()
+            .is_some_and(|a| !java_trim(a).is_empty())
+            || ctx.requested_rank.is_some_and(|r| r.is_species_or_below()))
 }
 
 /// A qualifier in front of a capitalised genus: a question mark, glued or spaced (`?Sydonia alba`,
@@ -1281,14 +1299,31 @@ fn normalise_hyphens(ctx: &mut ParseContext, s: String) -> String {
     }
     // A numeral epithet written with a dot for its hyphen ("Rhynchophorus 13.punctatus Herbst",
     // "Curculio 4.maculatus Villers"), which split into a number and an author.
-    DOTTED_NUMERAL_EPITHET
-        .replace_all(&s, "$1$2-$3$4")
-        .into_owned()
+    let s = DOTTED_NUMERAL_EPITHET.replace_all(&s, "$1$2-$3$4");
+    // ...or with a space ("Sphex 2 punctata", "Episyron rufipes 7. maculatus"), which lost the
+    // number or the whole epithet
+    SPACED_NUMERAL_EPITHET.replace(&s, "$1 $2-$3").into_owned()
 }
 
 /// A one- or two-digit number, a dot and a lower-case word: [`normalise_hyphens`].
 static DOTTED_NUMERAL_EPITHET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(\s)(\d{1,2})\.(\p{Ll}{4,})(\s|$)").unwrap());
+
+/// A one- or two-digit number and a numeral epithet's word, spaced apart, right after the genus
+/// (and subgenus) or the species: `Sphex 2 punctata`, `Coccinella 12 guttata`, `Episyron rufipes
+/// 7. maculatus`. Only the words such numbers count (spots, bands, teeth, …): a number before any
+/// other word is a strain, a virus or a numbered form (`Bovine herpesvirus 5 strain N569`).
+/// Rust-only (35 ChecklistBank names): Java dropped the number or the epithet.
+static SPACED_NUMERAL_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"^(\p{Lu}\p{Ll}+(?:(?-u:\s)\(\p{Lu}\p{Ll}+\))?(?:(?-u:\s)\p{Ll}[\p{Ll}-]*)?)",
+        r"(?-u:\s)(\d{1,2})\.?(?-u:\s+)",
+        r"((?:punctat|maculat|guttat|lineat|notat|fasciat|pustulat|dentat|spinos|striat|signat|",
+        r"costat|cinct|vittat|plagiat|sulcat|carinat|tuberculat|radiat|nodos|annulat|ocellat|",
+        r"stigmat|cornut|foveolat|marginat|lobat|virgat|mucronat|color)\p{Ll}*)\b",
+    ))
+    .unwrap()
+});
 
 // ---- Step 13: replaceHomoglyphs ----
 
@@ -1322,7 +1357,7 @@ fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
         Cow::Borrowed(_) => s,
     };
     if crate::unicode::contains_homoglyphs(&s) {
-        let repl = crate::unicode::replace_homoglyphs(&s);
+        let repl = crate::unicode::replace_homoglyphs_in_name(&s);
         if repl != s {
             ctx.name.add_warning(warnings::HOMOGLYHPS);
             return repl;
@@ -2967,13 +3002,16 @@ fn normalise_leading_auct(note: &str) -> String {
 /// `\s*\[\s*((?:auctt?|sensu|sec|non|nec|misspelling|misapplied|misident)\b[^\]]*)\]\s*\.?\s*$`,
 /// `Pattern.CASE_INSENSITIVE`, plus "auctorum" ("[auctorum]", see [`TAX_NOTE`]) and "not"
 /// ("[not used as valid]", "[not Amphisbetia pulchella Vannucci-Mendes 1954]"), which Java
-/// lacks and so read as authors. `[^\]]` is a negated custom class -> stays OUTSIDE any
+/// lacks and so read as authors. Rust-only as well: "lapsus" (`[lapsus, non-existent combination,
+/// not Kolmer, 1985]`), and a bracket whose homonym note follows a remark after a comma or semicolon
+/// (`[junior secondary homonym, nec Anthicus elegans Steven, 1806]`), taken whole: the note alone
+/// left its bracket's opening half and the remark behind as authors. `[^\]]` is a negated custom class -> stays OUTSIDE any
 /// `(?-u:…)` (`SIC_WITH_COMMENT`/`BRACKETED_NOM_NOTE` precedent from batches 1-2) ->
 /// atom-only `\s`/`\b` scoping, not whole-wrap. No lookaround/backreference -> plain
 /// `regex` crate.
 static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident)(?-u:\b)[^\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
+        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident|lapsus)(?-u:\b)[^\]]*|[^\[\]]*[,;](?-u:\s*)(?:non|nec|not)(?-u:\s)[^\[\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });

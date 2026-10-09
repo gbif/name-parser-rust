@@ -392,3 +392,31 @@ fn auct_with_a_trailing_comma() {
         .sensu("auct.")
         .nothing_else();
 }
+
+/// A bracketed note opening with "lapsus" is a note as a whole: `[lapsus, non-existent
+/// combination, not Kolmer, 1985]` gave the authors "lapsus" and "non-existent combination" and the
+/// note `not Kolmer, 1985]`, half a bracket.
+#[test]
+fn a_bracketed_lapsus_note() {
+    assert_name_auth(
+        "Flabelligera biscayensis",
+        "[lapsus, non-existent combination, not Kolmer, 1985]",
+    )
+    .species("Flabelligera", "biscayensis")
+    .sensu("lapsus, non-existent combination, not Kolmer, 1985")
+    .nothing_else();
+}
+
+/// A remark and then a homonym note, in one bracket: the bracket is the note.
+#[test]
+fn a_bracketed_remark_with_a_homonym_note() {
+    assert_name_auth(
+        "Anthicus elegans",
+        "(Lea, 1895) [junior secondary homonym, nec Anthicus elegans Steven, 1806]",
+    )
+    .species("Anthicus", "elegans")
+    .bas_authors(Some("1895"), &["Lea"])
+    .sensu("junior secondary homonym, nec Anthicus elegans Steven, 1806")
+    .code(NomCode::Zoological)
+    .nothing_else();
+}

@@ -211,3 +211,31 @@ fn leading_species_label_before_a_subgenus_binomial_is_dropped() {
         .species_ig("Eubulus", "Cryptorhynchus", "orthomasticus")
         .nothing_else();
 }
+
+/// A lone epithet whose author comes separately, or whose rank is species or below, lacks its
+/// genus: `denisi` + `(Arlé, 1939)` was made the genus "Denisi" of an informal name (ChecklistBank
+/// dataset 2130). The same name with its author in the string was a placeholder already.
+#[test]
+fn a_lone_epithet_lacks_its_genus() {
+    for (name, auth, rank) in [
+        ("denisi", Some("(Arlé, 1939)"), Some(Rank::Species)),
+        ("denisi", Some("(Arlé, 1939)"), None),
+        ("denisi", None, Some(Rank::Species)),
+        ("denisi (Arlé, 1939)", None, None),
+    ] {
+        match nameparser::parse(name, auth, rank, None) {
+            nameparser::ParseResult::Unparsable(e) => {
+                assert_eq!(e.type_, NameType::Placeholder, "{name} {auth:?}")
+            }
+            other => panic!("{name} {auth:?} {rank:?}: expected a placeholder, got {other:?}"),
+        }
+    }
+    // a lone word alone is still a uninomial
+    assert_name("denisi").monomial("Denisi");
+}
+
+/// A lower-cased genus with its subgenus stays a name: the bracket holds no author.
+#[test]
+fn a_lower_cased_genus_with_its_subgenus() {
+    assert_name("balea (Balea) swalesi").species_ig("Balea", "Balea", "swalesi");
+}

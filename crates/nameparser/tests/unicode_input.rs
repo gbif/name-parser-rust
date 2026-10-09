@@ -101,3 +101,26 @@ fn a_cyrillic_o_is_a_letter_o_not_a_zero() {
         .warning(&[warnings::HOMOGLYHPS])
         .nothing_else();
 }
+
+/// The Turkish dotless ı is a letter of its own in a surname (`Altıner`, `Yıldırım`), not a
+/// look-alike of `i`; in the genus or an epithet it still is one (ChecklistBank dataset 1157).
+#[test]
+fn a_turkish_dotless_i_stays_in_a_surname() {
+    assert_authorship("Altıner, 1988", &["Altıner"])
+        .comb_authors(Some("1988"), &["Altıner"])
+        .nothing_else();
+    assert_name("Pseudovidalinidae Altıner, 1988")
+        .monomial("Pseudovidalinidae")
+        .comb_authors(Some("1988"), &["Altıner"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Abies alba Yıldırım & Kılıç")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Yıldırım", "Kılıç"])
+        .nothing_else();
+    assert_name("Abies alıba Mill.")
+        .species("Abies", "aliba")
+        .comb_authors(None, &["Mill."])
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+}
