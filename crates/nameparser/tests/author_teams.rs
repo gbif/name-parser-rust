@@ -155,3 +155,23 @@ fn a_glued_etal_is_et_al() {
         .comb_authors(Some("1859"), &["Étallon"])
         .nothing_else();
 }
+
+/// A capitalised "Et Al." is "et al." too — it gave the author "Al.", rendered "Wilson & Al.".
+#[test]
+fn a_capitalised_et_al_is_et_al() {
+    for raw in [
+        "Wilson Et Al., 2013",
+        "Wilson ET AL., 2013",
+        "Wilson et Al. 2013",
+    ] {
+        assert_name_auth("Abies alba", raw)
+            .species("Abies", "alba")
+            .comb_authors(Some("2013"), &["Wilson", "al."])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    // a surname after "Et" stays one
+    assert_authorship("Smith Et Alvarez", &["Smith", "Alvarez"])
+        .comb_authors(None, &["Smith", "Alvarez"])
+        .nothing_else();
+}

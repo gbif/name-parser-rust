@@ -2964,15 +2964,25 @@ fn normalise_anon_str(s: &str) -> String {
 /// Rust-only: Java read it as a surname of its own or stopped parsing at it (30 ChecklistBank rows).
 static GLUED_ET_AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\s)[Ee]tal\b\.?").unwrap());
 
-/// Spell a glued [`GLUED_ET_AL`] as "et al.", which the authorship parser reads as the closing
-/// "al." author — the "&"/"and" some sources put in front of it is then read as the "et".
+/// "et al." capitalised: `Wilson Et Al., 2013`, `ET AL.`, `et Al.` (2,508 ChecklistBank rows). The
+/// authorship parser knows only the lower-case "al." and took "Al." for an author.
+static CAPITALISED_ET_AL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(\s)(?:Et|ET|et)(?-u:\s+)(?:Al|AL)\b\.?|(\s)(?:Et|ET)(?-u:\s+)al\b\.?").unwrap()
+});
+
+/// Spell a glued [`GLUED_ET_AL`] or a [`CAPITALISED_ET_AL`] as "et al.", which the authorship
+/// parser reads as the closing "al." author — the "&"/"and" some sources put in front of it is
+/// then read as the "et".
 fn normalise_glued_et_al(_ctx: &mut ParseContext, s: String) -> String {
     normalise_glued_et_al_str(&s)
 }
 
 /// [`normalise_glued_et_al`] for any string — also run on a separately supplied authorship.
 fn normalise_glued_et_al_str(s: &str) -> String {
-    GLUED_ET_AL.replace_all(s, "${1}et al.").into_owned()
+    let s = GLUED_ET_AL.replace_all(s, "${1}et al.");
+    CAPITALISED_ET_AL
+        .replace_all(&s, "${1}${2}et al.")
+        .into_owned()
 }
 
 // ---- Step 38: stripColonConceptReference ----
