@@ -537,10 +537,14 @@ fn strip_leading_species_label(ctx: &mut ParseContext, s: String) -> String {
 /// `\p{Ll}` -> only `\s` ASCII-scoped. Called via `.matches()` on a `.*CORE.*` pattern —
 /// equivalent to an unanchored `is_match` on CORE alone (dropping the `.*` bookends) since
 /// `.` matches any non-newline char and no name string embeds a newline — restructured to
-/// the core-only form.
+/// the core-only form. Extended beyond Java with the German `ß` (U+00DF), which digitised floras
+/// print for β ("Capitularia pyxidata ß longipes"), but only as a word of its own: glued to a
+/// letter it is the one in a surname (`Weiß`).
 static GREEK_MARKER_TEST: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"[\p{Ll}.](?-u:\s*)[\x{03B1}-\x{03C9}\x{237A}](?:(?-u:\s+)|\.(?-u:\s*))\p{Ll}")
-        .unwrap()
+    Regex::new(
+        r"[\p{Ll}.](?:(?-u:\s*)[\x{03B1}-\x{03C9}\x{237A}]|(?-u:\s+)\x{00DF})(?:(?-u:\s+)|\.(?-u:\s*))\p{Ll}",
+    )
+    .unwrap()
 });
 
 /// Java STAR_MARKER_TEST (StripAndStash.java:318-319): `.*\p{Ll}\s+\*+\s+\p{Ll}.*`, no
@@ -565,10 +569,10 @@ static STAR_MARKER_TEST: LazyLock<Regex> =
 /// it, unconditionally (`fancy_regex::parse`'s flag parser rejects `-u` outright, unlike the
 /// `regex` crate) — so ASCII-only `\s` is spelled out here as the literal Java ASCII
 /// whitespace set `[ \t\n\x0B\f\r]` (space/tab/LF/VT/FF/CR) instead of the `\s` shorthand,
-/// rather than attempting to scope it.
+/// rather than attempting to scope it. The `ß` lookalike for β as in [`GREEK_MARKER_TEST`].
 static GREEK_MARKER: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"([\p{Ll}.])[ \t\n\x0B\f\r]*[\x{03B1}-\x{03C9}\x{237A}](?:[ \t\n\x0B\f\r]+|\.[ \t\n\x0B\f\r]*)(?=[\p{Ll}])",
+        r"([\p{Ll}.])(?:[ \t\n\x0B\f\r]*[\x{03B1}-\x{03C9}\x{237A}]|[ \t\n\x0B\f\r]+\x{00DF})(?:[ \t\n\x0B\f\r]+|\.[ \t\n\x0B\f\r]*)(?=[\p{Ll}])",
     )
     .unwrap()
 });
