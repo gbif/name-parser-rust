@@ -254,18 +254,16 @@ fn not_parsed_ocr_errors_to_get_better_precision_recall_ratio() {
 }
 
 #[test]
-#[ignore = "desired: not parsed as a name, not yet supported"]
 fn no_parsing_genera_abbreviated_to3_letters_too_rare() {
     // group: No parsing -- Genera abbreviated to 3 letters (too rare)
-    // currently "Gen. et n. sp." + a locality parsed as genus "Gen." and epithets
+    // "Gen." is the word genus: a new genus and species not named yet, and a locality
     assert_unparsable(
         "Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma",
-        NameType::Other,
+        NameType::Placeholder,
     );
-    // currently "Genn. et n. sp." + a locality parsed as genus "Genn." and epithets
     assert_unparsable(
         "Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma",
-        NameType::Other,
+        NameType::Placeholder,
     );
 }
 

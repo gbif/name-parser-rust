@@ -4677,8 +4677,8 @@
 {"line":4678,"input":"Aghbyvirus ISAO8","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Aghbyvirus ISAO8"}}
 {"line":4679,"input":"Mahavira","parsed":{"rank":"UNRANKED","uninomial":"Mahavira","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}
 {"line":4680,"input":"Mom.alpium (Osbeck, 1778)","parsed":{"rank":"SPECIES","code":"ZOOLOGICAL","genus":"Mom.","specificEpithet":"alpium","candidatus":false,"type":"INFORMAL","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":["abbreviated genus name"],"combinationAuthorship":{"authors":[],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":["Osbeck"],"exAuthors":[],"year":"1778","anonymous":false}}}
-{"line":4681,"input":"Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma","parsed":{"rank":"SPECIES","genus":"Gen.","specificEpithet":"et","candidatus":false,"type":"INFORMAL","extinct":false,"nomenclaturalNote":"n. sp.","doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":["abbreviated genus name"],"combinationAuthorship":{"authors":["Kaimatira Pumice Sand","N.Marton","Ma"],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}
-{"line":4682,"input":"Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma","parsed":{"rank":"SPECIES","genus":"Genn.","specificEpithet":"et","candidatus":false,"type":"INFORMAL","extinct":false,"nomenclaturalNote":"n. sp.","doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":["abbreviated genus name"],"combinationAuthorship":{"authors":["Kaimatira Pumice Sand","N.Marton","Ma"],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}
+{"line":4681,"input":"Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma"}}
+{"line":4682,"input":"Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma"}}
 {"line":4683,"input":"Incertae sedis","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: Incertae sedis"}}
 {"line":4684,"input":"</i>Hipponicidae<i> incertae sedis</i>","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: </i>Hipponicidae<i> incertae sedis</i>"}}
 {"line":4685,"input":"incertae sedis","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: incertae sedis"}}
@@ -4886,8 +4886,8 @@
 {"line":4887,"input":"N.N. (e.g., Breoghania)","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: N.N. (e.g., Breoghania)"}}
 {"line":4888,"input":"N.N. (Chitinivorax)","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: N.N. (Chitinivorax)"}}
 {"line":4889,"input":"N.n. (Chitinivorax)","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: N.n. (Chitinivorax)"}}
-{"line":4890,"input":"Gen.nov. sp.nov.","error":{"type":"OTHER","message":"Unparsable OTHER name: Gen.nov. sp.nov."}}
-{"line":4891,"input":"Gen.nov.","error":{"type":"OTHER","message":"Unparsable OTHER name: Gen.nov."}}
+{"line":4890,"input":"Gen.nov. sp.nov.","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: Gen.nov. sp.nov."}}
+{"line":4891,"input":"Gen.nov.","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: Gen.nov."}}
 {"line":4892,"input":"Aster indet.","parsed":{"rank":"SPECIES","genus":"Aster","candidatus":false,"type":"INFORMAL","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":["indetermined name missing its terminal epithet"],"combinationAuthorship":{"authors":[],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}}
 {"line":4893,"input":"Asteraceae incertae sedis","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: Asteraceae incertae sedis"}}
 {"line":4894,"input":"unassigned Abies","error":{"type":"PLACEHOLDER","message":"Unparsable PLACEHOLDER name: unassigned Abies"}}

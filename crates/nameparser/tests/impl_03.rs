@@ -514,9 +514,27 @@ fn unparsable_placeholder() {
     assert_unparsable("N.N. (Chitinivorax)", NameType::Placeholder);
     assert_unparsable("N.n. (Chitinivorax)", NameType::Placeholder);
 
-    // https://github.com/gbif/checklistbank/issues/48
-    assert_unparsable("Gen.nov. sp.nov.", NameType::Other);
-    assert_unparsable("Gen.nov.", NameType::Other);
+    // https://github.com/gbif/checklistbank/issues/48: a new genus not named yet, the word
+    // "genus" abbreviated in front — no genus "Gen." with an epithet "et", no locality as author
+    for name in [
+        "Gen.nov. sp.nov.",
+        "Gen.nov.",
+        "gen nov",
+        "Gen. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma",
+        "Genn. et n. sp. Kaimatira Pumice Sand, Marton N ~1 Ma",
+        "Gen. et sp. nov.",
+        "Gen et sp non descr",
+        "Gen. (AQ520454) sp. (Iron Range L.J.Brass 19119)",
+        "Gen. nov. reichenowi Jordan, 1903",
+    ] {
+        assert_unparsable(name, NameType::Placeholder);
+    }
+    // undotted and before no "et"/"nov" it may be a genus
+    assert_name("Gen nilotica Simon 1906")
+        .species("Gen", "nilotica")
+        .comb_authors(Some("1906"), &["Simon"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 
     // "Aster indet." parses to genus "Aster" with a missing (indeterminate) specific epithet.
     // The DSL's species()/indet() helpers take the epithet as a plain `&str` (no way to express
