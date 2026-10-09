@@ -47,7 +47,9 @@ use unicode_normalization::UnicodeNormalization;
 /// `name-parser-api/src/main/resources/unicode/homoglyphs.txt`, itself sourced from
 /// <https://raw.githubusercontent.com/codebox/homoglyph/master/raw_data/chars.txt> per the
 /// resource file's own header comment — `diff`-verified byte-for-byte identical to the
-/// Java classpath resource). Each line lists a "canonical" character (the line's first
+/// Java classpath resource, but for 18 distinct letters removed in #65: the caron and the comma
+/// below of Czech `ě`, pinyin `ǎ`/`ǐ`/`ǒ`/`ǔ`, `ǧ`, `ǵ`, Romanian `ț`, Hungarian `Ő` and `ȧ`
+/// rewrote real letters to their breve, cedilla or diaeresis twins, "homoglyphs replaced"). Each line lists a "canonical" character (the line's first
 /// char) followed by every codepoint the codebox project considers a visual look-alike of
 /// it. 1861 lines total (`\n`-delimited; the file's own last line has no trailing
 /// terminator, the same off-by-one `wc -l` undercounts documented on
@@ -133,15 +135,15 @@ const DIACRITICS: [char; 21] = [
 ///    `LineReader` against the real resource file) — i.e. exactly this loop's `row`
 ///    variable below, a straight `enumerate()` index, not a count of rows actually
 ///    accepted. The `> 175` numeric fallback is dead code against the actual resource file
-///    — canonical `'ɸ'` (U+0278, physical line 151) always fires first — but ported
+///    — canonical `'ɸ'` (U+0278, physical line 135) always fires first — but ported
 ///    verbatim anyway, matching this port's established precedent of preserving
 ///    apparently-dead Java guards faithfully (see e.g. `stash_trailing_strain_code`'s
 ///    `DIGITS_ONLY` guard in `pipeline::stripandstash`). Net effect: only `homoglyphs.txt`
-///    lines 1-151 are ever consulted — lines 1-8 are the file's own comment header (all
+///    lines 1-135 are ever consulted — lines 1-8 are the file's own comment header (all
 ///    `#`-prefixed), line 9 is the ignored space-canonical row, 2 more rows in range (14,
 ///    canonical `'`; 20, canonical `-`) are also [`IGNORED_CANONICALS`], and the remaining
-///    140 rows (lines 10-151, minus those 2) each contribute at least one map entry — lines
-///    152-1861 (the file's long CJK "duplicate codepoint" tail, e.g. `"𦰶𦰶"`) are never
+///    124 rows (lines 10-135, minus those 2) each contribute at least one map entry — lines
+///    136-1845 (the file's long CJK "duplicate codepoint" tail, e.g. `"𦰶𦰶"`) are never
 ///    read into the map at all — by Java's own design, not a deferral this port introduces.
 static HOMOGLYPHS: LazyLock<HashMap<char, char>> = LazyLock::new(|| {
     let mut map = HashMap::new();
@@ -379,20 +381,32 @@ mod tests {
 
     // ---- Homoglyph table ----
 
-    /// `homoglyphs.txt` lines 10-151 (142 physical lines) are the candidate data rows once
+    /// `homoglyphs.txt` lines 10-135 (126 physical lines) are the candidate data rows once
     /// the 8-line `#`-comment header and line 9's ignored space-canonical row are behind us
-    /// (see [`HOMOGLYPHS`]'s own doc comment); 2 more of those 142 (line 14, canonical `'`;
-    /// line 20, canonical `-`) are also [`IGNORED_CANONICALS`], leaving 140 rows that each
+    /// (see [`HOMOGLYPHS`]'s own doc comment); 2 more of those 126 (line 14, canonical `'`;
+    /// line 20, canonical `-`) are also [`IGNORED_CANONICALS`], leaving 124 rows that each
     /// contribute at least one homoglyph codepoint (independently verified against the
     /// source file — no row contributes zero) — plus the `'ſ'` pre-seed, for an exact total
-    /// of 1751 map entries. Asserted exactly (not just "a lot"), as a direct regression
-    /// guard against a bad resource copy or a loader loop that silently stops early/never
-    /// reaches `'ɸ'`/double-counts/under-filters.
+    /// of 1733 map entries (1751 before the 18 distinct letters of #65 were removed). Asserted
+    /// exactly (not just "a lot"), as a direct regression guard against a bad resource copy or
+    /// a loader loop that silently stops early/never reaches `'ɸ'`/double-counts/under-filters.
     #[test]
-    fn resource_loads_exactly_1751_entries() {
+    fn distinct_letters_are_no_homoglyphs() {
+        // #65: Czech, Hungarian, Romanian and pinyin letters are no look-alikes
+        for c in [
+            'ě', 'Ě', 'ǎ', 'ǐ', 'ǒ', 'ǔ', 'ǧ', 'ǵ', 'ț', 'Ț', 'Ő', 'ȧ', 'Ȧ',
+        ] {
+            assert!(!HOMOGLYPHS.contains_key(&c), "{c} must not be replaced");
+        }
+        // a Cyrillic look-alike of Ö still is
+        assert_eq!(HOMOGLYPHS.get(&'Ӧ'), Some(&'Ö'));
+    }
+
+    #[test]
+    fn resource_loads_exactly_1733_entries() {
         assert_eq!(
             HOMOGLYPHS.len(),
-            1751,
+            1733,
             "loaded homoglyph count drifted — see this test's own doc comment"
         );
     }
