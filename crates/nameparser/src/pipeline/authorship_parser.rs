@@ -1837,7 +1837,9 @@ pub(crate) fn has_manuscript_ex(tokens: &[Token], from: usize, to: usize) -> boo
 }
 
 /// "Everything collected so far becomes ex authors": the authors before an `ex`, or before the
-/// closing bracket of a pre-starting-point author ("[Tourn.] L.").
+/// closing bracket of a pre-starting-point author ("[Tourn.] L."). A second `ex` adds to them:
+/// "Degen ex Nyár. ex Csürös, Gergely & Pop" keeps both Degen and Nyár., where Java kept only the
+/// last ones.
 fn start_ex_authors(
     cur: &mut String,
     authors: &mut Vec<String>,
@@ -1846,8 +1848,23 @@ fn start_ex_authors(
     ex_after_separator: &mut Vec<usize>,
 ) {
     flush(cur, authors);
-    *ex_authors = Some(std::mem::take(authors));
-    *ex_after_separator = std::mem::take(after_separator);
+    let new = std::mem::take(authors);
+    let separators = std::mem::take(after_separator);
+    match ex_authors {
+        Some(earlier) => {
+            // a name repeated along the chain is listed once ("Sieber ex Sieber ex Steudel")
+            if new.iter().all(|a| earlier.contains(a)) {
+                return;
+            }
+            let offset = earlier.len();
+            ex_after_separator.extend(separators.into_iter().map(|k| k + offset));
+            earlier.extend(new);
+        }
+        None => {
+            *ex_authors = Some(new);
+            *ex_after_separator = separators;
+        }
+    }
 }
 
 /// A year the [`parse_authors`] walk reads as one: a 3-4 digit number.

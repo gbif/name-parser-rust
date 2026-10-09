@@ -175,3 +175,23 @@ fn a_capitalised_et_al_is_et_al() {
         .comb_authors(None, &["Smith", "Alvarez"])
         .nothing_else();
 }
+
+/// A chain of ex-authors keeps them all, each once: Java kept only the last.
+#[test]
+fn a_chain_of_ex_authors_keeps_them_all() {
+    assert_name_auth(
+        "Festuca pachyphylla",
+        "Degen ex Nyár. ex Csürös, Gergely & Pop",
+    )
+    .species("Festuca", "pachyphylla")
+    .comb_authors(None, &["Csürös", "Gergely", "Pop"])
+    .comb_ex_authors(&["Degen", "Nyár."])
+    .code(NomCode::Botanical)
+    .nothing_else();
+    assert_name_auth("Ageratum conyzoides", "Sieber ex Sieber ex Steudel")
+        .species("Ageratum", "conyzoides")
+        .comb_authors(None, &["Steudel"])
+        .comb_ex_authors(&["Sieber"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
