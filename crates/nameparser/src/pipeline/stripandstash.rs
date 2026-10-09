@@ -4855,7 +4855,8 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // above).
     let padded_tax = format!(" {}", lift_bracketed_notes(&s));
     if let Some((_, group1_start)) = find_tax_note(&padded_tax, true) {
-        let raw = java_trim(java_trim(&padded_tax[group1_start..]).trim_end_matches(',')).to_string();
+        let raw =
+            java_trim(java_trim(&padded_tax[group1_start..]).trim_end_matches(',')).to_string();
         if !raw.is_empty() {
             let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
             notes.push(normalise_leading_auct(&with_dots));
