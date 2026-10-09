@@ -214,6 +214,21 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 i = after;
                 continue;
             }
+            // ... or before an unmarked infraspecific epithet ("Polypodium pectinatum (L. f.)
+            // typica Rosent"), seen with the authorship AuthorshipSplit kept out
+            if lower_epithets.len() == 1 && marker_idx_in_epithets < 0 {
+                if let Some(epithet) =
+                    authorship_split::unmarked_infraspecific_after_author(&ctx.tokens, i)
+                        .filter(|&e| e < ts.len())
+                {
+                    if ctx.mid_author_from < 0 {
+                        ctx.mid_author_from = i as i32;
+                        ctx.mid_author_to = epithet as i32;
+                    }
+                    i = epithet;
+                    continue;
+                }
+            }
         }
         // Abbreviated genus: Title-cased word of 1-4 chars then DOT, only when no genus
         // yet. The single-letter form ("M. alpium") is unambiguous; 2-4 letter forms
@@ -297,6 +312,19 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     pending_mid_name_author = Some(render_author_span(ts, i, after));
                     i = after;
                     continue;
+                }
+                if lower_epithets.len() == 1 && marker_idx_in_epithets < 0 {
+                    if let Some(epithet) =
+                        authorship_split::unmarked_infraspecific_after_author(&ctx.tokens, i)
+                            .filter(|&e| e < ts.len())
+                    {
+                        if ctx.mid_author_from < 0 {
+                            ctx.mid_author_from = i as i32;
+                            ctx.mid_author_to = epithet as i32;
+                        }
+                        i = epithet;
+                        continue;
+                    }
                 }
             }
             if genus.is_none() {

@@ -270,16 +270,28 @@ fn a_manuscript_marker_before_the_year_in_a_letter() {
 
 #[test]
 fn a_stray_lower_case_word_ends_the_authorship() {
-    // an epithet written without its rank marker, after the species author
-    assert_name("Loranthus incanus Schumach. & Thonn. sessilis Sprague")
-        .species("Loranthus", "incanus")
-        .comb_authors(None, &["Schumach.", "Thonn."])
-        .partial("sessilis Sprague")
+    // an epithet written without its rank marker, after the species author and before its own
+    assert_name("Loranthus incanus Schumach. & Thonn.  sessilis Sprague")
+        .infra_species("Loranthus", "incanus", Rank::InfraspecificName, "sessilis")
+        .specific_authors(None, &["Schumach.", "Thonn."])
+        .comb_authors(None, &["Sprague"])
         .nothing_else();
     assert_name("Polypodium pectinatum (L. f.) typica Rosent")
-        .species("Polypodium", "pectinatum")
-        .bas_authors(None, &["L.f."])
-        .partial("typica Rosent")
+        .infra_species(
+            "Polypodium",
+            "pectinatum",
+            Rank::InfraspecificName,
+            "typica",
+        )
+        .specific_bas_authors(None, &["L.f."])
+        .comb_authors(None, &["Rosent"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a note keyword is no epithet
+    assert_name("Abies alba Mill. teste Smith")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Mill."])
+        .partial("teste Smith")
         .nothing_else();
     // prose and notes the parser does not know
     assert_name("Acinos clinopodiifacie Gilib., opus utique oppr.")

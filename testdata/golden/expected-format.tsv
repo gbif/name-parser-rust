@@ -460,7 +460,7 @@ Lichenostigma gracilis Calat., Nav.-Ros. & Hafellner	true	Lichenostigma gracilis
 Linsia vernonioides Sch.Bip.	true	Linsia vernonioides Sch.Bip.	Linsia vernonioides	Linsia vernonioides	Linsia vernonioides Sch.Bip.	Sch.Bip.
 Lomaria vestita Blume var. b.	true	Lomaria vestita var. b	Lomaria vestita var. b	Lomaria vestita b	Lomaria vestita Blume var. b	
 Lopadium arthonioides Müll.Arg.	true	Lopadium arthonioides Müll.Arg.	Lopadium arthonioides	Lopadium arthonioides	Lopadium arthonioides Müll.Arg.	Müll.Arg.
-Loranthus incanus Schumach. & Thonn.  sessilis Sprague	true	Loranthus incanus Schumach. & Thonn.	Loranthus incanus	Loranthus incanus	Loranthus incanus Schumach. & Thonn.	Schumach. & Thonn.
+Loranthus incanus Schumach. & Thonn.  sessilis Sprague	true	Loranthus incanus sessilis Sprague	Loranthus incanus sessilis	Loranthus incanus sessilis	Loranthus incanus Schumach. & Thonn. sessilis Sprague	Sprague
 Loranthus mirabilis Van Heurck & Müll.Arg.	true	Loranthus mirabilis Van Heurck & Müll.Arg.	Loranthus mirabilis	Loranthus mirabilis	Loranthus mirabilis Van Heurck & Müll.Arg.	Van Heurck & Müll.Arg.
 Lychnophora tomentosa (Mart. ex DC.) Sch.Bip.	true	Lychnophora tomentosa (Mart. ex DC.) Sch.Bip.	Lychnophora tomentosa	Lychnophora tomentosa	Lychnophora tomentosa (Mart. ex DC.) Sch.Bip.	(Mart. ex DC.) Sch.Bip.
 Lychnophora uniflora Sch.Bip.	true	Lychnophora uniflora Sch.Bip.	Lychnophora uniflora	Lychnophora uniflora	Lychnophora uniflora Sch.Bip.	Sch.Bip.
@@ -542,7 +542,7 @@ Phaseolus lunatus L. cv. 'Didessa Mosaic'	true	Phaseolus lunatus 'Didessa Mosaic
 Phaulopsis inaequalis Pic.Serm.	true	Phaulopsis inaequalis Pic.Serm.	Phaulopsis inaequalis	Phaulopsis inaequalis	Phaulopsis inaequalis Pic.Serm.	Pic.Serm.
 Phebalium viridiflorum Peter G.Wilson	true	Phebalium viridiflorum Peter G.Wilson	Phebalium viridiflorum	Phebalium viridiflorum	Phebalium viridiflorum Peter G.Wilson	Peter G.Wilson
 Phoma schneiderae Boerema, Gruyter & van de Graaf	true	Phoma schneiderae Boerema, Gruyter & van de Graaf	Phoma schneiderae	Phoma schneiderae	Phoma schneiderae Boerema, Gruyter & van de Graaf	Boerema, Gruyter & van de Graaf
-Phormidium corium Kütz. y. inaequale Kütz.	true	Phormidium corium Kütz.	Phormidium corium	Phormidium corium	Phormidium corium Kütz.	Kütz.
+Phormidium corium Kütz. y. inaequale Kütz.	true	Phormidium corium inaequale Kütz.	Phormidium corium inaequale	Phormidium corium inaequale	Phormidium corium Kütz. inaequale Kütz.	Kütz.
 Phyllanthus adscendens Bojer ms.	true	Phyllanthus adscendens Bojer	Phyllanthus adscendens	Phyllanthus adscendens	Phyllanthus adscendens Bojer, ms.	Bojer
 Phyllanthus caliodiscus Jean F.Brunel	true	Phyllanthus caliodiscus Jean F.Brunel	Phyllanthus caliodiscus	Phyllanthus caliodiscus	Phyllanthus caliodiscus Jean F.Brunel	Jean F.Brunel
 Phyllanthus emarginatus Willd. ms.	true	Phyllanthus emarginatus Willd.	Phyllanthus emarginatus	Phyllanthus emarginatus	Phyllanthus emarginatus Willd., ms.	Willd.
@@ -4214,8 +4214,8 @@ Polypodium pectinatum L.f. typica Rosenst.	true	Polypodium pectinatum f. typica 
 Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	true	Polypodium lineare f. caudatoattenuatum Takeda	Polypodium lineare f. caudatoattenuatum	Polypodium lineare caudatoattenuatum	Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	Takeda
 Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	true	Rhododendron weyrichii f. albiflorum T.Yamaz.	Rhododendron weyrichii f. albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	T.Yamaz.
 Armeria maaritima (Mill.) Willd. fma. originaria Bern.	true	Armeria maaritima f. originaria Bern.	Armeria maaritima f. originaria	Armeria maaritima originaria	Armeria maaritima (Mill.) Willd. f. originaria Bern.	Bern.
-Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
-Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
+Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii fakeepithet	Rhododendron weyrichii Maxim. f. fakeepithet	
+Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii albiflorum (T.Yamaz.f.)	Rhododendron weyrichii albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. albiflorum (T.Yamaz.f.)	(T.Yamaz.f.)
 Cotoneaster (Pyracantha) rogersiana var.aurantiaca	true	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana aurantiaca	Cotoneaster (Pyracantha) rogersiana var. aurantiaca	
 Poa annua fo varia	true	Poa annua f. varia	Poa annua f. varia	Poa annua varia	Poa annua f. varia	
 Physarum globuliferum forma. flavum Leontyev & Dudka	true	Physarum globuliferum f. flavum Leontyev & Dudka	Physarum globuliferum f. flavum	Physarum globuliferum flavum	Physarum globuliferum f. flavum Leontyev & Dudka	Leontyev & Dudka
@@ -4371,7 +4371,7 @@ Racomitrium canescens f. ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium c
 Racomitrium canescens forma ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	Racomitrium canescens f. ericoides	Racomitrium canescens ericoides	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	(F.Weber ex Brid.) Mönk.
 Polypodium pectinatum L. f., Rosenst.	true	Polypodium pectinatum L.f. & Rosenst.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f. & Rosenst.	L.f. & Rosenst.
 Polypodium pectinatum L. f.	true	Polypodium pectinatum L.f.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f.	L.f.
-Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum (L.f.)	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum (L.f.)	(L.f.)
+Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum typica Rosent	Polypodium pectinatum typica	Polypodium pectinatum typica	Polypodium pectinatum (L.f.) typica Rosent	Rosent
 Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	Pfennig, 1968
 Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	Pfennig, 1968
 Morea (Morea) Burt 2342343242 23424322342 23424234	true	Morea infragen. Morea Burt	Morea infragen. Morea	Morea	Morea infragen. Morea Burt	Burt
@@ -5624,8 +5624,8 @@ Polypodium pectinatum L.f. typica Rosenst.	true	Polypodium pectinatum f. typica 
 Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	true	Polypodium lineare f. caudatoattenuatum Takeda	Polypodium lineare f. caudatoattenuatum	Polypodium lineare caudatoattenuatum	Polypodium lineare C.Chr. f. caudatoattenuatum Takeda	Takeda
 Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	true	Rhododendron weyrichii f. albiflorum T.Yamaz.	Rhododendron weyrichii f. albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. f. albiflorum T.Yamaz.	T.Yamaz.
 Armeria maaritima (Mill.) Willd. fma. originaria Bern.	true	Armeria maaritima f. originaria Bern.	Armeria maaritima f. originaria	Armeria maaritima originaria	Armeria maaritima (Mill.) Willd. f. originaria Bern.	Bern.
-Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
-Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii Maxim.	Rhododendron weyrichii	Rhododendron weyrichii	Rhododendron weyrichii Maxim.	Maxim.
+Rhododendron weyrichii Maxim. albiflorum T.Yamaz. f. fakeepithet	true	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii f. fakeepithet	Rhododendron weyrichii fakeepithet	Rhododendron weyrichii Maxim. f. fakeepithet	
+Rhododendron weyrichii Maxim. albiflorum (T.Yamaz. f.) fakeepithet	true	Rhododendron weyrichii albiflorum (T.Yamaz.f.)	Rhododendron weyrichii albiflorum	Rhododendron weyrichii albiflorum	Rhododendron weyrichii Maxim. albiflorum (T.Yamaz.f.)	(T.Yamaz.f.)
 Cotoneaster (Pyracantha) rogersiana var.aurantiaca	true	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana var. aurantiaca	Cotoneaster rogersiana aurantiaca	Cotoneaster (Pyracantha) rogersiana var. aurantiaca	
 Poa annua fo varia	true	Poa annua f. varia	Poa annua f. varia	Poa annua varia	Poa annua f. varia	
 Physarum globuliferum forma. flavum Leontyev & Dudka	true	Physarum globuliferum f. flavum Leontyev & Dudka	Physarum globuliferum f. flavum	Physarum globuliferum flavum	Physarum globuliferum f. flavum Leontyev & Dudka	Leontyev & Dudka
@@ -5775,7 +5775,7 @@ Racomitrium canescens f. ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium c
 Racomitrium canescens forma ericoides (F. Weber ex Brid.) Mönk.	true	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	Racomitrium canescens f. ericoides	Racomitrium canescens ericoides	Racomitrium canescens f. ericoides (F.Weber ex Brid.) Mönk.	(F.Weber ex Brid.) Mönk.
 Polypodium pectinatum L. f., Rosenst.	true	Polypodium pectinatum L.f. & Rosenst.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f. & Rosenst.	L.f. & Rosenst.
 Polypodium pectinatum L. f.	true	Polypodium pectinatum L.f.	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum L.f.	L.f.
-Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum (L.f.)	Polypodium pectinatum	Polypodium pectinatum	Polypodium pectinatum (L.f.)	(L.f.)
+Polypodium pectinatum (L. f.) typica Rosent	true	Polypodium pectinatum typica Rosent	Polypodium pectinatum typica	Polypodium pectinatum typica	Polypodium pectinatum (L.f.) typica Rosent	Rosent
 Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend. Imhoff, 2003	Pfennig, 1968
 Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	true	Chlorobium phaeobacteroides Pfennig, 1968	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides	Chlorobium phaeobacteroides Pfennig, 1968 emend Imhoff, 2003	Pfennig, 1968
 Morea (Morea) Burt 2342343242 23424322342 23424234	true	Morea infragen. Morea Burt	Morea infragen. Morea	Morea	Morea infragen. Morea Burt	Burt
