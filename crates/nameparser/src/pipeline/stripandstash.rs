@@ -2967,13 +2967,16 @@ fn normalise_leading_auct(note: &str) -> String {
 /// `\s*\[\s*((?:auctt?|sensu|sec|non|nec|misspelling|misapplied|misident)\b[^\]]*)\]\s*\.?\s*$`,
 /// `Pattern.CASE_INSENSITIVE`, plus "auctorum" ("[auctorum]", see [`TAX_NOTE`]) and "not"
 /// ("[not used as valid]", "[not Amphisbetia pulchella Vannucci-Mendes 1954]"), which Java
-/// lacks and so read as authors. `[^\]]` is a negated custom class -> stays OUTSIDE any
+/// lacks and so read as authors. Rust-only as well: "lapsus" (`[lapsus, non-existent combination,
+/// not Kolmer, 1985]`), and a bracket whose homonym note follows a remark after a comma or semicolon
+/// (`[junior secondary homonym, nec Anthicus elegans Steven, 1806]`), taken whole: the note alone
+/// left its bracket's opening half and the remark behind as authors. `[^\]]` is a negated custom class -> stays OUTSIDE any
 /// `(?-u:…)` (`SIC_WITH_COMMENT`/`BRACKETED_NOM_NOTE` precedent from batches 1-2) ->
 /// atom-only `\s`/`\b` scoping, not whole-wrap. No lookaround/backreference -> plain
 /// `regex` crate.
 static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident)(?-u:\b)[^\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
+        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident|lapsus)(?-u:\b)[^\]]*|[^\[\]]*[,;](?-u:\s*)(?:non|nec|not)(?-u:\s)[^\[\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });
