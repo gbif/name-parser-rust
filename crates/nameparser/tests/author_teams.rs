@@ -115,3 +115,43 @@ fn two_initials_share_the_surname() {
         .comb_authors(None, &["L.", "D.Don"])
         .nothing_else();
 }
+
+/// "et al." glued into one word, as `etal`, `Etal` or `etal.`, is still "et al." — Java took it
+/// for a surname or a second author, or stopped parsing at it (30 ChecklistBank rows).
+#[test]
+fn a_glued_etal_is_et_al() {
+    assert_name("Pachypus baroniensis Ahrens, Bazzato, Lopez, etal, 2026")
+        .species("Pachypus", "baroniensis")
+        .comb_authors(Some("2026"), &["Ahrens", "Bazzato", "Lopez", "al."])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_authorship(
+        "Ahrens, Bazzato, Lopez, etal, 2026",
+        &["Ahrens", "Bazzato", "Lopez", "al."],
+    )
+    .comb_authors(Some("2026"), &["Ahrens", "Bazzato", "Lopez", "al."])
+    .nothing_else();
+    assert_authorship("Bianchi etal. 2015", &["Bianchi", "al."])
+        .comb_authors(Some("2015"), &["Bianchi", "al."])
+        .nothing_else();
+    assert_authorship("(Ragsdale etal. 2011)", &[])
+        .bas_authors(Some("2011"), &["Ragsdale", "al."])
+        .nothing_else();
+    assert_authorship("Ying Xu etal.,2012", &["Ying Xu", "al."])
+        .comb_authors(Some("2012"), &["Ying Xu", "al."])
+        .nothing_else();
+    // after a conjunction: the "&" or "and" is the "et" already
+    assert_authorship("Fang & etal, 2007", &["Fang", "al."])
+        .comb_authors(Some("2007"), &["Fang", "al."])
+        .nothing_else();
+    assert_authorship("Wang & Etal, 2001", &["Wang", "al."])
+        .comb_authors(Some("2001"), &["Wang", "al."])
+        .nothing_else();
+    assert_authorship("Xing and etal 2018", &["Xing", "al."])
+        .comb_authors(Some("2018"), &["Xing", "al."])
+        .nothing_else();
+    // a surname that merely starts with it
+    assert_authorship("Étallon, 1859", &["Étallon"])
+        .comb_authors(Some("1859"), &["Étallon"])
+        .nothing_else();
+}

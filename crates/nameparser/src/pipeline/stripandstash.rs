@@ -107,6 +107,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_approved_lists(ctx, s);
     s = strip_mihi(ctx, s);
     s = normalise_anon(ctx, s);
+    s = normalise_glued_et_al(ctx, s);
     s = strip_colon_concept_reference(ctx, s);
     s = strip_bracketed_tax_note(ctx, s);
     s = strip_paren_tax_note(ctx, s);
@@ -2859,6 +2860,22 @@ fn normalise_anon_str(s: &str) -> String {
     fancy_replace_all(&ANON_LOWER, &s, |_| "anon.".to_string())
 }
 
+/// "et al." glued into one word: `etal`, `Etal`, `etal.` (`Bianchi etal. 2015`, `Ahrens, Bazzato,
+/// Lopez, etal, 2026`, `Fang & etal, 2007`). Whole word only, so `Étallon` stays a surname.
+/// Rust-only: Java read it as a surname of its own or stopped parsing at it (30 ChecklistBank rows).
+static GLUED_ET_AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\s)[Ee]tal\b\.?").unwrap());
+
+/// Spell a glued [`GLUED_ET_AL`] as "et al.", which the authorship parser reads as the closing
+/// "al." author — the "&"/"and" some sources put in front of it is then read as the "et".
+fn normalise_glued_et_al(_ctx: &mut ParseContext, s: String) -> String {
+    normalise_glued_et_al_str(&s)
+}
+
+/// [`normalise_glued_et_al`] for any string — also run on a separately supplied authorship.
+fn normalise_glued_et_al_str(s: &str) -> String {
+    GLUED_ET_AL.replace_all(s, "${1}et al.").into_owned()
+}
+
 // ---- Step 38: stripColonConceptReference ----
 
 /// Java COLON_CONCEPT_REFERENCE (StripAndStash.java:238-240):
@@ -2969,6 +2986,7 @@ static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// Smith [auctt. misspelling for Eunoe]" -> `taxonomicNote="auctt. misspelling for
 /// Eunoe"`, authors=["Smith"].
 fn strip_bracketed_tax_note(ctx: &mut ParseContext, s: String) -> String {
+    let s = move_homonym_note_behind_year(&s);
     if let Some(caps) = BRACKETED_TAX_NOTE.captures(&s) {
         let trimmed = java_trim(caps.get(1).unwrap().as_str());
         let collapsed = WHITESPACE.replace_all(trimmed, " ");
@@ -3214,6 +3232,8 @@ fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
 /// the last two shapes against an author's initials and plain English. Rust-only too: "sens. str." and
 /// "sens. lat." spelled out further than "s. str." (`Rubus fruticosus L. sens.str.`), and "ampl.",
 /// the amplified circumscription of `Cerastium octandrum Hochst. ex A.Rich. ampl. Möschl`.
+/// "non"/"not" may be followed by an "of" (`not of Rafinesque, 1819`), which otherwise left "not"
+/// behind as an author, and a stray closing comma is no part of the note (`auctt.,`).
 static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
@@ -3222,8 +3242,8 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|sensu\.?(?:(?-u:\s).*)?",
         r"|sec\.?(?:(?-u:\s).*)?",
         r"|nec(?-u:\b)(?:(?-u:\s).*)?",
-        r"|nonn?\.?(?-u:\s+)\(?\p{Lu}.*",
-        r"|not(?-u:\s+)\(?(?-i:\p{Lu}(?:\p{Ll}|\.|\p{Lu}\.)).*",
+        r"|nonn?\.?(?-u:\s+)(?:(?-i:of)(?-u:\s+))?\(?\p{Lu}.*",
+        r"|not(?-u:\s+)(?:(?-i:of)(?-u:\s+))?\(?(?-i:\p{Lu}(?:\p{Ll}|\.|\p{Lu}\.)).*",
         r"|emend(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
         r"|(?-i:[Ee]m\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
         r"|fide(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
@@ -3235,7 +3255,7 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?)",
         r"|(?-i:sens\.(?-u:\s*)(?:str|lat|l|ampl)\.?)",
         r"|(?-i:ampl\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
-        r")$",
+        r")(?-u:\s*),?$",
     ))
     .unwrap()
 });
@@ -3253,6 +3273,37 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
 /// F.europaeus" IS collapsed.
 static INITIAL_DOT_SPACE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:\b)(\p{Lu})\.(?-u:\s+)([\p{Ll}][\p{Ll}]{3,})").unwrap());
+
+/// A bracketed homonym note between the author and the year: `Lea (non Faust), 1913`,
+/// `Lea [non Faust] 1913`. Rust-only: it was read as part of the author, "Lea non Faust".
+static HOMONYM_NOTE_BEFORE_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)(\S)(?-u:\s*)([(\[](?:nec|non|not)(?-u:\s+)[^()\[\]]+[)\]])(?-u:\s*)(,?(?-u:\s*)(?-u:\d{4})[a-z]?)(?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+/// Moves a [`HOMONYM_NOTE_BEFORE_YEAR`] behind the year, where the trailing bracketed note steps
+/// take it: `Lea (non Faust), 1913` -> `Lea, 1913 (non Faust)`, `Christ (non Wall.)1897` -> `Christ 1897
+/// (non Wall.)`.
+fn move_homonym_note_behind_year(s: &str) -> String {
+    match HOMONYM_NOTE_BEFORE_YEAR.captures(s) {
+        Some(c) => {
+            // the year keeps the separator it had: a comma before a year is zoological usage
+            let year = java_trim(&c[3]);
+            let whole = c.get(0).unwrap();
+            let head = format!("{}{}", &s[..whole.start()], &c[1]);
+            let note = collapse_whitespace(&c[2]);
+            if year.starts_with(',') {
+                // "Tutt, (nec Treitschke), 1905": one comma
+                format!("{}{year} {note}", head.trim_end_matches(','))
+            } else {
+                format!("{head} {year} {note}")
+            }
+        }
+        None => s.to_string(),
+    }
+}
 
 /// A note keyword alone in brackets, followed by its author: "[sensu] Schmidt, 1878". Rust-only.
 static KEYWORD_ONLY_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
@@ -3452,7 +3503,8 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
     let Some((match_start, note_start)) = find_tax_note(&s, false) else {
         return s;
     };
-    let raw = java_trim(&s[note_start..]).to_string();
+    // a stray comma closing the string is no part of the note ("auctt.,")
+    let raw = java_trim(java_trim(&s[note_start..]).trim_end_matches(',')).to_string();
     if raw.is_empty() {
         return s;
     }
@@ -4681,9 +4733,13 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // Deliberately omits `CV_EX`/`HT_MARKER` (see the section doc comment).
     s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
     s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
-    // "Anon"/"anon" -> "anon.", as on the name string (step 37). Padded: its patterns need
-    // whitespace before the word, and here it often starts the string ("Anon. 1837").
-    s = java_trim(&normalise_anon_str(&format!(" {s}"))).to_string();
+    // "Anon"/"anon" -> "anon." and a glued "etal" -> "et al.", as on the name string (step 37).
+    // Padded: their patterns need whitespace before the word, and here it often starts the
+    // string ("Anon. 1837").
+    s = java_trim(&normalise_glued_et_al_str(&normalise_anon_str(&format!(
+        " {s}"
+    ))))
+    .to_string();
 
     // The notes this authorship carries are collected in source order and added once, at the
     // end, so the whole of it can be checked against the note the name string already gave:
@@ -4698,6 +4754,7 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // ("Focke [non Salisb.]"). A lone bracketed keyword is first unwrapped ("[sensu] Schmidt,
     // 1878").
     s = unwrap_keyword_only_bracket(&s);
+    s = move_homonym_note_behind_year(&s);
     loop {
         let caps = match BRACKETED_TAX_NOTE.captures(&s) {
             Some(c) => c,
@@ -4798,7 +4855,8 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // above).
     let padded_tax = format!(" {}", lift_bracketed_notes(&s));
     if let Some((_, group1_start)) = find_tax_note(&padded_tax, true) {
-        let raw = java_trim(&padded_tax[group1_start..]).to_string();
+        let raw =
+            java_trim(java_trim(&padded_tax[group1_start..]).trim_end_matches(',')).to_string();
         if !raw.is_empty() {
             let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
             notes.push(normalise_leading_auct(&with_dots));

@@ -334,3 +334,61 @@ fn a_bracketed_quoted_spelling_is_a_nomenclatural_note() {
         .nom_note("'olmae'")
         .nothing_else();
 }
+
+/// "not of X" is one note: the "of X" was taken first and "not" stayed behind as an author.
+#[test]
+fn not_of_is_one_note() {
+    assert_name_hinted(
+        "Amblodon",
+        Some("not of Rafinesque, 1819"),
+        Some(Rank::Genus),
+        Some(NomCode::Zoological),
+    )
+    .monomial_rank("Amblodon", Rank::Genus)
+    .sensu("not of Rafinesque, 1819")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name_auth("Amblodon", "Agassiz, 1829 not of Rafinesque, 1819")
+        .monomial("Amblodon")
+        .comb_authors(Some("1829"), &["Agassiz"])
+        .sensu("not of Rafinesque, 1819")
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+/// A bracketed homonym note before the year: `Lea (non Faust), 1913`. The note was read as part
+/// of the author, "Lea non Faust".
+#[test]
+fn a_bracketed_note_before_the_year() {
+    assert_name_auth("Mechistocerus similis", "Lea (non Faust), 1913")
+        .species("Mechistocerus", "similis")
+        .comb_authors(Some("1913"), &["Lea"])
+        .sensu("non Faust")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Mechistocerus similis", "Lea [non Faust] 1913")
+        .species("Mechistocerus", "similis")
+        .comb_authors(Some("1913"), &["Lea"])
+        .sensu("non Faust")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Rhyssomatus parvulus", "Champion (nec Casey), 1902")
+        .species("Rhyssomatus", "parvulus")
+        .comb_authors(Some("1902"), &["Champion"])
+        .sensu("nec Casey")
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+/// A lone "auct." with a stray comma is still the note, not an author "auctt.".
+#[test]
+fn auct_with_a_trailing_comma() {
+    assert_name_auth("Arixyleborus rugosipes", "auctt.,")
+        .species("Arixyleborus", "rugosipes")
+        .sensu("auctt.")
+        .nothing_else();
+    assert_name_auth("Amblodon", "auct.,")
+        .monomial("Amblodon")
+        .sensu("auct.")
+        .nothing_else();
+}

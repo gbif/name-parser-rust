@@ -382,3 +382,17 @@ fn a_second_name_after_an_ampersand_is_no_author() {
         .partial("& Sillago maculata")
         .nothing_else();
 }
+
+/// An unparsed bracket keeps the spaces of the source: Java glued its words together, so
+/// `(swamp variant)` came back as `(swampvariant)` (ChecklistBank dataset 1162).
+#[test]
+fn an_unparsed_bracket_keeps_its_spaces() {
+    assert_name("Acacia retinodes var. retinodes (swamp variant)")
+        .infra_species("Acacia", "retinodes", Rank::Variety, "retinodes")
+        .partial("(swamp variant)")
+        .nothing_else();
+    assert_name("Acacia brachybotyra (appressed hair variant)")
+        .species("Acacia", "brachybotyra")
+        .partial("(appressed hair variant)")
+        .nothing_else();
+}
