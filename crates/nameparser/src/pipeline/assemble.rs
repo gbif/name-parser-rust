@@ -406,6 +406,10 @@ pub(crate) fn is_unlikely_year(year: Option<&str>) -> bool {
     if year.ends_with('?') {
         return false;
     }
+    // the letter of "1961a" tells apart works of the same year
+    let year = year
+        .strip_suffix(|c: char| c.is_ascii_lowercase())
+        .unwrap_or(year);
     if !YEAR_4DIGIT.is_match(year) {
         return true;
     }

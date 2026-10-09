@@ -169,6 +169,9 @@ pub(crate) struct AuthState {
     /// An ex-author is a manuscript name another published ("Carpenter MS, Dall", `"Dall" Pils.`
     /// rewritten so), zoology's usage as much as botany's: no botanical evidence.
     pub manuscript_ex: bool,
+    /// The bacteriologists' revived name, "(ex Choukévitch 1911) Nakamura 1984" (ICNP Rule 28a): a
+    /// leading bracket of dated ex-authors, which only the prokaryote code uses.
+    pub revived_name: bool,
     /// Java `int unparsedFrom = -1;` — kept as a sentinel `i32`, matching the established
     /// convention for this exact shape of field elsewhere in the port (see
     /// `ParseContext::mid_author_from`/`mid_author_to`).
@@ -187,6 +190,7 @@ impl Default for AuthState {
             combination_year_after_comma: false,
             combination_initials_first: false,
             manuscript_ex: false,
+            revived_name: false,
             unparsed_from: -1,
             unparsed_text: None,
         }
@@ -199,6 +203,18 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
     let mut s = AuthState::default();
     let mut i = from;
     let n = tokens.len();
+
+    // A leading bracket opening with "ex" holds no basionym but the combination's ex-authors: the
+    // revived bacterial name "(ex Choukévitch 1911) Nakamura 1984", "(ex Torr.) Shinners". The
+    // year of the earlier proposal has no place in the model and is dropped.
+    let mut leading_ex: Option<Authorship> = None;
+    if let Some((inner_from, inner_end, close)) = bracketed_ex(tokens, i, n) {
+        let mut inner = Authorship::default();
+        parse_authors(tokens, inner_from, inner_end, &mut inner);
+        s.revived_name = inner.year.is_some();
+        leading_ex = Some(inner);
+        i = close + 1;
+    }
 
     // Phase A: leading "(...)" basionym candidate.
     if i < n && tokens[i].kind == TokenKind::OpenParen {
@@ -314,6 +330,16 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
     if i < n {
         s.unparsed_from = i as i32;
         s.unparsed_text = Some(unparsed_text(&tokens[i..n]));
+    }
+    if let Some(mut ex) = leading_ex {
+        if s.combination.authors.is_empty() && !s.combination.anonymous {
+            // nobody published it after them ("(ex Wang et al. 2025)"): they are the authors
+            s.combination.authors = ex.authors;
+            s.combination.year = s.combination.year.take().or(ex.year);
+        } else {
+            ex.authors.append(&mut s.combination.ex_authors);
+            s.combination.ex_authors = ex.authors;
+        }
     }
     s
 }
@@ -536,6 +562,58 @@ fn find_close(tokens: &[Token], open_idx: usize) -> Option<usize> {
     None
 }
 
+/// A bracket opening with "ex": "(ex Kirby MS)", "(? ex Dej. MS)", "(ex. Sol.)", "(ex Choukévitch
+/// 1911)". The authors in it proposed the name and someone else published it — the ex-authors,
+/// as in "Kirby ex Stephens": "Stephens (ex Kirby MS) 1828", the bacteriologists' revived name
+/// "(ex Choukévitch 1911) Nakamura 1984" (ICNP Rule 28a). Returns `(inner_from, inner_end, close)`:
+/// the span of its authors, without a closing manuscript mark ("MS", which "ex" already says), and
+/// the closing bracket, which must lie before `to`.
+fn bracketed_ex(tokens: &[Token], open: usize, to: usize) -> Option<(usize, usize, usize)> {
+    if tokens.get(open)?.kind != TokenKind::OpenParen {
+        return None;
+    }
+    let mut k = open + 1;
+    if tokens
+        .get(k)
+        .is_some_and(|t| t.kind == TokenKind::Other && t.text == "?")
+    {
+        k += 1;
+    }
+    if !tokens
+        .get(k)
+        .is_some_and(|t| t.kind == TokenKind::Word && t.text == "ex")
+    {
+        return None;
+    }
+    k += 1;
+    if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Dot) {
+        k += 1;
+    }
+    let close = find_close(tokens, open).filter(|&c| c < to)?;
+    let is_ms =
+        |t: &Token| t.kind == TokenKind::Word && matches!(t.text.as_str(), "MS" | "ms" | "Ms");
+    let mut end = close;
+    if end > k + 1 && tokens[end - 1].kind == TokenKind::Dot && is_ms(&tokens[end - 2]) {
+        end -= 2;
+    } else if end > k && is_ms(&tokens[end - 1]) {
+        end -= 1;
+    }
+    if end > k && tokens[end - 1].kind == TokenKind::Comma {
+        end -= 1;
+    }
+    // authors, not a host it was isolated from ("(ex Procavia capensis)") nor a former family
+    // ("(ex Chenopodiaceae)")
+    let no_author = tokens[k..end].iter().any(|t| {
+        t.kind == TokenKind::Word
+            && ((t.text.chars().count() > 3
+                && t.text.chars().all(char::is_lowercase)
+                && !is_lower_author_word(&t.text))
+                || t.text.ends_with("aceae")
+                || t.text.ends_with("idae"))
+    });
+    (end > k && !no_author && has_upper_word(tokens, k, end)).then_some((k, end, close))
+}
+
 /// Java `AuthorshipParser.parseAuthors(List<Token>, int, int, Authorship, AuthState)`.
 /// The `AuthState state` parameter is accepted but never read anywhere in the Java method
 /// body (verified against the source) — dropped here rather than carried as an unused Rust
@@ -554,6 +632,8 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     let mut after_separator: Vec<usize> = Vec::new();
     let mut ex_after_separator: Vec<usize> = Vec::new();
     let mut cur = String::new();
+    // inside the run of all-capital particles that opens an author ("VAN DER WULP")
+    let mut particle_run = false;
     let mut year_range = false;
     let mut bracketed_year: Option<String> = None;
     let mut i = from;
@@ -569,6 +649,18 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     let brackets = BracketedAuthors::read(tokens, from, to);
 
     while i < to {
+        // "Stephens (ex Kirby MS) 1828": the bracket names the ex-author whose manuscript name the
+        // author before it published; that author stays the author
+        if let Some((inner_from, inner_end, close)) = bracketed_ex(tokens, i, to) {
+            flush(&mut cur, &mut authors);
+            let mut inner = Authorship::default();
+            parse_authors(tokens, inner_from, inner_end, &mut inner);
+            ex_authors
+                .get_or_insert_with(Vec::new)
+                .extend(inner.authors);
+            i = close + 1;
+            continue;
+        }
         // "Anonymous [Bennett]": the anonymous word gives way to the attributed authors
         if brackets.skip.is_some_and(|(start, _)| i == start) {
             i = brackets.skip.expect("just checked").1;
@@ -624,17 +716,39 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                     if nx.kind == TokenKind::Number && (1..=4).contains(&nx.text.chars().count()) {
                         year_range = true;
                         i += 2;
+                        // a bracketed range is established from external evidence too:
+                        // "(Hübner, [1819-1822])"
+                        if in_brackets_initial
+                            && i < to
+                            && tokens[i].kind == TokenKind::CloseBracket
+                            && into.year.as_deref() == Some(tokens[i - 3].text.as_str())
+                        {
+                            into.bracketed_year = true;
+                            i += 1;
+                        }
                     }
                 }
             }
-            // Drop a single trailing lowercase-letter year disambiguator ("1935h" / "1935 h",
-            // or "193k7" where the k is an OCR/typo artifact followed by digits).
+            // A single letter glued to the year tells apart works of the same author(s) in the
+            // same year ("Browne, 1961a") and stays part of it; spaced ("1935 h") or followed by
+            // digits ("193k7", an OCR artefact) it is dropped.
             if i < to {
                 let nx = &tokens[i];
                 if nx.kind == TokenKind::Word
                     && starts_lower(&nx.text)
                     && is_year_disambiguator(&nx.text)
                 {
+                    let glued = nx.start == tokens[i - 1].end
+                        && nx.text.chars().count() == 1
+                        && nx.text.chars().all(|c| c.is_ascii_lowercase());
+                    if glued {
+                        for y in [&mut into.year, &mut into.imprint_year] {
+                            if y.as_deref() == Some(tokens[i - 1].text.as_str()) {
+                                y.as_mut().expect("just matched").push_str(&nx.text);
+                                break;
+                            }
+                        }
+                    }
                     i += 1;
                 }
             }
@@ -898,7 +1012,19 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                 }
             }
             // If full ALL-CAPS author name (e.g. FISCHER) length > 1, normalise to title case
-            let text = normalise_author_case(&t.text);
+            // an all-capital particle opening an author takes its usual case, and a short surname
+            // after it is no initials: "DE VIS" -> "de Vis". In the middle of a name ("NIETO-MONTES
+            // DE OCA") it is left to the initials reading.
+            let opens = cur.is_empty() || only_initials(&cur);
+            let particle = (opens || particle_run) && is_shouted_particle(tokens, i, to);
+            let text = if particle {
+                shouted_particle_case(&t.text, opens)
+            } else if particle_run {
+                title_case_shouted(&t.text)
+            } else {
+                normalise_author_case(&t.text)
+            };
+            particle_run = particle;
             append_space(&mut cur);
             cur.push_str(&text);
             i += 1;
@@ -1101,6 +1227,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
     if let Some(year) = bracketed_year {
         if into.year.is_none() {
             into.year = Some(year);
+            into.bracketed_year = true;
         } else if into.imprint_year.is_none() {
             into.imprint_year = Some(year);
         }
@@ -1482,9 +1609,9 @@ fn format_initials(s: &str) -> String {
 }
 
 /// Java `AuthorshipParser.isYearDisambiguator(String)`. True when the token text looks
-/// like a year-disambiguator suffix that should be dropped after a year token: a single
-/// lowercase letter optionally followed by all-digit characters — e.g. "h" (from
-/// "1935h"), "k7" (OCR-garbled year-suffix artifact in "193k7").
+/// like a year-disambiguator suffix after a year token: a single lowercase letter optionally
+/// followed by all-digit characters — e.g. "h" (from "1935h", kept with the year when glued to
+/// it), "k7" (OCR-garbled year-suffix artifact in "193k7", dropped).
 fn is_year_disambiguator(s: &str) -> bool {
     let mut chars = s.chars();
     match chars.next() {
@@ -1629,10 +1756,73 @@ fn append_author_words(tokens: &[Token], from: usize, to: usize, sb: &mut String
     }
 }
 
+/// An all-capital particle before an all-capital surname, perhaps after more particles: "DE
+/// SAUSSURE", "VAN DER WULP". Alone or before a mixed-case surname ("DE Saussure") it may be
+/// initials and is left as it is; so are a single letter and the connectors "IN", "OF", "UND".
+fn is_shouted_particle(tokens: &[Token], i: usize, to: usize) -> bool {
+    let particle = |t: &Token| {
+        t.kind == TokenKind::Word
+            && is_all_upper(&t.text)
+            && t.text.chars().count() > 1
+            && is_particle(&t.text)
+            && !matches!(t.text.as_str(), "IN" | "OF" | "UND")
+    };
+    if i >= to || !particle(&tokens[i]) {
+        return false;
+    }
+    let mut k = i + 1;
+    while k < to && particle(&tokens[k]) {
+        k += 1;
+    }
+    k < to
+        && tokens[k].kind == TokenKind::Word
+        && is_all_upper(&tokens[k].text)
+        && tokens[k].text.chars().count() >= 3
+}
+
+/// A [`is_shouted_particle`] in its usual case: lower case ("de Saussure", "van der Wulp"), but
+/// capitalised the Italian ones ("Di Iorio", "Dalla Torre") and the French article opening the
+/// name ("Le Conte", "La Ferté").
+fn shouted_particle_case(s: &str, opens_name: bool) -> String {
+    let lower = s.to_lowercase();
+    let capitalised = matches!(
+        lower.as_str(),
+        "di" | "dal"
+            | "dalla"
+            | "dalle"
+            | "dallo"
+            | "degli"
+            | "dei"
+            | "della"
+            | "delle"
+            | "delli"
+            | "dello"
+            | "lo"
+    ) || (opens_name && matches!(lower.as_str(), "le" | "la"));
+    if capitalised {
+        title_case_shouted(s)
+    } else {
+        lower
+    }
+}
+
+/// Only initials so far, "E.C." of "E.C. VAN DYKE": the author's name has not begun.
+fn only_initials(cur: &str) -> bool {
+    let cur = cur.trim();
+    !cur.is_empty()
+        && cur.ends_with('.')
+        && cur
+            .split('.')
+            .filter(|p| !p.is_empty())
+            .all(|p| p.chars().count() == 1 && p.chars().all(char::is_uppercase))
+}
+
 /// Java `AuthorshipParser.normaliseAuthorCase(String)`. Normalises an ALL-CAPS author word
 /// to title case ("FISCHER" → "Fischer"). Short all-caps tokens (< 4 chars) are kept
 /// as-is — they are likely initials ("MA", "DC"). Package-private in Java (widened
-/// visibility); no caller outside this module in this port, so kept private here.
+/// visibility); no caller outside this module in this port, so kept private here. Unlike Java,
+/// the letter after a "Mc" is a capital again ("MCCORD" → "McCord"); "Mac" is left alone, it is
+/// both "Macdonald" and "MacDonald".
 fn normalise_author_case(s: &str) -> String {
     if s.chars().count() < 4 {
         return s.to_string();
@@ -1641,6 +1831,14 @@ fn normalise_author_case(s: &str) -> String {
     if !all_upper {
         return s.to_string();
     }
+    title_case_shouted(s)
+}
+
+/// The title case of an all-capital word, whatever its length: every letter after the first of
+/// each hyphen- or apostrophe-separated part lower case ("ST-HILAIRE" -> "St-Hilaire",
+/// "O'BRIEN" -> "O'Brien"), and the letter after a "Mc" a capital again when a syllable follows
+/// ("MCCORD" -> "McCord", not the acronym "MCCS").
+fn title_case_shouted(s: &str) -> String {
     let mut b = String::with_capacity(s.len());
     let mut first = true;
     for c in s.chars() {
@@ -1654,6 +1852,16 @@ fn normalise_author_case(s: &str) -> String {
         } else {
             b.push(c);
             first = true;
+        }
+    }
+    if let Some(rest) = b.strip_prefix("Mc") {
+        let syllable = rest.chars().count() >= 3
+            && rest
+                .chars()
+                .any(|c| matches!(c, 'a' | 'e' | 'i' | 'o' | 'u' | 'y'));
+        let mut chars = rest.chars();
+        if let Some(c) = chars.next().filter(|c| c.is_lowercase() && syllable) {
+            b = format!("Mc{}{}", c.to_uppercase(), chars.as_str());
         }
     }
     b
@@ -1736,13 +1944,17 @@ fn manuscript_ex_at(tokens: &[Token], i: usize, to: usize) -> Option<usize> {
     (i > 0 && author_follows).then_some(k + 1 - i)
 }
 
-/// The span `tokens[from..to)` cites a manuscript name as an ex-author ("Carpenter MS, Dall").
+/// The span `tokens[from..to)` cites a manuscript name as an ex-author ("Carpenter MS, Dall",
+/// "Stephens (ex Kirby MS) 1828").
 pub(crate) fn has_manuscript_ex(tokens: &[Token], from: usize, to: usize) -> bool {
-    (from..to).any(|k| manuscript_ex_at(tokens, k, to).is_some())
+    (from..to)
+        .any(|k| manuscript_ex_at(tokens, k, to).is_some() || bracketed_ex(tokens, k, to).is_some())
 }
 
 /// "Everything collected so far becomes ex authors": the authors before an `ex`, or before the
-/// closing bracket of a pre-starting-point author ("[Tourn.] L.").
+/// closing bracket of a pre-starting-point author ("[Tourn.] L."). A second `ex` adds to them:
+/// "Degen ex Nyár. ex Csürös, Gergely & Pop" keeps both Degen and Nyár., where Java kept only the
+/// last ones.
 fn start_ex_authors(
     cur: &mut String,
     authors: &mut Vec<String>,
@@ -1751,8 +1963,23 @@ fn start_ex_authors(
     ex_after_separator: &mut Vec<usize>,
 ) {
     flush(cur, authors);
-    *ex_authors = Some(std::mem::take(authors));
-    *ex_after_separator = std::mem::take(after_separator);
+    let new = std::mem::take(authors);
+    let separators = std::mem::take(after_separator);
+    match ex_authors {
+        Some(earlier) => {
+            // a name repeated along the chain is listed once ("Sieber ex Sieber ex Steudel")
+            if new.iter().all(|a| earlier.contains(a)) {
+                return;
+            }
+            let offset = earlier.len();
+            ex_after_separator.extend(separators.into_iter().map(|k| k + offset));
+            earlier.extend(new);
+        }
+        None => {
+            *ex_authors = Some(new);
+            *ex_after_separator = separators;
+        }
+    }
 }
 
 /// A year the [`parse_authors`] walk reads as one: a 3-4 digit number.
@@ -2433,7 +2660,15 @@ mod tests {
         let s = parse_str("Fruhstorfer, [1912]");
         assert_eq!(s.combination.authors, vec!["Fruhstorfer".to_string()]);
         assert_eq!(s.combination.year, Some("1912".to_string()));
+        assert!(s.combination.bracketed_year);
         assert_eq!(s.combination.imprint_year, None);
+        // a plain year is not bracketed, nor is the one an imprint year follows
+        assert!(!parse_str("Fruhstorfer, 1912").combination.bracketed_year);
+        assert!(!parse_str("Storr, 1970 [1969]").combination.bracketed_year);
+        // a bracketed range keeps its first year, bracketed
+        let s = parse_str("(Hübner, [1819-1822])");
+        assert_eq!(s.basionym.year, Some("1819".to_string()));
+        assert!(s.basionym.bracketed_year);
     }
 
     #[test]
@@ -2464,10 +2699,15 @@ mod tests {
     }
 
     #[test]
-    fn trailing_year_disambiguator_letter_is_dropped() {
+    fn trailing_year_disambiguator_letter_stays_with_the_year() {
         let s = parse_str("Smith, 1935h");
-        assert_eq!(s.combination.year, Some("1935".to_string()));
+        assert_eq!(s.combination.year, Some("1935h".to_string()));
         assert_eq!(s.combination.authors, vec!["Smith".to_string()]);
+        // spaced it is dropped, as is the OCR artefact "193k7"
+        assert_eq!(
+            parse_str("Smith, 1935 h").combination.year,
+            Some("1935".to_string())
+        );
     }
 
     #[test]
@@ -2614,6 +2854,34 @@ mod tests {
         let s = parse_str("FISCHER 1885");
         assert_eq!(s.combination.authors, vec!["Fischer".to_string()]);
         assert_eq!(s.combination.year, Some("1885".to_string()));
+    }
+
+    #[test]
+    fn all_caps_mc_surname_keeps_its_second_capital() {
+        let s = parse_str("WILSON & MCCRANIE 1982");
+        assert_eq!(authors(&s), &["Wilson".to_string(), "McCranie".to_string()]);
+        // an acronym is no Mc name; Mac is left alone, it is both Macdonald and MacDonald
+        assert_eq!(authors(&parse_str("MACDONALD")), &["Macdonald".to_string()]);
+    }
+
+    #[test]
+    fn all_caps_particle_takes_its_usual_case() {
+        for (raw, author) in [
+            ("DE SAUSSURE", "de Saussure"),
+            ("VAN DER WULP", "van der Wulp"),
+            ("DE VIS", "de Vis"),
+            ("DI IORIO", "Di Iorio"),
+            ("DE DALLA TORRE", "de Dalla Torre"),
+            ("LE CONTE", "Le Conte"),
+            ("DE LA TORRE", "de la Torre"),
+        ] {
+            assert_eq!(authors(&parse_str(raw)), &[author.to_string()], "{raw}");
+        }
+        // before a mixed-case surname it may be initials
+        assert_eq!(
+            authors(&parse_str("DE Saussure")),
+            &["DE Saussure".to_string()]
+        );
     }
 
     #[test]

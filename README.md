@@ -6,6 +6,9 @@ structured `ParsedName`. This is the authoritative implementation: the Java
 `org.gbif:name-parser-api` contract, and every binding here — Java, Python, R, and the native
 CLI — runs this one engine.
 
+How real names are parsed, and what the parse result holds, is shown by some 140 examples in
+[`docs/parsing-examples.md`](docs/parsing-examples.md).
+
 > **Status: released and in production.** The core parser, the native CLI, and the Java, Python,
 > and R bindings are complete, cross-validated, and published at 0.3.0 (R excepted — not yet on
 > CRAN). The ChecklistBank backend has completed its cutover and now parses through this engine.

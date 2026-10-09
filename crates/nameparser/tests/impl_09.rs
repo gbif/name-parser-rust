@@ -638,7 +638,7 @@ fn test_nomenclatural_notes_pattern() {
         .code(NomCode::Botanical)
         .nothing_else();
     assert_nom_note(
-        "nom. cons.",
+        "nom. cons. Approved Lists 1980",
         "Yersinia pestis (Lehmann and Neumann, 1896) van Loghem, 1944 (Approved Lists, 1980) , nom. cons",
     )
         .species("Yersinia", "pestis")
@@ -798,5 +798,6 @@ fn year_variations() {
         .infra_species("Deudorix", "epijarbas", Rank::Subspecies, "turbo")
         .comb_authors(Some("1912"), &["Fruhstorfer"])
         .code(NomCode::Zoological)
+        .bracketed_year()
         .nothing_else();
 }

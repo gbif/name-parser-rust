@@ -215,13 +215,12 @@ fn monomial() {
 
 #[test]
 fn in_references() {
+    // Busk's manuscript name, published by Chimonides: an ex citation, not an unpublished name
     assert_name("Amathia tricornis Busk ms in Chimonides, 1987")
         .species("Amathia", "tricornis")
-        .comb_authors(Some("1987"), &["Busk"])
-        .published_in("Chimonides, 1987")
-        .nom_note("ms")
-        .manuscript()
-        .published_in_year(Some(1987))
+        .comb_authors(Some("1987"), &["Chimonides"])
+        .comb_ex_authors(&["Busk"])
+        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Xolisma turquini Small apud Britton & Wilson")

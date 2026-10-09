@@ -53,6 +53,14 @@ test_that("an anonymous authorship is a flag, attributed authors render in brack
   expect_equal(out$authorshipComplete, "([Bennett], 1830)")
 })
 
+test_that("a year from external evidence is flagged and rendered in brackets", {
+  out <- parse_names("Acleris aspersana (Hübner, [1819])")
+  expect_true(out$basionymBracketedYear)
+  expect_equal(out$basionymYear, "1819")
+  expect_false(out$combinationBracketedYear)
+  expect_equal(out$authorshipComplete, "(Hübner, [1819])")
+})
+
 test_that("NameFormatter rendering columns match the Java oracle", {
   out <- parse_names(c("Abies alba Mill.",
                        "Astragalus subg. Cercidothrix",

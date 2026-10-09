@@ -640,13 +640,12 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
     // group: Names with ex authors (we follow ICZN convention).
     // Year from publishedIn ("in Chimonides, 1987" / "in Souverbie and Montrouzier, 1864")
     // propagates onto comb authorship.
+    // Busk's manuscript name, published by Chimonides: an ex citation, not an unpublished name
     assert_name("Amathia tricornis Busk ms in Chimonides, 1987")
         .species("Amathia", "tricornis")
-        .comb_authors(Some("1987"), &["Busk"])
-        .nom_note("ms")
-        .published_in("Chimonides, 1987")
-        .published_in_year(Some(1987))
-        .manuscript()
+        .comb_authors(Some("1987"), &["Chimonides"])
+        .comb_ex_authors(&["Busk"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Pisania billehousti Souverbie, in Souverbie and Montrouzier, 1864")
         .species("Pisania", "billehousti")

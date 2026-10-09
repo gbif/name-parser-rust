@@ -119,6 +119,8 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_aggregate_suffix(ctx, s);
     s = strip_published_page(ctx, s);
     s = strip_in_press(ctx, s);
+    s = manuscript_in_as_ex(&s);
+    s = strip_bracketed_manuscript(ctx, s);
     s = strip_in_author_citations(ctx, s);
     s = strip_ipni_citation(ctx, s);
     s = strip_period_separated_reference(ctx, s);
@@ -2223,9 +2225,15 @@ static SIC_WITH_COMMENT: LazyLock<Regex> =
 /// (x4), no `\p{...}`, no unescaped wildcard, and the custom classes `[(\[]`/`[)\]]` are
 /// POSITIVE (list specific ASCII literals, not negated) so they're safe inside a
 /// `(?-u:…)` group (unlike `SIC_WITH_COMMENT`'s negated class above) -> whole-pattern
-/// ASCII-scope.
-static SIC: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?-u:\s*[(\[]\s*sic\s*!?\s*[)\]])").unwrap());
+/// ASCII-scope. Rust-only: a dot after "sic" ("[sic.]"), and a bare "sic." closing the string
+/// after a year or an abbreviated author ("AANDRES, 1881 sic.", not "subsp. sic") — group 1 keeps
+/// what it follows.
+static SIC: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?-u:\s*[(\[]\s*sic\.?\s*!?\s*[)\]])|(\d|\p{Lu}\p{L}*\.)(?-u:\s*)sic\.?!?(?-u:\s*)$",
+    )
+    .unwrap()
+});
 
 /// Java CORRIG (StripAndStash.java:35-36):
 /// `\s*[\(\[]\s*corrig\.?\s*[\)\]]|(?<=\s)corrig\.?(?=\s|$)`, no flags. The bracketed
@@ -2237,12 +2245,21 @@ static SIC: LazyLock<Regex> =
 /// self-contained like every other pattern in this file, and because `regexes::SIC`/
 /// `CORRIG` are NOT ASCII-scoped per this port's flag rule (they predate it), so reusing
 /// them directly would introduce a `\s`-scope divergence from Java.
+/// Rust-only: before a comma too ("Smith corrig., 1900"), and glued to the next author
+/// ("corrig.Yoon et al. 2001").
 static CORRIG: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"[ \t\n\x0B\f\r]*[(\[][ \t\n\x0B\f\r]*corrig\.?[ \t\n\x0B\f\r]*[)\]]|(?<=[ \t\n\x0B\f\r])corrig\.?(?=[ \t\n\x0B\f\r]|$)",
+        r"[ \t\n\x0B\f\r]*[(\[][ \t\n\x0B\f\r]*corrig\.?[ \t\n\x0B\f\r]*[)\]]|(?<=[ \t\n\x0B\f\r])corrig\.?(?=[ \t\n\x0B\f\r,]|$)|(?<=[ \t\n\x0B\f\r])corrig\.(?=\p{Lu})",
     )
     .unwrap()
 });
+
+/// `s` without the [`SIC`] match, keeping the year digit or dot a trailing bare "sic." follows.
+fn remove_sic(s: &str, caps: &regex::Captures<'_>) -> String {
+    let whole = caps.get(0).unwrap();
+    let kept = caps.get(1).map_or("", |m| m.as_str());
+    format!("{}{kept}{}", &s[..whole.start()], &s[whole.end()..])
+}
 
 /// Java `StripAndStash.stripSicAndCorrig` (StripAndStash.java:1101-1124). Three
 /// SEQUENTIAL checks (not else-if — each runs against the possibly-already-updated `s`,
@@ -2269,10 +2286,9 @@ fn strip_sic_and_corrig(ctx: &mut ParseContext, mut s: String) -> String {
         let (start, end) = (whole.start(), whole.end());
         s = format!("{}{}", &s[..start], &s[end..]);
     }
-    if let Some(m) = SIC.find(&s) {
+    if let Some(caps) = SIC.captures(&s) {
         ctx.name.original_spelling = Some(true);
-        let (start, end) = (m.start(), m.end());
-        s = format!("{}{}", &s[..start], &s[end..]);
+        s = remove_sic(&s, &caps);
     }
     let padded = format!(" {s}");
     if let Ok(Some(_)) = CORRIG.find(&padded) {
@@ -2842,20 +2858,23 @@ fn strip_pro_sp_annotation(_ctx: &mut ParseContext, s: String) -> String {
 /// (`(Approved Lists, 1980)`, 273 ChecklistBank rows), and an emendation after it (`Lee et al. 1979
 /// (Approved Lists 1980) emend. Kim 2000`, 301 rows), which Java left for the authors.
 static APPROVED_LISTS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\s*\(\s*Approved\s+Lists,?\s+\d{4}\s*\)\s*\.?\s*)(?:,?(?-u:\s*)(emend(?-u:\b).*))?$")
+    Regex::new(r"(?i)(?-u:\s*\(\s*Approved\s+Lists,?\s+(\d{4})\s*\)\s*\.?\s*)(?:,?(?-u:\s*)(emend(?-u:\b).*))?$")
         .unwrap()
 });
 
 /// Java `StripAndStash.stripApprovedLists` (StripAndStash.java:1241-1249). A trailing "
-/// (Approved Lists YYYY)" bacterial-code annotation is stripped silently, working-string
-/// only — spot-checked: "Aus bus Smith (Approved Lists 1980)" -> authors=["Smith"], no
-/// other side effect.
+/// (Approved Lists YYYY)" bacterial-code annotation is stripped from the working string. Java
+/// dropped it silently; it says the name is validly published by its inclusion in the Approved
+/// Lists of Bacterial Names (ICNP Rule 24a), so it is kept as the nomenclatural note "Approved
+/// Lists 1980".
 fn strip_approved_lists(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = APPROVED_LISTS.captures(&s) {
         ctx.approved_lists = true;
+        ctx.name
+            .add_nomenclatural_note(&format!("Approved Lists {}", &caps[1]));
         let before = java_trim(&s[..caps.get(0).unwrap().start()]);
         // the emendation that follows is left to the taxonomic-note step
-        return match caps.get(1) {
+        return match caps.get(2) {
             Some(emend) => format!("{before} {}", emend.as_str()),
             None => before.to_string(),
         };
@@ -2947,15 +2966,25 @@ fn normalise_anon_str(s: &str) -> String {
 /// Rust-only: Java read it as a surname of its own or stopped parsing at it (30 ChecklistBank rows).
 static GLUED_ET_AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(\s)[Ee]tal\b\.?").unwrap());
 
-/// Spell a glued [`GLUED_ET_AL`] as "et al.", which the authorship parser reads as the closing
-/// "al." author — the "&"/"and" some sources put in front of it is then read as the "et".
+/// "et al." capitalised: `Wilson Et Al., 2013`, `ET AL.`, `et Al.` (2,508 ChecklistBank rows). The
+/// authorship parser knows only the lower-case "al." and took "Al." for an author.
+static CAPITALISED_ET_AL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(\s)(?:Et|ET|et)(?-u:\s+)(?:Al|AL)\b\.?|(\s)(?:Et|ET)(?-u:\s+)al\b\.?").unwrap()
+});
+
+/// Spell a glued [`GLUED_ET_AL`] or a [`CAPITALISED_ET_AL`] as "et al.", which the authorship
+/// parser reads as the closing "al." author — the "&"/"and" some sources put in front of it is
+/// then read as the "et".
 fn normalise_glued_et_al(_ctx: &mut ParseContext, s: String) -> String {
     normalise_glued_et_al_str(&s)
 }
 
 /// [`normalise_glued_et_al`] for any string — also run on a separately supplied authorship.
 fn normalise_glued_et_al_str(s: &str) -> String {
-    GLUED_ET_AL.replace_all(s, "${1}et al.").into_owned()
+    let s = GLUED_ET_AL.replace_all(s, "${1}et al.");
+    CAPITALISED_ET_AL
+        .replace_all(&s, "${1}${2}et al.")
+        .into_owned()
 }
 
 // ---- Step 38: stripColonConceptReference ----
@@ -4281,6 +4310,80 @@ static MANUSCRIPT_MARKER_BEFORE_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+/// A manuscript name another author published: "Kuroda MS in Kira, 1959", "(Busk ms in
+/// Chimonides, 1987)". A plain "A in B" makes A the author, published within B's work; the
+/// manuscript mark says A never published it, B did — the ex relation, "Kuroda ex Kira, 1959". Group
+/// 1 = the author's last character, group 2 = the publisher's first letter.
+static MANUSCRIPT_IN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"([\p{L}.])(?-u:\s*,?\s+)(?:MS|ms|Ms|msc|MSC|ined)\.?(?-u:\s+)in(?-u:\s+)(\p{Lu})")
+        .unwrap()
+});
+
+/// See [`MANUSCRIPT_IN`]: rewritten to the form the authorship parser reads as an ex citation of a
+/// manuscript name, "A MS, B" ("Carpenter MS, Dall"), so neither the manuscript flag nor the
+/// in-citation is set — the name is published — and the ex-author casts no botanical vote.
+/// Rust-only; run on the name string and a separate authorship.
+pub(crate) fn manuscript_in_as_ex(s: &str) -> String {
+    MANUSCRIPT_IN.replace_all(s, "${1} MS, ${2}").into_owned()
+}
+
+/// A manuscript marker of an author inside a bracket, closing it or before the bracket's "in"
+/// citation: "(Parreyss, MS.)", "(Kuroda MS in Kira, 1959)". Java read "MS" as the initials of
+/// "M.S.Parreyss". Group 1 = the author or year before it, group 2 = the marker with its
+/// separator, group 3 = the marker, group 4 = what follows it.
+static BRACKETED_MANUSCRIPT_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"([\p{Lu}\d][\p{L}\d.'\-]*)((?-u:\s*,?\s+)((?i:ms|msc|ined)\.?))((?-u:\s*)\)|(?-u:\s+)in(?-u:\s))",
+    )
+    .unwrap()
+});
+
+/// An "ex" in a bracket: "(ex Kirby MS)", "(? ex Dej. MS)", "(ex. Sol. MS)".
+static EX_WORD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\bex\b)").unwrap());
+
+/// See [`BRACKETED_MANUSCRIPT_MARKER`]: the marker is dropped from inside its bracket and sets
+/// `manuscript` with the lower-cased marker as the note, as a trailing one does. Rust-only.
+pub(crate) fn strip_bracketed_manuscript_marker(s: &str, name: &mut ParsedName) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut last = 0;
+    for caps in BRACKETED_MANUSCRIPT_MARKER.captures_iter(s) {
+        let marker = caps.get(2).unwrap();
+        let before = &s[..marker.start()];
+        let Some(open_at) = before.rfind('(') else {
+            continue;
+        };
+        // inside the bracket, which opens the authorship or follows the epithet: not one between
+        // an author and the year ("Doubleday (Boisd. MS) 1844"), nor an "(ex Kirby MS)", whose
+        // ex-author reading is still open (#66)
+        let inside = before.matches('(').count() > before.matches(')').count();
+        let after_author = s[..open_at]
+            .split_whitespace()
+            .next_back()
+            .is_some_and(|w| w.starts_with(|c: char| c.is_uppercase()));
+        if !inside || after_author || EX_WORD.is_match(&s[open_at..marker.start()]) {
+            continue;
+        }
+        out.push_str(&s[last..marker.start()]);
+        out.push_str(&caps[4]);
+        last = caps.get(4).unwrap().end();
+        name.manuscript = true;
+        let tag = caps[3].to_lowercase();
+        if !name
+            .nomenclatural_note
+            .as_deref()
+            .is_some_and(|existing| contains_words(existing, &tag))
+        {
+            name.add_nomenclatural_note(&tag);
+        }
+    }
+    out.push_str(&s[last..]);
+    out
+}
+
+fn strip_bracketed_manuscript(ctx: &mut ParseContext, s: String) -> String {
+    strip_bracketed_manuscript_marker(&s, &mut ctx.name)
+}
+
 /// Java `StripAndStash.stripManuscriptMarker` (StripAndStash.java:1542-1555). A trailing
 /// manuscript marker ("ined."/"ms."/"msc."/"unpublished", any case, with an optional leading
 /// comma) sets `manuscript = true` and APPENDS the LOWER-CASED tag to `nomenclaturalNote`
@@ -4812,9 +4915,9 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
         name.original_spelling = Some(true);
         s = format!("{}{}", &s[..m.start()], &s[m.end()..]);
     }
-    if let Some(m) = SIC.find(&s) {
+    if let Some(caps) = SIC.captures(&s) {
         name.original_spelling = Some(true);
-        s = format!("{}{}", &s[..m.start()], &s[m.end()..]);
+        s = remove_sic(&s, &caps);
     }
     {
         let padded = format!(" {s}");
@@ -6574,10 +6677,14 @@ mod tests {
     // ---- Step 35: stripApprovedLists ----
 
     #[test]
-    fn approved_lists_annotation_is_stripped_silently() {
+    fn approved_lists_annotation_becomes_the_nomenclatural_note() {
         let mut c = ctx("x");
         let out = strip_approved_lists(&mut c, "Aus bus Smith (Approved Lists 1980)".to_string());
         assert_eq!(out, "Aus bus Smith");
+        assert_eq!(
+            c.name.nomenclatural_note.as_deref(),
+            Some("Approved Lists 1980")
+        );
     }
 
     #[test]
@@ -7787,17 +7894,17 @@ mod tests {
     // ---- Batch 2d cross-step interaction (full `run()`) ----
 
     #[test]
-    fn full_run_strips_both_in_author_citation_and_manuscript_marker_in_order() {
-        // Oracle-verified end-to-end (StripAndStash's own contribution): "Aus bus Busk ms in
-        // Chimonides, 1987" must have the in-author tail stripped first (step 48), leaving
-        // "Aus bus Busk ms" for the manuscript marker (step 52) to finish.
+    fn full_run_reads_a_manuscript_name_published_in_another_work_as_ex() {
+        // "Busk ms in Chimonides, 1987": Busk's manuscript name, published by Chimonides — no
+        // in-citation, no manuscript flag, but the ex citation the authorship parser reads
+        // ("Carpenter MS, Dall"). Java (and Rust before #67) stripped the in-author tail first and
+        // left "Busk ms" for the manuscript marker.
         let mut c = ctx("Aus bus Busk ms in Chimonides, 1987");
         run(&mut c);
-        assert_eq!(c.working, "Aus bus Busk");
-        assert!(c.name.manuscript);
-        assert_eq!(c.name.nomenclatural_note, Some("ms".to_string()));
-        assert_eq!(c.name.published_in, Some("Chimonides, 1987".to_string()));
-        assert_eq!(c.name.published_in_year, Some(1987));
+        assert_eq!(c.working, "Aus bus Busk MS, Chimonides, 1987");
+        assert!(!c.name.manuscript);
+        assert_eq!(c.name.nomenclatural_note, None);
+        assert_eq!(c.name.published_in, None);
     }
 
     // ---- Step 53: stripSupraRankPrefix ----

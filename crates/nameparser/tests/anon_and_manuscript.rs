@@ -117,3 +117,36 @@ fn a_question_mark_glued_to_the_manuscript_marker() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 }
+
+/// "MS" after an author inside a bracket is that author's manuscript marker, as it is outside one,
+/// not the initials of "M.S.Parreyss".
+#[test]
+fn a_manuscript_marker_inside_a_bracket() {
+    assert_name_auth("Unio byzuntinus", "(Parreyss, MS.)")
+        .species("Unio", "byzuntinus")
+        .bas_authors(None, &["Parreyss"])
+        .nom_note("ms.")
+        .manuscript()
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a manuscript name another author published is an ex citation, not unpublished
+    assert_name("Haustellum kiiensis (Kuroda MS in Kira, 1959)")
+        .species("Haustellum", "kiiensis")
+        .bas_authors(Some("1959"), &["Kira"])
+        .bas_ex_authors(Some("1959"), &["Kuroda"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Haustellum kiiensis", "Kuroda MS in Kira, 1959")
+        .species("Haustellum", "kiiensis")
+        .comb_authors(Some("1959"), &["Kira"])
+        .comb_ex_authors(&["Kuroda"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a provisional name's phrase keeps it verbatim
+    assert_informal("Celmisia sp. (pulchella ms)")
+        .taxon("Celmisia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. (pulchella ms)")
+        .nothing_else();
+}

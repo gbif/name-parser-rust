@@ -64,6 +64,10 @@ final class StructCodec {
   private static final int OFF_AUTHORSHIP_FLAGS = 30;
   private static final int ANON_COMBINATION_BIT = 1;
   private static final int ANON_BASIONYM_BIT = 2;
+  // ABI 7: the bracketedYear flags of the combination (bit 2) and basionym (bit 3) authorships, in
+  // the same byte and nested-group word
+  private static final int BRACKETED_YEAR_COMBINATION_BIT = 4;
+  private static final int BRACKETED_YEAR_BASIONYM_BIT = 8;
   private static final int OFF_PUBLISHED_IN_YEAR = 32;
 
   private static final int STATUS_SUCCESS = 0;
@@ -131,10 +135,10 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 6) {
+    if (abi != 7) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 6 -- rebuild the cdylib "
+              + ", StructCodec was written against 7 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
@@ -434,11 +438,11 @@ final class StructCodec {
     }
 
     pn.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, strings[SLOT_YEAR_COMB],
-        strings[SLOT_IMPRINT_YEAR_COMB], (authorshipFlags & ANON_COMBINATION_BIT) != 0,
-        strings[SLOT_SANCTIONING_AUTHOR_COMB]));
+        strings[SLOT_IMPRINT_YEAR_COMB], (authorshipFlags & BRACKETED_YEAR_COMBINATION_BIT) != 0,
+        (authorshipFlags & ANON_COMBINATION_BIT) != 0, strings[SLOT_SANCTIONING_AUTHOR_COMB]));
     pn.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, strings[SLOT_YEAR_BAS],
-        strings[SLOT_IMPRINT_YEAR_BAS], (authorshipFlags & ANON_BASIONYM_BIT) != 0,
-        strings[SLOT_SANCTIONING_AUTHOR_BAS]));
+        strings[SLOT_IMPRINT_YEAR_BAS], (authorshipFlags & BRACKETED_YEAR_BASIONYM_BIT) != 0,
+        (authorshipFlags & ANON_BASIONYM_BIT) != 0, strings[SLOT_SANCTIONING_AUTHOR_BAS]));
 
     if (genericAuthorship != null) {
       pn.setGenericAuthorship(genericAuthorship);
@@ -572,21 +576,24 @@ final class StructCodec {
 
     CombinedAuthorship ca = new CombinedAuthorship();
     ca.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, yearComb, imprintYearComb,
-        (flags & ANON_COMBINATION_BIT) != 0, sanctioningAuthorComb));
+        (flags & BRACKETED_YEAR_COMBINATION_BIT) != 0, (flags & ANON_COMBINATION_BIT) != 0,
+        sanctioningAuthorComb));
     ca.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, yearBas, imprintYearBas,
-        (flags & ANON_BASIONYM_BIT) != 0, sanctioningAuthorBas));
+        (flags & BRACKETED_YEAR_BASIONYM_BIT) != 0, (flags & ANON_BASIONYM_BIT) != 0,
+        sanctioningAuthorBas));
     return ca;
   }
 
   /** Builds an {@link Authorship} via its plain setters -- NOT {@code addAuthor}/{@code
    *  addExAuthor}, which have an inverted-blank-check bug making them no-ops for real authors. */
   private static Authorship authorship(List<String> authors, List<String> exAuthors, String year, String imprintYear,
-                                       boolean anonymous, String sanctioningAuthor) {
+                                       boolean bracketedYear, boolean anonymous, String sanctioningAuthor) {
     Authorship a = new Authorship();
     a.setAuthors(authors);
     a.setExAuthors(exAuthors);
     a.setYear(year);
     a.setImprintYear(imprintYear);
+    a.setBracketedYear(bracketedYear);
     a.setAnonymous(anonymous);
     a.setSanctioningAuthor(sanctioningAuthor);
     return a;

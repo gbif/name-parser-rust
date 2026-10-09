@@ -5,7 +5,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NomCode};
+use nameparser::model::{warnings, NomCode, Rank};
 
 #[test]
 fn a_byte_order_mark_is_ignored() {
@@ -18,10 +18,26 @@ fn a_byte_order_mark_is_ignored() {
 
 #[test]
 fn invisible_format_characters_are_ignored() {
-    // zero-width spaces and joiners (not the soft hyphen, see `unicode::normalize_input`)
+    // zero-width spaces and joiners (the soft hyphen has a test of its own)
     assert_name("Abies\u{200b} alba\u{200d} Mill.\u{2060}")
         .species("Abies", "alba")
         .comb_authors(None, &["Mill."])
+        .nothing_else();
+}
+
+/// A soft hyphen marks where a word may break: it splits nothing, and between a lower-case and a
+/// capital letter it is the hyphen of a double name.
+#[test]
+fn a_soft_hyphen_splits_no_word() {
+    assert_name("Oedogonium platygynum var. novae\u{ad}zelandiae Hirn")
+        .infra_species("Oedogonium", "platygynum", Rank::Variety, "novaezelandiae")
+        .comb_authors(None, &["Hirn"])
+        .nothing_else();
+    assert_name("Basilia speiseri (Miranda\u{ad}Ribeiro) Miranda-Ribeiro")
+        .species("Basilia", "speiseri")
+        .comb_authors(None, &["Miranda-Ribeiro"])
+        .bas_authors(None, &["Miranda-Ribeiro"])
+        .code(NomCode::Botanical)
         .nothing_else();
 }
 

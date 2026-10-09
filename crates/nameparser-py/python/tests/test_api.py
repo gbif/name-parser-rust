@@ -178,6 +178,7 @@ def test_to_dict_uses_wire_field_names_and_string_enums():
         "authors": ["Miller"],
         "exAuthors": [],
         "year": "1907",
+        "bracketedYear": False,
         "anonymous": False,
     }
 
@@ -200,7 +201,12 @@ def test_classes_report_the_nameparser_module_not_builtins():
 def test_authorship_to_dict_and_repr():
     pn = sci("Abies alba Mill.")
     ca = pn.combination_authorship
-    assert ca.to_dict() == {"authors": ["Mill."], "exAuthors": [], "anonymous": False}
+    assert ca.to_dict() == {
+        "authors": ["Mill."],
+        "exAuthors": [],
+        "bracketedYear": False,
+        "anonymous": False,
+    }
     assert "Mill." in repr(ca)
 
 
@@ -319,3 +325,12 @@ def test_anonymous_authorship():
     assert bas.year == "1830"
     assert "anonymous=True" in repr(bas)
     assert nameparser.parse("Abies alba Mill.").combination_authorship.anonymous is False
+
+
+def test_bracketed_year():
+    # a year from external evidence, cited in square brackets (ICZN Recommendation 22A.2.3)
+    ca = nameparser.parse("Phyllomacromia", authorship="Westwood, [1851]").combination_authorship
+    assert ca.year == "1851"
+    assert ca.bracketed_year is True
+    assert "bracketed_year=True" in repr(ca)
+    assert nameparser.parse("Abies alba Mill.").combination_authorship.bracketed_year is False

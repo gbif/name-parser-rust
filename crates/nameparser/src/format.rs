@@ -540,7 +540,15 @@ fn append_authorship(
                 }
                 sb.push(' ');
             }
-            sb.push_str(year);
+            // a year established from external evidence is cited in square brackets (ICZN
+            // Rec. 22A.2.3)
+            if auth.bracketed_year {
+                sb.push('[');
+                sb.push_str(year);
+                sb.push(']');
+            } else {
+                sb.push_str(year);
+            }
         }
         if let Some(iy) = &auth.imprint_year {
             sb.push_str(" [");
@@ -673,7 +681,7 @@ static MARK: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\p{M}").unwrap());
 /// Java `UnicodeUtils.foldToAscii(String)` — `replaceSpecialCases`, then Unicode NFD (which
 /// splits accented letters into base + combining mark), then drop all `\p{M}` marks, leaving
 /// the ascii base letters.
-fn fold_to_ascii(x: &str) -> String {
+pub(crate) fn fold_to_ascii(x: &str) -> String {
     let x = replace_special_cases(x);
     let nfd: String = x.nfd().collect();
     MARK.replace_all(&nfd, "").into_owned()

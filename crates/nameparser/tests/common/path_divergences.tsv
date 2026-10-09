@@ -4,9 +4,16 @@
 # variant	input	authorship	rank	code	fields	note
 embedded	Spongia	[Renier]	GENUS		combinationAuthorship,phrase,type	deliberate: [Renier] in the authorship column is an attributed anonymous author, on the name string a WoRMS [Word] phrase
 embedded	Abies alba  Mill	Mill.			combinationAuthorship	deliberate: a different separate authorship wins over the name string's own
-embedded	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship	deliberate: a different separate authorship wins over the name string's own
+embedded	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship,warnings	deliberate: a different separate authorship wins over the name string's own
+embedded	Abies alba Mill. foo 1234 bar	L. foo bar baz			combinationAuthorship,unparsed,warnings	deliberate: a different separate authorship wins over the name string's own
+embedded	Aus bus (L.) Smith	Mill.			basionymAuthorship,code,combinationAuthorship,warnings	deliberate: a different separate authorship wins over the name string's own
+embedded	Cyprinus carpio Linnaeus, 1758 ssp. murgo Dybowski, 1869	Linnaeus, 1758			warnings	deliberate: a separate authorship of another part of the name is kept apart and flagged
+embedded	Mulleripicus funebris (Valenciennes, 1826)	Achille Valenciennes			combinationAuthorship	deliberate: a separate authorship holding less keeps the name string's year and brackets
 redundant	Spongia	[Renier]	GENUS		combinationAuthorship,phrase,type	deliberate: [Renier] in the authorship column is an attributed anonymous author, on the name string a WoRMS [Word] phrase
-redundant	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship	deliberate: a different separate authorship wins over the name string's own
+redundant	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship,warnings	deliberate: a different separate authorship wins over the name string's own
+redundant	Abies alba Mill. foo 1234 bar	L. foo bar baz			combinationAuthorship,unparsed	deliberate: a different separate authorship wins over the name string's own
+redundant	Aus bus (L.) Smith	Mill.			basionymAuthorship,code,combinationAuthorship,warnings	deliberate: a different separate authorship wins over the name string's own
+redundant	Mulleripicus funebris (Valenciennes, 1826)	Achille Valenciennes			combinationAuthorship	deliberate: a separate authorship holding less keeps the name string's year and brackets
 nosplit	"Accipiter bicolor (Vieillot, 1817)"				-	structural
 nosplit	"Pseudomonas denitrificans" (Christensen, 1903) Bergey et al., 1923, nom. rejic.				-	structural
 nosplit	? alba Smith				-	structural

@@ -44,6 +44,11 @@ pub struct Authorship {
     /// 22A.2.3 brackets only an imprint year cited after the actual one.
     #[serde(rename = "imprintYear", skip_serializing_if = "Option::is_none")]
     pub imprint_year: Option<String>,
+    /// Java `Authorship.bracketedYear` (name-parser-api 5.4): the [`Self::year`] is not given in the
+    /// work itself but established from external evidence, cited in square brackets: `Westwood,
+    /// [1851]` (ICZN Recommendation 22A.2.3). Always serialized, like Java's primitive boolean.
+    #[serde(rename = "bracketedYear")]
+    pub bracketed_year: bool,
     /// Java `Authorship.anonymous` (name-parser-api 5.1): the work was published anonymously,
     /// "Anon." / "anon." / "Anonymous". Any [`Self::authors`] are then attributed from external
     /// evidence, cited in square brackets: `[Denis & Schiffermüller], 1775` (ICZN Recommendation
@@ -418,7 +423,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}"#;
+        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -441,7 +446,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}"#;
+        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -467,7 +472,7 @@ mod tests {
         // Sanity check independent of the two golden rows above: a bare `default()`
         // must omit every Option field and every nested-struct Option, while still
         // emitting the always-on primitives/collections/enums.
-        let expected = r#"{"rank":"UNRANKED","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"anonymous":false}}"#;
+        let expected = r#"{"rank":"UNRANKED","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(
             serde_json::to_string(&ParsedName::default()).unwrap(),
             expected
@@ -629,6 +634,7 @@ mod tests {
             ex_authors: vec!["hort.".into()],
             year: None,
             imprint_year: None,
+            bracketed_year: false,
             anonymous: false,
             sanctioning_author: None,
         };
