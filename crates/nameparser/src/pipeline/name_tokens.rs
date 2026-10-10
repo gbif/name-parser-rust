@@ -893,7 +893,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     && (w.eq_ignore_ascii_case("agg")
                         || w.eq_ignore_ascii_case("aggregate")
                         || w.eq_ignore_ascii_case("group")
-                        || w.eq_ignore_ascii_case("complex"))
+                        || w.eq_ignore_ascii_case("complex")
+                        || w.eq_ignore_ascii_case("superspecies"))
                 {
                     ctx.aggregate = true;
                     i += 1;

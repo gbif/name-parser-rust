@@ -68,6 +68,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_letter_subdivision_marker(ctx, s);
     s = normalise_unranked_marker(s);
     s = unbracket_infrageneric_marker(s);
+    s = strip_superspecies_marker(ctx, s);
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -1649,6 +1650,26 @@ fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
         Some(caps) => {
             ctx.trailing_identifier = Some(caps[2].to_string());
             caps[1].to_string()
+        }
+        None => s,
+    }
+}
+
+/// A superspecies marker between the genus and the epithet: `Eosembia supersp. thoracica`.
+static SUPERSPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)(?i:supersp|superspecies)\.?(?-u:\s+)(\p{Ll})").unwrap()
+});
+
+/// The Orthoptera, Embioptera and Plecoptera species files write a superspecies with the marker
+/// `supersp.` before its epithet; the marker became the epithet and every superspecies of a
+/// genus the same name `Eosembia supersp` (#87). The marker goes and the name is a species
+/// aggregate, the rank a superspecies takes in the model.
+fn strip_superspecies_marker(ctx: &mut ParseContext, s: String) -> String {
+    match SUPERSPECIES_MARKER.captures(&s) {
+        Some(caps) => {
+            ctx.aggregate = true;
+            let epithet = caps.get(2).unwrap().start();
+            format!("{} {}", &caps[1], &s[epithet..])
         }
         None => s,
     }
@@ -3968,7 +3989,7 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
 /// as `SIC`/`CORRIG` in batch 2 (`strip_sic_and_corrig`'s doc comment).
 static AGGREGATE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:\s+(?:agg\.?|aggregate|species\s+group|species\s+complex|group|complex)|\s*-\s*group|\s*-\s*aggregate)\s*)$",
+        r"(?i)(?-u:(?:\s+(?:agg\.?|aggregate|species\s+group|species\s+complex|group|complex|superspecies|supersp\.?)|\s*-\s*group|\s*-\s*aggregate)\s*)$",
     )
     .unwrap()
 });

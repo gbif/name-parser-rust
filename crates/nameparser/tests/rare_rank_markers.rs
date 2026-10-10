@@ -160,3 +160,16 @@ fn an_infrageneric_marker_inside_the_brackets() {
         .comb_authors(None, &["H.Lev."])
         .nothing_else();
 }
+
+#[test]
+fn a_superspecies_is_a_species_aggregate() {
+    // #87: the marker became the epithet, and all superspecies of a genus one name
+    assert_name_auth("Eosembia supersp. thoracica", "(Ross, 2007)")
+        .binomial("Eosembia", None, "thoracica", Rank::SpeciesAggregate)
+        .bas_authors(Some("2007"), &["Ross"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Acestrura heliodor superspecies")
+        .binomial("Acestrura", None, "heliodor", Rank::SpeciesAggregate)
+        .nothing_else();
+}
