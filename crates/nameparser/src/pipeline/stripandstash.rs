@@ -54,6 +54,7 @@ use unicode_normalization::UnicodeNormalization;
 pub(crate) fn run(ctx: &mut ParseContext) {
     let mut s = ctx.working.clone();
     s = stash_trailing_identifier(ctx, s);
+    s = close_bracket_after_year(ctx, s);
     s = repair_colon_diacritics(ctx, s);
     s = flag_uncertain_authorship(ctx, s);
     s = extract_generic_author(ctx, s);
@@ -143,6 +144,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_ipni_citation(ctx, s);
     s = strip_period_separated_reference(ctx, s);
     s = strip_comma_prefixed_reference(ctx, s);
+    s = stash_text_after_year(ctx, s);
     s = strip_manuscript_marker(ctx, s);
     s = strip_supra_rank_prefix(ctx, s);
     s = strip_leading_infrageneric_marker(ctx, s);
@@ -5021,6 +5023,129 @@ fn strip_comma_prefixed_reference(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
+// ---- Text after the year that closes an authorship ----
+
+/// A bracket opened after the year of an authorship and never closed, at the end: `Dobson, 1878
+/// [nomen nudum`, `Fairm., 1899 (1900`. Group 1 what comes before the bracket, group 2 the bracket,
+/// group 3 its content.
+static UNCLOSED_BRACKET_AFTER_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*\p{L}.*?[,\s](?:1[5-9][0-9]{2}|20[0-9]{2})[a-z]?\)?[,\s]*)([\[(])([^\[\]()]*[^\[\]()\s])(?-u:\s*)$").unwrap()
+});
+
+/// Closes a bracket left open after the year ([`UNCLOSED_BRACKET_AFTER_YEAR`]), so that the steps
+/// for a bracketed note, an imprint year or a citation read it as they read a closed one; left
+/// open, its content was taken for an author (`Dobson & nomen nudum, 1878`, #106).
+fn close_bracket_after_year(_ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = UNCLOSED_BRACKET_AFTER_YEAR.captures(&s) else {
+        return s;
+    };
+    let close = if &caps[2] == "[" { ']' } else { ')' };
+    format!("{}{}{}{close}", &caps[1], &caps[2], &caps[3])
+}
+
+/// A bracket after the year that closes an authorship, at the end: `Lesson, 1842 [incorrect
+/// subsequent spelling]`, `(R. A. Philippi, 1900) [preoccupied]`, `(Haitlinger, 2003) [L]`,
+/// `Siddiqi, 1970 (Jairajpuri & Ahmad, 1992)`. Group 1 what comes before it, group 2 the bracket,
+/// group 3 or 4 its content.
+static BRACKET_AFTER_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*\p{L}.*?[,\s](?:1[5-9][0-9]{2}|20[0-9]{2})[a-z]?\)?)[,\s]*(\[([^\[\]]*)\]|\(([^()]*)\))(?-u:\s*)\.?(?-u:\s*)$").unwrap()
+});
+
+/// A capitalised word after the year that closes an authorship, at the end: a family-group name
+/// (`Grosmann, 1935 Phylloxeroidea`, `(Signoret, 1869) Coccoidea`) or a remark (`Levi, 1988 New`).
+/// Group 1 what comes before it, group 2 a comma before the year, group 3 a bracket closed after
+/// it, group 4 the word.
+static WORD_AFTER_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*\p{L}.*?(?:(,)(?-u:\s*)|(?-u:\s+))(?:1[5-9][0-9]{2}|20[0-9]{2})[a-z]?(\)?))(?-u:\s+)(\p{Lu}[\p{L}\-]+)(?-u:\s*)$").unwrap()
+});
+
+/// A status of the name, as the Mammal Diversity Database and the ICZN word it: `incorrect
+/// subsequent spelling`, `preoccupied`, `nomen nudum`, `rejected by fiat`, `placed on index`.
+static NOMENCLATURAL_STATUS_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"(?i)^(?:",
+        r"(?:in)?correct(?-u:\s+)(?:original(?-u:\s+)|subsequent(?-u:\s+))?spelling(?:(?-u:\s).*)?",
+        r"|orig(?:inal|\.)(?-u:\s*)(?:orthography|spelling)",
+        r"|(?:un)?justified(?-u:\s+)emendation|as(?-u:\s+)emended",
+        r"|preoccupied|infrasubspecific|variant|original|variety(?-u:\s+)or(?-u:\s+)form",
+        r"|inconsistently(?-u:\s+)binominal|nomen(?-u:\s+)\p{L}+",
+        r"|placed(?-u:\s+)on(?-u:\s+)(?:the(?-u:\s+))?(?:official(?-u:\s+))?index.*",
+        r"|(?:partially(?-u:\s+))?suppressed|rejected(?:(?-u:\s+)by(?-u:\s+)fiat)?",
+        r"|new(?-u:\s+)(?:combination|name|replacement(?-u:\s+)name|status)|replacement(?-u:\s+)name",
+        r"|unavailable(?:(?-u:\s+)name)?|unpublished(?:(?-u:\s).*)?",
+        r"|in(?-u:\s+)error|ex(?-u:\s+)errore|errore?(?-u:\s+)typographic(?:us|al)|sphalm",
+        r"|status(?-u:\s+)unclear|as(?-u:\s+)(?:var|subsp|ssp|f|form)",
+        r")\.?$",
+    ))
+    .unwrap()
+});
+
+/// A note on the taxon concept rather than the name: `fide Smith 1943`, `teste Scudder 1882`,
+/// `sensu Hamer et al., 1994`, `nec Breuning, 1927`.
+static TAXONOMIC_NOTE_LEAD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:fide|teste|vide|sensu|sec|auctt?|auctorum|non|nec|not|lapsus|misspelling|misapplied|misident)\b").unwrap()
+});
+
+/// "In part", as `pro parte` after the authors: `(partim)`, `(p.p.)`, `[in part]`.
+static PRO_PARTE_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(?:partim|p\.(?-u:\s*)p|pro(?-u:\s+)parte|in(?-u:\s+)part)\.?$").unwrap()
+});
+
+/// Files a note found after an authorship by what it says: a status of the name
+/// ([`NOMENCLATURAL_STATUS_NOTE`]), a note on the concept ([`TAXONOMIC_NOTE_LEAD`]), `extinct`, or
+/// `pro parte` (doubtful, as [`strip_pro_parte`] has it). Anything else is left unparsed, a life
+/// stage (`[L]`), a month (`(May)`), another citation (`(Jairajpuri & Ahmad, 1992)`): never an
+/// author.
+fn file_note_after_authorship(ctx: &mut ParseContext, content: &str, verbatim: &str) {
+    let note = collapse_whitespace(java_trim(content));
+    if note.eq_ignore_ascii_case("extinct") {
+        ctx.name.extinct = true;
+    } else if PRO_PARTE_NOTE.is_match(&note) {
+        ctx.name.doubtful = true;
+    } else if NOMENCLATURAL_STATUS_NOTE.is_match(&note) {
+        // "[unpublished thesis]"
+        if MANUSCRIPT_KEYWORD.is_match(&note) {
+            ctx.name.manuscript = true;
+        }
+        ctx.name.add_nomenclatural_note(&note);
+    } else if TAXONOMIC_NOTE_LEAD.is_match(&note) {
+        ctx.name.add_taxonomic_note(&note);
+    } else {
+        ctx.set_pending_unparsed(java_trim(verbatim));
+    }
+}
+
+/// The year closes an author team, so what follows it is no author (#106). A bracket after it
+/// ([`BRACKET_AFTER_YEAR`]) is filed by [`file_note_after_authorship`]: it was read as one more
+/// author (`Lesson & incorrect subsequent spelling, 1842`), or after a basionym as the author of
+/// the combination (`(Haitlinger, 2003) L.`). A word after it ([`WORD_AFTER_YEAR`]) is left
+/// unparsed when it names a family group, or follows a comma and the year: after a basionym's
+/// bracket any other word is the author of the combination. Not in a provisional name, whose phrase
+/// takes it all: `Cruznema sp. Davies, 2011 (Waite Nematode Collection WNC 519)`.
+fn stash_text_after_year(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = BRACKET_AFTER_YEAR.captures(&s) {
+        let content = caps.get(3).or(caps.get(4)).map_or("", |m| m.as_str());
+        // a number, an imprint year left over: "Lea, 1908 (09)", "Cook, 1985(1983?)"
+        if !content.chars().any(char::is_alphabetic) || INDET_MARKER_WORD.is_match(&caps[1]) {
+            return s;
+        }
+        file_note_after_authorship(ctx, content, &caps[2]);
+        return java_trim(&caps[1]).to_string();
+    }
+    if let Some(caps) = WORD_AFTER_YEAR.captures(&s) {
+        let word = &caps[4];
+        let after_comma = caps.get(2).is_some() && caps[3].is_empty();
+        if (FAMILY_GROUP_ENDING.is_match(word)
+            || (after_comma && !MANUSCRIPT_KEYWORD.is_match(word)))
+            && !INDET_MARKER_WORD.is_match(&caps[1])
+        {
+            ctx.set_pending_unparsed(word);
+            return java_trim(&caps[1]).to_string();
+        }
+    }
+    s
+}
+
 // ---- Step 52: stripManuscriptMarker ----
 
 /// Java MANUSCRIPT_MARKER (StripAndStash.java:277-279):
@@ -5574,12 +5699,13 @@ fn on_authorship(
 }
 
 /// [`run`]'s steps that apply to a separately supplied authorship as much as to an authorship on
-/// the name string, and that come before [`strip_authorship_markers`]'s: coded diacritics
-/// (`Mu:2ller`), uncertain authors (`?`,
+/// the name string, and that come before [`strip_authorship_markers`]'s: a bracket left open after
+/// the year, coded diacritics (`Mu:2ller`), uncertain authors (`?`,
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 15] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 16] = [
+        close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
         strip_imprint_years,
@@ -5624,12 +5750,14 @@ pub(crate) fn strip_authorship_trailing_steps(ctx: &mut ParseContext, s: String)
 }
 
 /// [`run`]'s publication-reference steps for a separately supplied authorship, after the
-/// in-citation split: IPNI-style, period-separated and comma-prefixed references.
+/// in-citation split: IPNI-style, period-separated and comma-prefixed references, and the text
+/// after the year.
 pub(crate) fn strip_authorship_reference_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 3] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 4] = [
         strip_ipni_citation,
         strip_period_separated_reference,
         strip_comma_prefixed_reference,
+        stash_text_after_year,
     ];
     steps
         .into_iter()

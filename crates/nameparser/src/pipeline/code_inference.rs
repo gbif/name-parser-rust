@@ -287,11 +287,12 @@ fn all_abbreviated(authors: &[String]) -> bool {
 /// Word-boundary matching (not bare substring search) so a status token is only recognised
 /// as a whole word — "cons" matches "nom. cons." but not an unrelated word that merely
 /// contains the letters (e.g. "reconsider"). A spelled-out "illegitimum" is zoologists' usage,
-/// botanists abbreviate (7 of the 9 ChecklistBank rows declare ICZN): no botanical vote.
+/// botanists abbreviate (7 of the 9 ChecklistBank rows declare ICZN): no botanical vote. Nor for
+/// the English "rejected", the ICZN's Official Index wording (`[rejected by fiat]`).
 pub(crate) fn code_from_nom_note(note: Option<&str>) -> Option<NomCode> {
     let note = note?;
     let s = note.to_lowercase();
-    if ICN_STATUS.is_match(&s) && !s.contains("illegitimum") {
+    if ICN_STATUS.is_match(&s) && !s.contains("illegitimum") && !s.contains("rejected") {
         return Some(NomCode::Botanical);
     }
     if ICZN_STATUS.is_match(&s) {
