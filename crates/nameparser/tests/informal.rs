@@ -171,18 +171,19 @@ fn underscored_otu_codes_are_captured_as_the_phrase_not_stashed_as_unparsed() {
     }
 }
 
-/// A DETERMINED name keeps the old `unparsed` stash: it stays `Parsed`, so the code rides along on
-/// the `ParsedName` and nothing is lost. Guard against widening the diversion above.
+/// A DETERMINED name stays `Parsed`, its code the phrase of the binomial like any other strain code
+/// (#84; it used to be stashed as `unparsed`, a PARTIAL parse). Guard against widening the
+/// diversion above.
 #[test]
-fn a_determined_name_still_stashes_its_otu_code_as_unparsed() {
+fn a_determined_name_keeps_its_otu_code_as_phrase() {
     let pn = match nameparser::parse("Oxalis barrelieri XXZ_21243", None, None, None) {
         ParseResult::Parsed(pn) => pn,
         other => panic!("expected Parsed, got {other:?}"),
     };
     assert_eq!(pn.genus.as_deref(), Some("Oxalis"));
     assert_eq!(pn.specific_epithet.as_deref(), Some("barrelieri"));
-    assert_eq!(pn.unparsed.as_deref(), Some("XXZ_21243"));
-    assert_eq!(pn.phrase, None);
+    assert_eq!(pn.unparsed, None);
+    assert_eq!(pn.phrase.as_deref(), Some("XXZ_21243"));
 }
 
 /// A catalogue number's `:<digits>` tail belongs to the phrase, not to `publishedInPage`.

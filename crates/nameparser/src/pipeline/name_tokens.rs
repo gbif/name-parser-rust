@@ -79,6 +79,11 @@ static AUTHOR_YEAR_TAIL: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+/// Is this an author citation with its year, as [`AUTHOR_YEAR_TAIL`] reads one?
+pub(crate) fn is_author_year(s: &str) -> bool {
+    AUTHOR_YEAR_TAIL.is_match(s)
+}
+
 /// Java `NameTokens.classify(ParseContext, int)` (`NameTokens.java:25-536`). Walks
 /// `ctx.tokens[0, boundary)`, classifying it into the structural name-part fields on
 /// `ctx.name`, plus `ctx.mid_author_from`/`ctx.mid_author_to` (the species-level author

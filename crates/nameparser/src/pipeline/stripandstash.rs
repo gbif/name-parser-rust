@@ -71,6 +71,8 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_organism_label_tail(ctx, s);
     s = stash_trailing_strain_code(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
+    s = stash_trailing_accession(ctx, s);
+    s = stash_aggregate_designation(ctx, s);
     s = stash_bracketed_annotation(ctx, s);
     s = stash_underscore_designation(ctx, s);
     s = split_underscore_binomial(s);
@@ -890,10 +892,12 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 /// that one character was enough to put the name back on the silent-truncation path. The guards
 /// below exempt a bare year and a numeral-prefixed epithet. Rust-only too: a qualifier may stand
 /// before the epithet ("Gemmula cf. cosmoi NP-2008", "Acalymma nr. blomorum JJG229") and a hyphen
-/// before the code's digits, where the code became an author.
+/// before the code's digits, where the code became an author. And a Candidatus name takes a code
+/// as any other (`Candidatus Caldatribacterium saccharofermentans OP9-77CS`), as does a code of
+/// capitals joined by an underscore (`PW_SP`), which no author has (#84).
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^([\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:\-]*\d[\p{L}\d_\-:]*|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$",
+        r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:\-]*\d[\p{L}\d_\-:]*|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$",
     )
     .unwrap()
 });
@@ -1232,6 +1236,66 @@ fn stash_trailing_culture_accession(ctx: &mut ParseContext, s: String) -> String
         ctx.name.phrase = Some(caps.get(2).unwrap().as_str().to_string());
         ctx.name.type_ = NameType::Informal;
         return caps.get(1).unwrap().as_str().to_string();
+    }
+    s
+}
+
+/// A specimen, voucher or strain accession after a binomial that is not in the curated list of
+/// [`TRAILING_CULTURE_ACCESSION`]: an acronym of capitals and a code with a digit, `RLB 7550`,
+/// `IFO 3283`, `SCGC AAA011-E11`, also after a qualifier or on a Candidatus name. Group 1 is the
+/// name, group 3 the code.
+static TRAILING_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+(\p{Lu}{2,}[\p{Lu}\d]*\s+([\p{L}\d][\p{L}\d_\-.:/]*))$",
+    )
+    .unwrap()
+});
+
+/// See [`TRAILING_ACCESSION`]. The accession becomes the phrase, as a culture accession does,
+/// instead of a title-cased author (`Scgc Aaa011-E11`) and a year `7550` (#84). A code that is a
+/// plausible year stays: `SMITH 1900` is an author written in capitals. `Adacnarca species NZOI
+/// U602` is left to NameTokens, which keeps the marker in the phrase.
+fn stash_trailing_accession(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = TRAILING_ACCESSION.captures(&s) {
+        let code = &caps[3];
+        if code.contains(|c: char| c.is_ascii_digit())
+            && super::assemble::is_unlikely_year(Some(code))
+            && !is_indet_species_marker(caps[1].rsplit(char::is_whitespace).next().unwrap_or(""))
+        {
+            ctx.name.phrase = Some(caps[2].to_string());
+            ctx.name.type_ = NameType::Informal;
+            return caps[1].to_string();
+        }
+    }
+    s
+}
+
+/// A designation after a species aggregate's `sp.`: `Aegla longirostri complex sp. UFSM ES2`,
+/// `Acropora hyacinthus complex sp. A JTL-2012`. Group 1 is the aggregate, group 2 the phrase.
+static AGGREGATE_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^([\p{Lu}][\p{Ll}]+(?-u:\s+)[\p{Ll}][\p{Ll}\-]+(?-u:\s+)(?i:(?:species(?-u:\s+))?(?:complex|group|agg\.?)))(?-u:\s+)((?i:sp|spp)\.?(?-u:\s+)(.+))$",
+    )
+    .unwrap()
+});
+
+/// A note keyword in an [`AGGREGATE_DESIGNATION`], or the `n.` of `sp. n.`.
+static NOTE_IN_DESIGNATION: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\b(?:sensu|auctt?|non|nec|not)\b|^nov?\.?$").unwrap());
+
+/// See [`AGGREGATE_DESIGNATION`]. Everything after the marker designates the provisional species,
+/// so the phrase runs to the end, `sp.` included (#84). A tail of one code already came out so;
+/// a longer one was read as an author (`E.S.2.Ufsm`) and the marker dropped. An author with a
+/// year after the marker stays an authorship, and a taxonomic note is left to the note steps
+/// (`complex sp. D sensu Somboon et al. (2020)`).
+fn stash_aggregate_designation(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = AGGREGATE_DESIGNATION.captures(&s) {
+        if !super::name_tokens::is_author_year(&caps[3]) && !NOTE_IN_DESIGNATION.is_match(&caps[3])
+        {
+            ctx.name.phrase = Some(caps[2].to_string());
+            ctx.name.type_ = NameType::Informal;
+            return caps[1].to_string();
+        }
     }
     s
 }
