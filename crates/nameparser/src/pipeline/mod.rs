@@ -222,26 +222,15 @@ pub fn run(
         auth_state = Some(st);
     }
 
-    // Autonym species author: a "(Bas) Comb" or plain author span recorded mid-name by
-    // NameTokens, sitting between the species epithet and the infraspecific marker. The
-    // autonym's final epithet carries no author of its own (ICN Art. 22.1/26.1), so this
-    // span IS the species author and becomes the name's authorship. Only applied when the
-    // name is an autonym and no trailing authorship was already parsed.
-    let mut autonym_state: Option<AuthState> = None;
-    if ctx.mid_author_from >= 0 && ctx.name.is_autonym() && !ctx.name.has_authorship() {
-        let from = ctx.mid_author_from as usize;
-        let to = ctx.mid_author_to as usize;
-        let st = authorship_parser::parse(&ctx.tokens[from..to], 0);
-        apply_authorship(&mut ctx.name, &st);
-        autonym_state = Some(st);
-    }
-    // Any other name keeps that mid-name span as the species' authorship ("Festuca ovina L. subsp.
-    // guestfalica …" — it used to be dropped). The authorship after the infraspecific epithet is
-    // the name's own — on an autonym that carries one too ("Pilocarpus microphyllus Stapf ex
-    // Wardlew. var. microphyllus Rizzini").
+    // An author span recorded mid-name by NameTokens, between the species epithet and the
+    // infraspecific marker, is the species' authorship ("Festuca ovina L. subsp. guestfalica …" —
+    // it used to be dropped). The authorship after the infraspecific epithet is the name's own.
+    // An autonym has none of its own (ICN Art. 22.1/26.1): "Crepis arenaria (Pomel) Pomel subsp.
+    // arenaria" is no subspecies by Pomel, so the span is its specific authorship too (#86; Java
+    // made it the autonym's). One given after it is the name's, as written ("Pilocarpus
+    // microphyllus Stapf ex Wardlew. var. microphyllus Rizzini").
     let mut species_state: Option<AuthState> = None;
-    if ctx.mid_author_from >= 0 && autonym_state.is_none() && ctx.name.specific_authorship.is_none()
-    {
+    if ctx.mid_author_from >= 0 && ctx.name.specific_authorship.is_none() {
         let from = ctx.mid_author_from as usize;
         let to = ctx.mid_author_to as usize;
         let st = authorship_parser::parse(&ctx.tokens[from..to], 0);
@@ -310,10 +299,9 @@ pub fn run(
     // sanctioning author, applied further below, overwrites it — last-write-wins).
     let mut extra_state: Option<AuthState> = None;
     if let Some(authorship) = ctx.authorship_input.clone() {
-        // The name string's own authorship: the trailing one, or an autonym's species author.
+        // The name string's own authorship, the trailing one.
         let own = auth_state
             .as_ref()
-            .or(autonym_state.as_ref())
             .filter(|st| st.combination.exists() || st.basionym.exists());
         // a name string ending in its cultivar epithet holds only the species author, the column
         // the cultivar's own: no conflict ("Acer campestre L. cv. 'Elsrijk'" + "Broerse")
@@ -321,7 +309,20 @@ pub fn run(
         let repeated = own.is_some()
             && !letters(&authorship).is_empty()
             && contains_ignoring_punctuation(&trimmed, &authorship);
+        // On an autonym, a column repeating the species author the name string gives before its
+        // rank marker is that species author again — VASCAN fills it so ("Amelanchier alnifolia
+        // (Nuttall) Nuttall ex M. Roemer var. alnifolia" + "(Nuttall) Nuttall ex M. Roemer") — and
+        // no authorship of the autonym. Any other infraspecific name may well have the species'
+        // author as its own ("Aeonium × proliferum Bañares nothovar. glabrifolium" + "Bañares").
+        let species_repeated = own.is_none()
+            && ctx.name.is_autonym()
+            && species_state.as_ref().is_some_and(|species| {
+                let mut column = ctx.clone();
+                parse_separate_authorship(&mut column, authorship.clone())
+                    .is_some_and(|st| same_authorship(species, &st))
+            });
         match own.filter(|_| repeated) {
+            _ if species_repeated => {}
             // The name string repeats this authorship — sources fill both columns, not always
             // alike — so keep the name string's parse, which may well carry more: the year of
             // `Germar, 1848` + `Germar`, the brackets of `(Bloch, 1792)` + `Bloch 1792`, the
@@ -394,7 +395,7 @@ pub fn run(
 
     // Code inference reads the authorship the name ends up with: the separately supplied one
     // when it carries authors or a basionym (it is applied last, so it wins), else the name
-    // string's own, else the autonym's species author. Java 4.2.0 consulted a separate
+    // string's own, else the species author before the rank marker. Java 4.2.0 consulted a separate
     // authorship only when the name string had none AND it carried a basionym with a year or a
     // combination author, so `Aus bus` + `L., 1758` got no code while `Aus bus L., 1758` was
     // zoological — a deliberate change: both paths now infer alike. A name whose only authorship
@@ -405,7 +406,6 @@ pub fn run(
         .as_ref()
         .filter(has_signal)
         .or_else(|| auth_state.as_ref().filter(has_signal))
-        .or(autonym_state.as_ref())
         .or_else(|| species_state.as_ref().filter(has_signal))
         .or(auth_state.as_ref())
         .or(extra_state.as_ref());
@@ -924,7 +924,8 @@ mod tests {
         // Pipeline.java's own worked example (Pipeline.java:138-140) for the autonym
         // codeState fallback: the mid-name "(Klatt) Baker" span IS the species author of
         // the autonym "spathata subsp. spathata" and infers BOTANICAL from its
-        // basionym+combination authors, with no separately-supplied authorship involved.
+        // basionym+combination authors, with no separately-supplied authorship involved. It is
+        // the specific authorship, not the autonym's (#86).
         let pn = run(
             "Trimezia spathata (Klatt) Baker subsp. spathata",
             None,
@@ -934,7 +935,15 @@ mod tests {
         .expect("should parse");
         assert!(pn.is_autonym());
         assert_eq!(pn.code, Some(NomCode::Botanical));
-        assert_eq!(pn.combination_authorship.authors, vec!["Baker".to_string()]);
-        assert_eq!(pn.basionym_authorship.authors, vec!["Klatt".to_string()]);
+        assert!(!pn.has_authorship());
+        let species = pn.specific_authorship.expect("species authorship");
+        assert_eq!(
+            species.combination_authorship.authors,
+            vec!["Baker".to_string()]
+        );
+        assert_eq!(
+            species.basionym_authorship.authors,
+            vec!["Klatt".to_string()]
+        );
     }
 }

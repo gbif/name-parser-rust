@@ -602,11 +602,11 @@ fn author_variations() {
         .nothing_else();
 
     // Autonym authors are the species authors (ICN Art. 22.1/26.1): the autonym's final
-    // epithet carries no author, but the species author "d'Urv." is captured and rendered
-    // after the species epithet.
+    // epithet carries no author, but the species author "d'Urv." is captured as the specific
+    // authorship (#86) and rendered after the species epithet.
     assert_name("Cirsium creticum d'Urv. subsp. creticum")
         .infra_species("Cirsium", "creticum", Rank::Subspecies, "creticum")
-        .comb_authors(None, &["d'Urv."])
+        .specific_authors(None, &["d'Urv."])
         .autonym()
         .nothing_else();
 

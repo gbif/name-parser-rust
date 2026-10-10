@@ -27,11 +27,38 @@ fn a_species_author_before_the_rank_marker_is_kept() {
 }
 
 #[test]
-fn an_autonym_takes_the_species_author_as_its_own() {
+fn an_autonym_keeps_the_species_author_apart() {
+    // an autonym has no author of its own (ICN Art. 26.1, #86; Java made it the autonym's)
     assert_name("Abies alba Mill. var. alba")
         .infra_species("Abies", "alba", Rank::Variety, "alba")
+        .specific_authors(None, &["Mill."])
+        .nothing_else();
+    assert_name("Crepis arenaria (Pomel) Pomel subsp. arenaria")
+        .infra_species("Crepis", "arenaria", Rank::Subspecies, "arenaria")
+        .specific_authors(None, &["Pomel"])
+        .specific_bas_authors(None, &["Pomel"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // given after the autonym, it is the name's as written
+    assert_name("Abies alba subsp. alba Mill.")
+        .infra_species("Abies", "alba", Rank::Subspecies, "alba")
         .comb_authors(None, &["Mill."])
         .nothing_else();
+}
+
+#[test]
+fn a_separate_authorship_repeating_an_autonyms_species_author_is_no_authorship_of_it() {
+    // VASCAN repeats the species author in the authorship column (#86)
+    assert_name_auth(
+        "Amelanchier alnifolia (Nuttall) Nuttall ex M. Roemer var. alnifolia",
+        "(Nuttall) Nuttall ex M. Roemer",
+    )
+    .infra_species("Amelanchier", "alnifolia", Rank::Variety, "alnifolia")
+    .specific_authors(None, &["M.Roemer"])
+    .specific_ex_authors(&["Nuttall"])
+    .specific_bas_authors(None, &["Nuttall"])
+    .code(NomCode::Botanical)
+    .nothing_else();
 }
 
 #[test]
@@ -76,7 +103,7 @@ fn a_provisional_infraspecific_designation_keeps_the_species_author_apart() {
 fn a_species_author_with_a_filius_in_a_team_ends_at_the_rank_marker() {
     assert_name("Conostomum pusillum Hook.f. & Wilson var. pusillum")
         .infra_species("Conostomum", "pusillum", Rank::Variety, "pusillum")
-        .comb_authors(None, &["Hook.f.", "Wilson"])
+        .specific_authors(None, &["Hook.f.", "Wilson"])
         .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Parnassia foliosa Hook.f. et Thomson var. japonica (Nakai) Ohwi")
@@ -103,7 +130,7 @@ fn more_species_author_shapes_before_the_rank_marker() {
     assert_name("Eriophorum ×medium Andersson subsp. ×medium")
         .infra_species("Eriophorum", "medium", Rank::Subspecies, "medium")
         .notho(&[NamePart::Specific, NamePart::Infraspecific])
-        .comb_authors(None, &["Andersson"])
+        .specific_authors(None, &["Andersson"])
         .code(NomCode::Botanical)
         .nothing_else();
 }
