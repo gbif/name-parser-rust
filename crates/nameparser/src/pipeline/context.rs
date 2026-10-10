@@ -97,6 +97,10 @@ pub(crate) struct ParseContext {
     /// the "(Adans.) Kuntze" in "Cordia (Adans.) Kuntze sect. Salimori"). Parsed and set
     /// as `ParsedName::generic_authorship` by Pipeline.
     pub pending_generic_author: Option<String>,
+    /// The name of a serovar after a binomial (the "Typhimurium" of "Salmonella enterica subsp.
+    /// enterica serovar Typhimurium"), removed by StripAndStash so the binomial parses, then set by
+    /// Pipeline as the infraspecific epithet of rank SEROVAR (#81).
+    pub pending_serovar: Option<String>,
     /// Set by Preflight (5.0.0) when it rescues an anchored informal grouping (`"Bartonella group"`,
     /// `"Vermistella-lineage"`) by building a complete `Informal`-shaped `ParsedName` directly rather
     /// than erroring. `Pipeline::run` then returns `ctx.name` as-is and skips the whole
@@ -159,6 +163,7 @@ impl ParseContext {
             pending_imprint_year: None,
             pending_specific_author: None,
             pending_generic_author: None,
+            pending_serovar: None,
             preflight_complete: false,
             qualified_genus: false,
             approved_lists: false,

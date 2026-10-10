@@ -2156,6 +2156,66 @@ static SEROVAR_BARE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+/// A binomial (group 1), perhaps a subspecies (group 2), the serovar or serotype marker, perhaps in
+/// brackets (group 3), the serovar (group 4) and what follows (group 5): "Salmonella enterica subsp.
+/// enterica serovar Typhimurium str. JCM 1652", "Actinobacillus pleuropneumoniae serotype 1",
+/// "Leptospira interrogans (serovar Pomona)".
+static SEROVAR_OF_BINOMIAL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}[\p{Ll}\-]+)((?-u:\s+)(?:subsp|ssp)\.?(?-u:\s+)[^\s()]+)?(?-u:\s+)(\(?)(?i:serovar|serotype)(?-u:\s+)([^\s()]+)(?:(?-u:\s+)([^()]+?))?\)?(?-u:\s*)\.?(?-u:\s*)$",
+    )
+    .unwrap()
+});
+
+/// The name of a serovar, a word of three letters or more (`Typhimurium`, `kurstaki`), not a
+/// number, an antigenic formula or a letter (`1`, `4,12:z:1,7`, `b`).
+static SEROVAR_NAME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{L}[\p{Ll}\-]{2,}$").unwrap());
+
+/// A word in the place of a serovar's name that says it has none: `serovar Untypable`, `serovar
+/// Rough`.
+static NO_SEROVAR_NAME: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:(?:un|non-?)type?able|rough)$").unwrap());
+
+/// #81: a serovar of a binomial is kept, with the rank SEROVAR. A named one is the infraspecific
+/// epithet, set by Pipeline once the binomial is parsed ([`ParseContext::pending_serovar`]); a
+/// numbered one or an antigenic formula is the phrase, as a numbered variety's number is, and the
+/// name INFORMAL. A strain after it joins the phrase. A subspecies before it has to go, as the model
+/// has one infraspecific slot, with the warnings of any other quadrinomial. Returns `None` for
+/// any other shape.
+fn stash_serovar_of_binomial(ctx: &mut ParseContext, s: &str) -> Option<String> {
+    let caps = SEROVAR_OF_BINOMIAL.captures(s)?;
+    let bracketed = !caps[3].is_empty();
+    if bracketed != s.trim_end().trim_end_matches('.').ends_with(')') {
+        return None;
+    }
+    let serovar = &caps[4];
+    let rest = caps.get(5).map(|m| java_trim(m.as_str()));
+    if SEROVAR_NAME.is_match(serovar) && !NO_SEROVAR_NAME.is_match(serovar) {
+        ctx.pending_serovar = Some(serovar.to_string());
+        if let Some(rest) = rest {
+            ctx.name.phrase = Some(rest.to_string());
+            ctx.name.type_ = NameType::Informal;
+        }
+    } else {
+        ctx.name.phrase = Some(match rest {
+            Some(rest) => format!("{serovar} {rest}"),
+            None => serovar.to_string(),
+        });
+        ctx.name.type_ = NameType::Informal;
+    }
+    if let Some(subspecies) = caps.get(2) {
+        ctx.name.add_warning(&format!(
+            "{}{}",
+            warnings::REMOVED_PREFIX,
+            java_trim(subspecies.as_str())
+        ));
+        ctx.name.add_warning(warnings::QUADRINOMIAL);
+    }
+    ctx.name.rank = Rank::Serovar;
+    Some(caps[1].to_string())
+}
+
 /// Java `StripAndStash.stripSerovarSerotype` (StripAndStash.java:900-921). Bacterial
 /// serovar/serotype/strain annotations on a binomial are sub-species-level epidemiological
 /// designators, not formal taxonomic ranks — stripped silently so the underlying binomial
@@ -2165,10 +2225,14 @@ static SEROVAR_BARE: LazyLock<Regex> = LazyLock::new(|| {
 /// clean binomials, no warnings). `SEROVAR_PAREN` and `SEROVAR_BARE` both run in sequence
 /// (not else-if), the second against the (possibly already-shortened) result of the first.
 ///
-/// Rust-only: what is removed is named in a warning, `Removed: serovar Typhimurium` — Java dropped
-/// it silently, leaving nothing to tell the serovars of one species apart (#81).
+/// Rust-only: a serovar of a binomial is kept ([`stash_serovar_of_binomial`]); in any other shape
+/// what is removed is named in a warning, `Removed: serovar 4` — Java dropped it silently, leaving
+/// nothing to tell the serovars of one species apart (#81).
 fn strip_serovar_serotype(ctx: &mut ParseContext, mut s: String) -> String {
     if SEROVAR_TEST.is_match(&s) {
+        if let Some(binomial) = stash_serovar_of_binomial(ctx, &s) {
+            return binomial;
+        }
         let mut strip = |re: &Regex, s: String| match re.find(&s) {
             Some(m) => {
                 let removed = java_trim(m.as_str()).trim_end_matches('.').trim_end();
@@ -6904,31 +6968,35 @@ mod tests {
     // ---- Step 17: stripSerovarSerotype ----
 
     #[test]
-    fn bare_serovar_annotation_is_stripped_with_a_warning() {
+    fn a_named_serovar_of_a_binomial_is_kept_for_its_epithet() {
         let mut c = ctx("x");
         let out =
             strip_serovar_serotype(&mut c, "Leptospira interrogans serovar Fugis".to_string());
         assert_eq!(out, "Leptospira interrogans");
-        assert_eq!(c.name.warnings, ["Removed: serovar Fugis"]);
+        assert_eq!(c.pending_serovar.as_deref(), Some("Fugis"));
+        assert_eq!(c.name.rank, Rank::Serovar);
+        assert!(c.name.warnings.is_empty());
     }
 
     #[test]
-    fn serotype_with_trailing_strain_suffix_is_stripped() {
+    fn a_serotype_letter_and_its_strain_are_the_phrase() {
         let mut c = ctx("x");
         let out = strip_serovar_serotype(
             &mut c,
             "Aggregatibacter actinomycetemcomitans serotype d str. SA508".to_string(),
         );
         assert_eq!(out, "Aggregatibacter actinomycetemcomitans");
+        assert_eq!(c.pending_serovar, None);
+        assert_eq!(c.name.phrase.as_deref(), Some("d str. SA508"));
+        assert_eq!(c.name.type_, NameType::Informal);
     }
 
     #[test]
-    fn parenthesised_serotype_annotation_is_stripped() {
+    fn a_serotype_after_anything_but_a_binomial_is_stripped_with_a_warning() {
         let mut c = ctx("x");
-        let out =
-            strip_serovar_serotype(&mut c, "Streptococcus pyogenes (serotype M18)".to_string());
-        assert_eq!(out, "Streptococcus pyogenes");
-        assert_eq!(c.name.warnings, ["Removed: (serotype M18)"]);
+        let out = strip_serovar_serotype(&mut c, "Leptospira sp. serovar Kenya".to_string());
+        assert_eq!(out, "Leptospira sp.");
+        assert_eq!(c.name.warnings, ["Removed: serovar Kenya"]);
     }
 
     #[test]

@@ -196,6 +196,12 @@ pub fn run(
     ctx.tokens = tokenize(&ctx.working);
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
+    if let Some(serovar) = ctx.pending_serovar.take() {
+        if ctx.name.specific_epithet.is_some() && ctx.name.infraspecific_epithet.is_none() {
+            ctx.name.infraspecific_epithet = Some(serovar);
+            ctx.name.rank = Rank::Serovar;
+        }
+    }
     // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a binomial open
     // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`.
     // A bare qualified uninomial (`?Monotremata`) keeps its type: as INFORMAL it would become a flat
