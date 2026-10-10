@@ -352,8 +352,15 @@ static MISSING_GENUS_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[a-z][a-z\-]+(?-u:\s+)(?:\p{Lu}|\(\p{Lu}[^)]*[\d.,&][^)]*\)).*$").unwrap()
 });
 
-/// A lone epithet: `denisi`.
-static LONE_EPITHET: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z][a-z\-]+$").unwrap());
+/// A lone epithet: `denisi`, perhaps of an aggregate, `abbreviata group` (#100).
+static LONE_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[a-z][a-z\-]+(?: (?:group|complex|aggregate|agg\.?))?$").unwrap()
+});
+
+/// A hybrid sign before a lone epithet: `× columbiana`, a nothospecies whose genus is missing. Not
+/// the letter x, which may stand for the genus itself.
+static LONE_NOTHO_EPITHET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^×(?-u:\s*)([a-z][a-z\-]+)$").unwrap());
 
 /// Java MISSING_GENUS_NOTE_KEYWORD (StripAndStash.java:343-344):
 /// `^(?:non|nec|not|sensu|sec|auct|auctt|fide|emend|ss|s|cf|aff|hort)\b.*`, no flags. Has
@@ -399,6 +406,10 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
         // "? alba Smith", "?alba": the same explicit mark without the quote. Rust-only: Java
         // parsed a SCIENTIFIC name with the genus "?".
         missing = Some(format!("? {rest}"));
+    } else if let Some(caps) = LONE_NOTHO_EPITHET.captures(&s) {
+        // "× columbiana" was made the nothogenus Columbiana (#100)
+        missing = Some(format!("? ×{}", &caps[1]));
+        emit_warning = true;
     } else if s.starts_with("Missing ") {
         let rest: String = s.chars().skip(8).collect();
         if rest.chars().next().is_some_and(|c| c.is_lowercase()) {

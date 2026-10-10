@@ -635,6 +635,7 @@ fn test_nomenclatural_notes_pattern() {
         .monomial_rank("Non", Rank::Unranked)
         .comb_authors(Some("1792"), &["Clarisia Abat"])
         .code(NomCode::Botanical)
+        .warning(&[warnings::LC_MONOMIAL])
         .nothing_else();
     assert_nom_note(
         "nom. cons. Approved Lists 1980",

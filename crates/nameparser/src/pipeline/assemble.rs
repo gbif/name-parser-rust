@@ -253,6 +253,20 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         phrase.push_str(&tail);
     }
 
+    // Step 8b2: a monomial written in lower case, "duplocingulatoides", may as well be an epithet
+    // whose genus is missing (#100); with no rank or authorship to tell, it stays the uninomial,
+    // flagged.
+    let first_word = ctx.original.split_whitespace().next().unwrap_or_default();
+    if first_word.starts_with(|c: char| c.is_lowercase())
+        && ctx
+            .name
+            .uninomial
+            .as_deref()
+            .is_some_and(|u| u.to_lowercase() == first_word)
+    {
+        ctx.name.add_warning(warnings::LC_MONOMIAL);
+    }
+
     // Step 8c: a BOLD BIN or SH code set aside by `stash_trailing_identifier` designates the
     // name: it ends the phrase (`sp. BOLD:AAF5952`), or is the phrase of a determined name. A
     // designated `Genus sp.` is no longer missing anything, as `Genus sp. RMCC TR1811` is not.
