@@ -456,3 +456,41 @@ fn an_author_starting_like_a_note_keyword_is_an_author() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn a_note_inside_the_basionym_bracket_leaves_the_bracket_whole() {
+    // #95: the note took the closing bracket along, and the basionym author became the
+    // combination author
+    assert_name_auth(
+        "Heteraphorura orientalis",
+        "(Martynova, 1976 nec Stach, 1954)",
+    )
+    .species("Heteraphorura", "orientalis")
+    .bas_authors(Some("1976"), &["Martynova"])
+    .sensu("nec Stach, 1954")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name_auth("Asynapta flava", "(Kieffer, 1894 sensu Spungis 1988)")
+        .species("Asynapta", "flava")
+        .bas_authors(Some("1894"), &["Kieffer"])
+        .sensu("sensu Spungis 1988")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth(
+        "Nassa japonica",
+        "(A. Ad., 1851, nec Reeve, nec Lischke, 1870)",
+    )
+    .species("Nassa", "japonica")
+    .bas_authors(Some("1851"), &["A.Ad."])
+    .sensu("nec Reeve, nec Lischke, 1870")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    // a bracket holding only a note is the note
+    assert_name_auth(
+        "Arrhopalites binoculatus",
+        "(Of American Authors, not Börner, 1901)",
+    )
+    .species("Arrhopalites", "binoculatus")
+    .sensu("Of American Authors, not Börner, 1901")
+    .nothing_else();
+}

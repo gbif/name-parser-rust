@@ -115,6 +115,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_anon(ctx, s);
     s = normalise_glued_et_al(ctx, s);
     s = strip_colon_concept_reference(ctx, s);
+    s = split_note_from_basionym_bracket(ctx, s);
     s = strip_bracketed_tax_note(ctx, s);
     s = strip_alternative_subgenera(ctx, s);
     s = strip_paren_tax_note(ctx, s);
@@ -3381,6 +3382,45 @@ static PAREN_CONCEPT_NOTE: LazyLock<Regex> =
 static INDET_MARKER_WORD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:spp?|spec|species|indet)(?-u:\b)").unwrap());
 
+/// A note inside the bracket of a basionym authorship, after its author: `(Martynova, 1976 nec
+/// Stach, 1954)`, `(Kieffer, 1894 sensu Spungis 1988)`. Group 1 is the author, group 2 the note.
+static NOTE_IN_BASIONYM_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\(([^()]*?\p{L}[^()]*?)[,;]?(?-u:\s+)((?i:nec|non|not|sensu|sec|auctt?\.?)(?-u:\s)[^()]*)\)").unwrap()
+});
+
+/// A note keyword anywhere, a homonym's too.
+static ANY_NOTE_KEYWORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)\b(?:sensu|auctt?|non|nec|not)\b").unwrap());
+
+/// What makes the author part of a [`NOTE_IN_BASIONYM_BRACKET`] a note too: `(Of American Authors,
+/// not Börner, 1901)`.
+static NOTE_LEAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:[Oo]f(?-u:\s)|(?i:auctt?)\b)").unwrap());
+
+/// Takes a note out of the bracket of a basionym authorship, which it broke: the note pattern took
+/// it from its keyword to the end, closing bracket included, and the bracketed author became the
+/// combination author, `(Martynova, 1976` (#95). The bracket keeps the author, the note goes to
+/// the taxonomic note. An author part that is a note itself takes the whole bracket along.
+fn split_note_from_basionym_bracket(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = NOTE_IN_BASIONYM_BRACKET.captures(&s) else {
+        return s;
+    };
+    let whole = caps.get(0).unwrap();
+    // a bracket inside a note is part of it: "sensu Hansen, 1913 (partim.; not Sars, 1882)"
+    if ANY_NOTE_KEYWORD.is_match(&s[..whole.start()]) {
+        return s;
+    }
+    let author = java_trim(&caps[1]);
+    let (kept, note) = if NOTE_LEAD.is_match(author) {
+        (String::new(), format!("{author}, {}", java_trim(&caps[2])))
+    } else {
+        (format!("({author})"), java_trim(&caps[2]).to_string())
+    };
+    ctx.name.add_taxonomic_note(&collapse_whitespace(&note));
+    let out = format!("{}{kept}{}", &s[..whole.start()], &s[whole.end()..]);
+    collapse_whitespace(java_trim(&out))
+}
+
 /// Java `StripAndStash.stripParenTaxNote` (StripAndStash.java:1334-1344). A trailing
 /// "(nec/non/not …, YYYY)" parenthesised homonym citation — the WHOLE bracket wraps the
 /// note (unlike step 40's sibling `PAREN_NOTE`/`LEADING_HOMONYM_PAREN`, ported further down
@@ -5139,7 +5179,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 10] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 11] = [
         repair_colon_diacritics,
         flag_uncertain_authorship,
         strip_imprint_years,
@@ -5150,6 +5190,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         normalise_hort_ex_placeholder,
         strip_extinct_dagger,
         stash_synonym_bracket,
+        split_note_from_basionym_bracket,
     ];
     steps
         .into_iter()
