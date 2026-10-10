@@ -235,3 +235,31 @@ fn a_lowercase_cultivar_and_an_abbreviated_cultivar_group() {
         .cultivar_sp_rank("Lactuca", "sativa", Rank::CultivarGroup, "Capitata")
         .nothing_else();
 }
+
+/// #93: a stirps with a capitalised epithet, as MycoBank has Bidaud et al.'s Cortinarius atlas,
+/// is an unranked infrageneric name; the model has no stirps rank.
+#[test]
+fn a_stirps_with_a_capitalised_epithet_is_an_unranked_infrageneric_name() {
+    assert_name("Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux")
+        .infrageneric_at("Cortinarius", Rank::InfragenericName, "Balteatus")
+        .bas_authors(None, &["Bidaud", "Moënne-Loccoz", "Reumaux"])
+        .comb_authors(None, &["Bidaud", "Moënne-Loccoz", "Reumaux"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // ChecklistBank passes the rank stirps as PROLES; the marker wins
+    assert_name_hinted(
+        "Cortinarius stirps Caesiostraminei",
+        None,
+        Some(Rank::Proles),
+        Some(NomCode::Botanical),
+    )
+    .infrageneric_at("Cortinarius", Rank::InfragenericName, "Caesiostraminei")
+    .code(NomCode::Botanical)
+    .nothing_else();
+    // the species stirps and its author
+    assert_name("Astraea stirps Laws, 1932")
+        .species("Astraea", "stirps")
+        .comb_authors(Some("1932"), &["Laws"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

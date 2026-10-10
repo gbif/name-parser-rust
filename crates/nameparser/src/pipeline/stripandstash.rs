@@ -68,6 +68,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = normalise_unranked_marker(s);
+    s = normalise_stirps_marker(s);
     s = unbracket_infrageneric_marker(s);
     s = capitalise_infrageneric_epithet(s);
     s = normalise_greek_letter_marker(s);
@@ -1960,6 +1961,35 @@ fn normalise_unranked_marker(s: String) -> String {
         _ => return s,
     };
     format!("{} {marker} {rest}", &caps[1])
+}
+
+/// A genus (group 1), the word `stirps` and a capitalised epithet after it (group 2), and what
+/// follows (group 3).
+static STIRPS_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)stirps\.?(?-u:\s+)(\p{Lu}\p{Ll}+)(.*)$").unwrap()
+});
+
+/// What makes the capitalised word after `stirps` the first author of the species `stirps`: a
+/// comma, a second author or a year after it (`Astraea stirps Laws, 1932`, `Ctenophthalmus stirps
+/// Beaucournu et Orhan, 1983`).
+static AUTHOR_CONTINUES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:,|(?-u:\s+)(?:&|et(?-u:\s)|(?-u:\d{4})))").unwrap());
+
+/// Bidaud et al.'s *Atlas des Cortinaires*, as MycoBank has it, groups the species of a section in
+/// a stirps with a capitalised epithet: `Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz &
+/// Reumaux) Bidaud, Moënne-Loccoz & Reumaux`. The model has no stirps rank, so it is an unranked
+/// infrageneric name, the `unr.` it is rewritten to (#93). `stirps` was read as the species epithet
+/// and the epithet glued to the first author. A lowercase epithet after a species is de Candolle's
+/// infraspecific stirps (`Brassica oleracea stirps caulorapa DC.`), and `stirps` before an
+/// authorship a species epithet (`Astraea stirps Laws, 1932`); both are left alone.
+fn normalise_stirps_marker(s: String) -> String {
+    match STIRPS_MARKER.captures(&s) {
+        Some(caps) if !AUTHOR_CONTINUES.is_match(&caps[3]) => {
+            let rest = &s[caps.get(2).unwrap().start()..];
+            format!("{} unr. {rest}", &caps[1])
+        }
+        _ => s,
+    }
 }
 
 /// A genus and a capitalised word (group 2) after it, and what follows (group 3).
