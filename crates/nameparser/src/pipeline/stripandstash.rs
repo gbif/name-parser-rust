@@ -69,6 +69,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_unranked_marker(s);
     s = unbracket_infrageneric_marker(s);
     s = strip_superspecies_marker(ctx, s);
+    s = join_particle_epithet(s);
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -1653,6 +1654,34 @@ fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
         }
         None => s,
     }
+}
+
+/// A particle and a lowercase word after the genus: `Amphoropsis van heurckii`. Group 1 the
+/// genus, group 2 the particle, group 3 the word.
+static PARTICLE_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)(van|von|de|di|du|da|del|della|des|der|den|la|le)(?-u:\s+)(\p{Ll}[\p{Ll}\-]+)").unwrap()
+});
+
+/// An epithet formed from a name with a particle is written as one word, `vanheurckii`; written
+/// apart, `Amphoropsis van heurckii`, it was dropped, the species turned into its genus (#91). A
+/// particle before a capitalised word is an author's (`Zodarion van Bosmans`), as is a run of
+/// particles (`Eutonia van der Wulp`); a rank marker after it is none of an epithet (`Apomecyna
+/// van subsp. eyeni`). Left alone, all.
+fn join_particle_epithet(s: String) -> String {
+    let Some(caps) = PARTICLE_EPITHET.captures(&s) else {
+        return s;
+    };
+    let word = &caps[3];
+    let rest = &s[caps.get(0).unwrap().end()..];
+    if token::is_particle(word)
+        || word == "den"
+        || !rest.chars().next().is_none_or(char::is_whitespace)
+        || super::rank_markers::match_infraspecific(word).is_some()
+        || super::rank_markers::match_infrageneric(word).is_some()
+    {
+        return s;
+    }
+    format!("{} {}{word}{rest}", &caps[1], &caps[2])
 }
 
 /// A superspecies marker between the genus and the epithet: `Eosembia supersp. thoracica`.

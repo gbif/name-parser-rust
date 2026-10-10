@@ -214,3 +214,25 @@ fn den_dem_and_ver_are_particles_only_before_a_surname() {
         .species("Agnetina", "den")
         .nothing_else();
 }
+
+#[test]
+fn an_epithet_with_its_particle_apart_is_one_word() {
+    // #91: written apart, the epithet was dropped and the species became its genus
+    assert_name_auth("Amphoropsis van heurckii", "(Grunow) Mereschkowsky")
+        .species("Amphoropsis", "vanheurckii")
+        .bas_authors(None, &["Grunow"])
+        .comb_authors(None, &["Mereschkowsky"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Moneilema le contei Thomson, 1878")
+        .species("Moneilema", "lecontei")
+        .comb_authors(Some("1878"), &["Thomson"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a run of particles, or one before a capital, is an author's
+    assert_name("Eutonia van der Wulp, 1874")
+        .monomial("Eutonia")
+        .comb_authors(Some("1874"), &["van der Wulp"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
