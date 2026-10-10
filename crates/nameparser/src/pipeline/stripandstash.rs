@@ -79,6 +79,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_trailing_rank_marker_code(ctx, s);
     s = stash_organism_label_tail(ctx, s);
     s = stash_trailing_strain_code(ctx, s);
+    s = stash_numbered_uninomial(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
     s = stash_trailing_accession(ctx, s);
     s = stash_trailing_voucher(ctx, s);
@@ -1164,6 +1165,84 @@ fn stash_bracketed_annotation(ctx: &mut ParseContext, s: String) -> String {
         return s;
     };
     ctx.name.phrase = Some(caps[2].to_string());
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
+}
+
+/// A uninomial and the rest of a numbered label of an unnamed group: `Spirochaeta 2`, `Phakellia
+/// 508 (Qld Mus.)`, `Barea Subgroup 4`, `Acinetobacter genomosp. 3`, `Nostoc SAG 60.79`,
+/// `Acidobacteriaceae (Subgroup 1)`. Group 1 is the uninomial, group 2 the label.
+static NUMBERED_UNINOMIAL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^((?:Candidatus(?-u:\s+))?\p{Lu}\p{Ll}+)(?-u:\s+)(\S.*?)(?-u:\s*)$").unwrap()
+});
+
+/// A number or a code that leads with a digit, as [`TRAILING_STRAIN_CODE`]'s third alternative.
+const LABEL_CODE: &str = r"\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?";
+
+/// A word that names the kind of group a number designates, or a collection's acronym. Not the
+/// lowercase `sp.`, `spp.` or `species`: NameTokens owns those and gives them their rank. Not
+/// `clade`: Preflight leaves every clade label OTHER.
+const GROUP_WORD: &str = r"(?:(?i:sub-?group|group|cluster|lineage|section|taxon|phenon|phylotype|morphotype|ribotype|genotype|serotype|type|morphospecies|genomospecies|genospecies|genomosp\.?|genosp\.?|gen\.)|Sp\.?|Spp\.?|\p{Lu}{2,}[\p{Lu}\d]*)";
+
+/// The label of a [`NUMBERED_UNINOMIAL`]: a code alone, or after a [`GROUP_WORD`], perhaps followed
+/// by a capitalised word or a bracket (a voucher, an author). Group 1 is the group word, group 2
+/// the code. A lowercase word after the number is an epithet (`Callidium 2 fasciatum`, `Cerambyx
+/// 4 subsp. punctatus`).
+static NUMBERED_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?:({GROUP_WORD})(?-u:\s+))?({LABEL_CODE})(?:(?-u:\s+)[\p{{Lu}}(\[].*)?$"
+    ))
+    .unwrap()
+});
+
+/// A bracketed [`NUMBERED_LABEL`], or a collector and number as [`TRAILING_VOUCHER`] has them after
+/// a binomial: `(Subgroup 1)`, `Pig 1`, `Dial 01`. Group 1 is the word, group 2 the number.
+static NUMBERED_LABEL_ALONE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^\(({GROUP_WORD})(?-u:\s+)({LABEL_CODE})\)$|^((?:\p{{Lu}}\.(?-u:\s?))*\p{{Lu}}[\p{{L}}'\-]+)(?-u:\s+)((?-u:\d{{1,5}})[a-z]?)$"
+    ))
+    .unwrap()
+});
+
+/// A group word that stands for a species: its label is a species of the uninomial's genus.
+static SPECIES_GROUP_WORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:(?i:morphospecies|genomospecies|genospecies|genomosp\.?|genosp\.?)|Sp\.?|Spp\.?)$",
+    )
+    .unwrap()
+});
+
+/// gbif/name-parser-rust#108: a [`NUMBERED_UNINOMIAL`] is an informal name, the uninomial its
+/// anchor and the label its phrase, as `Abies alba 3` and `Bartonella group` already are. The
+/// number was dropped (`Spirochaeta 2` → `Spirochaeta`), or it went into the authorship with the
+/// word before it (`Barea Subgroup 4` → author `Subgroup`): a complete scientific name that
+/// duplicates the real genus. Whatever follows the number joins the phrase, as on a provisional
+/// species (`Cantuaria sp. Forster, 1968`), so the embedded and the separate authorship agree. A
+/// number that is a plausible year stays the year of an authorship (`Azotobacter 1901`), and a
+/// numeral epithet stays an epithet (`Leptura 4pustulata`, `Cerambyx 4-Maculatus`).
+fn stash_numbered_uninomial(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = NUMBERED_UNINOMIAL.captures(&s) else {
+        return s;
+    };
+    let label = caps.get(2).unwrap().as_str();
+    let (word, code) = if let Some(l) = NUMBERED_LABEL.captures(label) {
+        (l.get(1), l.get(2).unwrap())
+    } else if let Some(l) = NUMBERED_LABEL_ALONE.captures(label) {
+        (l.get(1).or(l.get(3)), l.get(2).or(l.get(4)).unwrap())
+    } else {
+        return s;
+    };
+    let code = code.as_str();
+    if !super::assemble::is_unlikely_year(Some(code))
+        || token::is_numeral_epithet(code)
+        || code.chars().filter(|c| c.is_lowercase()).count() >= 3
+    {
+        return s;
+    }
+    if word.is_some_and(|w| SPECIES_GROUP_WORD.is_match(w.as_str())) {
+        ctx.name.rank = Rank::Species;
+    }
+    ctx.name.phrase = Some(label.to_string());
     ctx.name.type_ = NameType::Informal;
     caps[1].to_string()
 }
