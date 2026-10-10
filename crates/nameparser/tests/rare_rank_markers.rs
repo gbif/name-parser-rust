@@ -140,3 +140,23 @@ fn an_unranked_marker_marks_an_unranked_name() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn an_infrageneric_marker_inside_the_brackets() {
+    // #88: the epithet was lost, the bracket read as the basionym author "sect.Auriculella"
+    assert_name("Achatinella (sect. Auriculella) Pfeiffer 1854")
+        .infrageneric_at("Achatinella", Rank::SectionBotany, "Auriculella")
+        .comb_authors(Some("1854"), &["Pfeiffer"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Zygopetalum (sect. Cheiradenia)", "(Lindl.) Kuntze")
+        .infrageneric_at("Zygopetalum", Rank::SectionBotany, "Cheiradenia")
+        .bas_authors(None, &["Lindl."])
+        .comb_authors(None, &["Kuntze"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Begonia (sect. Diploclinium) labordei", "H. Lev.")
+        .species_ig("Begonia", "Diploclinium", "labordei")
+        .comb_authors(None, &["H.Lev."])
+        .nothing_else();
+}

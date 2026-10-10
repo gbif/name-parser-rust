@@ -67,6 +67,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
     s = normalise_unranked_marker(s);
+    s = unbracket_infrageneric_marker(s);
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -1648,6 +1649,25 @@ fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
         Some(caps) => {
             ctx.trailing_identifier = Some(caps[2].to_string());
             caps[1].to_string()
+        }
+        None => s,
+    }
+}
+
+/// An infrageneric rank marker and its epithet in brackets after the genus: `Achatinella (sect.
+/// Auriculella)`. Group 1 the genus, group 2 the marker, group 3 the epithet.
+static BRACKETED_INFRAGENERIC_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)\((?-u:\s*)((?i:sect|subsect|supersect|subgen|subg|ser|subser|div))\.?(?-u:\s+)(\p{Lu}[\p{Ll}\-]+)(?-u:\s*)\)").unwrap()
+});
+
+/// ZooBank and others put the marker of an infrageneric name inside its brackets, `Achatinella
+/// (sect. Auriculella) Pfeiffer 1854`; the epithet was lost and the bracket read as a basionym
+/// author `sect.Auriculella` (#88). Without the brackets the marker is read as it always is.
+fn unbracket_infrageneric_marker(s: String) -> String {
+    match BRACKETED_INFRAGENERIC_MARKER.captures(&s) {
+        Some(caps) => {
+            let rest = &s[caps.get(0).unwrap().end()..];
+            format!("{} {}. {}{rest}", &caps[1], &caps[2], &caps[3])
         }
         None => s,
     }
