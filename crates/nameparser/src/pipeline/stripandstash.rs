@@ -349,8 +349,7 @@ static LONE_EPITHET: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z][a-z\
 /// since that would also flip `.`'s Unicode-scalar-vs-byte meaning). Called via
 /// `.matches()` -> trailing `$` added.
 static MISSING_GENUS_NOTE_KEYWORD: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(?:non|nec|not|sensu|sec|auct|auctt|fide|emend|ss|s|cf|aff|hort)(?-u:\b).*$")
-        .unwrap()
+    Regex::new(r"^(?:non|nec|not|sensu|sec|auct|auctt|fide|emend|ss|s|cf|aff|hort)\b.*$").unwrap()
 });
 
 /// Java `StripAndStash.firstWord` (StripAndStash.java:649-653): the leading non-whitespace
@@ -2470,7 +2469,7 @@ fn strip_quoted_spelling_variant(ctx: &mut ParseContext, s: String) -> String {
 /// scoping (not whole-wrap).
 static BRACKETED_NOM_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)[\[\(](?-u:\s*)((?:nom|nomen|comb|orth|typ|ined|in(?-u:\s+)sched)(?-u:\b)[^\]\)]*)[\]\)](?-u:\s*)$",
+        r"(?i)(?-u:\s*)[\[\(](?-u:\s*)((?:nom|nomen|comb|orth|typ|ined|in(?-u:\s+)sched)\b[^\]\)]*)[\]\)](?-u:\s*)$",
     )
     .unwrap()
 });
@@ -2572,7 +2571,7 @@ static SINGLE_TITLE_WORD: LazyLock<Regex> =
 /// `strip_authorship_markers`) and `stripManuscriptMarker` (batch 4) — defined once here,
 /// reusable file-wide.
 static MANUSCRIPT_KEYWORD: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:ined|ms|msc|unpublished)(?-u:\b)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?i)\b(?:ined|ms|msc|unpublished)\b").unwrap());
 
 /// Java NOM_NOTE_RANK_HINT (StripAndStash.java:223-225): `^(gen|fam|var|form|sp|spec)\b\.?`,
 /// `Pattern.CASE_INSENSITIVE`. Has `\b`, no `\p{...}`, no unescaped wildcard -> whole
@@ -2892,8 +2891,10 @@ fn strip_pro_sp_annotation(_ctx: &mut ParseContext, s: String) -> String {
 /// (`(Approved Lists, 1980)`, 273 ChecklistBank rows), and an emendation after it (`Lee et al. 1979
 /// (Approved Lists 1980) emend. Kim 2000`, 301 rows), which Java left for the authors.
 static APPROVED_LISTS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\s*\(\s*Approved\s+Lists,?\s+(\d{4})\s*\)\s*\.?\s*)(?:,?(?-u:\s*)(emend(?-u:\b).*))?$")
-        .unwrap()
+    Regex::new(
+        r"(?i)(?-u:\s*\(\s*Approved\s+Lists,?\s+(\d{4})\s*\)\s*\.?\s*)(?:,?(?-u:\s*)(emend\b.*))?$",
+    )
+    .unwrap()
 });
 
 /// Java `StripAndStash.stripApprovedLists` (StripAndStash.java:1241-1249). A trailing "
@@ -3121,7 +3122,7 @@ fn normalise_leading_auct(note: &str) -> String {
 /// `regex` crate.
 static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident|lapsus)(?-u:\b)[^\]]*|[^\[\]]*[,;](?-u:\s*)(?:non|nec|not)(?-u:\s)[^\[\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
+        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident|lapsus)\b[^\]]*|[^\[\]]*[,;](?-u:\s*)(?:non|nec|not)(?-u:\s)[^\[\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });
@@ -3166,16 +3167,15 @@ static PAREN_SENSU_STRICTO: LazyLock<Regex> = LazyLock::new(|| {
 /// `BRACKETED_TAX_NOTE` above). No lookaround/backreference -> plain `regex` crate.
 static PAREN_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+|(?:auctt?|auctorum|sensu|sec|vide|synonym)(?-u:\b)[^)]*)\)(?-u:\s*)\.?(?-u:\s*)$",
+        r"(?i)(?-u:\s*)\((?-u:\s*)((?:nec|non|not)(?-u:\s+)[^)]+|(?:auctt?|auctorum|sensu|sec|vide|synonym)\b[^)]*)\)(?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });
 
 /// The Rust-only concept-keyword branch of [`PAREN_TAX_NOTE`] (`auct`/`auctt`/`auctorum`/`sensu`/
 /// `sec`/`vide`/`synonym`).
-static PAREN_CONCEPT_NOTE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?:auctt?|auctorum|sensu|sec|vide|synonym)(?-u:\b)").unwrap()
-});
+static PAREN_CONCEPT_NOTE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:auctt?|auctorum|sensu|sec|vide|synonym)\b").unwrap());
 /// A standalone indeterminate rank-marker word (`sp.`, `spp.`, `spec.`, `species`, `indet.`).
 static INDET_MARKER_WORD: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)(?:spp?|spec|species|indet)(?-u:\b)").unwrap());
@@ -3404,21 +3404,21 @@ fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
 static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
-        r"auctt?(?-u:\b)\.?(?:[,.]?(?-u:\s).*)?",
-        r"|auctorum(?-u:\b)(?:[,.]?(?-u:\s).*)?",
+        r"auctt?\b\.?(?:[,.]?(?-u:\s).*)?",
+        r"|auctorum\b(?:[,.]?(?-u:\s).*)?",
         r"|sensu\.?(?:(?-u:\s).*)?",
         r"|sec\.?(?:(?-u:\s).*)?",
-        r"|nec(?-u:\b)(?:(?-u:\s).*)?",
+        r"|nec\b(?:(?-u:\s).*)?",
         r"|nonn?\.?(?-u:\s+)(?:(?-i:of)(?-u:\s+))?\(?\p{Lu}.*",
         r"|not(?-u:\s+)(?:(?-i:of)(?-u:\s+))?\(?(?-i:\p{Lu}(?:\p{Ll}|\.|\p{Lu}\.)).*",
-        r"|emend(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
+        r"|emend\b\.?(?-u:\s+)\(?\p{Lu}.*",
         r"|(?-i:[Ee]m\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
-        r"|fide(?-u:\b)\.?(?-u:\s+)\(?\p{Lu}.*",
+        r"|fide\b\.?(?-u:\s+)\(?\p{Lu}.*",
         r"|(?-i:[Vv]ide)(?-u:\s+)\(?(?-i:\p{Lu}).*",
-        r"|(?-i:[Oo]f)(?-u:\s+)(?:authors(?-u:\b)|(?-i:\p{Lu})|d'|(?-i:de|van|von|la|le|du)(?-u:\s)).*",
+        r"|(?-i:[Oo]f)(?-u:\s+)(?:authors\b|(?-i:\p{Lu})|d'|(?-i:de|van|von|la|le|du)(?-u:\s)).*",
         r"|according(?-u:\s+)to(?-u:\s+)\p{Lu}.*",
         r"|excl\.(?-u:\s+).*",
-        r"|ss(?-u:\b)\.?(?-u:\s+).*",
+        r"|ss\b\.?(?-u:\s+).*",
         r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?)",
         r"|(?-i:sens\.(?-u:\s*)(?:str|lat|l|ampl)\.?)",
         r"|(?-i:ampl\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
@@ -4903,7 +4903,7 @@ static STANDALONE_MS: LazyLock<Regex> =
 /// pattern ASCII-scoped (leading `^` left outside the wrap, per convention — same as
 /// `CANDIDATUS_PREFIX`). No lookaround/backreference -> plain `regex` crate.
 static LEADING_HOMONYM_PAREN: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?i)^(?-u:\(\s*(?:non|nec|not)\b)").unwrap());
+    LazyLock::new(|| Regex::new(r"(?i)^\((?-u:\s*)(?:non|nec|not)\b").unwrap());
 
 /// Java PAREN_NOTE (StripAndStash.java:108-109):
 /// `\(\s*((?:auctt?|sensu|sec)\b[^)]*)\)\s*`, `Pattern.CASE_INSENSITIVE`, plus "auctorum" (see
@@ -4916,7 +4916,7 @@ static LEADING_HOMONYM_PAREN: LazyLock<Regex> =
 /// lookaround/backreference -> plain `regex` crate.
 static PAREN_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)\((?-u:\s*)((?:auctt?|auctorum|sensu|sec|vide|synonym)(?-u:\b)[^)]*|(?-i:s\.(?-u:\s*)(?:str|s|l|lat|ampl)\.?))(?-u:\s*)\)(?-u:\s*)",
+        r"(?i)\((?-u:\s*)((?:auctt?|auctorum|sensu|sec|vide|synonym)\b[^)]*|(?-i:s\.(?-u:\s*)(?:str|s|l|lat|ampl)\.?))(?-u:\s*)\)(?-u:\s*)",
     )
     .unwrap()
 });

@@ -438,3 +438,21 @@ fn alternative_subgenera_in_brackets_are_a_note() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn an_author_starting_like_a_note_keyword_is_an_author() {
+    // #83: "Not" before the non-ASCII "ø" ended a word for the ASCII word boundary, so the
+    // separate authorship "(Notø) Zahn" was taken for a "not" note as a whole
+    assert_name_auth("Hieracium alpinum subsp. comptellum", "(Notø) Zahn")
+        .infra_species("Hieracium", "alpinum", Rank::Subspecies, "comptellum")
+        .bas_authors(None, &["Notø"])
+        .comb_authors(None, &["Zahn"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Hieracium durans", "(Notø) Notø")
+        .species("Hieracium", "durans")
+        .bas_authors(None, &["Notø"])
+        .comb_authors(None, &["Notø"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
