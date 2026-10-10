@@ -6,7 +6,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NamePart, NameType, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn a_species_author_before_the_rank_marker_is_kept() {
@@ -166,4 +166,38 @@ fn a_spaced_numeral_epithet() {
     {
         assert_ne!(p.infraspecific_epithet.as_deref(), Some("1-muscorum"));
     }
+}
+
+#[test]
+fn a_capitalised_species_epithet_is_put_in_lower_case() {
+    // #99: Linnaeus's "Ovis Aries" — the epithet became part of an author "Aries Linnæus"
+    assert_name_hinted(
+        "Ovis Aries Linnæus, 1758",
+        None,
+        Some(Rank::Species),
+        Some(NomCode::Zoological),
+    )
+    .species("Ovis", "aries")
+    .comb_authors(Some("1758"), &["Linnæus"])
+    .code(NomCode::Zoological)
+    .warning(&[warnings::CAPITALISED_EPITHET])
+    .nothing_else();
+    assert_name_auth("Hyla Everetti", "Boulenger, 1897")
+        .species("Hyla", "everetti")
+        .comb_authors(Some("1897"), &["Boulenger"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+    assert_name("Ischyodon Johnsonii (Agassiz, 1843)")
+        .species("Ischyodon", "johnsonii")
+        .bas_authors(Some("1843"), &["Agassiz"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+    // a genus with a surname of two words keeps it
+    assert_name_auth("Homalaspis Milne Edwards, 1863", "Milne Edwards 1863")
+        .monomial("Homalaspis")
+        .comb_authors(Some("1863"), &["Milne Edwards"])
+        .code(NomCode::Zoological)
+        .nothing_else();
 }

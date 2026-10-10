@@ -62,6 +62,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_rank_lineage(ctx, s);
     s = strip_leading_species_label(ctx, s);
+    s = lower_capitalised_epithet(ctx, s);
     s = strip_stray_qmark_after_marker(s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
@@ -1677,6 +1678,79 @@ fn normalise_unranked_marker(s: String) -> String {
         _ => return s,
     };
     format!("{} {marker} {rest}", &caps[1])
+}
+
+/// A genus and a capitalised word (group 2) after it, and what follows (group 3).
+static GENUS_CAPITALISED_WORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+))(\p{Lu}[\p{Ll}\-]+)(?:(?-u:\s+)(.+))?$").unwrap()
+});
+
+/// An ending only a Latin epithet has, not a surname: `Johnsonii`, `Caricæ`, `Bahiensis`. Not the
+/// family-group endings, `African Crioceridae` is no species.
+static LATIN_EPITHET_ENDING: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:ii|ae|æ|orum|arum|ensis|oides|formis)$").unwrap());
+static FAMILY_GROUP_ENDING: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:idae|inae|aceae|oideae|ineae|oidea)$").unwrap());
+
+/// An author with a year, perhaps in brackets: `Linnæus, 1758`, `(Agassiz, 1843)`.
+static AUTHOR_WITH_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\(?\p{Lu}[\p{L}'.\- ]*,?(?-u:\s*)(?:1[789]\d\d|20[0-2]\d)\)?$").unwrap()
+});
+
+/// Linnaeus and his contemporaries capitalised some species epithets, `Ovis Aries Linnæus, 1758`,
+/// `Hyla Everetti` + `Boulenger, 1897`, and ZooBank keeps them so; the epithet became the start of
+/// an author "Aries Linnæus" (#99). The Code puts it in lower case (ICZN Art. 28), so does this
+/// step, with a warning, when the word must be the epithet: under a rank hint at species or
+/// below, an authorship following; when the authorship comes separately, repeating what follows the word or not starting
+/// with it; or when it ends as only a Latin epithet does, nothing or an author with a year after
+/// it. A
+/// genus with a surname of two words, `Homalaspis Milne Edwards, 1863`, has none of these.
+fn lower_capitalised_epithet(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = GENUS_CAPITALISED_WORD.captures(&s) else {
+        return s;
+    };
+    let word = &caps[2];
+    let tail = caps.get(3).map(|m| m.as_str());
+    if caps[1].trim_end() == "Candidatus" || token::is_particle(&word.to_lowercase()) {
+        return s;
+    }
+    let letters = |s: &str| {
+        s.chars()
+            .filter(|c| c.is_alphanumeric())
+            .flat_map(char::to_lowercase)
+            .collect::<String>()
+    };
+    let column = ctx
+        .authorship_input
+        .as_deref()
+        .map(|a| java_trim(without_authorship_placeholder(a)))
+        // begun as an authorship, not as `<Unspecified Agent>`
+        .filter(|a| a.starts_with(|c: char| c.is_alphabetic() || c == '(' || c == '['));
+    // alone after the genus it may be the author of an indet species ("Lepidoptera Hooker")
+    let hinted = tail.is_some() && ctx.requested_rank.is_some_and(|r| r.is_species_or_below());
+    let by_column = match (column, tail) {
+        (Some(column), None) => !letters(column).starts_with(&letters(word)),
+        (Some(column), Some(tail)) => letters(column) == letters(tail),
+        (None, _) => false,
+    };
+    let by_ending = LATIN_EPITHET_ENDING.is_match(word)
+        && !FAMILY_GROUP_ENDING.is_match(word)
+        && tail.is_none_or(|t| AUTHOR_WITH_YEAR.is_match(t));
+    if !(hinted || by_column || by_ending) {
+        return s;
+    }
+    ctx.name.add_warning(warnings::CAPITALISED_EPITHET);
+    let mut chars = word.chars();
+    let lowered: String = chars
+        .next()
+        .into_iter()
+        .flat_map(char::to_lowercase)
+        .chain(chars)
+        .collect();
+    match tail {
+        Some(tail) => format!("{}{lowered} {tail}", &caps[1]),
+        None => format!("{}{lowered}", &caps[1]),
+    }
 }
 
 // ---- Step 15: normaliseDoubleUnderscores ----
