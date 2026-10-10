@@ -111,3 +111,32 @@ fn rare_infrageneric_markers() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn an_unranked_marker_marks_an_unranked_name() {
+    // #98: IPNI's "[unranked]" put the epithet into the authorship
+    assert_name("Aetheorhiza bulbosa [unranked] montana (Willk.) Gand.")
+        .infra_species("Aetheorhiza", "bulbosa", Rank::InfraspecificName, "montana")
+        .bas_authors(None, &["Willk."])
+        .comb_authors(None, &["Gand."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Viola [unranked] Mirabiles Nyman")
+        .infrageneric_at("Viola", Rank::InfragenericName, "Mirabiles")
+        .comb_authors(None, &["Nyman"])
+        .nothing_else();
+    assert_name_auth("Abelia unranked Biflorae", "Zabel")
+        .infrageneric_at("Abelia", Rank::InfragenericName, "Biflorae")
+        .comb_authors(None, &["Zabel"])
+        .nothing_else();
+    assert_name("Poa (unranked) Arctophila")
+        .infrageneric_at("Poa", Rank::InfragenericName, "Arctophila")
+        .nothing_else();
+    // the marker the formatter writes for it reads back
+    assert_name("Bromus hordeaceus infrasp. ferronii (Mabille) P.M.Sm.")
+        .infra_species("Bromus", "hordeaceus", Rank::InfraspecificName, "ferronii")
+        .bas_authors(None, &["Mabille"])
+        .comb_authors(None, &["P.M.Sm."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}

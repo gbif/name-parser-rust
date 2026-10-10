@@ -65,6 +65,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_stray_qmark_after_marker(s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
+    s = normalise_unranked_marker(s);
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -1614,6 +1615,34 @@ fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
         }
         None => s,
     }
+}
+
+/// `[unranked]`, `(unranked)` or a bare `unranked` after the genus (group 1) or a species epithet
+/// (group 2) of a name.
+static UNRANKED_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^((?-i:\p{Lu}\p{Ll}+)|(?-i:\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}[\p{Ll}\-]+))(?-u:\s+)(?:\[unranked\]|\(unranked\)|unranked)(?-u:\s+)").unwrap()
+});
+
+/// IPNI, Euro+Med and Tropicos mark a name without a rank `[unranked]`, `Hieracium [unranked]
+/// Verbasciformia` or `Aetheorhiza bulbosa [unranked] montana (Willk.) Gand.`; the epithet went
+/// into the authorship (#98). After the genus and before a capitalised epithet it is the marker
+/// `unr.` of an unranked infrageneric name, after a species epithet and before a lowercase one the
+/// `infrasp.` of an unranked infraspecific name. Other shapes are left as they are.
+fn normalise_unranked_marker(s: String) -> String {
+    if !s.contains("nranked") {
+        return s;
+    }
+    let Some(caps) = UNRANKED_MARKER.captures(&s) else {
+        return s;
+    };
+    let rest = &s[caps.get(0).unwrap().end()..];
+    let infraspecific = caps[1].contains(char::is_whitespace);
+    let marker = match rest.chars().next() {
+        Some(c) if infraspecific && c.is_lowercase() => "infrasp.",
+        Some(c) if !infraspecific && c.is_uppercase() => "unr.",
+        _ => return s,
+    };
+    format!("{} {marker} {rest}", &caps[1])
 }
 
 // ---- Step 15: normaliseDoubleUnderscores ----
