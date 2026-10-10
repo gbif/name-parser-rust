@@ -446,14 +446,18 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
 
 /// A lone lower-case word is an epithet whose genus is missing when its author comes separately or
 /// the rank says species or below: `denisi` + `(Arlé, 1939)` + species. Rust-only: it was made the
-/// genus of an informal name, "Denisi sp.".
+/// genus of an informal name, "Denisi sp.". Without a rank or an authorship it is a placeholder all
+/// the same (#100): it may as well be a genus in lower case (`abelisaurus`), but there is no taxon to
+/// anchor a name on. Only a rank above the species keeps it a uninomial (`abelisaurus` + genus).
 fn lone_epithet_of_a_species(ctx: &ParseContext, s: &str) -> bool {
     LONE_EPITHET.is_match(s)
         && (ctx
             .authorship_input
             .as_deref()
             .is_some_and(|a| !java_trim(a).is_empty())
-            || ctx.requested_rank.is_some_and(|r| r.is_species_or_below()))
+            || ctx
+                .requested_rank
+                .is_none_or(|r| r.is_species_or_below() || r == Rank::Unranked))
 }
 
 /// A qualifier in front of a capitalised genus: a question mark, glued or spaced (`?Sydonia alba`,

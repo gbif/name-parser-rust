@@ -118,9 +118,12 @@ fn a_lone_epithet_is_no_genus() {
         .type_(NameType::Placeholder)
         .warning(&[warnings::MISSING_GENUS])
         .nothing_else();
-    // with nothing to tell, a lowercase monomial stays one, flagged
-    assert_name("duplocingulatoides")
-        .monomial("Duplocingulatoides")
+    // with nothing to tell, there is no taxon to anchor a name on: a placeholder all the same
+    assert_unparsable("duplocingulatoides", NameType::Placeholder);
+    assert_unparsable("abelisaurus", NameType::Placeholder);
+    // a rank above the species makes it a genus in lower case, flagged
+    assert_name_hinted("abelisaurus", None, Some(Rank::Genus), None)
+        .monomial_rank("Abelisaurus", Rank::Genus)
         .warning(&[warnings::LC_MONOMIAL])
         .nothing_else();
 }

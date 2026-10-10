@@ -253,9 +253,9 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         phrase.push_str(&tail);
     }
 
-    // Step 8b2: a monomial written in lower case, "duplocingulatoides", may as well be an epithet
-    // whose genus is missing (#100); with no rank or authorship to tell, it stays the uninomial,
-    // flagged.
+    // Step 8b2: a monomial written in lower case, "abelisaurus", may as well be an epithet whose
+    // genus is missing (#100); with a rank above the species to tell, it stays the uninomial,
+    // flagged. Without one StripAndStash already made it the placeholder "? abelisaurus".
     let first_word = ctx.original.split_whitespace().next().unwrap_or_default();
     if first_word.starts_with(|c: char| c.is_lowercase())
         && ctx
