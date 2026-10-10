@@ -157,6 +157,7 @@ fn to_informal(pn: ParsedName) -> Informal {
         rank: pn.rank,
         phrase: pn.phrase,
         code: pn.code,
+        candidatus: pn.candidatus,
     }
 }
 

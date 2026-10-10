@@ -263,7 +263,9 @@ def test_informal_molecular_provisional_species():
         "taxonRank": "GENUS",
         "rank": "SPECIES",
         "phrase": "sp. RE1-2a",
+        "candidatus": False,
     }
+    assert r.candidatus is False
     assert "Serratia" in repr(r)
     assert r.canonical_name() == "Serratia sp. RE1-2a"  # round-trips to the canonical string
     assert str(r) == "Serratia sp. RE1-2a"  # __str__ is the canonical name, as for ParsedName
@@ -285,6 +287,16 @@ def test_informal_bare_genus_sp_carries_the_bare_marker_phrase():
     assert r.rank == "SPECIES"
     assert r.phrase == "sp."  # bare "Genus sp." carries the verbatim marker as its phrase
     assert r.canonical_name() == "Rhizobium sp."  # round-trips to the same canonical string
+
+
+def test_informal_keeps_candidatus():
+    # #76: Candidatus is a status of the name the provisional designation belongs to
+    r = nameparser.parse("Candidatus Pelagibacter sp. HTCC7211")
+    assert isinstance(r, nameparser.Informal)
+    assert r.taxon == "Pelagibacter"
+    assert r.phrase == "sp. HTCC7211"
+    assert r.candidatus is True
+    assert r.canonical_name() == '"Candidatus Pelagibacter" sp. HTCC7211'
 
 
 def test_cf_binomial_stays_parsed_not_informal():

@@ -216,6 +216,11 @@ class Informal:
     def code(self) -> str | None:
         """The `NomCode` wire name when known, else `None`."""
         ...
+    @property
+    def candidatus(self) -> bool:
+        """Whether the name has Candidatus status (`Candidatus Pelagibacter sp. HTCC7211`); the
+        word itself is in neither `taxon` nor `phrase`."""
+        ...
 
     def canonical_name(self) -> str:
         """The canonical string form, e.g. `"Rhizobium sp. RMCC TR1811"`, `"Bartonella group"` —
@@ -226,7 +231,7 @@ class Informal:
 
     def to_dict(self) -> dict[str, Any]:
         """The complete `Informal` structure straight from the core's `serde::Serialize` impl, keyed
-        by its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`)."""
+        by its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`, `candidatus`)."""
         ...
     def __repr__(self) -> str: ...
 

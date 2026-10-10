@@ -8,6 +8,7 @@ import org.gbif.nameparser.api.ParseResult;
 import org.gbif.nameparser.api.ParsedName;
 import org.gbif.nameparser.api.Rank;
 import org.gbif.nameparser.api.UnparsableNameException;
+import org.gbif.nameparser.util.NameFormatter;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -222,6 +223,18 @@ class NameParserRustSmokeTest {
     assertEquals("Rhizobium", inf.taxon());
     assertEquals(Rank.SPECIES, inf.rank());
     assertEquals("sp.", inf.phrase());
+    assertFalse(inf.candidatus());
+  }
+
+  @Test
+  void informalKeepsCandidatus() {
+    // #76: Candidatus is a status of the name the provisional designation belongs to
+    ParseResult.Informal inf = assertInstanceOf(ParseResult.Informal.class,
+        parser.parse("Candidatus Pelagibacter sp. HTCC7211", null, null, null));
+    assertEquals("Pelagibacter", inf.taxon());
+    assertEquals("sp. HTCC7211", inf.phrase());
+    assertTrue(inf.candidatus());
+    assertEquals("\"Candidatus Pelagibacter\" sp. HTCC7211", NameFormatter.canonical(inf));
   }
 
   @Test

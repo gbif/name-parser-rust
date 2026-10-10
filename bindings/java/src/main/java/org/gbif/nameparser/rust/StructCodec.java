@@ -277,7 +277,8 @@ final class StructCodec {
         taxon = pn.getInfragenericEpithet();
         taxonRank = pn.getRank();
       }
-      return new ParseResult.Informal(taxon, taxonRank, pn.getRank(), pn.getPhrase(), pn.getCode());
+      return new ParseResult.Informal(taxon, taxonRank, pn.getRank(), pn.getPhrase(), pn.getCode(),
+          pn.isCandidatus());
     }
     return new ParseResult.Parsed(pn);
   }
