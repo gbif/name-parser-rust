@@ -3987,7 +3987,7 @@ Activation-tagging vector pSKI015	false
 siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot	false					
 Binary RNAi Gateway destination vector pAGSM552	false					
 20S RNA replicon	false					
-Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Istvnffi, 1898 [1897]
+Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Istv?nffi, 1898 [1897]
 @23546	false					
 tobedeleted	false					
 tobedeleted , 1999	false					
@@ -4524,7 +4524,7 @@ Anthoscopus Cabanis [1851?]	true	Anthoscopus Cabanis, [1851?]	Anthoscopus	Anthos
 Trismegistia monodii Ando, 1973 [1974]	true	Trismegistia monodii Ando, 1973 [1974]	Trismegistia monodii	Trismegistia monodii	Trismegistia monodii Ando, 1973 [1974]	Ando, 1973 [1974]
 Zygaena witti Wiegel [1973]	true	Zygaena witti Wiegel, [1973]	Zygaena witti	Zygaena witti	Zygaena witti Wiegel, [1973]	Wiegel, [1973]
 Deyeuxia coarctata Kunth, 1815 [1816]	true	Deyeuxia coarctata Kunth, 1815 [1816]	Deyeuxia coarctata	Deyeuxia coarctata	Deyeuxia coarctata Kunth, 1815 [1816]	Kunth, 1815 [1816]
-Macrotes cordovaria Guen�e 1857	true	Macrotes cordovaria Guene, 1857	Macrotes cordovaria	Macrotes cordovaria	Macrotes cordovaria Guene, 1857	Guene, 1857
+Macrotes cordovaria Guen�e 1857	true	Macrotes cordovaria Guen�e, 1857	Macrotes cordovaria	Macrotes cordovaria	Macrotes cordovaria Guen�e, 1857	Guen�e, 1857
 Fusinus eucos�nius	true	Fusinus eucosnius	Fusinus eucosnius	Fusinus eucosnius	Fusinus eucosnius	
 Byssochlamys fulva Olliver & G. Smith	true	Byssochlamys fulva Olliver & G.Smith	Byssochlamys fulva	Byssochlamys fulva	Byssochlamys fulva Olliver & G.Smith	Olliver & G.Smith
 Kinosternidae　Agassiz, 1857	true	Kinosternidae Agassiz, 1857	Kinosternidae	Kinosternidae	Kinosternidae Agassiz, 1857	Agassiz, 1857
@@ -5023,7 +5023,7 @@ Cribbia pendula la Croix & P.J.Cribb	true	Cribbia pendula la Croix & P.J.Cribb	C
 Cribbia pendula le Croix & P.J.Cribb	true	Cribbia pendula le Croix & P.J.Cribb	Cribbia pendula	Cribbia pendula	Cribbia pendula le Croix & P.J.Cribb	le Croix & P.J.Cribb
 Cribbia pendula de la Croix & le P.J.Cribb	true	Cribbia pendula de la Croix & le P.J.Cribb	Cribbia pendula	Cribbia pendula	Cribbia pendula de la Croix & le P.J.Cribb	de la Croix & le P.J.Cribb
 Cribbia pendula Croix & de le P.J.Cribb	true	Cribbia pendula Croix & de le P.J.Cribb	Cribbia pendula	Cribbia pendula	Cribbia pendula Croix & de le P.J.Cribb	Croix & de le P.J.Cribb
-Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Istvnffi, 1898 [1897]
+Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Istv?nffi, 1898 [1897]
 Cestodiscus gemmifer F.S.Castracane degli Antelminelli	true	Cestodiscus gemmifer F.S.Castracane degli Antelminelli	Cestodiscus gemmifer	Cestodiscus gemmifer	Cestodiscus gemmifer F.S.Castracane degli Antelminelli	F.S.Castracane degli Antelminelli
 Hieracium scorzoneraefolium De la Soie	true	Hieracium scorzoneraefolium De la Soie	Hieracium scorzoneraefolium	Hieracium scorzoneraefolium	Hieracium scorzoneraefolium De la Soie	De la Soie
 Sepidium capricorne des Desbrochers des Loges, 1881	true	Sepidium capricorne des Desbrochers des Loges, 1881	Sepidium capricorne	Sepidium capricorne	Sepidium capricorne des Desbrochers des Loges, 1881	des Desbrochers des Loges, 1881
@@ -5305,7 +5305,7 @@ Foo bar Cushman Em. Sellier de Civrieux, 1976	true	Foo bar Cushman	Foo bar	Foo b
 Foo bar la Croix & P.J.Cribb	true	Foo bar la Croix & P.J.Cribb	Foo bar	Foo bar	Foo bar la Croix & P.J.Cribb	la Croix & P.J.Cribb
 Foo bar le Croix & P.J.Cribb	true	Foo bar le Croix & P.J.Cribb	Foo bar	Foo bar	Foo bar le Croix & P.J.Cribb	le Croix & P.J.Cribb
 Foo bar de la Croix & le P.J.Cribb	true	Foo bar de la Croix & le P.J.Cribb	Foo bar	Foo bar	Foo bar de la Croix & le P.J.Cribb	de la Croix & le P.J.Cribb
-Foo bar Istv?nffi, 1898	true	Foo bar Istvnffi, 1898	Foo bar	Foo bar	Foo bar Istvnffi, 1898	Istvnffi, 1898
+Foo bar Istv?nffi, 1898	true	Foo bar Istv?nffi, 1898	Foo bar	Foo bar	Foo bar Istv?nffi, 1898	Istv?nffi, 1898
 Foo bar F.S.Castracane degli Antelminelli	true	Foo bar F.S.Castracane degli Antelminelli	Foo bar	Foo bar	Foo bar F.S.Castracane degli Antelminelli	F.S.Castracane degli Antelminelli
 Foo bar De la Soie	true	Foo bar De la Soie	Foo bar	Foo bar	Foo bar De la Soie	De la Soie
 Foo bar Hort. ex Vilmorin	true	Foo bar hort. ex Vilmorin	Foo bar	Foo bar	Foo bar hort. ex Vilmorin	hort. ex Vilmorin

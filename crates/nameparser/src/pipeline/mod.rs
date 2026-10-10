@@ -152,6 +152,10 @@ pub fn run(
             .filter(|a| !a.is_empty() && !contains_ignoring_punctuation(&trimmed, a))
             .map_or(0, |a| a.chars().count() + 1);
     let mut ctx = ParseContext::new(trimmed.clone(), authorship, rank, code);
+    ctx.lost_letters = stripandstash::lost_letter_words(&ctx.original);
+    if let Some(a) = ctx.authorship_input.as_deref() {
+        ctx.lost_letters.extend(stripandstash::lost_letter_words(a));
+    }
     // folded up front (see `normalize_input`), but still flagged like the homoglyphs they are
     if fullwidth {
         ctx.name.add_warning(warnings::HOMOGLYHPS);
@@ -472,8 +476,78 @@ pub fn run(
             }
         }
     }
+    restore_lost_letters(&mut ctx);
 
     Ok(ctx.name)
+}
+
+/// Puts the verbatim spelling of a word with a lost letter back into the authors and the phrase it
+/// ended up in: `S?rensen`, not the glued `Srensen` (#104). Such an author is flagged
+/// `UNUSUAL_CHARACTERS`, no longer doubtful — the `?` is a broken encoding, not a doubt. A word
+/// left glued elsewhere, in an epithet, is flagged as before: doubtful, and
+/// `QUESTION_MARKS_REMOVED` for a `?`.
+fn restore_lost_letters(ctx: &mut ParseContext) {
+    let mut lost = std::mem::take(&mut ctx.lost_letters);
+    if lost.is_empty() {
+        return;
+    }
+    // sources repeat the authorship in both columns
+    lost.sort();
+    lost.dedup();
+    let n = &mut ctx.name;
+    let (mut restored, mut glued_qmark, mut glued_fffd) = (false, false, false);
+    for (glued, verbatim) in &lost {
+        let mut hit = false;
+        let mut put_back = |text: &mut String| {
+            if text.contains(verbatim.as_str()) {
+                hit = true;
+            } else if text.contains(glued.as_str()) {
+                *text = text.replace(glued.as_str(), verbatim);
+                hit = true;
+            }
+        };
+        if let Some(phrase) = n.phrase.as_mut() {
+            put_back(phrase);
+        }
+        let mut restore = |a: &mut Authorship| {
+            for author in a
+                .authors
+                .iter_mut()
+                .chain(a.ex_authors.iter_mut())
+                .chain(a.sanctioning_author.iter_mut())
+            {
+                put_back(author);
+            }
+        };
+        restore(&mut n.combination_authorship);
+        restore(&mut n.basionym_authorship);
+        for ca in [
+            n.specific_authorship.as_mut(),
+            n.generic_authorship.as_mut(),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            restore(&mut ca.combination_authorship);
+            restore(&mut ca.basionym_authorship);
+        }
+        if hit {
+            restored = true;
+        } else if verbatim.contains('?') {
+            glued_qmark = true;
+        } else {
+            glued_fffd = true;
+        }
+    }
+    if glued_qmark || glued_fffd {
+        n.doubtful = true;
+    }
+    if glued_qmark {
+        n.add_warning(warnings::QUESTION_MARKS_REMOVED);
+    }
+    if restored || glued_fffd {
+        n.add_warning(warnings::UNUSUAL_CHARACTERS);
+    }
 }
 
 /// Runs a separately supplied authorship through the name string's annotation steps and the

@@ -779,16 +779,52 @@ static LETTER_FFFD_LETTER: LazyLock<Regex> =
 
 /// The replacement character a broken encoding leaves for a letter ("Fusinus eucos\u{FFFD}nius",
 /// "Guen\u{FFFD}e 1857") is a missing letter, like a "?" inside a word: removed, it no longer
-/// splits the word in two. Flags doubtful + `UNUSUAL_CHARACTERS`.
-fn remove_replacement_characters(name: &mut ParsedName, mut s: String) -> String {
-    if s.contains('\u{FFFD}') && LETTER_FFFD_LETTER.is_match(&s) {
+/// splits the word in two. Pipeline flags it, see [`lost_letter_words`].
+fn remove_replacement_characters(mut s: String) -> String {
+    if s.contains('\u{FFFD}') {
         while LETTER_FFFD_LETTER.is_match(&s) {
             s = LETTER_FFFD_LETTER.replace_all(&s, "$1$2").into_owned();
         }
-        name.doubtful = true;
-        name.add_warning(warnings::UNUSUAL_CHARACTERS);
     }
     s
+}
+
+/// A `?` for a lost apostrophe: `d?Orbigny`, `L?Hér.`, `O?Donoghue`.
+static LOST_APOSTROPHE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(^|[^\p{L}])([dDlLO])\?(\p{Lu})").unwrap());
+
+/// Puts the apostrophe back that a broken encoding turned into a `?` after an elided particle or
+/// an O': `d'Orbigny`, not the glued `dOrbigny` that was read as an epithet (#104). Flagged
+/// `UNUSUAL_CHARACTERS`, as the lost letters are.
+fn repair_lost_apostrophe(name: Option<&mut ParsedName>, s: String) -> String {
+    if s.contains('?') && LOST_APOSTROPHE.is_match(&s) {
+        if let Some(name) = name {
+            name.add_warning(warnings::UNUSUAL_CHARACTERS);
+        }
+        return LOST_APOSTROPHE.replace_all(&s, "$1$2'$3").into_owned();
+    }
+    s
+}
+
+/// A word with a `?` or U+FFFD between two of its letters.
+static LOST_LETTER_WORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\p{L}[\p{L}?\x{FFFD}]*[?\x{FFFD}][\p{L}?\x{FFFD}]*\p{L}").unwrap()
+});
+
+/// The words of `s` that [`repair_question_mark_in_word`] glues, as (glued, verbatim). A broken
+/// encoding put the `?` or U+FFFD in place of a letter, so the verbatim spelling is the truer one
+/// for an author: `(S?rensen, 1873)` is no author Srensen (#104).
+pub(crate) fn lost_letter_words(s: &str) -> Vec<(String, String)> {
+    let s = repair_lost_apostrophe(None, s.to_string());
+    LOST_LETTER_WORD
+        .find_iter(&s)
+        .map(|m| m.as_str())
+        .filter(|w| LETTER_QMARK_LETTER.is_match(w) || LETTER_FFFD_LETTER.is_match(w))
+        .map(|w| {
+            let glued = remove_qmarks_between_letters(remove_replacement_characters(w.to_string()));
+            (glued, w.to_string())
+        })
+        .collect()
 }
 
 /// Removes every "?" between two letters. Matches of [`QMARK_BETWEEN_LETTERS`] share their letters
@@ -804,18 +840,16 @@ fn remove_qmarks_between_letters(mut s: String) -> String {
 /// Java `StripAndStash.repairQuestionMarkInWord` (StripAndStash.java:739-748). A "?" inside
 /// a word is a transcription artefact for a missing letter ("Istv?nffi") — strips the "?"
 /// and glues the surrounding word parts directly together (no placeholder letter is
-/// guessed: "Istv?nffi" -> "Istvnffi"), flagging doubtful + `QUESTION_MARKS_REMOVED`. (The
+/// guessed: "Istv?nffi" -> "Istvnffi"). Java flagged doubtful + `QUESTION_MARKS_REMOVED`; here
+/// Pipeline flags it once the parse is done, see [`lost_letter_words`]. (The
 /// identical inline logic also opens the separate `stripAuthorshipMarkers`
 /// auxiliary-authorship path (ported below as `strip_authorship_markers`) —
 /// `StripAndStash.java` duplicates it rather than sharing a helper, so this port does too,
 /// reusing the same static patterns.)
 fn repair_question_mark_in_word(ctx: &mut ParseContext, s: String) -> String {
-    let s = remove_replacement_characters(&mut ctx.name, s);
-    if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
-        let s = remove_qmarks_between_letters(s);
-        ctx.name.doubtful = true;
-        ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
-        return s;
+    let s = remove_replacement_characters(repair_lost_apostrophe(Some(&mut ctx.name), s));
+    if s.contains('?') {
+        return remove_qmarks_between_letters(s);
     }
     s
 }
@@ -5115,12 +5149,10 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
         }
     }
     // "?" inside a word — transcription artefact for a missing letter ("Istv?nffi"). Strip
-    // the ? and glue the surrounding word parts; flag doubtful + warning.
-    s = remove_replacement_characters(name, s);
-    if s.contains('?') && LETTER_QMARK_LETTER.is_match(&s) {
+    // the ? and glue the surrounding word parts; Pipeline flags it (`lost_letter_words`).
+    s = remove_replacement_characters(repair_lost_apostrophe(Some(name), s));
+    if s.contains('?') {
         s = remove_qmarks_between_letters(s);
-        name.doubtful = true;
-        name.add_warning(warnings::QUESTION_MARKS_REMOVED);
     }
     s = repair_win1252_artefacts_name(name, s);
     // "Hort."/"hortus(a)" horticultural placeholder, lower-cased to the canonical "hort.".
@@ -5597,15 +5629,15 @@ mod tests {
     // ---- Step 7: repairQuestionMarkInWord ----
 
     #[test]
-    fn qmark_inside_a_word_is_removed_and_flags_doubtful() {
+    fn qmark_inside_a_word_is_removed() {
+        // flagged by Pipeline, once it knows where the word ended up (#104)
         let mut c = ctx("x");
         let out = repair_question_mark_in_word(&mut c, "Aus bus Istv?nffi".to_string());
         assert_eq!(out, "Aus bus Istvnffi");
-        assert!(c.name.doubtful);
-        assert!(c
-            .name
-            .warnings
-            .contains(&warnings::QUESTION_MARKS_REMOVED.to_string()));
+        assert_eq!(
+            lost_letter_words("Aus bus Istv?nffi"),
+            vec![("Istvnffi".to_string(), "Istv?nffi".to_string())]
+        );
     }
 
     #[test]
@@ -8463,14 +8495,10 @@ mod tests {
     }
 
     #[test]
-    fn question_mark_transcription_artefact_glues_and_flags_doubtful() {
+    fn question_mark_transcription_artefact_glues() {
         let mut n = name();
         let out = strip_authorship_markers("Istv?nffi", &mut n);
         assert_eq!(out, "Istvnffi");
-        assert!(n.doubtful);
-        assert!(n
-            .warnings
-            .contains(&warnings::QUESTION_MARKS_REMOVED.to_string()));
     }
 
     #[test]

@@ -650,11 +650,10 @@ fn author_variations() {
 
     assert_name("Navicula ambigua f. craticularis Istv?nffi, 1898, 1897")
         .infra_species("Navicula", "ambigua", Rank::Form, "craticularis")
-        .comb_authors(Some("1898"), &["Istvnffi"])
+        .comb_authors(Some("1898"), &["Istv?nffi"])
         .imprint_year("1897")
-        .doubtful()
         .code(NomCode::Zoological)
-        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
     assert_name("Cestodiscus gemmifer F.S.Castracane degli Antelminelli")

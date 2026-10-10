@@ -238,10 +238,9 @@ fn authorship_only() {
         .comb_authors(None, &["de la Croix", "le P.J.Cribb"])
         .nothing_else();
 
-    assert_authorship("Istv?nffi, 1898", &["Istvnffi"])
-        .comb_authors(Some("1898"), &["Istvnffi"])
-        .doubtful()
-        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+    assert_authorship("Istv?nffi, 1898", &["Istv?nffi"])
+        .comb_authors(Some("1898"), &["Istv?nffi"])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
     assert_authorship("F.S.Castracane degli Antelminelli", &[])
