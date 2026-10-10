@@ -392,6 +392,16 @@ static NN_PLACEHOLDER: LazyLock<Regex> =
 static GENUS_WORD_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))").unwrap()
 });
+/// A numbered group with no taxon before it: `Subgroup 10`, `Morphotype 1`, `Genotype 3`, `Group
+/// 1.1c`, and a numbered new genus, `Genus Novum 10`, `Genus nov. (2)`. It stands for an unnamed
+/// group of its parent, as `Rissooidea indet. 1` does, and there is no anchor for an informal name
+/// (gbif/name-parser-rust#108). Java read the word as a genus and dropped the number.
+static NUMBERED_GROUP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(?:(?i:sub-?group|group|cluster|lineage|phylotype|morphotype|ribotype|genotype|serotype|morphospecies|genomospecies|genospecies)|Genus(?-u:\s+)(?i:novum|nov\.?|n\.))(?-u:\s+)\(?\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?\)?$",
+    )
+    .unwrap()
+});
 /// A record that names nothing: "None", "None recorded", "not recorded" (any case). Rust-only:
 /// Java parsed them as the genus "None" or "Not".
 static NO_NAME_RECORDED: LazyLock<Regex> =
@@ -567,7 +577,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
-    if GENUS_WORD_PLACEHOLDER.is_match(&s) {
+    if GENUS_WORD_PLACEHOLDER.is_match(&s) || NUMBERED_GROUP_PLACEHOLDER.is_match(&s) {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
 

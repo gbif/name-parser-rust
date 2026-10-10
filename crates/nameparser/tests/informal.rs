@@ -965,3 +965,110 @@ fn a_gtdb_genus_keeps_its_suffix_under_the_bacterial_code() {
         .phrase("BF")
         .nothing_else();
 }
+
+/// #108: a numbered label after a uninomial is an informal name of an unnamed group, the uninomial
+/// its anchor and the label its phrase. The number was dropped (`Spirochaeta 2` → `Spirochaeta`) or
+/// went into the authorship with the word before it (`Barea Subgroup 4` → author `Subgroup`).
+#[test]
+fn a_numbered_label_after_a_uninomial_is_its_phrase() {
+    assert_informal_hinted("Spirochaeta 2", None, Some(Rank::Genus), None)
+        .taxon("Spirochaeta")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Genus)
+        .phrase("2")
+        .nothing_else();
+    assert_informal_hinted(
+        "Barea Subgroup 4",
+        None,
+        Some(Rank::Tribe),
+        Some(NomCode::Zoological),
+    )
+    .taxon("Barea")
+    .taxon_rank(Rank::Tribe)
+    .rank(Rank::Tribe)
+    .phrase("Subgroup 4")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_informal_hinted(
+        "Acidobacteriaceae (Subgroup 1)",
+        None,
+        Some(Rank::Family),
+        None,
+    )
+    .taxon("Acidobacteriaceae")
+    .taxon_rank(Rank::Family)
+    .rank(Rank::Family)
+    .phrase("(Subgroup 1)")
+    .nothing_else();
+    for (input, taxon, phrase) in [
+        ("Phakellia 508 (Qld Mus.)", "Phakellia", "508 (Qld Mus.)"),
+        ("Allograpta 75-6", "Allograpta", "75-6"),
+        ("Nostoc SAG 60.79", "Nostoc", "SAG 60.79"),
+        ("Cryptosporidium Pig 1", "Cryptosporidium", "Pig 1"),
+        (
+            "Acrocirridae gen. 1 KJO-2009",
+            "Acrocirridae",
+            "gen. 1 KJO-2009",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // a genomospecies is a species of the genus
+    assert_informal("Acinetobacter genomosp. 3")
+        .taxon("Acinetobacter")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("genomosp. 3")
+        .nothing_else();
+    // the authorship joins the phrase, as on a provisional species
+    assert_informal_hinted("Curculio 13", Some("Geoffroy"), None, None)
+        .taxon("Curculio")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("13 Geoffroy")
+        .nothing_else();
+    assert_informal_hinted("Pero Group 4", Some("Poole, 1987"), None, None)
+        .taxon("Pero")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("Group 4 Poole, 1987")
+        .nothing_else();
+}
+
+/// #108: a numbered group with no taxon before it has no anchor; it stands for an unnamed group of
+/// its parent, as `Rissooidea indet. 1` does.
+#[test]
+fn a_numbered_group_without_a_taxon_is_a_placeholder() {
+    for input in [
+        "Subgroup 10",
+        "Morphotype 1",
+        "Genotype 3",
+        "Genus Novum 10",
+        "Genus nov. (2)",
+    ] {
+        assert_unparsable(input, NameType::Placeholder);
+    }
+}
+
+/// #108's boundaries: a plausible year after a uninomial is still the year of an authorship, and a
+/// numeral epithet still an epithet.
+#[test]
+fn a_year_or_a_numeral_epithet_after_a_uninomial_stays() {
+    assert_name("Azotobacter 1901")
+        .monomial("Azotobacter")
+        .comb_authors(Some("1901"), &[])
+        .nothing_else();
+    assert_name("Leptura 4pustulata")
+        .species("Leptura", "4pustulata")
+        .nothing_else();
+    assert_name_auth("Callidium 2 fasciatum", "Zimsen, 1964")
+        .species("Callidium", "2-fasciatum")
+        .comb_authors(Some("1964"), &["Zimsen"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
