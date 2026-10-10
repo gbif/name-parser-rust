@@ -93,6 +93,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_serovar_serotype(ctx, s);
     s = strip_angle_bracket_authorship(ctx, s);
     s = strip_html(ctx, s);
+    s = unquote_note(ctx, s);
     s = unbracket_in_citation(ctx, s);
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
@@ -4247,6 +4248,20 @@ static BRACKETED_IN_AUTHOR: LazyLock<Regex> =
 static DANGLING_IN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:,?\s+)(?:in|In)(?-u:\s*)$").unwrap());
 
+/// A taxonomic note in double quotes: `"sensu Blanco, non Merr."`. Group 1 the note.
+static QUOTED_NOTE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#""((?i:sensu|auctt?|non|nec|not)\b[^"]*)""#).unwrap());
+
+/// The Plant List (ILDIS) wraps notes in double quotes, `"sensu Blanco, non Merr."`; quoted, the
+/// note was no note, its first part became an author and on the name string the whole a
+/// cultivar epithet (#97). Quotes never mark a cultivar there, they go.
+fn unquote_note(_ctx: &mut ParseContext, s: String) -> String {
+    if !s.contains('"') {
+        return s;
+    }
+    QUOTED_NOTE.replace_all(&s, "$1").into_owned()
+}
+
 /// An in-citation opening its own bracket after the author, WoRMS-style with a colon: `Reid (in:
 /// Reid, Strayer, McArthur, Stibbe & Lewis), 1999`. Group 1 the author, group 2 the work.
 static IN_CITATION_IN_BRACKETS: LazyLock<Regex> = LazyLock::new(|| {
@@ -5288,7 +5303,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 12] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 13] = [
         repair_colon_diacritics,
         flag_uncertain_authorship,
         strip_imprint_years,
@@ -5300,6 +5315,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_extinct_dagger,
         stash_synonym_bracket,
         split_note_from_basionym_bracket,
+        unquote_note,
         unbracket_in_citation,
     ];
     steps

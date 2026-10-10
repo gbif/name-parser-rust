@@ -494,3 +494,17 @@ fn a_note_inside_the_basionym_bracket_leaves_the_bracket_whole() {
     .sensu("Of American Authors, not Börner, 1901")
     .nothing_else();
 }
+
+#[test]
+fn a_quoted_note_is_a_note() {
+    // #97: The Plant List quotes its notes; "sensu Blanco" became an author, and in the name
+    // string the whole a cultivar epithet
+    assert_name_auth("Cassia fistula", "\"sensu Blanco, non Merr.\"")
+        .species("Cassia", "fistula")
+        .sensu("sensu Blanco, non Merr.")
+        .nothing_else();
+    assert_name("Cassia fistula \"sensu Blanco, non Merr.\"")
+        .species("Cassia", "fistula")
+        .sensu("sensu Blanco, non Merr.")
+        .nothing_else();
+}
