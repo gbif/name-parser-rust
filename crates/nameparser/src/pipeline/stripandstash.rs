@@ -68,6 +68,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_letter_subdivision_marker(ctx, s);
     s = normalise_unranked_marker(s);
     s = unbracket_infrageneric_marker(s);
+    s = capitalise_infrageneric_epithet(s);
     s = strip_superspecies_marker(ctx, s);
     s = join_particle_epithet(s);
     s = repair_question_mark_in_word(ctx, s);
@@ -1710,6 +1711,37 @@ fn join_particle_epithet(s: String) -> String {
     format!("{} {}{word}{rest}", &caps[1], &caps[2])
 }
 
+/// An infrageneric rank marker after the genus and a lowercase epithet after it: `Hygrocybe sect.
+/// obtusae`. Group 1 everything before the epithet, group 2 its first letter.
+static LOWERCASE_INFRAGENERIC_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(?:(?:sect|subsect|supersect|subgen|subg|subser)\.?|(?:ser|unr)\.)(?-u:\s+))(\p{Ll})([\p{Ll}\-]+)").unwrap()
+});
+
+/// An infrageneric epithet is capitalised (ICN Art. 21.2); MycoBank, GRIN and others write some
+/// in lower case after their marker, `Hygrocybe sect. obtusae`, and the epithet became a species
+/// epithet, the name a species (#89). After an explicit marker in lower case it is capitalised —
+/// `Pocockia Ser. ex DC.` is by Seringe, and an undotted `ser` may be an epithet (`Serina ser`) —
+/// unless it is a rank marker or `nov.` itself.
+fn capitalise_infrageneric_epithet(s: String) -> String {
+    let Some(caps) = LOWERCASE_INFRAGENERIC_EPITHET.captures(&s) else {
+        return s;
+    };
+    let first = caps.get(2).unwrap();
+    let word = format!("{}{}", &caps[2], &caps[3]);
+    if word.starts_with("nov")
+        || super::rank_markers::match_infraspecific(&word).is_some()
+        || super::rank_markers::match_infrageneric(&word).is_some()
+    {
+        return s;
+    }
+    format!(
+        "{}{}{}",
+        &caps[1],
+        first.as_str().to_uppercase(),
+        &s[first.end()..]
+    )
+}
+
 /// A superspecies marker between the genus and the epithet: `Eosembia supersp. thoracica`.
 static SUPERSPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)(?i:supersp|superspecies)\.?(?-u:\s+)(\p{Ll})").unwrap()
@@ -1769,9 +1801,11 @@ fn normalise_unranked_marker(s: String) -> String {
     };
     let rest = &s[caps.get(0).unwrap().end()..];
     let infraspecific = caps[1].contains(char::is_whitespace);
+    // a lowercase epithet after the genus is an infrageneric one all the same, capitalised by
+    // `capitalise_infrageneric_epithet`
     let marker = match rest.chars().next() {
         Some(c) if infraspecific && c.is_lowercase() => "infrasp.",
-        Some(c) if !infraspecific && c.is_uppercase() => "unr.",
+        Some(c) if !infraspecific && c.is_alphabetic() => "unr.",
         _ => return s,
     };
     format!("{} {marker} {rest}", &caps[1])

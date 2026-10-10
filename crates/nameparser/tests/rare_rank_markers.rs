@@ -173,3 +173,25 @@ fn a_superspecies_is_a_species_aggregate() {
         .binomial("Acestrura", None, "heliodor", Rank::SpeciesAggregate)
         .nothing_else();
 }
+
+#[test]
+fn a_lowercase_infrageneric_epithet_after_its_marker_is_capitalised() {
+    // #89: it became a species epithet
+    assert_name("Hygrocybe sect. obtusae (A.H. Sm. & Hesler) Bon")
+        .infrageneric_at("Hygrocybe", Rank::SectionBotany, "Obtusae")
+        .bas_authors(None, &["A.H.Sm.", "Hesler"])
+        .comb_authors(None, &["Bon"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Limacinia subgen limacinula Saccardo & D.Saccardo")
+        .infrageneric_at("Limacinia", Rank::Subgenus, "Limacinula")
+        .comb_authors(None, &["Saccardo", "D.Saccardo"])
+        .nothing_else();
+    // an author abbreviated like a marker is none
+    assert_name("Pocockia Ser. ex DC.")
+        .monomial("Pocockia")
+        .comb_authors(None, &["DC."])
+        .comb_ex_authors(&["Ser."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
