@@ -145,6 +145,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_period_separated_reference(ctx, s);
     s = strip_comma_prefixed_reference(ctx, s);
     s = stash_text_after_year(ctx, s);
+    s = stash_trailing_lowercase_bracket(ctx, s);
     s = strip_manuscript_marker(ctx, s);
     s = strip_supra_rank_prefix(ctx, s);
     s = strip_leading_infrageneric_marker(ctx, s);
@@ -5072,11 +5073,20 @@ static NOMENCLATURAL_STATUS_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|placed(?-u:\s+)on(?-u:\s+)(?:the(?-u:\s+))?(?:official(?-u:\s+))?index.*",
         r"|(?:partially(?-u:\s+))?suppressed|rejected(?:(?-u:\s+)by(?-u:\s+)fiat)?",
         r"|new(?-u:\s+)(?:combination|name|replacement(?-u:\s+)name|status)|replacement(?-u:\s+)name",
-        r"|unavailable(?:(?-u:\s+)name)?|unpublished(?:(?-u:\s).*)?",
+        r"|unavailable(?:(?-u:\s+)name)?",
         r"|in(?-u:\s+)error|ex(?-u:\s+)errore|errore?(?-u:\s+)typographic(?:us|al)|sphalm",
         r"|status(?-u:\s+)unclear|as(?-u:\s+)(?:var|subsp|ssp|f|form)",
         r")\.?$",
     ))
+    .unwrap()
+});
+
+/// A name not published, as a manuscript marker after the authors says (`Grunow ms`): `(ms)`,
+/// `(in litteris)`, `[unpublished thesis]`.
+static MANUSCRIPT_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)^(?:ms|msc|ined|unpubl?|unpublished(?:(?-u:\s).*)?|in(?-u:\s+)litt(?:eris)?)\.?$",
+    )
     .unwrap()
 });
 
@@ -5086,13 +5096,14 @@ static TAXONOMIC_NOTE_LEAD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^(?:fide|teste|vide|sensu|sec|auctt?|auctorum|non|nec|not|lapsus|misspelling|misapplied|misident)\b").unwrap()
 });
 
-/// "In part", as `pro parte` after the authors: `(partim)`, `(p.p.)`, `[in part]`.
+/// "In part", as `pro parte` after the authors: `(partim)`, `(p.p.)`, `[in part]`, `(part)`.
 static PRO_PARTE_NOTE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?:partim|p\.(?-u:\s*)p|pro(?-u:\s+)parte|in(?-u:\s+)part)\.?$").unwrap()
+    Regex::new(r"(?i)^(?:partim|part|pars|p\.(?-u:\s*)p|pro(?-u:\s+)parte|in(?-u:\s+)part)\.?$")
+        .unwrap()
 });
 
 /// Files a note found after an authorship by what it says: a status of the name
-/// ([`NOMENCLATURAL_STATUS_NOTE`]), a note on the concept ([`TAXONOMIC_NOTE_LEAD`]), `extinct`, or
+/// ([`NOMENCLATURAL_STATUS_NOTE`], [`MANUSCRIPT_NOTE`]), a note on the concept ([`TAXONOMIC_NOTE_LEAD`]), `extinct`, or
 /// `pro parte` (doubtful, as [`strip_pro_parte`] has it). Anything else is left unparsed, a life
 /// stage (`[L]`), a month (`(May)`), another citation (`(Jairajpuri & Ahmad, 1992)`): never an
 /// author.
@@ -5102,11 +5113,10 @@ fn file_note_after_authorship(ctx: &mut ParseContext, content: &str, verbatim: &
         ctx.name.extinct = true;
     } else if PRO_PARTE_NOTE.is_match(&note) {
         ctx.name.doubtful = true;
+    } else if MANUSCRIPT_NOTE.is_match(&note) {
+        ctx.name.manuscript = true;
+        ctx.name.add_nomenclatural_note(&note);
     } else if NOMENCLATURAL_STATUS_NOTE.is_match(&note) {
-        // "[unpublished thesis]"
-        if MANUSCRIPT_KEYWORD.is_match(&note) {
-            ctx.name.manuscript = true;
-        }
         ctx.name.add_nomenclatural_note(&note);
     } else if TAXONOMIC_NOTE_LEAD.is_match(&note) {
         ctx.name.add_taxonomic_note(&note);
@@ -5144,6 +5154,49 @@ fn stash_text_after_year(ctx: &mut ParseContext, s: String) -> String {
         }
     }
     s
+}
+
+/// Lower-case words in round brackets after the author of a name, at the end: `Pennisetum
+/// setaceum (Forssk.) Chiov. (native)`, `Andreaea rothii ssp. falcata (Schimp.) Lindb. (huntii)`.
+/// The author follows an epithet, so a bracket after a uninomial (`Acantharea (awaiting
+/// allocation)`) is left alone, and so is one after a letter (`Acacia decurrens var. B (beta)`).
+/// Group 1 what comes before the bracket, group 2 its content.
+static TRAILING_LOWERCASE_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*(?-u:\s)\p{Ll}[\p{Ll}\-.]*(?-u:\s+)(?:.*(?-u:\s))?(?:\p{Lu}[\p{L}'.\-]+|\(.*\)))(?-u:\s+)\((\p{Ll}[\p{Ll}\-]+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+)*)\)(?-u:\s*)$").unwrap()
+});
+
+/// The same in a separately supplied authorship: `(Forssk.) Chiov. (native)`.
+static TRAILING_LOWERCASE_BRACKET_OF_AUTHORSHIP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*(?:\p{Lu}[\p{L}'.\-]+|\)))(?-u:\s+)\((\p{Ll}[\p{Ll}\-]+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+)*)\)(?-u:\s*)$").unwrap()
+});
+
+/// What an author's own bracket may hold: `filius`, `fils`.
+static AUTHOR_SUFFIX_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:fil|filius|fils|junior|senior|pater)$").unwrap());
+
+/// A bracketed remark (`native`, `introduced`) or alternative epithet (`huntii`) after the authors
+/// was glued to the last of them, its space removed: "Chiov.native" (#107). It is filed as a note
+/// after the year is ([`file_note_after_authorship`]), mostly left unparsed.
+fn stash_trailing_lowercase_bracket(ctx: &mut ParseContext, s: String) -> String {
+    stash_lowercase_bracket(ctx, s, &TRAILING_LOWERCASE_BRACKET)
+}
+
+/// [`stash_trailing_lowercase_bracket`] for a separately supplied authorship, which starts with
+/// the author.
+fn stash_trailing_lowercase_bracket_of_authorship(ctx: &mut ParseContext, s: String) -> String {
+    stash_lowercase_bracket(ctx, s, &TRAILING_LOWERCASE_BRACKET_OF_AUTHORSHIP)
+}
+
+fn stash_lowercase_bracket(ctx: &mut ParseContext, s: String, re: &Regex) -> String {
+    let Some(caps) = re.captures(&s) else {
+        return s;
+    };
+    if AUTHOR_SUFFIX_WORD.is_match(&caps[2]) || INDET_MARKER_WORD.is_match(&caps[1]) {
+        return s;
+    }
+    let bracket = format!("({})", &caps[2]);
+    file_note_after_authorship(ctx, &caps[2], &bracket);
+    java_trim(&caps[1]).to_string()
 }
 
 // ---- Step 52: stripManuscriptMarker ----
@@ -5750,14 +5803,15 @@ pub(crate) fn strip_authorship_trailing_steps(ctx: &mut ParseContext, s: String)
 }
 
 /// [`run`]'s publication-reference steps for a separately supplied authorship, after the
-/// in-citation split: IPNI-style, period-separated and comma-prefixed references, and the text
-/// after the year.
+/// in-citation split: IPNI-style, period-separated and comma-prefixed references, the text after
+/// the year and a lower-case bracket after the authors.
 pub(crate) fn strip_authorship_reference_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 4] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 5] = [
         strip_ipni_citation,
         strip_period_separated_reference,
         strip_comma_prefixed_reference,
         stash_text_after_year,
+        stash_trailing_lowercase_bracket_of_authorship,
     ];
     steps
         .into_iter()

@@ -576,3 +576,68 @@ fn minor_authorship_shapes_of_the_reimport() {
         .sensu("porphyria")
         .nothing_else();
 }
+
+#[test]
+fn a_lowercase_bracket_after_the_authors_is_no_part_of_them() {
+    // #107: a remark or an alternative epithet in brackets was glued to the last author, its space
+    // removed: "Chiov.native", "Lindb.huntii"
+    assert_name("Pennisetum setaceum (Forssk.) Chiov. (native)")
+        .species("Pennisetum", "setaceum")
+        .bas_authors(None, &["Forssk."])
+        .comb_authors(None, &["Chiov."])
+        .partial("(native)")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Pennisetum setaceum", "(Forssk.) Chiov. (native)")
+        .species("Pennisetum", "setaceum")
+        .bas_authors(None, &["Forssk."])
+        .comb_authors(None, &["Chiov."])
+        .partial("(native)")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Andreaea rothii ssp. falcata (Schimp.) Lindb. (huntii)")
+        .infra_species("Andreaea", "rothii", Rank::Subspecies, "falcata")
+        .bas_authors(None, &["Schimp."])
+        .comb_authors(None, &["Lindb."])
+        .partial("(huntii)")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Brachythecium curtum (Lindb.) J.Lange & C.Jens. (oedipodium)")
+        .species("Brachythecium", "curtum")
+        .bas_authors(None, &["Lindb."])
+        .comb_authors(None, &["J.Lange", "C.Jens."])
+        .partial("(oedipodium)")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // filed like a note after the year: a status, a manuscript, "in part"
+    assert_name("Angraecum carifolium H.Perrier (sphalm)")
+        .species("Angraecum", "carifolium")
+        .comb_authors(None, &["H.Perrier"])
+        .nom_note("sphalm")
+        .nothing_else();
+    assert_name_auth("Nitzschia subconstricta", "Grunow (ms)")
+        .species("Nitzschia", "subconstricta")
+        .comb_authors(None, &["Grunow"])
+        .nom_note("ms")
+        .manuscript()
+        .nothing_else();
+    assert_name_auth("Cyzicus lobatus", "Wolf (in litteris) in Daday, 1914")
+        .species("Cyzicus", "lobatus")
+        .comb_authors(Some("1914"), &["Wolf"])
+        .published_in("Daday, 1914")
+        .published_in_year(Some(1914))
+        .nom_note("in litteris")
+        .manuscript()
+        .nothing_else();
+    assert_name_auth("Asterina penicillaris", "Sladen, 1889 (part)")
+        .species("Asterina", "penicillaris")
+        .comb_authors(Some("1889"), &["Sladen"])
+        .doubtful()
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // not after a uninomial
+    assert_name("Acantharea (awaiting allocation)")
+        .monomial("Acantharea")
+        .partial("(awaiting allocation)")
+        .nothing_else();
+}
