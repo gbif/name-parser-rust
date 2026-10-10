@@ -428,7 +428,8 @@ fn not_names() {
 fn autonym_authorship() {
     use nameparser::parse_name as parse;
 
-    // botanical: species author after the species epithet, none after the autonym
+    // botanical: species author after the species epithet, none after the autonym. The autonym
+    // has no author of its own, the one cited is the species' (#86; Java made it the autonym's).
     let acer = parse(
         "Acer rubrum L. var. rubrum",
         None,
@@ -439,9 +440,26 @@ fn autonym_authorship() {
     assert_eq!(acer.specific_epithet.as_deref(), Some("rubrum"));
     assert_eq!(acer.infraspecific_epithet.as_deref(), Some("rubrum"));
     assert!(acer.is_autonym());
-    assert_eq!(acer.authorship_complete().as_deref(), Some("L."));
+    assert_eq!(acer.authorship_complete(), None);
     assert_eq!(
         acer.canonical_name().as_deref(),
+        Some("Acer rubrum var. rubrum")
+    );
+    assert_eq!(
+        acer.canonical_name_complete().as_deref(),
+        Some("Acer rubrum L. var. rubrum")
+    );
+    // an author given after the autonym is placed after the species epithet all the same
+    let given = parse(
+        "Acer rubrum var. rubrum L.",
+        None,
+        None,
+        Some(NomCode::Botanical),
+    )
+    .unwrap();
+    assert_eq!(given.authorship_complete().as_deref(), Some("L."));
+    assert_eq!(
+        given.canonical_name().as_deref(),
         Some("Acer rubrum L. var. rubrum")
     );
 
@@ -458,9 +476,9 @@ fn autonym_authorship() {
     assert_eq!(trim.infraspecific_epithet.as_deref(), Some("spathata"));
     assert_eq!(trim.infrageneric_epithet, None);
     assert_eq!(trim.code, Some(NomCode::Botanical));
-    assert_eq!(trim.authorship_complete().as_deref(), Some("(Klatt) Baker"));
+    assert_eq!(trim.authorship_complete(), None);
     assert_eq!(
-        trim.canonical_name().as_deref(),
+        trim.canonical_name_complete().as_deref(),
         Some("Trimezia spathata (Klatt) Baker subsp. spathata")
     );
 

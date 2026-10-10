@@ -238,10 +238,9 @@ fn authorship_only() {
         .comb_authors(None, &["de la Croix", "le P.J.Cribb"])
         .nothing_else();
 
-    assert_authorship("Istv?nffi, 1898", &["Istvnffi"])
-        .comb_authors(Some("1898"), &["Istvnffi"])
-        .doubtful()
-        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+    assert_authorship("Istv?nffi, 1898", &["Istv?nffi"])
+        .comb_authors(Some("1898"), &["Istv?nffi"])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
     assert_authorship("F.S.Castracane degli Antelminelli", &[])
@@ -636,6 +635,7 @@ fn test_nomenclatural_notes_pattern() {
         .monomial_rank("Non", Rank::Unranked)
         .comb_authors(Some("1792"), &["Clarisia Abat"])
         .code(NomCode::Botanical)
+        .warning(&[warnings::LC_MONOMIAL])
         .nothing_else();
     assert_nom_note(
         "nom. cons. Approved Lists 1980",
@@ -749,8 +749,9 @@ fn test_nomenclatural_notes_pattern() {
     // 1199 is a page or typo: no year that could vote for the zoological code
     assert_nom_note("var. nov.", "Euphorbia rossiana var. nov. Steinmann, 1199")
         .species("Euphorbia", "rossiana")
-        .comb_authors(Some("1199"), &["Steinmann"])
+        .comb_authors(None, &["Steinmann"])
         .doubtful()
+        .partial("1199")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 }

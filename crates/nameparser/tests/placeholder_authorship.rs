@@ -12,7 +12,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NameType, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn a_placeholder_as_the_whole_authorship_is_removed_and_flagged() {
@@ -98,4 +98,29 @@ fn not_validly_published_is_a_nomenclatural_note() {
     .comb_authors(None, &["Gehrm."])
     .nom_note("not validly publ.")
     .nothing_else();
+}
+
+#[test]
+fn a_lone_epithet_is_no_genus() {
+    // #100: with a rank that says so, an aggregate's epithet whose genus is missing
+    let n = nameparser::parse_name("abbreviata group", None, Some(Rank::SpeciesAggregate), None)
+        .expect("parses");
+    assert_eq!(n.genus.as_deref(), Some("?"));
+    assert_eq!(n.specific_epithet.as_deref(), Some("abbreviata"));
+    assert_eq!(n.rank, Rank::SpeciesAggregate);
+    assert_eq!(n.type_, NameType::Placeholder);
+    assert_eq!(n.warnings, vec![warnings::MISSING_GENUS.to_string()]);
+    // a hybrid sign before it: a nothospecies
+    assert_raw_name("× columbiana")
+        .species("?", "columbiana")
+        .notho(&[NamePart::Specific])
+        .code(NomCode::Botanical)
+        .type_(NameType::Placeholder)
+        .warning(&[warnings::MISSING_GENUS])
+        .nothing_else();
+    // with nothing to tell, a lowercase monomial stays one, flagged
+    assert_name("duplocingulatoides")
+        .monomial("Duplocingulatoides")
+        .warning(&[warnings::LC_MONOMIAL])
+        .nothing_else();
 }

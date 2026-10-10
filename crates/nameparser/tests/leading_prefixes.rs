@@ -34,6 +34,31 @@ fn unclassified_virus_keeps_its_virus_code() {
 // ---- generic organism label + strain code ------------------------------------------------------
 
 #[test]
+fn a_vernacular_organism_label_with_a_capital_is_no_name() {
+    // #103: the capitalised word is no genus, nor a host binomial one with three epithets
+    for name in [
+        "Adelie penguin guano bacterium 92",
+        "Amazonian soil bacterium M14",
+        "Acromyrmex echinatior fungal symbiont Acech322",
+    ] {
+        assert_unparsable(name, NameType::Identifier);
+    }
+    for name in [
+        "Acyrthosiphon pisum primary endosymbiont",
+        "Ammonia oxidizing bacteria",
+        "Acyrthosiphon kondoi symbiont bacterium",
+    ] {
+        assert_unparsable(name, NameType::Other);
+    }
+    // a Latin epithet is no label
+    assert_name("Andrena minutula alga Warncke, 1974")
+        .infra_species("Andrena", "minutula", Rank::Subspecies, "alga")
+        .comb_authors(Some("1974"), &["Warncke"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
 fn organism_label_with_a_strain_code_is_an_identifier() {
     for name in [
         "bacterium Ac10",

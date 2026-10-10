@@ -282,6 +282,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     || w.eq_ignore_ascii_case("aggregate")
                     || w.eq_ignore_ascii_case("group")
                     || w.eq_ignore_ascii_case("complex")
+                    || w.eq_ignore_ascii_case("superspecies")
                 {
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {

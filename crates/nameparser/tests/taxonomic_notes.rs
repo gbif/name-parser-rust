@@ -438,3 +438,183 @@ fn alternative_subgenera_in_brackets_are_a_note() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn an_author_starting_like_a_note_keyword_is_an_author() {
+    // #83: "Not" before the non-ASCII "ø" ended a word for the ASCII word boundary, so the
+    // separate authorship "(Notø) Zahn" was taken for a "not" note as a whole
+    assert_name_auth("Hieracium alpinum subsp. comptellum", "(Notø) Zahn")
+        .infra_species("Hieracium", "alpinum", Rank::Subspecies, "comptellum")
+        .bas_authors(None, &["Notø"])
+        .comb_authors(None, &["Zahn"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Hieracium durans", "(Notø) Notø")
+        .species("Hieracium", "durans")
+        .bas_authors(None, &["Notø"])
+        .comb_authors(None, &["Notø"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
+
+#[test]
+fn a_note_inside_the_basionym_bracket_leaves_the_bracket_whole() {
+    // #95: the note took the closing bracket along, and the basionym author became the
+    // combination author
+    assert_name_auth(
+        "Heteraphorura orientalis",
+        "(Martynova, 1976 nec Stach, 1954)",
+    )
+    .species("Heteraphorura", "orientalis")
+    .bas_authors(Some("1976"), &["Martynova"])
+    .sensu("nec Stach, 1954")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name_auth("Asynapta flava", "(Kieffer, 1894 sensu Spungis 1988)")
+        .species("Asynapta", "flava")
+        .bas_authors(Some("1894"), &["Kieffer"])
+        .sensu("sensu Spungis 1988")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth(
+        "Nassa japonica",
+        "(A. Ad., 1851, nec Reeve, nec Lischke, 1870)",
+    )
+    .species("Nassa", "japonica")
+    .bas_authors(Some("1851"), &["A.Ad."])
+    .sensu("nec Reeve, nec Lischke, 1870")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    // a bracket holding only a note is the note
+    assert_name_auth(
+        "Arrhopalites binoculatus",
+        "(Of American Authors, not Börner, 1901)",
+    )
+    .species("Arrhopalites", "binoculatus")
+    .sensu("Of American Authors, not Börner, 1901")
+    .nothing_else();
+}
+
+#[test]
+fn a_quoted_note_is_a_note() {
+    // #97: The Plant List quotes its notes; "sensu Blanco" became an author, and in the name
+    // string the whole a cultivar epithet
+    assert_name_auth("Cassia fistula", "\"sensu Blanco, non Merr.\"")
+        .species("Cassia", "fistula")
+        .sensu("sensu Blanco, non Merr.")
+        .nothing_else();
+    assert_name("Cassia fistula \"sensu Blanco, non Merr.\"")
+        .species("Cassia", "fistula")
+        .sensu("sensu Blanco, non Merr.")
+        .nothing_else();
+}
+
+#[test]
+fn text_after_the_year_is_no_author() {
+    // #106: the year closes the author team. A status of the name after it is the nomenclatural
+    // note; it was one more author, "Lesson & incorrect subsequent spelling, 1842".
+    assert_name("Abrocoma bennettii bennetii Lesson, 1842 [incorrect subsequent spelling]")
+        .infra_species("Abrocoma", "bennettii", Rank::Subspecies, "bennetii")
+        .comb_authors(Some("1842"), &["Lesson"])
+        .nom_note("incorrect subsequent spelling")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // after a basionym it was the author of the combination
+    assert_name_auth(
+        "Abrothrix olivacea germaini",
+        "(R. A. Philippi, 1900) [preoccupied]",
+    )
+    .infra_species("Abrothrix", "olivacea", Rank::Subspecies, "germaini")
+    .bas_authors(Some("1900"), &["R.A.Philippi"])
+    .nom_note("preoccupied")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    // "rejected" is the ICZN's word, no botanical status
+    assert_name("Burramys parvus hosersbogensis Hoser, 2020 [rejected by fiat]")
+        .infra_species("Burramys", "parvus", Rank::Subspecies, "hosersbogensis")
+        .comb_authors(Some("2020"), &["Hoser"])
+        .nom_note("rejected by fiat")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a bracket left open
+    assert_name("Artibeus fimbriatus grandis Dobson, 1878 [nomen nudum")
+        .infra_species("Artibeus", "fimbriatus", Rank::Subspecies, "grandis")
+        .comb_authors(Some("1878"), &["Dobson"])
+        .nom_note("nomen nudum")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a note on the concept, or a flag
+    assert_name_auth("Gecko similignum", "SMITH 1923 (fide KLUGE 1993)")
+        .species("Gecko", "similignum")
+        .comb_authors(Some("1923"), &["Smith"])
+        .sensu("fide KLUGE 1993")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Conilurus albipes", "(Lichtenstein, 1829) (extinct)")
+        .species("Conilurus", "albipes")
+        .bas_authors(Some("1829"), &["Lichtenstein"])
+        .extinct()
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Elaphe taeniura", "BARBOUR 1912 (partim)")
+        .species("Elaphe", "taeniura")
+        .comb_authors(Some("1912"), &["Barbour"])
+        .doubtful()
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // anything else is left unparsed: a life stage, a month, another citation
+    assert_name("Abrolophus bohdani (Haitlinger, 2003) [L]")
+        .species("Abrolophus", "bohdani")
+        .bas_authors(Some("2003"), &["Haitlinger"])
+        .partial("[L]")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Aptornis", "Owen 1848 (Apr.)")
+        .monomial("Aptornis")
+        .comb_authors(Some("1848"), &["Owen"])
+        .partial("(Apr.)")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth(
+        "Axonchium (Syncheilaxonchium) baldum",
+        "Thorne, 1964 (Coomans & Nair, 1975)",
+    )
+    .species_ig("Axonchium", "Syncheilaxonchium", "baldum")
+    .comb_authors(Some("1964"), &["Thorne"])
+    .partial("(Coomans & Nair, 1975)")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    // a family group after the year, or any word after a comma and the year
+    assert_name("Adelges prelli Grosmann, 1935 Phylloxeroidea")
+        .species("Adelges", "prelli")
+        .comb_authors(Some("1935"), &["Grosmann"])
+        .partial("Phylloxeroidea")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Dolichopus plumipes", "(Scopoli 1763) Dolichopodinae")
+        .species("Dolichopus", "plumipes")
+        .bas_authors(Some("1763"), &["Scopoli"])
+        .partial("Dolichopodinae")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Alpaida moka", "Levi, 1988 New")
+        .species("Alpaida", "moka")
+        .comb_authors(Some("1988"), &["Levi"])
+        .partial("New")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // after a basionym's bracket any other word is the author of the combination
+    assert_name_auth("Aus bus", "(Linnaeus 1753) Willd.")
+        .species("Aus", "bus")
+        .bas_authors(Some("1753"), &["Linnaeus"])
+        .comb_authors(None, &["Willd."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a provisional name's phrase takes it all
+    assert_informal("Cruznema sp. Davies, 2011 (Waite Nematode Collection WNC 519)")
+        .taxon("Cruznema")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. Davies, 2011 (Waite Nematode Collection WNC 519)")
+        .nothing_else();
+}

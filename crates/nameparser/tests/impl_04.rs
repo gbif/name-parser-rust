@@ -69,20 +69,18 @@ fn todo_names() {
         .code(NomCode::Zoological)
         .nothing_else();
 
-    // homoglyph "?" in the author abbreviation cannot be recovered, so it is stripped
+    // homoglyph "?" in the author abbreviation cannot be recovered, so it is kept as given (#104)
     assert_name("Rosa intermedia Cr?p.")
         .species("Rosa", "intermedia")
-        .comb_authors(None, &["Crp."])
-        .doubtful()
-        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .comb_authors(None, &["Cr?p."])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
-    // every "?" goes, even two sharing a letter, and the dot stays
+    // every "?" stays, even two sharing a letter, and the dot too
     assert_name("Rosa alpestris D?s?gl.")
         .species("Rosa", "alpestris")
-        .comb_authors(None, &["Dsgl."])
-        .doubtful()
-        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .comb_authors(None, &["D?s?gl."])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
     assert_name("Digitaria sanguinea Weber, orth. var.")
@@ -109,10 +107,9 @@ fn todo_names() {
 
     assert_name("Cavendishia polyantha H?rold, pro syn.")
         .species("Cavendishia", "polyantha")
-        .comb_authors(None, &["Hrold"])
+        .comb_authors(None, &["H?rold"])
         .nom_note("pro syn.")
-        .doubtful()
-        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
     assert_name("Leucopogon veillonii (Virot) comb. ined.")
@@ -188,27 +185,31 @@ fn todo_names() {
         .comb_authors(Some("1910"), &["Cabeau"])
         .nothing_else();
 
+    // an unlikely year is no year, left unparsed (#85)
     assert_name("Scleropogon kelloggi (Wilcox, 137)")
         .species("Scleropogon", "kelloggi")
-        .bas_authors(Some("137"), &["Wilcox"])
+        .bas_authors(None, &["Wilcox"])
         .code(NomCode::Zoological)
         .doubtful()
+        .partial("137")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 
     assert_name("Ospriocerus arizonensis (Bromley, 193k7)")
         .species("Ospriocerus", "arizonensis")
-        .bas_authors(Some("193"), &["Bromley"])
+        .bas_authors(None, &["Bromley"])
         .code(NomCode::Zoological)
         .doubtful()
+        .partial("193")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 
     // "0000" is no year, so it casts no zoological vote
     assert_name("Lepidanthrax coquilletti Evenhuis and Hall, 0000")
         .species("Lepidanthrax", "coquilletti")
-        .comb_authors(Some("0000"), &["Evenhuis", "Hall"])
+        .comb_authors(None, &["Evenhuis", "Hall"])
         .doubtful()
+        .partial("0000")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 

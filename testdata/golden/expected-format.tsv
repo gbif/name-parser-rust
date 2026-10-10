@@ -492,7 +492,7 @@ Mniadelphus montagneanus Müll.Hal. var.	true	Mniadelphus montagneanus var.	Mnia
 Montanoa karvinskii (DC.) Sch.Bip. ex C.Koch	true	Montanoa karvinskii (DC.) Sch.Bip. ex C.Koch	Montanoa karvinskii	Montanoa karvinskii	Montanoa karvinskii (DC.) Sch.Bip. ex C.Koch	(DC.) Sch.Bip. ex C.Koch
 Myodocarpus lanceolatus Dubard & R.Vig. f. brevipetiolata Baum.-Bod.	true	Myodocarpus lanceolatus f. brevipetiolata Baum.-Bod.	Myodocarpus lanceolatus f. brevipetiolata	Myodocarpus lanceolatus brevipetiolata	Myodocarpus lanceolatus Dubard & R.Vig. f. brevipetiolata Baum.-Bod.	Baum.-Bod.
 Myriactis cabrerae J.Kost. var.	true	Myriactis cabrerae var.	Myriactis cabrerae var.	Myriactis cabrerae	Myriactis cabrerae J.Kost. var.	
-Nasa pteridophylla Weigend & Dostert ssp. Pteridophylla	true	Nasa pteridophylla subsp. pteridophylla Weigend & Dostert	Nasa pteridophylla subsp. pteridophylla	Nasa pteridophylla pteridophylla	Nasa pteridophylla subsp. pteridophylla Weigend & Dostert	Weigend & Dostert
+Nasa pteridophylla Weigend & Dostert ssp. Pteridophylla	true	Nasa pteridophylla subsp. pteridophylla	Nasa pteridophylla subsp. pteridophylla	Nasa pteridophylla pteridophylla	Nasa pteridophylla Weigend & Dostert subsp. pteridophylla	
 Navia jauana L.B.Sm., Steyerm. & H.Rob.	true	Navia jauana L.B.Sm., Steyerm. & H.Rob.	Navia jauana	Navia jauana	Navia jauana L.B.Sm., Steyerm. & H.Rob.	L.B.Sm., Steyerm. & H.Rob.
 Navia scirpiflora L.B.Sm., Steyerm. & H.Rob.	true	Navia scirpiflora L.B.Sm., Steyerm. & H.Rob.	Navia scirpiflora	Navia scirpiflora	Navia scirpiflora L.B.Sm., Steyerm. & H.Rob.	L.B.Sm., Steyerm. & H.Rob.
 Navicula acidobiontica Tosh.Watan.	true	Navicula acidobiontica Tosh.Watan.	Navicula acidobiontica	Navicula acidobiontica	Navicula acidobiontica Tosh.Watan.	Tosh.Watan.
@@ -558,7 +558,7 @@ Phyllanthus puncticulatus Jean F.Brunel	true	Phyllanthus puncticulatus Jean F.Br
 Phyllanthus pycnophyllus Müll.Arg.	true	Phyllanthus pycnophyllus Müll.Arg.	Phyllanthus pycnophyllus	Phyllanthus pycnophyllus	Phyllanthus pycnophyllus Müll.Arg.	Müll.Arg.
 Phyllanthus raynalii Jean F.Brunel & J.P.Roux	true	Phyllanthus raynalii Jean F.Brunel & J.P.Roux	Phyllanthus raynalii	Phyllanthus raynalii	Phyllanthus raynalii Jean F.Brunel & J.P.Roux	Jean F.Brunel & J.P.Roux
 Phyllanthus seydelii Jean F.Brunel	true	Phyllanthus seydelii Jean F.Brunel	Phyllanthus seydelii	Phyllanthus seydelii	Phyllanthus seydelii Jean F.Brunel	Jean F.Brunel
-Phyllanthus tenuicaulis Muell.-Arg. var. Tenuicaulis	true	Phyllanthus tenuicaulis var. tenuicaulis Muell.-Arg.	Phyllanthus tenuicaulis var. tenuicaulis	Phyllanthus tenuicaulis tenuicaulis	Phyllanthus tenuicaulis var. tenuicaulis Muell.-Arg.	Muell.-Arg.
+Phyllanthus tenuicaulis Muell.-Arg. var. Tenuicaulis	true	Phyllanthus tenuicaulis var. tenuicaulis	Phyllanthus tenuicaulis var. tenuicaulis	Phyllanthus tenuicaulis tenuicaulis	Phyllanthus tenuicaulis Muell.-Arg. var. tenuicaulis	
 Phyllanthus tukuyuanus Jean F.Brunel	true	Phyllanthus tukuyuanus Jean F.Brunel	Phyllanthus tukuyuanus	Phyllanthus tukuyuanus	Phyllanthus tukuyuanus Jean F.Brunel	Jean F.Brunel
 Phyllanthus virgulatus Müll.Arg.	true	Phyllanthus virgulatus Müll.Arg.	Phyllanthus virgulatus	Phyllanthus virgulatus	Phyllanthus virgulatus Müll.Arg.	Müll.Arg.
 Phyllanthus zollingeri Müll.Arg.	true	Phyllanthus zollingeri Müll.Arg.	Phyllanthus zollingeri	Phyllanthus zollingeri	Phyllanthus zollingeri Müll.Arg.	Müll.Arg.
@@ -3987,7 +3987,7 @@ Activation-tagging vector pSKI015	false
 siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot	false					
 Binary RNAi Gateway destination vector pAGSM552	false					
 20S RNA replicon	false					
-Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Istvnffi, 1898 [1897]
+Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Istv?nffi, 1898 [1897]
 @23546	false					
 tobedeleted	false					
 tobedeleted , 1999	false					
@@ -4194,7 +4194,7 @@ Prunus mexicana S. Watson var. reticulata (Sarg.) Sarg.	true	Prunus mexicana var
 Potamogeton iilinoensis var. ventanicola	true	Potamogeton iilinoensis var. ventanicola	Potamogeton iilinoensis var. ventanicola	Potamogeton iilinoensis ventanicola	Potamogeton iilinoensis var. ventanicola	
 Potamogeton iilinoensis var. ventanicola (Hicken) Horn af Rantzien	true	Potamogeton iilinoensis var. ventanicola (Hicken) Horn af Rantzien	Potamogeton iilinoensis var. ventanicola	Potamogeton iilinoensis ventanicola	Potamogeton iilinoensis var. ventanicola (Hicken) Horn af Rantzien	(Hicken) Horn af Rantzien
 Triticum repens var. vulgäre	true	Triticum repens var. vulgäre	Triticum repens var. vulgäre	Triticum repens vulgare	Triticum repens var. vulgäre	
-Aus bus Linn. var. bus	true	Aus bus var. bus Linn.	Aus bus var. bus	Aus bus bus	Aus bus var. bus Linn.	Linn.
+Aus bus Linn. var. bus	true	Aus bus var. bus	Aus bus var. bus	Aus bus bus	Aus bus Linn. var. bus	
 Agalinis purpurea (L.) Briton var. borealis (Berg.) Peterson 1987	true	Agalinis purpurea var. borealis (Berg.) Peterson, 1987	Agalinis purpurea var. borealis	Agalinis purpurea borealis	Agalinis purpurea (L.) Briton var. borealis (Berg.) Peterson, 1987	(Berg.) Peterson, 1987
 Callideriphus flavicollis morph. reductus Fuchs 1961	true	Callideriphus flavicollis morph reductus Fuchs, 1961	Callideriphus flavicollis morph reductus	Callideriphus flavicollis reductus	Callideriphus flavicollis morph reductus Fuchs, 1961	Fuchs, 1961
 Caulerpa cupressoides forma nuda	true	Caulerpa cupressoides f. nuda	Caulerpa cupressoides f. nuda	Caulerpa cupressoides nuda	Caulerpa cupressoides f. nuda	
@@ -4226,7 +4226,7 @@ Acidalia remutaria ab. n. undularia	true	Acidalia remutaria ab. undularia	Acidal
 Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	true	Acmaeops bivittata ab. fusciceps Aurivillius, 1912	Acmaeops bivittata ab. fusciceps	Acmaeops bivittata fusciceps	Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	Aurivillius, 1912
 Hydnellum scrobiculatum var. zonatum f. parvum (Banker) D. Hall & D.E. Stuntz 1972	true	Hydnellum scrobiculatum f. parvum (Banker) D.Hall & D.E.Stuntz, 1972	Hydnellum scrobiculatum f. parvum	Hydnellum scrobiculatum parvum	Hydnellum scrobiculatum f. parvum (Banker) D.Hall & D.E.Stuntz, 1972	(Banker) D.Hall & D.E.Stuntz, 1972
 Senecio fuchsii C.C.Gmel. subsp. fuchsii var. expansus (Boiss. & Heldr.) Hayek	true	Senecio fuchsii var. expansus (Boiss. & Heldr.) Hayek	Senecio fuchsii var. expansus	Senecio fuchsii expansus	Senecio fuchsii C.C.Gmel. var. expansus (Boiss. & Heldr.) Hayek	(Boiss. & Heldr.) Hayek
-Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii	true	Senecio fuchsii var. fuchsii C.C.Gmel.	Senecio fuchsii var. fuchsii	Senecio fuchsii fuchsii	Senecio fuchsii var. fuchsii C.C.Gmel.	C.C.Gmel.
+Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii	true	Senecio fuchsii var. fuchsii	Senecio fuchsii var. fuchsii	Senecio fuchsii fuchsii	Senecio fuchsii C.C.Gmel. var. fuchsii	
 Euastrum divergens var. rhodesiense f. coronulum A.M. Scott & Prescott	true	Euastrum divergens f. coronulum A.M.Scott & Prescott	Euastrum divergens f. coronulum	Euastrum divergens coronulum	Euastrum divergens f. coronulum A.M.Scott & Prescott	A.M.Scott & Prescott
 Aristotelia fruticosa var. δ. microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
 Hieracium unr. Verbasciformia Arv.-Touv.	true	Hieracium infragen. Verbasciformia Arv.-Touv.	Hieracium infragen. Verbasciformia	Verbasciformia	Hieracium infragen. Verbasciformia Arv.-Touv.	Arv.-Touv.
@@ -4453,8 +4453,8 @@ Aesculus cf. × hybrida	true	Aesculus cf. × hybrida	Aesculus cf. × hybrida	Aes
 Daphnia (Daphnia) x krausi Flossner 1993	true	Daphnia × krausi Flossner, 1993	Daphnia × krausi	Daphnia krausi	Daphnia (Daphnia) × krausi Flossner, 1993	Flossner, 1993
 Barbus cf macrotaenia × toppini	false					
 Gemmula cf. cosmoi NP-2008	true	Gemmula cf. cosmoi NP-2008	Gemmula cf. cosmoi NP-2008	Gemmula cosmoi	Gemmula cf. cosmoi NP-2008	
-Coleoptera sp. BOLD:AAV0432	false					
-Coleoptera Bold:AAV0432	false					
+Coleoptera sp. BOLD:AAV0432	true	Coleoptera sp. BOLD:AAV0432	Coleoptera sp. BOLD:AAV0432	Coleoptera	Coleoptera sp. BOLD:AAV0432	
+Coleoptera Bold:AAV0432	true	Coleoptera Bold:AAV0432	Coleoptera Bold:AAV0432	Coleoptera	Coleoptera Bold:AAV0432	
 Ceylonesmus vector Chamberlin, 1941	true	Ceylonesmus vector Chamberlin, 1941	Ceylonesmus vector	Ceylonesmus vector	Ceylonesmus vector Chamberlin, 1941	Chamberlin, 1941
 Arv1virus	false					
 Turtle herpesviruses	false					
@@ -4524,7 +4524,7 @@ Anthoscopus Cabanis [1851?]	true	Anthoscopus Cabanis, [1851?]	Anthoscopus	Anthos
 Trismegistia monodii Ando, 1973 [1974]	true	Trismegistia monodii Ando, 1973 [1974]	Trismegistia monodii	Trismegistia monodii	Trismegistia monodii Ando, 1973 [1974]	Ando, 1973 [1974]
 Zygaena witti Wiegel [1973]	true	Zygaena witti Wiegel, [1973]	Zygaena witti	Zygaena witti	Zygaena witti Wiegel, [1973]	Wiegel, [1973]
 Deyeuxia coarctata Kunth, 1815 [1816]	true	Deyeuxia coarctata Kunth, 1815 [1816]	Deyeuxia coarctata	Deyeuxia coarctata	Deyeuxia coarctata Kunth, 1815 [1816]	Kunth, 1815 [1816]
-Macrotes cordovaria Guen�e 1857	true	Macrotes cordovaria Guene, 1857	Macrotes cordovaria	Macrotes cordovaria	Macrotes cordovaria Guene, 1857	Guene, 1857
+Macrotes cordovaria Guen�e 1857	true	Macrotes cordovaria Guen�e, 1857	Macrotes cordovaria	Macrotes cordovaria	Macrotes cordovaria Guen�e, 1857	Guen�e, 1857
 Fusinus eucos�nius	true	Fusinus eucosnius	Fusinus eucosnius	Fusinus eucosnius	Fusinus eucosnius	
 Byssochlamys fulva Olliver & G. Smith	true	Byssochlamys fulva Olliver & G.Smith	Byssochlamys fulva	Byssochlamys fulva	Byssochlamys fulva Olliver & G.Smith	Olliver & G.Smith
 Kinosternidae　Agassiz, 1857	true	Kinosternidae Agassiz, 1857	Kinosternidae	Kinosternidae	Kinosternidae Agassiz, 1857	Agassiz, 1857
@@ -4743,7 +4743,7 @@ Torymus bangalorensis (Mani &amp; Kurian, 1953)	true	Torymus bangalorensis (Mani
 Oxalis_barrelieri	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	
 Oxalis_barrelieri ined.?	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri, ined.	
 Pseudocercospora__dendrobii	true	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii	
-Oxalis barrelieri XXZ_21243	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	
+Oxalis barrelieri XXZ_21243	true	Oxalis barrelieri XXZ_21243	Oxalis barrelieri XXZ_21243	Oxalis barrelieri	Oxalis barrelieri XXZ_21243	
 Ameiva plei Rosicky, 1955	true	Ameiva plei Rosicky, 1955	Ameiva plei	Ameiva plei	Ameiva plei Rosicky, 1955	Rosicky, 1955
 Ameiva plei (sic) Duméril & Bibron, 1839	true	Ameiva plei Duméril & Bibron, 1839	Ameiva plei	Ameiva plei	Ameiva plei Duméril & Bibron, 1839	Duméril & Bibron, 1839
 †Amnicola kushixiaensis [sic]	true	Amnicola kushixiaensis	Amnicola kushixiaensis	Amnicola kushixiaensis	Amnicola kushixiaensis	
@@ -4763,7 +4763,7 @@ Campylobacter laridis (sic) Benjamin et al. 1984	true	Campylobacter laridis Benj
 Firmicutes corrig. Gibbons & Murray, 1978	true	Firmicutes Gibbons & Murray, 1978	Firmicutes	Firmicutes	Firmicutes Gibbons & Murray, 1978	Gibbons & Murray, 1978
 Barleeidae [sic]	true	Barleeidae	Barleeidae	Barleeidae	Barleeidae	
 †Sainshandiidae [sic]	true	Sainshandiidae	Sainshandiidae	Sainshandiidae	Sainshandiidae	
-Turbo porphyrites [sic, porphyria]	true	Turbo porphyrites	Turbo porphyrites	Turbo porphyrites	Turbo porphyrites	
+Turbo porphyrites [sic, porphyria]	true	Turbo porphyrites	Turbo porphyrites	Turbo porphyrites	Turbo porphyrites porphyria	
 [sic] Walter	true	Walter	Walter	Walter	Walter	
 [Acontia] chia Holland, 1894	true	Acontia chia Holland, 1894	Acontia chia	Acontia chia	Acontia chia Holland, 1894	Holland, 1894
 [Dexia]	true	Dexia	Dexia	Dexia	Dexia	
@@ -4971,7 +4971,7 @@ SH19186714.17FU	false
 SH191814.08FU	false					
 SH191814.04FU	false					
 BOLD:ACW2100	false					
-Festuca sp. BOLD:ACW2100	false					
+Festuca sp. BOLD:ACW2100	true	Festuca sp. BOLD:ACW2100	Festuca sp. BOLD:ACW2100	Festuca	Festuca sp. BOLD:ACW2100	
 sh460441.07fu	false					
 Boldenaria	true	Boldenaria	Boldenaria	Boldenaria	Boldenaria	
 Boldea	true	Boldea	Boldea	Boldea	Boldea	
@@ -5015,7 +5015,7 @@ Modiola caroliniana L.f	true	Modiola caroliniana L.f	Modiola caroliniana	Modiola
 Modiola caroliniana (L.) G. Don filius	true	Modiola caroliniana (L.) G.Don filius	Modiola caroliniana	Modiola caroliniana	Modiola caroliniana (L.) G.Don filius	(L.) G.Don filius
 Modiola caroliniana (L.) G. Don fil.	true	Modiola caroliniana (L.) G.Don fil.	Modiola caroliniana	Modiola caroliniana	Modiola caroliniana (L.) G.Don fil.	(L.) G.Don fil.
 Cirsium creticum d'Urv.	true	Cirsium creticum d'Urv.	Cirsium creticum	Cirsium creticum	Cirsium creticum d'Urv.	d'Urv.
-Cirsium creticum d'Urv. subsp. creticum	true	Cirsium creticum subsp. creticum d'Urv.	Cirsium creticum subsp. creticum	Cirsium creticum creticum	Cirsium creticum subsp. creticum d'Urv.	d'Urv.
+Cirsium creticum d'Urv. subsp. creticum	true	Cirsium creticum subsp. creticum	Cirsium creticum subsp. creticum	Cirsium creticum creticum	Cirsium creticum d'Urv. subsp. creticum	
 Cirsium creticum Balsamo M Fregni E Tongiorgi P	true	Cirsium creticum M.Balsamo, E.Fregni & P.Tongiorgi	Cirsium creticum	Cirsium creticum	Cirsium creticum M.Balsamo, E.Fregni & P.Tongiorgi	M.Balsamo, E.Fregni & P.Tongiorgi
 Cirsium creticum Balsamo M Todaro MA	true	Cirsium creticum M.Balsamo & M.A.Todaro	Cirsium creticum	Cirsium creticum	Cirsium creticum M.Balsamo & M.A.Todaro	M.Balsamo & M.A.Todaro
 Bolivina albatrossi Cushman Em. Sellier de Civrieux, 1976	true	Bolivina albatrossi Cushman	Bolivina albatrossi	Bolivina albatrossi	Bolivina albatrossi Cushman Em. Sellier de Civrieux, 1976	Cushman
@@ -5023,7 +5023,7 @@ Cribbia pendula la Croix & P.J.Cribb	true	Cribbia pendula la Croix & P.J.Cribb	C
 Cribbia pendula le Croix & P.J.Cribb	true	Cribbia pendula le Croix & P.J.Cribb	Cribbia pendula	Cribbia pendula	Cribbia pendula le Croix & P.J.Cribb	le Croix & P.J.Cribb
 Cribbia pendula de la Croix & le P.J.Cribb	true	Cribbia pendula de la Croix & le P.J.Cribb	Cribbia pendula	Cribbia pendula	Cribbia pendula de la Croix & le P.J.Cribb	de la Croix & le P.J.Cribb
 Cribbia pendula Croix & de le P.J.Cribb	true	Cribbia pendula Croix & de le P.J.Cribb	Cribbia pendula	Cribbia pendula	Cribbia pendula Croix & de le P.J.Cribb	Croix & de le P.J.Cribb
-Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istvnffi, 1898 [1897]	Istvnffi, 1898 [1897]
+Navicula ambigua f. craticularis Istv?nffi, 1898, 1897	true	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Navicula ambigua f. craticularis	Navicula ambigua craticularis	Navicula ambigua f. craticularis Istv?nffi, 1898 [1897]	Istv?nffi, 1898 [1897]
 Cestodiscus gemmifer F.S.Castracane degli Antelminelli	true	Cestodiscus gemmifer F.S.Castracane degli Antelminelli	Cestodiscus gemmifer	Cestodiscus gemmifer	Cestodiscus gemmifer F.S.Castracane degli Antelminelli	F.S.Castracane degli Antelminelli
 Hieracium scorzoneraefolium De la Soie	true	Hieracium scorzoneraefolium De la Soie	Hieracium scorzoneraefolium	Hieracium scorzoneraefolium	Hieracium scorzoneraefolium De la Soie	De la Soie
 Sepidium capricorne des Desbrochers des Loges, 1881	true	Sepidium capricorne des Desbrochers des Loges, 1881	Sepidium capricorne	Sepidium capricorne	Sepidium capricorne des Desbrochers des Loges, 1881	des Desbrochers des Loges, 1881
@@ -5305,7 +5305,7 @@ Foo bar Cushman Em. Sellier de Civrieux, 1976	true	Foo bar Cushman	Foo bar	Foo b
 Foo bar la Croix & P.J.Cribb	true	Foo bar la Croix & P.J.Cribb	Foo bar	Foo bar	Foo bar la Croix & P.J.Cribb	la Croix & P.J.Cribb
 Foo bar le Croix & P.J.Cribb	true	Foo bar le Croix & P.J.Cribb	Foo bar	Foo bar	Foo bar le Croix & P.J.Cribb	le Croix & P.J.Cribb
 Foo bar de la Croix & le P.J.Cribb	true	Foo bar de la Croix & le P.J.Cribb	Foo bar	Foo bar	Foo bar de la Croix & le P.J.Cribb	de la Croix & le P.J.Cribb
-Foo bar Istv?nffi, 1898	true	Foo bar Istvnffi, 1898	Foo bar	Foo bar	Foo bar Istvnffi, 1898	Istvnffi, 1898
+Foo bar Istv?nffi, 1898	true	Foo bar Istv?nffi, 1898	Foo bar	Foo bar	Foo bar Istv?nffi, 1898	Istv?nffi, 1898
 Foo bar F.S.Castracane degli Antelminelli	true	Foo bar F.S.Castracane degli Antelminelli	Foo bar	Foo bar	Foo bar F.S.Castracane degli Antelminelli	F.S.Castracane degli Antelminelli
 Foo bar De la Soie	true	Foo bar De la Soie	Foo bar	Foo bar	Foo bar De la Soie	De la Soie
 Foo bar Hort. ex Vilmorin	true	Foo bar hort. ex Vilmorin	Foo bar	Foo bar	Foo bar hort. ex Vilmorin	hort. ex Vilmorin
@@ -5354,7 +5354,7 @@ Iridaea undulosa var. papillosa Bory de Saint-Vincent, nom. nud.	true	Iridaea un
 Sargassum angustifolium forma filiforme V. Krishnamurthy & H. Joshi, nom. inval	true	Sargassum angustifolium f. filiforme V.Krishnamurthy & H.Joshi	Sargassum angustifolium f. filiforme	Sargassum angustifolium filiforme	Sargassum angustifolium f. filiforme V.Krishnamurthy & H.Joshi, nom. inval.	V.Krishnamurthy & H.Joshi
 Solanum bifidum Vell. ex Dunal, nomen nudum	true	Solanum bifidum Vell. ex Dunal	Solanum bifidum	Solanum bifidum	Solanum bifidum Vell. ex Dunal, nomen nudum	Vell. ex Dunal
 Schoenoplectus ×scheuchzeri (Bruegger) Palla ex Janchen, nomen invalid.	true	Schoenoplectus × scheuchzeri (Bruegger) Palla ex Janchen	Schoenoplectus × scheuchzeri	Schoenoplectus scheuchzeri	Schoenoplectus × scheuchzeri (Bruegger) Palla ex Janchen, nomen invalid	(Bruegger) Palla ex Janchen
-Cryptomys "Kasama" Kawalika et al., 2001, nom. nud. (Kasama, Zambia) .	true	Cryptomys 'Kasama' Kawalika, al., Kasama & Zambia, 2001	Cryptomys 'Kasama'	Cryptomys	Cryptomys 'Kasama' Kawalika, al., Kasama & Zambia, 2001, nom. nud.	Kawalika, al., Kasama & Zambia, 2001
+Cryptomys "Kasama" Kawalika et al., 2001, nom. nud. (Kasama, Zambia) .	true	Cryptomys 'Kasama' Kawalika et al., 2001	Cryptomys 'Kasama'	Cryptomys	Cryptomys 'Kasama' Kawalika et al., 2001, nom. nud.	Kawalika et al., 2001
 Pandanus odorifer (Forssk.) Kuntze, nom. dub.	true	Pandanus odorifer (Forssk.) Kuntze	Pandanus odorifer	Pandanus odorifer	Pandanus odorifer (Forssk.) Kuntze, nom. dub.	(Forssk.) Kuntze
 non Clarisia Abat, 1792, nom. rejic.	true	Non Clarisia Abat, 1792	Non	Non	Non Clarisia Abat, 1792, nom. rejic.	Clarisia Abat, 1792
 Yersinia pestis (Lehmann and Neumann, 1896) van Loghem, 1944 (Approved Lists, 1980) , nom. cons	true	Yersinia pestis (Lehmann & Neumann 1896) van Loghem 1944	Yersinia pestis	Yersinia pestis	Yersinia pestis (Lehmann & Neumann 1896) van Loghem 1944, nom. cons. Approved Lists 1980	(Lehmann & Neumann 1896) van Loghem 1944
@@ -5370,7 +5370,7 @@ Ipomopsis tridactyla (Rydb.) Wilken, comb. nov. ined.	true	Ipomopsis tridactyla 
 Orobanche riparia Collins, sp. nov. ined.	true	Orobanche riparia Collins	Orobanche riparia	Orobanche riparia	Orobanche riparia Collins, sp. nov. ined.	Collins
 Anchimolgidae gen. nov. New Caledonia-Rjh-, 2004	true	Anchimolgidae New Caledonia-Rjh, 2004	Anchimolgidae	Anchimolgidae	Anchimolgidae New Caledonia-Rjh, 2004, gen. nov.	New Caledonia-Rjh, 2004
 Stebbinsoseris gen. nov. ined.	true	Stebbinsoseris	Stebbinsoseris	Stebbinsoseris	Stebbinsoseris, gen. nov. ined.	
-Euphorbia rossiana var. nov. Steinmann, 1199	true	Euphorbia rossiana Steinmann, 1199	Euphorbia rossiana	Euphorbia rossiana	Euphorbia rossiana Steinmann, 1199, var. nov.	Steinmann, 1199
+Euphorbia rossiana var. nov. Steinmann, 1199	true	Euphorbia rossiana Steinmann	Euphorbia rossiana	Euphorbia rossiana	Euphorbia rossiana Steinmann, var. nov.	Steinmann
 Merulius lacrimans (Wulfen : Fr.) Schum.	true	Merulius lacrimans (Wulfen : Fr.) Schum.	Merulius lacrimans	Merulius lacrimans	Merulius lacrimans (Wulfen : Fr.) Schum.	(Wulfen : Fr.) Schum.
 Merulius lacrimans (Wulfen) Schum. : Fr.	true	Merulius lacrimans (Wulfen) Schum. : Fr.	Merulius lacrimans	Merulius lacrimans	Merulius lacrimans (Wulfen) Schum. : Fr.	(Wulfen) Schum. : Fr.
 Deudorix epijarbas turbo Fruhstorfer, [1912]	true	Deudorix epijarbas turbo Fruhstorfer, [1912]	Deudorix epijarbas turbo	Deudorix epijarbas turbo	Deudorix epijarbas turbo Fruhstorfer, [1912]	Fruhstorfer, [1912]
@@ -5604,7 +5604,7 @@ Prunus mexicana S. Watson var. reticulata (Sarg.) Sarg.	true	Prunus mexicana var
 Potamogeton iilinoensis var. ventanicola	true	Potamogeton iilinoensis var. ventanicola	Potamogeton iilinoensis var. ventanicola	Potamogeton iilinoensis ventanicola	Potamogeton iilinoensis var. ventanicola	
 Potamogeton iilinoensis var. ventanicola (Hicken) Horn af Rantzien	true	Potamogeton iilinoensis var. ventanicola (Hicken) Horn af Rantzien	Potamogeton iilinoensis var. ventanicola	Potamogeton iilinoensis ventanicola	Potamogeton iilinoensis var. ventanicola (Hicken) Horn af Rantzien	(Hicken) Horn af Rantzien
 Triticum repens var. vulgäre	true	Triticum repens var. vulgäre	Triticum repens var. vulgäre	Triticum repens vulgare	Triticum repens var. vulgäre	
-Aus bus Linn. var. bus	true	Aus bus var. bus Linn.	Aus bus var. bus	Aus bus bus	Aus bus var. bus Linn.	Linn.
+Aus bus Linn. var. bus	true	Aus bus var. bus	Aus bus var. bus	Aus bus bus	Aus bus Linn. var. bus	
 Agalinis purpurea (L.) Briton var. borealis (Berg.) Peterson 1987	true	Agalinis purpurea var. borealis (Berg.) Peterson, 1987	Agalinis purpurea var. borealis	Agalinis purpurea borealis	Agalinis purpurea (L.) Briton var. borealis (Berg.) Peterson, 1987	(Berg.) Peterson, 1987
 Callideriphus flavicollis morph. reductus Fuchs 1961	true	Callideriphus flavicollis morph reductus Fuchs, 1961	Callideriphus flavicollis morph reductus	Callideriphus flavicollis reductus	Callideriphus flavicollis morph reductus Fuchs, 1961	Fuchs, 1961
 Caulerpa cupressoides forma nuda	true	Caulerpa cupressoides f. nuda	Caulerpa cupressoides f. nuda	Caulerpa cupressoides nuda	Caulerpa cupressoides f. nuda	
@@ -5636,7 +5636,7 @@ Acidalia remutaria ab. n. undularia	true	Acidalia remutaria ab. undularia	Acidal
 Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	true	Acmaeops bivittata ab. fusciceps Aurivillius, 1912	Acmaeops bivittata ab. fusciceps	Acmaeops bivittata fusciceps	Acmaeops (Pseudodinoptera) bivittata ab. fusciceps Aurivillius, 1912	Aurivillius, 1912
 Hydnellum scrobiculatum var. zonatum f. parvum (Banker) D. Hall & D.E. Stuntz 1972	true	Hydnellum scrobiculatum f. parvum (Banker) D.Hall & D.E.Stuntz, 1972	Hydnellum scrobiculatum f. parvum	Hydnellum scrobiculatum parvum	Hydnellum scrobiculatum f. parvum (Banker) D.Hall & D.E.Stuntz, 1972	(Banker) D.Hall & D.E.Stuntz, 1972
 Senecio fuchsii C.C.Gmel. subsp. fuchsii var. expansus (Boiss. & Heldr.) Hayek	true	Senecio fuchsii var. expansus (Boiss. & Heldr.) Hayek	Senecio fuchsii var. expansus	Senecio fuchsii expansus	Senecio fuchsii C.C.Gmel. var. expansus (Boiss. & Heldr.) Hayek	(Boiss. & Heldr.) Hayek
-Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii	true	Senecio fuchsii var. fuchsii C.C.Gmel.	Senecio fuchsii var. fuchsii	Senecio fuchsii fuchsii	Senecio fuchsii var. fuchsii C.C.Gmel.	C.C.Gmel.
+Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii	true	Senecio fuchsii var. fuchsii	Senecio fuchsii var. fuchsii	Senecio fuchsii fuchsii	Senecio fuchsii C.C.Gmel. var. fuchsii	
 Euastrum divergens var. rhodesiense f. coronulum A.M. Scott & Prescott	true	Euastrum divergens f. coronulum A.M.Scott & Prescott	Euastrum divergens f. coronulum	Euastrum divergens coronulum	Euastrum divergens f. coronulum A.M.Scott & Prescott	A.M.Scott & Prescott
 Aristotelia fruticosa var. δ. microphylla Hook.f.	true	Aristotelia fruticosa var. microphylla Hook.f.	Aristotelia fruticosa var. microphylla	Aristotelia fruticosa microphylla	Aristotelia fruticosa var. microphylla Hook.f.	Hook.f.
 Hieracium unr. Verbasciformia Arv.-Touv.	true	Hieracium infragen. Verbasciformia Arv.-Touv.	Hieracium infragen. Verbasciformia	Verbasciformia	Hieracium infragen. Verbasciformia Arv.-Touv.	Arv.-Touv.
@@ -5834,7 +5834,7 @@ Rühlella	true	Rühlella	Rühlella	Ruhlella	Rühlella
 Buteo borealis ? ventralis	true	Buteo borealis ? ventralis	Buteo borealis ? ventralis	Buteo borealis ventralis	Buteo borealis ? ventralis	
 Aesculus cf. × hybrida	true	Aesculus cf. × hybrida	Aesculus cf. × hybrida	Aesculus hybrida	Aesculus cf. × hybrida	
 Daphnia (Daphnia) x krausi Flossner 1993	true	Daphnia × krausi Flossner, 1993	Daphnia × krausi	Daphnia krausi	Daphnia (Daphnia) × krausi Flossner, 1993	Flossner, 1993
-Coleoptera Bold:AAV0432	false					
+Coleoptera Bold:AAV0432	true	Coleoptera Bold:AAV0432	Coleoptera Bold:AAV0432	Coleoptera	Coleoptera Bold:AAV0432	
 Ceylonesmus vector Chamberlin, 1941	true	Ceylonesmus vector Chamberlin, 1941	Ceylonesmus vector	Ceylonesmus vector	Ceylonesmus vector Chamberlin, 1941	Chamberlin, 1941
 Carabus satyrus satyrus KURNAKOV, 1962	true	Carabus satyrus satyrus Kurnakov, 1962	Carabus satyrus satyrus	Carabus satyrus satyrus	Carabus satyrus satyrus Kurnakov, 1962	Kurnakov, 1962
 Fakus prioni	true	Fakus prioni	Fakus prioni	Fakus prioni	Fakus prioni	
@@ -6015,7 +6015,7 @@ Quadrella steyermarkii (Standl.) Iltis &amp; Cornejo	true	Quadrella steyermarkii
 Torymus bangalorensis (Mani &amp; Kurian, 1953)	true	Torymus bangalorensis (Mani & Kurian, 1953)	Torymus bangalorensis	Torymus bangalorensis	Torymus bangalorensis (Mani & Kurian, 1953)	(Mani & Kurian, 1953)
 Oxalis_barrelieri	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	
 Pseudocercospora__dendrobii	true	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii	Pseudocercospora dendrobii	
-Oxalis barrelieri XXZ_21243	true	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	Oxalis barrelieri	
+Oxalis barrelieri XXZ_21243	true	Oxalis barrelieri XXZ_21243	Oxalis barrelieri XXZ_21243	Oxalis barrelieri	Oxalis barrelieri XXZ_21243	
 Bactrodesmiastrum monilioides Hern.-Restr., Gené & R.F. Castañeda	true	Bactrodesmiastrum monilioides Hern.-Restr., Gené & R.F.Castañeda	Bactrodesmiastrum monilioides	Bactrodesmiastrum monilioides	Bactrodesmiastrum monilioides Hern.-Restr., Gené & R.F.Castañeda	Hern.-Restr., Gené & R.F.Castañeda
 Sarcophaga (Liosarcophaga) vietnamica (Verves, 1980)	true	Sarcophaga vietnamica (Verves, 1980)	Sarcophaga vietnamica	Sarcophaga vietnamica	Sarcophaga (Liosarcophaga) vietnamica (Verves, 1980)	(Verves, 1980)
 Zolini Sharp, 1886	true	Zolini Sharp, 1886	Zolini	Zolini	Zolini Sharp, 1886	Sharp, 1886

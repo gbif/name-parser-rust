@@ -1157,6 +1157,9 @@ pub mod warnings {
     /// Rust-only so far (name-parser-api has no constant for it yet): a separately supplied
     /// authorship differs from the one in the name string beyond holding less of it.
     pub const AUTHORSHIP_CONFLICT: &str = "separate authorship differs from the name string's";
+    /// Rust-only so far: a species epithet written with a capital, as Linnaeus did (`Ovis Aries`),
+    /// was put in lower case (ICZN Art. 28).
+    pub const CAPITALISED_EPITHET: &str = "capitalised epithet put in lower case";
 }
 
 #[cfg(test)]

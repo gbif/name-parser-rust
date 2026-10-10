@@ -9,25 +9,24 @@ embedded	Abies alba Mill. foo 1234 bar	L. foo bar baz			combinationAuthorship,un
 embedded	Aus bus (L.) Smith	Mill.			basionymAuthorship,code,combinationAuthorship,warnings	deliberate: a different separate authorship wins over the name string's own
 embedded	Cyprinus carpio Linnaeus, 1758 ssp. murgo Dybowski, 1869	Linnaeus, 1758			warnings	deliberate: a separate authorship of another part of the name is kept apart and flagged
 embedded	Mulleripicus funebris (Valenciennes, 1826)	Achille Valenciennes			combinationAuthorship	deliberate: a separate authorship holding less keeps the name string's year and brackets
+embedded	Amelanchier alnifolia (Nuttall) Nuttall ex M. Roemer var. alnifolia	(Nuttall) Nuttall ex M. Roemer			basionymAuthorship,combinationAuthorship	deliberate: a column repeating an autonym's species author is none of the autonym; written after the autonym in the name string, it is its own
+embedded	Hyla Everetti	Boulenger, 1897			combinationAuthorship,genus,rank,specificEpithet,uninomial,warnings	deliberate: only a separate authorship tells the capitalised word is the epithet, not the start of an author
 redundant	Spongia	[Renier]	GENUS		combinationAuthorship,phrase,type	deliberate: [Renier] in the authorship column is an attributed anonymous author, on the name string a WoRMS [Word] phrase
 redundant	Aus bus Smith, 1900	(L.) Mill.			basionymAuthorship,code,combinationAuthorship,warnings	deliberate: a different separate authorship wins over the name string's own
 redundant	Abies alba Mill. foo 1234 bar	L. foo bar baz			combinationAuthorship,unparsed	deliberate: a different separate authorship wins over the name string's own
 redundant	Aus bus (L.) Smith	Mill.			basionymAuthorship,code,combinationAuthorship,warnings	deliberate: a different separate authorship wins over the name string's own
 redundant	Mulleripicus funebris (Valenciennes, 1826)	Achille Valenciennes			combinationAuthorship	deliberate: a separate authorship holding less keeps the name string's year and brackets
+redundant	Amelanchier alnifolia (Nuttall) Nuttall ex M. Roemer var. alnifolia	(Nuttall) Nuttall ex M. Roemer			basionymAuthorship,combinationAuthorship	deliberate: a column repeating an autonym's species author is none of the autonym; written after the autonym in the name string, it is its own
 nosplit	"Accipiter bicolor (Vieillot, 1817)"				-	structural
 nosplit	"Pseudomonas denitrificans" (Christensen, 1903) Bergey et al., 1923, nom. rejic.				-	structural
 nosplit	? alba Smith				-	structural
-nosplit	Abies alba Mill. var. alba				-	structural
 nosplit	Acidalia remutaria ab. n. undularia				-	structural
 nosplit	Ambrysus-Stål, 1862				-	structural
 nosplit	Ammodramus caudacutus (s.s.) diversus				-	structural
 nosplit	Anchimolgidae gen. nov. New Caledonia-Rjh-, 2004				-	structural
 nosplit	Aster Gen.nov.				-	structural
-nosplit	Aus bus Linn. var. bus				-	structural
-nosplit	Cirsium creticum d'Urv. subsp. creticum				-	structural
-nosplit	Conostomum pusillum Hook.f. & Wilson var. pusillum				-	structural
 nosplit	Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852				-	structural
-nosplit	Eriophorum ×medium Andersson subsp. ×medium				-	structural
+nosplit	Ovis Aries Linnæus, 1758		SPECIES	ZOOLOGICAL	-	structural: "Ovis Aries" alone is a genus and its author, the epithet shows only with the authorship after it
 nosplit	Pentapanax angelicifoliusGriseb.				-	structural
 nosplit	Polypodium pectinatum (L. f.) typica Rosent				-	structural
 nosplit	denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017				-	structural
@@ -36,6 +35,5 @@ nosplit	Gobiosoma spec (Ginsburg, 1939)				-	structural
 nosplit	Hemicloeina spec Platnick, 2002				-	structural
 nosplit	Lampona spec Platnick, 2000				-	structural
 nosplit	Loranthus incanus Schumach. & Thonn.  sessilis Sprague				-	structural
-nosplit	Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii				-	structural
 nosplit	Stebbinsoseris gen. nov. ined.				-	structural
 nosplit	Zygonyx spec Dijkstra & Kipping				-	structural

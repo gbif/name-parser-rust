@@ -98,11 +98,11 @@ fn a_replacement_character_inside_a_word_is_a_missing_letter() {
         .doubtful()
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
+    // in an author it is kept: "Guene" is no author (#104)
     assert_name("Macrotes cordovaria Guen\u{FFFD}e 1857")
         .species("Macrotes", "cordovaria")
-        .comb_authors(Some("1857"), &["Guene"])
+        .comb_authors(Some("1857"), &["Guen\u{FFFD}e"])
         .code(NomCode::Zoological)
-        .doubtful()
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 }
@@ -138,5 +138,41 @@ fn a_turkish_dotless_i_stays_in_a_surname() {
         .species("Abies", "aliba")
         .comb_authors(None, &["Mill."])
         .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+}
+
+#[test]
+fn a_letter_lost_to_a_broken_encoding_stays_in_the_author() {
+    // #104: the "?" or U+FFFD stands for a letter; glued, it made up an author "Srensen"
+    assert_name("Anelasmocephalus lycosinus (S?rensen, 1873)")
+        .species("Anelasmocephalus", "lycosinus")
+        .bas_authors(Some("1873"), &["S?rensen"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+    assert_name("Adaina microdactyla (H\u{FFFD}bner, 1813)")
+        .species("Adaina", "microdactyla")
+        .bas_authors(Some("1813"), &["H\u{FFFD}bner"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+    assert_name_auth("Absconditella fossarum", "V?zda & Pišút, 1985")
+        .species("Absconditella", "fossarum")
+        .comb_authors(Some("1985"), &["V?zda", "Pišút"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+    // a lost apostrophe is put back, "dOrbigny" was read as an epithet
+    assert_name("Aus bus d?Orbigny, 1839")
+        .species("Aus", "bus")
+        .comb_authors(Some("1839"), &["d'Orbigny"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+    // in an epithet the letter stays glued, flagged as before
+    assert_name("Fusinus eucos?nius")
+        .species("Fusinus", "eucosnius")
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 }

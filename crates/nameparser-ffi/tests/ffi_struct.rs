@@ -532,8 +532,17 @@ fn autonym_decodes_matching_specific_and_infraspecific_epithets() {
         decoded.strings[layout::SLOT_SPECIFIC],
         decoded.strings[layout::SLOT_INFRASPECIFIC]
     );
-    assert_eq!(decoded.authors_comb, vec!["Baker".to_string()]);
-    assert_eq!(decoded.authors_bas, vec!["Klatt".to_string()]);
+    // the species author before the marker is the specific authorship, the autonym has none
+    assert!(decoded.authors_comb.is_empty());
+    let species = decoded.specific_authorship.expect("specific authorship");
+    assert_eq!(
+        species.combination_authorship.authors,
+        vec!["Baker".to_string()]
+    );
+    assert_eq!(
+        species.basionym_authorship.authors,
+        vec!["Klatt".to_string()]
+    );
 }
 
 #[test]
