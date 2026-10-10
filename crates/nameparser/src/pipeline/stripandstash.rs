@@ -72,6 +72,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_greek_letter_marker(s);
     s = strip_superspecies_marker(ctx, s);
     s = join_particle_epithet(s);
+    s = normalise_minor_shapes(s);
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -125,6 +126,8 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_glued_et_al(ctx, s);
     s = strip_colon_concept_reference(ctx, s);
     s = split_note_from_basionym_bracket(ctx, s);
+    s = split_second_citation(ctx, s);
+    s = stash_trailing_bracket_author(ctx, s);
     s = strip_bracketed_tax_note(ctx, s);
     s = strip_alternative_subgenera(ctx, s);
     s = strip_paren_tax_note(ctx, s);
@@ -1776,6 +1779,38 @@ fn normalise_greek_letter_marker(s: String) -> String {
     format!("{}{marker} {}", &caps[1], &s[epithet..])
 }
 
+/// A hybrid sign after a lone genus: `Eriochroma ×`, the nothogenus.
+static TRAILING_HYBRID_SIGN: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)×(?:(?-u:\s+)(\p{Lu}.*))?$").unwrap());
+
+/// `n.aff.`, a new species near the epithet that follows: `Hoploseius n.aff.tenuis`.
+static NEW_AFF: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)n\.(?-u:\s*)(aff|cf)\.(?-u:\s*)").unwrap()
+});
+
+/// Two rare shapes (#105): a hybrid sign after the genus, `Eriochroma ×` (WCVP), is the
+/// nothogenus `× Eriochroma`, not a nothospecies; and `n.aff.tenuis` is `aff. tenuis`, the `n.`
+/// of a new species having made `n` the epithet.
+fn normalise_minor_shapes(s: String) -> String {
+    if let Some(caps) = TRAILING_HYBRID_SIGN.captures(&s) {
+        // an author after it, "Eriochroma × J.M.H.Shaw", not a second genus of a formula
+        match caps.get(2).map(|m| m.as_str()) {
+            None => return format!("× {}", &caps[1]),
+            Some(author) if author.contains(|c: char| c == '.' || c.is_ascii_digit()) => {
+                return format!("× {} {author}", &caps[1]);
+            }
+            Some(_) => {}
+        }
+    }
+    if s.contains("n.") {
+        if let Some(caps) = NEW_AFF.captures(&s) {
+            let whole = caps.get(0).unwrap();
+            return format!("{} {}. {}", &caps[1], &caps[2], &s[whole.end()..]);
+        }
+    }
+    s
+}
+
 /// A superspecies marker between the genus and the epithet: `Eosembia supersp. thoracica`.
 static SUPERSPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)(?i:supersp|superspecies)\.?(?-u:\s+)(\p{Ll})").unwrap()
@@ -2662,7 +2697,7 @@ fn strip_doubtful_genus_brackets(ctx: &mut ParseContext, s: String) -> String {
 /// this port's rule would otherwise prefer. No backreference, no lookaround -> plain
 /// `regex` crate.
 static SIC_WITH_COMMENT: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?-u:\s*)[(\[](?-u:\s*)sic(?-u:\s*),([^)\]]+)[)\]]").unwrap());
+    LazyLock::new(|| Regex::new(r"(?-u:\s*)[(\[](?-u:\s*)sic(?-u:\s*)[,;]([^)\]]+)[)\]]").unwrap());
 
 /// Java SIC (StripAndStash.java:29-30): `\s*[\(\[]\s*sic\s*!?\s*[)\]]`, no flags. Has `\s`
 /// (x4), no `\p{...}`, no unescaped wildcard, and the custom classes `[(\[]`/`[)\]]` are
@@ -2720,11 +2755,12 @@ fn remove_sic(s: &str, caps: &regex::Captures<'_>) -> String {
 ///      then a whitespace-collapse + trim after removing every match — the exact lesson
 ///      `regexes::strip_corrig_fancy` documents at length (Phase 0).
 fn strip_sic_and_corrig(ctx: &mut ParseContext, mut s: String) -> String {
+    // the comment is a note: "[sic; apparently Giao, Tuoc, Dung, …]" (#105). Java made it an
+    // unparsed rest with its spaces squished out, and took `;` for no separator at all.
     if let Some(caps) = SIC_WITH_COMMENT.captures(&s) {
         ctx.name.original_spelling = Some(true);
-        let inner = java_trim(caps.get(1).unwrap().as_str()).to_string();
-        let squished = WHITESPACE.replace_all(&inner, "").into_owned();
-        ctx.set_pending_unparsed(&format!("(sic,{squished})"));
+        ctx.name
+            .add_taxonomic_note(&collapse_whitespace(caps.get(1).unwrap().as_str()));
         let whole = caps.get(0).unwrap();
         let (start, end) = (whole.start(), whole.end());
         s = format!("{}{}", &s[..start], &s[end..]);
@@ -3595,6 +3631,99 @@ static INDET_MARKER_WORD: LazyLock<Regex> =
 static NOTE_IN_BASIONYM_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\(([^()]*?\p{L}[^()]*?)[,;]?(?-u:\s+)((?i:nec|non|not|sensu|sec|auctt?\.?)(?-u:\s)[^()]*)\)").unwrap()
 });
+
+/// A second citation after a semicolon in a basionym bracket: `(Boulenger, 1890; Kramer, 1977)`.
+/// Group 1 the first citation, ending in its year, group 2 the second.
+static SECOND_CITATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\(([^();]*\p{L}[^();]*?[,\s](?:1[789]\d\d|20[0-2]\d)[a-z]?)(?-u:\s*);(?-u:\s*)([^();]+)\)").unwrap()
+});
+
+/// A second citation in the bracket of a basionym is no co-author: `(Boulenger, 1890; Kramer, 1977)`
+/// came out as the team Boulenger & Kramer with the second year an imprint year (#105). The
+/// bracket keeps the first citation, the second is a taxonomic note.
+fn split_second_citation(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = SECOND_CITATION.captures(&s) else {
+        return s;
+    };
+    // where a basionym's bracket stands: at the start of an authorship or after an epithet, not
+    // in the phrase of `Smilosicyopus sp (Theusen et al 2011; Ebner et al 2012)`
+    let before = java_trim(&s[..caps.get(0).unwrap().start()]);
+    let last = before
+        .rsplit(char::is_whitespace)
+        .next()
+        .unwrap_or_default();
+    let after_epithet = last.chars().count() > 2
+        && last.chars().all(|c| c.is_lowercase() || c == '-')
+        && !matches!(last, "spp" | "spec" | "species" | "indet");
+    if !(before.is_empty() || after_epithet) {
+        return s;
+    }
+    ctx.name.add_taxonomic_note(&collapse_whitespace(&caps[2]));
+    let whole = caps.get(0).unwrap();
+    format!(
+        "{}({}){}",
+        &s[..whole.start()],
+        java_trim(&caps[1]),
+        &s[whole.end()..]
+    )
+}
+
+/// A bracketed author after the author of the combination, at the end: `… flavescens Quintanilla
+/// (Saez)`. Group 1 what comes before the bracket, group 2 the bracket.
+static TRAILING_BRACKET_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*(?-u:\s)(\p{Ll}[\p{Ll}\-]{2,})(?-u:\s+)\p{Lu}[\p{L}'\-]+\.?)(?-u:\s+)(\(\p{Lu}[\p{L}'.\-]*(?:(?-u:\s+)\p{Lu}[\p{L}'.\-]*)?\))(?-u:\s*)$").unwrap()
+});
+
+/// The same in a separately supplied authorship: `Quintanilla (Saez)`.
+static TRAILING_BRACKET_AUTHOR_OF_AUTHORSHIP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^((?-u:\s*)\p{Lu}[\p{L}'\-]+\.?)()(?-u:\s+)(\(\p{Lu}[\p{L}'.\-]*(?:(?-u:\s+)\p{Lu}[\p{L}'.\-]*)?\))(?-u:\s*)$").unwrap()
+});
+
+/// A basionym author in brackets after the combination author, `Quintanilla (Saez)`, `Fr. (L.)`
+/// (MycoBank, for `Cordyceps militaris (L.) Fr.`), is the usual citation turned round; the two
+/// were merged into one person, "Quintanilla Saez" (#105). Abbreviated, it is put the right way
+/// round; else the bracket is left unparsed.
+fn stash_trailing_bracket_author(ctx: &mut ParseContext, s: String) -> String {
+    stash_bracket_author(ctx, s, &TRAILING_BRACKET_AUTHOR)
+}
+
+/// [`stash_trailing_bracket_author`] for a separately supplied authorship, which starts with the
+/// author; a name string so is a genus and its subgenus (`Aus (Bus)`).
+fn stash_trailing_bracket_author_of_authorship(ctx: &mut ParseContext, s: String) -> String {
+    stash_bracket_author(ctx, s, &TRAILING_BRACKET_AUTHOR_OF_AUTHORSHIP)
+}
+
+fn stash_bracket_author(ctx: &mut ParseContext, s: String, re: &Regex) -> String {
+    let Some(caps) = re.captures(&s) else {
+        return s;
+    };
+    // the author follows an epithet, not a connector of a team or citation; the bracket holds a
+    // surname, or Linnaeus's "L.", not a note ("Schust. (Non Herz.)") or the author's own initial
+    // ("Costa (A.)")
+    let bracket = &caps[3];
+    let surname = bracket[1..].chars().nth(1).is_some_and(char::is_lowercase) || bracket == "(L.)";
+    if matches!(&caps[2], "and" | "apud" | "von" | "van" | "del" | "della")
+        || !surname
+        || ANY_NOTE_KEYWORD.is_match(bracket)
+    {
+        return s;
+    }
+    let before = java_trim(&caps[1]);
+    // abbreviated, "Fr. (L.)", both are authors; spelled out, "Quintanilla (Saez)", the bracket may
+    // as well hold a subgenus ("Forel (Atopogyne)"), and is left unparsed rather than merged
+    // — unless the name string has it the right way round: "Murrill (Peck)" beside "Boletinus
+    // spectabilis (Peck) Murrill"
+    let confirmed = ctx.original.contains(&format!("{bracket} {before}"));
+    if !(bracket.ends_with(".)") || before.ends_with('.') || confirmed) {
+        ctx.set_pending_unparsed(bracket);
+        return before.to_string();
+    }
+    // the name before the combination author stays in front
+    match before.rfind(char::is_whitespace) {
+        Some(i) => format!("{} {bracket} {}", &before[..i], before[i..].trim_start()),
+        None => format!("{bracket} {before}"),
+    }
+}
 
 /// A note keyword anywhere, a homonym's too.
 static ANY_NOTE_KEYWORD: LazyLock<Regex> =
@@ -5450,7 +5579,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 13] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 15] = [
         repair_colon_diacritics,
         flag_uncertain_authorship,
         strip_imprint_years,
@@ -5462,6 +5591,8 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_extinct_dagger,
         stash_synonym_bracket,
         split_note_from_basionym_bracket,
+        split_second_citation,
+        stash_trailing_bracket_author_of_authorship,
         unquote_note,
         unbracket_in_citation,
     ];
@@ -5520,8 +5651,10 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     if STANDALONE_MS.is_match(&s) {
         return strip_trailing_manuscript_marker(&format!(" {s}"), name);
     }
-    if let Some(m) = SIC_WITH_COMMENT.find(&s) {
+    if let Some(caps) = SIC_WITH_COMMENT.captures(&s) {
         name.original_spelling = Some(true);
+        name.add_taxonomic_note(&collapse_whitespace(caps.get(1).unwrap().as_str()));
+        let m = caps.get(0).unwrap();
         s = format!("{}{}", &s[..m.start()], &s[m.end()..]);
     }
     if let Some(caps) = SIC.captures(&s) {
@@ -6865,20 +6998,21 @@ mod tests {
         let out = strip_sic_and_corrig(&mut c, "Aus bus Storr [sic, porphyria]".to_string());
         assert_eq!(out, "Aus bus Storr");
         assert_eq!(c.name.original_spelling, Some(true));
-        assert_eq!(c.pending_unparsed, Some("(sic,porphyria)".to_string()));
+        // the comment is a note (#105); Java stashed "(sic,porphyria)" as unparsed
+        assert_eq!(c.name.taxonomic_note.as_deref(), Some("porphyria"));
+        assert_eq!(c.pending_unparsed, None);
     }
 
     #[test]
-    fn multi_word_sic_comment_has_all_internal_whitespace_removed_not_just_collapsed() {
-        // Spot-checked against the Java CLI oracle: "multiple words here" squishes to
-        // "multiplewordshere" — Java's WHITESPACE.replaceAll("") here, replacement "",
-        // NOT collapsed to single spaces.
+    fn multi_word_sic_comment_is_a_note_with_its_spaces() {
+        // Java squished "multiple words here" to an unparsed "(sic,multiplewordshere)"; a note
+        // keeps its words apart, and a semicolon separates as a comma does (#105)
         let mut c = ctx("x");
-        let out = strip_sic_and_corrig(&mut c, "Foo bar [sic, multiple words here]".to_string());
+        let out = strip_sic_and_corrig(&mut c, "Foo bar [sic; multiple  words here]".to_string());
         assert_eq!(out, "Foo bar");
         assert_eq!(
-            c.pending_unparsed,
-            Some("(sic,multiplewordshere)".to_string())
+            c.name.taxonomic_note.as_deref(),
+            Some("multiple words here")
         );
     }
 

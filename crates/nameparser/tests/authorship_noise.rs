@@ -531,3 +531,48 @@ fn an_implausible_year_is_no_year() {
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 }
+
+#[test]
+fn minor_authorship_shapes_of_the_reimport() {
+    // #105: a second citation in the basionym bracket is a note, no co-author
+    assert_name("Amphiesma parallelum (Boulenger, 1890; Kramer, 1977)")
+        .species("Amphiesma", "parallelum")
+        .bas_authors(Some("1890"), &["Boulenger"])
+        .sensu("Kramer, 1977")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a basionym author written after the combination author: turned round when abbreviated,
+    // never merged into one person
+    assert_name_auth("Cordyceps militaris", "Fr. (L.)")
+        .species("Cordyceps", "militaris")
+        .bas_authors(None, &["L."])
+        .comb_authors(None, &["Fr."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Penicillium mariae-crucis var. flavescens Quintanilla (Saez)")
+        .infra_species("Penicillium", "mariae-crucis", Rank::Variety, "flavescens")
+        .comb_authors(None, &["Quintanilla"])
+        .partial("(Saez)")
+        .nothing_else();
+    // a hybrid sign after the genus marks the nothogenus
+    assert_name_hinted("Eriochroma ×", Some("J.M.H.Shaw"), Some(Rank::Genus), None)
+        .monomial_rank("Eriochroma", Rank::Genus)
+        .notho(&[NamePart::Generic])
+        .comb_authors(None, &["J.M.H.Shaw"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // "n.aff." is a new species near the epithet
+    assert_name("Hoploseius n.aff.tenuis Lindquist, 1965")
+        .species("Hoploseius", "tenuis")
+        .qualifiers(&[(NamePart::Specific, "aff.")])
+        .comb_authors(Some("1965"), &["Lindquist"])
+        .code(NomCode::Zoological)
+        .type_(NameType::Informal)
+        .nothing_else();
+    // the comment of a sic is a note
+    assert_name_auth("Turbo porphyrites", "[sic, porphyria]")
+        .species("Turbo", "porphyrites")
+        .sic()
+        .sensu("porphyria")
+        .nothing_else();
+}
