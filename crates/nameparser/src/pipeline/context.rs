@@ -44,6 +44,13 @@ pub(crate) struct ParseContext {
     /// an indet informal name, where it is the distinguishing designator rather than an unparsable
     /// remainder; only that one writer may set this.
     pub pending_unparsed_trailing_tag: bool,
+    /// The words of the input with a letter lost to a broken encoding, `?` or U+FFFD between two
+    /// letters, as (glued, verbatim): ("Srensen", "S?rensen"). StripAndStash glues them to parse;
+    /// Pipeline puts the verbatim spelling back into the authors.
+    pub lost_letters: Vec<(String, String)>,
+    /// A BOLD BIN or UNITE SH code that trailed the name (`Decapoda sp. BOLD:AAF5952`), set aside
+    /// by StripAndStash before anything can read it as an author. Assemble appends it to the phrase.
+    pub trailing_identifier: Option<String>,
     /// The VERBATIM text `strip_published_page` removed (`":220860"`, `": 377"`) — separator and
     /// spacing included, so it can be restored exactly. Assemble puts it back on the phrase of an
     /// indet informal name, where a `:<digits>` tail is a catalogue number rather than a page.
@@ -139,6 +146,8 @@ impl ParseContext {
             name,
             pending_unparsed: None,
             pending_unparsed_trailing_tag: false,
+            trailing_identifier: None,
+            lost_letters: Vec::new(),
             page_strip_verbatim: None,
             aggregate: false,
             viral_shape: false,

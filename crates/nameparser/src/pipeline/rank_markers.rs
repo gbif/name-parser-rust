@@ -108,6 +108,9 @@ static INFRASPECIFIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         ("st", Rank::InfraspecificName),
         // "*" between two lowercase epithets is an old infraspecific separator.
         ("*", Rank::InfraspecificName),
+        // Rust-only: the marker the formatter writes for an unranked infraspecific name, which
+        // StripAndStash also puts in place of `[unranked]` after a species epithet
+        ("infrasp", Rank::InfraspecificName),
     ])
 });
 

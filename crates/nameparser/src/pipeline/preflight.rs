@@ -275,6 +275,12 @@ fn classify_organism_label(s: &str) -> Option<NameType> {
     if caps[1].is_empty() && AUTHOR_YEAR.is_match(rest) {
         return None;
     }
+    Some(classify_label_rest(rest))
+}
+
+/// What follows an organism label: a strain or clone code makes it an IDENTIFIER, anything else
+/// OTHER.
+fn classify_label_rest(rest: &str) -> NameType {
     let code = &rest[CODE_LEAD.find(rest).map_or(0, |m| m.end())..];
     let quoted = (code.starts_with('\'') && code.ends_with('\''))
         || (code.starts_with('"') && code.ends_with('"'));
@@ -289,11 +295,67 @@ fn classify_organism_label(s: &str) -> Option<NameType> {
                 .last()
                 .is_some_and(|t| t.chars().any(|c| c.is_ascii_digit()))
                 || tokens.iter().all(|t| codeish(t))));
-    Some(if is_code {
+    if is_code {
         NameType::Identifier
     } else {
         NameType::Other
-    })
+    }
+}
+
+/// A capitalised word and a lowercase one, then more: the lead of a vernacular organism label.
+static VERNACULAR_LEAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+ \p{Ll}[\p{Ll}\-]* ").unwrap());
+
+/// An English organism word no Latin epithet is: not `alga`, `fungi`, which are (`Andrena minutula
+/// alga Warncke, 1974`).
+static VERNACULAR_LABEL_WORD: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:\p{Ll}*bacteri(?:um|a)|\p{Ll}*archae(?:on|ote)s?|\p{Ll}*symbionts?|fungus|fungal|yeasts?|protists?|microorganisms?|actinomycetes?)$").unwrap()
+});
+
+/// A vernacular organism label that opens with a capital, its label words after two or more others:
+/// `Adelie penguin guano bacterium 92`, `Amazonian soil bacterium M14`, `Acyrthosiphon pisum
+/// primary endosymbiont`. Taken for a genus, an epithet and an infraspecific epithet, it made one
+/// SCIENTIFIC name of all numbered isolates (#103). Classified as [`classify_organism_label`] does
+/// a lowercase one. A label right after the genus is left to StripAndStash (`Acidimicrobiales
+/// bacterium JGI 01_E13`), as is a Candidatus name.
+fn classify_vernacular_label(s: &str) -> Option<NameType> {
+    if !VERNACULAR_LEAD.is_match(s) || s.starts_with("Candidatus ") {
+        return None;
+    }
+    let words: Vec<&str> = s.split(' ').collect();
+    // an indet marker belongs to the symbiont ("Wolbachia species endosymbiont of Delia platura"),
+    // and a label right after the taxon is its informal phrase ("Bacteroidetes bacterium
+    // endosymbiont of Bemisia tabaci")
+    if matches!(words[1], "sp" | "sp." | "spp" | "spp." | "species")
+        || VERNACULAR_LABEL_WORD.is_match(words[1])
+    {
+        return None;
+    }
+    let at = words
+        .iter()
+        .skip(2)
+        .position(|w| VERNACULAR_LABEL_WORD.is_match(w))?
+        + 2;
+    // every word before the label is lowercase, but for the first
+    if !words[1..at]
+        .iter()
+        .all(|w| w.starts_with(|c: char| c.is_lowercase()))
+    {
+        return None;
+    }
+    if at + 1 == words.len() {
+        return Some(NameType::Other);
+    }
+    let rest = words[at + 1..].join(" ");
+    // an author behind it makes it an epithet
+    if AUTHOR_YEAR.is_match(&rest) {
+        return None;
+    }
+    // "symbiont bacterium" is two labels, no code
+    if VERNACULAR_LABEL_WORD.is_match(&rest) {
+        return Some(NameType::Other);
+    }
+    Some(classify_label_rest(&rest))
 }
 
 /// The `unclassified` placeholder word, kept out of [`PLACEHOLDER_KEYWORDS`] so it is tested after
@@ -526,7 +588,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // `bacterium enrichment culture clone OB115` (~90k CLB names): the label plus a strain/clone
     // code is an IDENTIFIER; any other label (`endosymbiont of Chlamys farreri`) is OTHER. These
     // used to come back as genus `?` + epithet `bacterium`, or as a SCIENTIFIC genus `marine`.
-    if let Some(type_) = classify_organism_label(&s) {
+    if let Some(type_) = classify_organism_label(&s).or_else(|| classify_vernacular_label(&s)) {
         return Err(ParseError::new(type_, None, s));
     }
     // An author's name alone, its particle leading ("van Berg", "del Rosario Author"): no taxon.
@@ -651,16 +713,6 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // GTDB/SILVA specimen codes ending with "sp" + 8+ digits (e.g. "18JY21-1 sp004344915").
     if s.contains(' ') && OTU_SPECIMEN_SUFFIX.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
-    }
-    // Multi-word input whose last token is a known OTU code (e.g. "Festuca sp. BOLD:ACW2100").
-    if s.contains(' ') {
-        let last = last_word(&s);
-        if OTU_BOLD.is_match(last) {
-            return Err(ParseError::new(NameType::Other, None, last));
-        }
-        if OTU_SH.is_match(last) {
-            return Err(ParseError::new(NameType::Other, None, last.to_uppercase()));
-        }
     }
 
     // Hybrid formula — only when the cross sits between two distinct name spans.
@@ -1014,10 +1066,10 @@ mod tests {
     }
 
     #[test]
-    fn trailing_bold_code_in_multiword_input_is_rejected_with_last_word_as_name() {
-        let err = check("Festuca sp. BOLD:ACW2100").unwrap_err();
-        assert_eq!(err.type_, NameType::Other);
-        assert_eq!(err.name, "BOLD:ACW2100");
+    fn trailing_bold_code_in_multiword_input_passes_on_to_the_parser() {
+        // #101: StripAndStash makes the code the phrase of the taxon before it
+        assert!(check("Festuca sp. BOLD:ACW2100").is_ok());
+        assert!(check("Russula sp. SH1957732.10FU").is_ok());
     }
 
     // ---------- category: informal (5.0.0 — anchored groupings RESCUED, anchorless → OTHER) --------

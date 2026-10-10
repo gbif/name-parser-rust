@@ -1124,17 +1124,25 @@ mod tests {
 
     #[test]
     fn botanical_autonym_places_author_after_species_epithet() {
-        // ICN Art. 22.1/26.1: the species author sits before the (repeated) rank marker.
+        // ICN Art. 22.1/26.1: the species author sits before the (repeated) rank marker. Parsed,
+        // it is the specific authorship, the autonym having none of its own (#86).
         let n = p("Trimezia spathata (Klatt) Baker subsp. spathata");
+        assert_eq!(
+            n.canonical_name_complete().as_deref(),
+            Some("Trimezia spathata (Klatt) Baker subsp. spathata")
+        );
+        assert_eq!(
+            n.canonical_name().as_deref(),
+            Some("Trimezia spathata subsp. spathata")
+        );
+        assert_eq!(n.authorship_complete(), None);
+        // one given as the autonym's goes to the same place
+        let mut n = p("Trimezia spathata subsp. spathata (Klatt) Baker");
+        n.code = Some(crate::model::NomCode::Botanical);
         assert_eq!(
             n.canonical_name().as_deref(),
             Some("Trimezia spathata (Klatt) Baker subsp. spathata")
         );
-        assert_eq!(
-            n.canonical_name_without_authorship().as_deref(),
-            Some("Trimezia spathata subsp. spathata")
-        );
-        assert_eq!(n.authorship_complete().as_deref(), Some("(Klatt) Baker"));
     }
 
     #[test]

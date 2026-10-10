@@ -165,7 +165,11 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // Step 7: a monomial with an underscore is either "Genus_species" (underscore as space:
     // genus + specific epithet, when the after-part starts lowercase) or a GTDB-style phrase
     // name (e.g. "Desulfobacterota_B": uninomial + phrase, when the after-part starts
-    // uppercase).
+    // uppercase). Under the bacterial code a GTDB suffix of capitals stays on the uninomial,
+    // though: `Bacillus_BF` is one of several genera GTDB splits Bacillus into, not Bacillus with
+    // a designation, and the suffixed genus of a binomial (`Acholeplasma_D palmae`) is kept whole
+    // too (#102). Without it the suffix may as well be a BOLD placeholder code
+    // (`Blattellinae_SB`).
     if ctx.name.type_ == NameType::Scientific {
         if let Some(idx) = ctx.name.uninomial.as_ref().and_then(|u| u.find('_')) {
             let uni = ctx.name.uninomial.clone().expect("just matched Some above");
@@ -177,6 +181,11 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
                 ctx.name.genus = Some(before);
                 ctx.name.specific_epithet = Some(after);
                 ctx.name.rank = Rank::Species;
+            } else if ctx.requested_code == Some(NomCode::Bacterial)
+                && after.chars().count() <= 4
+                && after.chars().all(|c| c.is_ascii_uppercase())
+            {
+                // "Bacillus_BF" → one GTDB genus
             } else {
                 // "Desulfobacterota_B" → GTDB-style phrase name
                 ctx.name.uninomial = Some(before);
@@ -244,6 +253,34 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         phrase.push_str(&tail);
     }
 
+    // Step 8b2: a monomial written in lower case, "duplocingulatoides", may as well be an epithet
+    // whose genus is missing (#100); with no rank or authorship to tell, it stays the uninomial,
+    // flagged.
+    let first_word = ctx.original.split_whitespace().next().unwrap_or_default();
+    if first_word.starts_with(|c: char| c.is_lowercase())
+        && ctx
+            .name
+            .uninomial
+            .as_deref()
+            .is_some_and(|u| u.to_lowercase() == first_word)
+    {
+        ctx.name.add_warning(warnings::LC_MONOMIAL);
+    }
+
+    // Step 8c: a BOLD BIN or SH code set aside by `stash_trailing_identifier` designates the
+    // name: it ends the phrase (`sp. BOLD:AAF5952`), or is the phrase of a determined name. A
+    // designated `Genus sp.` is no longer missing anything, as `Genus sp. RMCC TR1811` is not.
+    if let Some(id) = ctx.trailing_identifier.take() {
+        ctx.name.phrase = Some(match ctx.name.phrase.take() {
+            Some(p) => format!("{p} {id}"),
+            None => id,
+        });
+        ctx.name.warnings.retain(|w| w != warnings::INDETERMINED);
+        if ctx.name.type_ == NameType::Scientific {
+            ctx.name.type_ = NameType::Informal;
+        }
+    }
+
     // Step 9: a year range in the authorship ("1845-1847") was interpreted down to just its
     // first year — flag it so callers know the year was reduced from a range.
     if auth_state.is_some_and(|s| s.year_range) {
@@ -296,7 +333,13 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // suffix maps derived from authorship-inferred code — that would silently assign ranks to
     // names whose code we merely guessed.
     if ctx.name.rank == Rank::Unranked {
-        if let Some(uninomial) = ctx.name.uninomial.clone() {
+        // the suffix of a GTDB name is no part of it here: "Bacillaceae_B" is a family
+        if let Some(uninomial) = ctx
+            .name
+            .uninomial
+            .as_deref()
+            .map(|u| u.split('_').next().unwrap_or(u).to_string())
+        {
             let code_for_inference =
                 ctx.requested_code
                     .or(if ctx.viral_shape { ctx.name.code } else { None });
@@ -382,10 +425,18 @@ fn rank_from_global_suffix(name: &str) -> Option<Rank> {
     }
 }
 
-/// Plausible authorship years fall in this inclusive range; anything else is flagged. Java
-/// `Assemble.MIN_YEAR`/`MAX_YEAR` (`Assemble.java:198-199`).
-const MIN_YEAR: i32 = 1500;
-const MAX_YEAR: i32 = 2100;
+/// Plausible authorship years fall in this inclusive range; anything else is flagged. Java had
+/// 1500 to 2100 (`Assemble.MIN_YEAR`/`MAX_YEAR`); nomenclature starts in 1753 (ICN Art. 13, ICZN
+/// Art. 3 in 1758), and no name is published after next year, so a voucher number such as `Pannell
+/// 2083` or `Montoya 1558` passed for a year (#85).
+const MIN_YEAR: i32 = 1753;
+static MAX_YEAR: LazyLock<i32> = LazyLock::new(|| {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    // the year now, give or take a day around New Year, and the next one
+    1970 + (secs / 31_556_952) as i32 + 1
+});
 
 /// Java `Assemble.YEAR_4DIGIT` (`Assemble.java:200-201`), compiled with no flags — Java's
 /// `\d` is therefore ASCII-only, ported as `(?-u:\d{4})` (this port's per-pattern flag rule).
@@ -418,16 +469,29 @@ pub(crate) fn is_unlikely_year(year: Option<&str>) -> bool {
         .expect("YEAR_4DIGIT just matched exactly 4 ASCII digits, always parseable as i32");
     // Java: `return v < MIN_YEAR || v > MAX_YEAR;` — same truth table, spelled with the
     // standard range helper per clippy::manual_range_contains.
-    !(MIN_YEAR..=MAX_YEAR).contains(&v)
+    !(MIN_YEAR..=*MAX_YEAR).contains(&v)
 }
 
-/// Java `Assemble.flagUnlikelyYears(ParsedName)` (`Assemble.java:208-214`).
+/// Java `Assemble.flagUnlikelyYears(ParsedName)` (`Assemble.java:208-214`). An unlikely year is no
+/// year (#85): Java kept it, flagged, so `Blainville, 183`, a truncated year, was the year 183. It
+/// goes to `unparsed` (a PARTIAL parse), the warning kept.
 fn flag_unlikely_years(n: &mut ParsedName) {
     if is_unlikely_year(n.combination_authorship.year.as_deref())
         || is_unlikely_year(n.basionym_authorship.year.as_deref())
     {
         n.doubtful = true;
         n.add_warning(warnings::UNLIKELY_YEAR);
+        for a in [&mut n.combination_authorship, &mut n.basionym_authorship] {
+            if is_unlikely_year(a.year.as_deref()) {
+                let year = a.year.take().expect("an unlikely year is a year");
+                n.unparsed = Some(match n.unparsed.take() {
+                    Some(u) if u.contains(&year) => u,
+                    Some(u) => format!("{u} {year}"),
+                    None => year,
+                });
+                n.state = State::Partial;
+            }
+        }
     }
 }
 
@@ -834,10 +898,10 @@ mod tests {
 
     #[test]
     fn is_unlikely_year_boundaries() {
-        assert!(!is_unlikely_year(Some("1500")));
-        assert!(!is_unlikely_year(Some("2100")));
-        assert!(is_unlikely_year(Some("1499")));
-        assert!(is_unlikely_year(Some("2101")));
+        assert!(!is_unlikely_year(Some("1753")));
+        assert!(!is_unlikely_year(Some("2025")));
+        assert!(is_unlikely_year(Some("1752")));
+        assert!(is_unlikely_year(Some("2100")));
         assert!(is_unlikely_year(Some("137")));
         assert!(is_unlikely_year(Some("0000")));
         assert!(!is_unlikely_year(Some("198?")));

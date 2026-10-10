@@ -329,7 +329,7 @@ fn infraspecies_with_rank_icn() {
         .nothing_else();
     assert_name("Aus bus Linn. var. bus")
         .infra_species("Aus", "bus", Rank::Variety, "bus")
-        .comb_authors(None, &["Linn."])
+        .specific_authors(None, &["Linn."])
         .nothing_else();
     assert_name("Agalinis purpurea (L.) Briton var. borealis (Berg.) Peterson 1987")
         .infra_species("Agalinis", "purpurea", Rank::Variety, "borealis")
@@ -511,7 +511,7 @@ fn infraspecies_multiple_icn() {
     assert_name("Senecio fuchsii C.C.Gmel. subsp. fuchsii var. fuchsii")
         .infra_species("Senecio", "fuchsii", Rank::Variety, "fuchsii")
         .warning(&["Removed: subsp. fuchsii", warnings::QUADRINOMIAL])
-        .comb_authors(None, &["C.C.Gmel."])
+        .specific_authors(None, &["C.C.Gmel."])
         .nothing_else();
     assert_name("Euastrum divergens var. rhodesiense f. coronulum A.M. Scott & Prescott")
         .infra_species("Euastrum", "divergens", Rank::Form, "coronulum")

@@ -12,7 +12,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NomCode, Rank};
+use nameparser::model::{warnings, NomCode, Rank};
 
 #[test]
 fn a_spanish_y_joins_the_two_surnames_of_one_person() {
@@ -235,5 +235,49 @@ fn a_bracket_opening_with_ex_holds_the_ex_authors() {
         .species("Alicyclobacillus", "mali")
         .comb_authors(Some("2002"), &["Matsubara", "al."])
         .code(NomCode::Bacterial)
+        .nothing_else();
+}
+
+#[test]
+fn a_question_mark_after_an_author_before_the_year_is_uncertain() {
+    // #80: 107 CLB authorships with "Author? year" lost the "?" without a trace
+    assert_name_auth("Aaages", "Barovski? 1926")
+        .monomial("Aaages")
+        .comb_authors(Some("1926"), &["Barovski"])
+        .code(NomCode::Zoological)
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+    assert_name_auth("Antheraea kausalia", "Rondot? 1887?")
+        .species("Antheraea", "kausalia")
+        .comb_authors(Some("1887?"), &["Rondot"])
+        .code(NomCode::Zoological)
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+    // a doubted lone initial after "&" is an author of its own, not an initial of the one before
+    assert_name_auth("Anomalomma muju", "Chrysanthus & F? 1967")
+        .species("Anomalomma", "muju")
+        .comb_authors(Some("1967"), &["Chrysanthus", "F."])
+        .code(NomCode::Zoological)
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+    // …while after a comma it is the doubted initial of the author before
+    assert_name_auth("Otiorrhynchus mandibularis", "Redtenbacher, W?, 1842")
+        .species("Otiorrhynchus", "mandibularis")
+        .comb_authors(Some("1842"), &["W.Redtenbacher"])
+        .code(NomCode::Zoological)
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+}
+
+#[test]
+fn co_authors_with_given_names_joined_by_commas_are_no_reference() {
+    // #94: the particle "de" read as a title's connector, the rest of the team as a reference
+    assert_name("Phialophora ellipsoidea Yali Li, Sybren de Hoog, Ruoyu Li")
+        .species("Phialophora", "ellipsoidea")
+        .comb_authors(None, &["Yali Li", "Sybren de Hoog", "Ruoyu Li"])
         .nothing_else();
 }

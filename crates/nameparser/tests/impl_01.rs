@@ -147,9 +147,10 @@ fn sic() {
         .sic()
         .nothing_else();
 
+    // the comment of a sic is a note (#105; Java: an unparsed "(sic,porphyria)")
     assert_name("Turbo porphyrites [sic, porphyria]")
         .species("Turbo", "porphyrites")
-        .partial("(sic,porphyria)") // not ideal , but hey
+        .sensu("porphyria")
         .sic()
         .nothing_else();
 }

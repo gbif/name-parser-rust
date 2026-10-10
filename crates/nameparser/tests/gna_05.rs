@@ -365,19 +365,27 @@ fn open_taxonomy_with_ranks_unfinished() {
 #[test]
 fn ignoring_serovar_serotype() {
     // group: Ignoring serovar/serotype. Bacterial subspecific epidemiological
-    // designators (serotype/serovar [strain]) are silently stripped — they aren't
-    // formal nomenclatural ranks.
+    // designators (serotype/serovar [strain]) are stripped — they aren't formal
+    // nomenclatural ranks — and named in a warning (#81).
     assert_name("Aggregatibacter actinomycetemcomitans serotype d str. SA508")
         .species("Aggregatibacter", "actinomycetemcomitans")
+        .warning(&["Removed: serotype d str. SA508"])
         .nothing_else();
     assert_name("Streptococcus pyogenes (serotype M18)")
         .species("Streptococcus", "pyogenes")
+        .warning(&["Removed: (serotype M18)"])
         .nothing_else();
     assert_name("Actinobacillus pleuropneumoniae serovar 2 strain S1536")
         .species("Actinobacillus", "pleuropneumoniae")
+        .warning(&["Removed: serovar 2 strain S1536"])
         .nothing_else();
     assert_name("Leptospira interrogans serovar Fugis")
         .species("Leptospira", "interrogans")
+        .warning(&["Removed: serovar Fugis"])
+        .nothing_else();
+    assert_name("Salmonella enterica subsp. enterica serovar Typhimurium")
+        .infra_species("Salmonella", "enterica", Rank::Subspecies, "enterica")
+        .warning(&["Removed: serovar Typhimurium"])
         .nothing_else();
 }
 

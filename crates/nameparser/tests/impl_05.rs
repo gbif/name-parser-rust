@@ -297,14 +297,14 @@ fn o_tu() {
         NameType::Identifier,
         "BOLD:ACW2100",
     );
-    // ...but a BOLD code TRAILING a taxonomic anchor is still stripped to the inner surrogate and
-    // reported as OTHER (the anchored-trailing-code path is unchanged in 5.0.0).
-    assert_unparsable_name(
-        "Festuca sp. BOLD:ACW2100",
-        Rank::Unranked,
-        NameType::Other,
-        "BOLD:ACW2100",
-    );
+    // ...but a BOLD code TRAILING a taxonomic anchor designates it, and the anchor is kept (#101;
+    // Java reported OTHER, named by the code alone).
+    assert_informal("Festuca sp. BOLD:ACW2100")
+        .taxon("Festuca")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. BOLD:ACW2100")
+        .nothing_else();
     assert_unparsable_name(
         "sh460441.07fu",
         Rank::Unranked,
@@ -602,11 +602,11 @@ fn author_variations() {
         .nothing_else();
 
     // Autonym authors are the species authors (ICN Art. 22.1/26.1): the autonym's final
-    // epithet carries no author, but the species author "d'Urv." is captured and rendered
-    // after the species epithet.
+    // epithet carries no author, but the species author "d'Urv." is captured as the specific
+    // authorship (#86) and rendered after the species epithet.
     assert_name("Cirsium creticum d'Urv. subsp. creticum")
         .infra_species("Cirsium", "creticum", Rank::Subspecies, "creticum")
-        .comb_authors(None, &["d'Urv."])
+        .specific_authors(None, &["d'Urv."])
         .autonym()
         .nothing_else();
 
@@ -650,11 +650,10 @@ fn author_variations() {
 
     assert_name("Navicula ambigua f. craticularis Istv?nffi, 1898, 1897")
         .infra_species("Navicula", "ambigua", Rank::Form, "craticularis")
-        .comb_authors(Some("1898"), &["Istvnffi"])
+        .comb_authors(Some("1898"), &["Istv?nffi"])
         .imprint_year("1897")
-        .doubtful()
         .code(NomCode::Zoological)
-        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
     assert_name("Cestodiscus gemmifer F.S.Castracane degli Antelminelli")

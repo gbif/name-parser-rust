@@ -94,3 +94,29 @@ fn an_apostrophe_in_an_author_name_stays() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn a_bracketed_second_year_after_a_comma_is_the_imprint_year() {
+    // #79: 917 CLB authorships lost the actual year to the bracketed one, read as the year of a
+    // citation "1909 (1910)"; the year is the first, as without the comma
+    for authorship in [
+        "Broun, 1909 (1910)",
+        "Broun , 1909 (1910)",
+        "Broun 1909 (1910)",
+        "Broun, 1909(1910)",
+    ] {
+        assert_name_auth("Acalles metrosiderae", authorship)
+            .species("Acalles", "metrosiderae")
+            .comb_authors(Some("1909"), &["Broun"])
+            .imprint_year("1910")
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    // a family-group name's date of priority (ICZN Art. 40.2.1) has no field of its own
+    assert_name("Acanthocinini J.Thomson, 1860 (1839)")
+        .monomial("Acanthocinini")
+        .comb_authors(Some("1860"), &["J.Thomson"])
+        .imprint_year("1839")
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

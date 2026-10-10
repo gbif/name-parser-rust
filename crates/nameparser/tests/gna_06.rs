@@ -520,8 +520,10 @@ fn underscores_instead_of_spaces() {
         .species("Pseudocercospora", "dendrobii")
         .nothing_else();
 
+    // a strain code like any other, not an unparsed rest (#84)
     assert_name("Oxalis barrelieri XXZ_21243")
         .species("Oxalis", "barrelieri")
-        .partial("XXZ_21243")
+        .phrase("XXZ_21243")
+        .type_(NameType::Informal)
         .nothing_else();
 }
