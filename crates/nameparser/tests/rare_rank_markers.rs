@@ -223,3 +223,15 @@ fn a_greek_letter_in_brackets_numbers_an_infraspecific_name() {
         .comb_authors(None, &["Grunow"])
         .nothing_else();
 }
+
+#[test]
+fn a_lowercase_cultivar_and_an_abbreviated_cultivar_group() {
+    // #92: "cv" became the infraspecific epithet, "Queen Gp" a basionym author
+    assert_name_auth("Vanilla planifolia cv. tahiti", "Costantin & Bois, 1916")
+        .cultivar_sp("Vanilla", "planifolia", "Tahiti")
+        .comb_authors(Some("1916"), &["Costantin", "Bois"])
+        .nothing_else();
+    assert_name("Lactuca sativa (Capitata Gp)")
+        .cultivar_sp_rank("Lactuca", "sativa", Rank::CultivarGroup, "Capitata")
+        .nothing_else();
+}

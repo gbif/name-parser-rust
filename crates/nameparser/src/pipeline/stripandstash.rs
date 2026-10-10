@@ -100,6 +100,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = unbracket_in_citation(ctx, s);
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
+    s = normalise_cultivar_spelling(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
     s = lower_shouted_qualifier(s);
     s = strip_rank_nova(ctx, s);
@@ -2265,6 +2266,50 @@ fn normalise_hort_ex_placeholder(_ctx: &mut ParseContext, s: String) -> String {
     let s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
     let s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
     HT_MARKER.replace_all(&s, "hort.").into_owned()
+}
+
+/// A Cultivar Group abbreviated or in brackets at the end: `(Queen Gp)`, `Queen Gp.`, `(Capitata
+/// Group)`. Group 1 the group's epithet.
+static CULTIVAR_GROUP_SPELLING: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s+)(?:\((\p{Lu}\p{L}+(?:(?-u:\s+)\p{Lu}\p{L}+)*)(?-u:\s+)(?:Gp\.?|Group)\)|(\p{Lu}\p{L}+(?:(?-u:\s+)\p{Lu}\p{L}+)*)(?-u:\s+)Gp\.?)(?-u:\s*)$").unwrap()
+});
+
+/// A cultivar epithet in lower case after its marker: `cv. tahiti`. Group 1 its first letter, group
+/// 2 the rest.
+static LOWERCASE_CULTIVAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\bcv\.?(?-u:\s+)(\p{Ll})([\p{Ll}\-]+)").unwrap());
+
+/// TAXREF and older sources write a cultivar epithet in lower case, `Vanilla planifolia cv.
+/// tahiti`, and a Cultivar Group abbreviated in brackets, `Ananas comosus (Queen Gp)`: the first
+/// made `cv` the infraspecific epithet, the second a basionym author `Queen Gp` (#92). Both are
+/// written the ICNCP way here, `cv. 'Tahiti'` and `Queen Group`, for the cultivar steps to read.
+fn normalise_cultivar_spelling(_ctx: &mut ParseContext, s: String) -> String {
+    let s = match CULTIVAR_GROUP_SPELLING.captures(&s) {
+        Some(caps) => {
+            let group = caps.get(1).or(caps.get(2)).unwrap().as_str();
+            format!("{} {group} Group", &s[..caps.get(0).unwrap().start()])
+        }
+        None => s,
+    };
+    // only where the cultivar steps can take it: at the end, or before a plain author
+    let fits = |caps: &regex::Captures| {
+        let rest = s[caps.get(0).unwrap().end()..].trim_start();
+        !caps[0].ends_with(" ex")
+            && (rest.is_empty() || rest.starts_with(|c: char| c.is_uppercase()))
+    };
+    match LOWERCASE_CULTIVAR.captures(&s) {
+        Some(caps) if fits(&caps) => {
+            let whole = caps.get(0).unwrap();
+            format!(
+                "{}cv. '{}{}'{}",
+                &s[..whole.start()],
+                caps[1].to_uppercase(),
+                &caps[2],
+                &s[whole.end()..]
+            )
+        }
+        _ => s,
+    }
 }
 
 // ---- Step 22: stripCultivarGroupGrex ----
