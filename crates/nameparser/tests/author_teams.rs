@@ -272,3 +272,12 @@ fn a_question_mark_after_an_author_before_the_year_is_uncertain() {
         .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
         .nothing_else();
 }
+
+#[test]
+fn co_authors_with_given_names_joined_by_commas_are_no_reference() {
+    // #94: the particle "de" read as a title's connector, the rest of the team as a reference
+    assert_name("Phialophora ellipsoidea Yali Li, Sybren de Hoog, Ruoyu Li")
+        .species("Phialophora", "ellipsoidea")
+        .comb_authors(None, &["Yali Li", "Sybren de Hoog", "Ruoyu Li"])
+        .nothing_else();
+}

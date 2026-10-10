@@ -4795,11 +4795,22 @@ static AUTHOR_TEAM_TAIL: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+/// The end of an author list joined by commas alone, its authors with given names: "Sybren de
+/// Hoog, Ruoyu Li". Each name has at most three capitalised words besides its particles.
+static AUTHOR_LIST_TAIL: LazyLock<Regex> = LazyLock::new(|| {
+    let particle = r"(?:de|da|do|dos|van|von|der|den|du|le|la|di|del)";
+    let word = r"\p{Lu}[\p{L}'.\-]*";
+    let name = format!(r"(?:{particle}\s+)*{word}(?:\s+(?:{particle}\s+)*{word}){{0,2}}");
+    Regex::new(&format!(r"^{name}(?:,\s+{name})+$")).unwrap()
+});
+
 fn strip_comma_prefixed_reference(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = COMMA_PREFIXED_REFERENCE.captures(&s) {
         let group1 = caps.get(1).unwrap();
         let reference = java_trim(group1.as_str()).to_string();
-        if AUTHOR_TEAM_TAIL.is_match(&reference) {
+        // co-authors, not a title: "Yali Li, Sybren de Hoog, Ruoyu Li" lost all but the first
+        // (#94)
+        if AUTHOR_TEAM_TAIL.is_match(&reference) || AUTHOR_LIST_TAIL.is_match(&reference) {
             return s;
         }
         ctx.name.set_published_in(&reference);
