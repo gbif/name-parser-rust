@@ -5,7 +5,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn in_litteris_is_an_unpublished_name() {
@@ -504,5 +504,30 @@ fn a_page_in_the_basionym_brackets_is_dropped() {
         .species("Actinia", "bermudensis")
         .bas_authors(Some("1889"), &["McMurrich"])
         .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn an_implausible_year_is_no_year() {
+    // #85: a voucher number after a binomial is its phrase
+    assert_name("Abietinella abietina Bezgodov 116")
+        .species("Abietinella", "abietina")
+        .phrase("Bezgodov 116")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Aglaia aff. spectabilis Pannell 2083")
+        .species("Aglaia", "spectabilis")
+        .qualifiers(&[(NamePart::Specific, "aff.")])
+        .phrase("Pannell 2083")
+        .type_(NameType::Informal)
+        .nothing_else();
+    // a truncated year is left unparsed, flagged
+    assert_name_auth("Sepidium reichei", ",187 Allard")
+        .species("Sepidium", "reichei")
+        .comb_authors(None, &["Allard"])
+        .partial("187")
+        .doubtful()
+        .code(NomCode::Zoological)
+        .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 }

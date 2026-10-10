@@ -77,6 +77,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = stash_trailing_strain_code(ctx, s);
     s = stash_trailing_culture_accession(ctx, s);
     s = stash_trailing_accession(ctx, s);
+    s = stash_trailing_voucher(ctx, s);
     s = stash_aggregate_designation(ctx, s);
     s = stash_bracketed_annotation(ctx, s);
     s = stash_underscore_designation(ctx, s);
@@ -1304,6 +1305,29 @@ fn stash_trailing_accession(ctx: &mut ParseContext, s: String) -> String {
             && super::assemble::is_unlikely_year(Some(code))
             && !is_indet_species_marker(caps[1].rsplit(char::is_whitespace).next().unwrap_or(""))
         {
+            ctx.name.phrase = Some(caps[2].to_string());
+            ctx.name.type_ = NameType::Informal;
+            return caps[1].to_string();
+        }
+    }
+    s
+}
+
+/// A collector and number after a binomial, perhaps in brackets: `Bezgodov 116`, `(A.R.Chapman
+/// 596)`. Group 1 the name, group 2 the voucher, group 3 the number.
+static TRAILING_VOUCHER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+(\(?(?:\p{Lu}\.\s?)*\p{Lu}[\p{L}'\-]+(?:\s+et\s+al\.)?\s+((?-u:\d{1,5})[a-z]?)\)?)$",
+    )
+    .unwrap()
+});
+
+/// A [`TRAILING_VOUCHER`] whose number is no plausible year is the phrase, like an accession: NCBI
+/// and the Australian herbaria name specimens so, and the number became the year 116 or 6460
+/// (#85).
+fn stash_trailing_voucher(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = TRAILING_VOUCHER.captures(&s) {
+        if super::assemble::is_unlikely_year(Some(&caps[3])) {
             ctx.name.phrase = Some(caps[2].to_string());
             ctx.name.type_ = NameType::Informal;
             return caps[1].to_string();

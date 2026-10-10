@@ -748,8 +748,9 @@ fn test_nomenclatural_notes_pattern() {
     // 1199 is a page or typo: no year that could vote for the zoological code
     assert_nom_note("var. nov.", "Euphorbia rossiana var. nov. Steinmann, 1199")
         .species("Euphorbia", "rossiana")
-        .comb_authors(Some("1199"), &["Steinmann"])
+        .comb_authors(None, &["Steinmann"])
         .doubtful()
+        .partial("1199")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 }

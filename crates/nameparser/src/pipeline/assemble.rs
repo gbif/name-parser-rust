@@ -411,10 +411,18 @@ fn rank_from_global_suffix(name: &str) -> Option<Rank> {
     }
 }
 
-/// Plausible authorship years fall in this inclusive range; anything else is flagged. Java
-/// `Assemble.MIN_YEAR`/`MAX_YEAR` (`Assemble.java:198-199`).
-const MIN_YEAR: i32 = 1500;
-const MAX_YEAR: i32 = 2100;
+/// Plausible authorship years fall in this inclusive range; anything else is flagged. Java had
+/// 1500 to 2100 (`Assemble.MIN_YEAR`/`MAX_YEAR`); nomenclature starts in 1753 (ICN Art. 13, ICZN
+/// Art. 3 in 1758), and no name is published after next year, so a voucher number such as `Pannell
+/// 2083` or `Montoya 1558` passed for a year (#85).
+const MIN_YEAR: i32 = 1753;
+static MAX_YEAR: LazyLock<i32> = LazyLock::new(|| {
+    let secs = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs());
+    // the year now, give or take a day around New Year, and the next one
+    1970 + (secs / 31_556_952) as i32 + 1
+});
 
 /// Java `Assemble.YEAR_4DIGIT` (`Assemble.java:200-201`), compiled with no flags — Java's
 /// `\d` is therefore ASCII-only, ported as `(?-u:\d{4})` (this port's per-pattern flag rule).
@@ -447,16 +455,29 @@ pub(crate) fn is_unlikely_year(year: Option<&str>) -> bool {
         .expect("YEAR_4DIGIT just matched exactly 4 ASCII digits, always parseable as i32");
     // Java: `return v < MIN_YEAR || v > MAX_YEAR;` — same truth table, spelled with the
     // standard range helper per clippy::manual_range_contains.
-    !(MIN_YEAR..=MAX_YEAR).contains(&v)
+    !(MIN_YEAR..=*MAX_YEAR).contains(&v)
 }
 
-/// Java `Assemble.flagUnlikelyYears(ParsedName)` (`Assemble.java:208-214`).
+/// Java `Assemble.flagUnlikelyYears(ParsedName)` (`Assemble.java:208-214`). An unlikely year is no
+/// year (#85): Java kept it, flagged, so `Blainville, 183`, a truncated year, was the year 183. It
+/// goes to `unparsed` (a PARTIAL parse), the warning kept.
 fn flag_unlikely_years(n: &mut ParsedName) {
     if is_unlikely_year(n.combination_authorship.year.as_deref())
         || is_unlikely_year(n.basionym_authorship.year.as_deref())
     {
         n.doubtful = true;
         n.add_warning(warnings::UNLIKELY_YEAR);
+        for a in [&mut n.combination_authorship, &mut n.basionym_authorship] {
+            if is_unlikely_year(a.year.as_deref()) {
+                let year = a.year.take().expect("an unlikely year is a year");
+                n.unparsed = Some(match n.unparsed.take() {
+                    Some(u) if u.contains(&year) => u,
+                    Some(u) => format!("{u} {year}"),
+                    None => year,
+                });
+                n.state = State::Partial;
+            }
+        }
     }
 }
 
@@ -863,10 +884,10 @@ mod tests {
 
     #[test]
     fn is_unlikely_year_boundaries() {
-        assert!(!is_unlikely_year(Some("1500")));
-        assert!(!is_unlikely_year(Some("2100")));
-        assert!(is_unlikely_year(Some("1499")));
-        assert!(is_unlikely_year(Some("2101")));
+        assert!(!is_unlikely_year(Some("1753")));
+        assert!(!is_unlikely_year(Some("2025")));
+        assert!(is_unlikely_year(Some("1752")));
+        assert!(is_unlikely_year(Some("2100")));
         assert!(is_unlikely_year(Some("137")));
         assert!(is_unlikely_year(Some("0000")));
         assert!(!is_unlikely_year(Some("198?")));

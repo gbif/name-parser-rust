@@ -185,27 +185,31 @@ fn todo_names() {
         .comb_authors(Some("1910"), &["Cabeau"])
         .nothing_else();
 
+    // an unlikely year is no year, left unparsed (#85)
     assert_name("Scleropogon kelloggi (Wilcox, 137)")
         .species("Scleropogon", "kelloggi")
-        .bas_authors(Some("137"), &["Wilcox"])
+        .bas_authors(None, &["Wilcox"])
         .code(NomCode::Zoological)
         .doubtful()
+        .partial("137")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 
     assert_name("Ospriocerus arizonensis (Bromley, 193k7)")
         .species("Ospriocerus", "arizonensis")
-        .bas_authors(Some("193"), &["Bromley"])
+        .bas_authors(None, &["Bromley"])
         .code(NomCode::Zoological)
         .doubtful()
+        .partial("193")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 
     // "0000" is no year, so it casts no zoological vote
     assert_name("Lepidanthrax coquilletti Evenhuis and Hall, 0000")
         .species("Lepidanthrax", "coquilletti")
-        .comb_authors(Some("0000"), &["Evenhuis", "Hall"])
+        .comb_authors(None, &["Evenhuis", "Hall"])
         .doubtful()
+        .partial("0000")
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 
