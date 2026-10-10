@@ -195,3 +195,31 @@ fn a_lowercase_infrageneric_epithet_after_its_marker_is_capitalised() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn a_greek_letter_in_brackets_numbers_an_infraspecific_name() {
+    // #90: written out in brackets, the letter dropped the epithet; as β it was understood
+    assert_name_auth("Achnanthes brevipes [beta] salina", "Kützing")
+        .infra_species("Achnanthes", "brevipes", Rank::InfraspecificName, "salina")
+        .comb_authors(None, &["Kützing"])
+        .nothing_else();
+    assert_name_auth(
+        "Batrachospermum moniliforme (epsilon)viridis",
+        "(Bory) J.E. Duby",
+    )
+    .infra_species(
+        "Batrachospermum",
+        "moniliforme",
+        Rank::InfraspecificName,
+        "viridis",
+    )
+    .bas_authors(None, &["Bory"])
+    .comb_authors(None, &["J.E.Duby"])
+    .code(NomCode::Botanical)
+    .nothing_else();
+    // after a rank marker it is a mere label
+    assert_name_auth("Epithemia gibba var. .(gamma)parallela", "Grunow")
+        .infra_species("Epithemia", "gibba", Rank::Variety, "parallela")
+        .comb_authors(None, &["Grunow"])
+        .nothing_else();
+}

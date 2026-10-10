@@ -69,6 +69,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_unranked_marker(s);
     s = unbracket_infrageneric_marker(s);
     s = capitalise_infrageneric_epithet(s);
+    s = normalise_greek_letter_marker(s);
     s = strip_superspecies_marker(ctx, s);
     s = join_particle_epithet(s);
     s = repair_question_mark_in_word(ctx, s);
@@ -1751,6 +1752,27 @@ fn capitalise_infrageneric_epithet(s: String) -> String {
         first.as_str().to_uppercase(),
         &s[first.end()..]
     )
+}
+
+/// A Greek letter numbering an infraspecific taxon after the species epithet, perhaps after a rank
+/// marker: `β hydrophilus`, `[beta] salina`, `(epsilon)viridis`, `var. .(gamma)parallela`. Group 1
+/// the binomial, group 2 a rank marker, group 3 the first letter of the epithet.
+static GREEK_LETTER_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)[\p{Ll}\-]+)((?-u:\s+)(?:var|subvar|subsp|ssp|f|forma)\.)?(?-u:\s*)\.?(?:[\[(](?:alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega)[\])]\.?|[α-ω](?:\.|(?-u:\s)))(?-u:\s*)(\p{Ll})").unwrap()
+});
+
+/// Old works number the varieties of a species with Greek letters, `Agaricus stipatus β
+/// hydrophilus`, which Index Nominum Algarum writes `[beta]`; the epithet was dropped and the name
+/// became its species (#90). After a rank marker the letter is a mere label and goes; alone it
+/// gives no rank, the name is an unranked infraspecific one. A letter glued to the epithet,
+/// `var. δmicrophylla`, is left as it was.
+fn normalise_greek_letter_marker(s: String) -> String {
+    let Some(caps) = GREEK_LETTER_MARKER.captures(&s) else {
+        return s;
+    };
+    let epithet = caps.get(3).unwrap().start();
+    let marker = caps.get(2).map_or(" infrasp.", |m| m.as_str());
+    format!("{}{marker} {}", &caps[1], &s[epithet..])
 }
 
 /// A superspecies marker between the genus and the epithet: `Eosembia supersp. thoracica`.
