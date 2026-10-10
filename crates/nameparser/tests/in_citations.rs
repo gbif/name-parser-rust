@@ -180,3 +180,30 @@ fn a_capitalised_or_bracketed_in_is_a_citation_too() {
         .published_in("Aiton")
         .nothing_else();
 }
+
+#[test]
+fn an_in_citation_in_its_own_bracket() {
+    // #96: WoRMS writes it "(in: …)"; the authorship was cut to "Reid (in" and the year lost
+    assert_name_auth(
+        "Rheocyclops carolinianus",
+        "Reid (in: Reid, Strayer, McArthur, Stibbe & Lewis), 1999",
+    )
+    .species("Rheocyclops", "carolinianus")
+    .comb_authors(Some("1999"), &["Reid"])
+    .published_in("Reid, Strayer, McArthur, Stibbe & Lewis, 1999")
+    .published_in_year(Some(1999))
+    .nothing_else();
+    assert_name_auth("Nirmus anagrapsus", "Nitzsch (in Giebel), 1866")
+        .species("Nirmus", "anagrapsus")
+        .comb_authors(Some("1866"), &["Nitzsch"])
+        .published_in("Giebel, 1866")
+        .published_in_year(Some(1866))
+        .nothing_else();
+    // NCBI's higher taxon of a homonym is no citation
+    assert_informal("Bostrychia sp. (in: Rhodophyta)")
+        .taxon("Bostrychia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. (in: Rhodophyta)")
+        .nothing_else();
+}

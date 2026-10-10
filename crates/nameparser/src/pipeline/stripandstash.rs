@@ -93,6 +93,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_serovar_serotype(ctx, s);
     s = strip_angle_bracket_authorship(ctx, s);
     s = strip_html(ctx, s);
+    s = unbracket_in_citation(ctx, s);
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
@@ -4246,6 +4247,44 @@ static BRACKETED_IN_AUTHOR: LazyLock<Regex> =
 static DANGLING_IN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:,?\s+)(?:in|In)(?-u:\s*)$").unwrap());
 
+/// An in-citation opening its own bracket after the author, WoRMS-style with a colon: `Reid (in:
+/// Reid, Strayer, McArthur, Stibbe & Lewis), 1999`. Group 1 the author, group 2 the work.
+static IN_CITATION_IN_BRACKETS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(\p{L}[^()]*?)(?-u:\s*)\((?-u:\s*)(?:in|In)(?-u:\s*):?(?-u:\s+)(\p{Lu}[^()]*?)(?-u:\s*)\)").unwrap()
+});
+
+/// Writes an [`IN_CITATION_IN_BRACKETS`] as the plain `Reid in Reid, Strayer, …, 1999` the
+/// in-citation steps split: the bracket was not recognised, its colon taken for a concept
+/// reference, and the authorship cut to `Reid (in` with the year lost (#96).
+fn unbracket_in_citation(_ctx: &mut ParseContext, s: String) -> String {
+    if !s.contains("(in") && !s.contains("(In") {
+        return s;
+    }
+    let Some(caps) = IN_CITATION_IN_BRACKETS.captures(&s) else {
+        return s;
+    };
+    // after an author or its year, not after `sp.` or a designation: NCBI's `Bostrychia sp. (in:
+    // Rhodophyta)` names the higher taxon of a homonym
+    let last = caps[1].split_whitespace().last().unwrap_or_default();
+    if !(AUTHOR_WORD.is_match(last) || YEAR_WORD.is_match(last)) {
+        return s;
+    }
+    let whole = caps.get(0).unwrap();
+    format!(
+        "{}{} in {}{}",
+        &s[..whole.start()],
+        &caps[1],
+        &caps[2],
+        &s[whole.end()..]
+    )
+}
+
+/// A surname, perhaps abbreviated, as the last word before an in-citation: not a lone capital.
+static AUTHOR_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}[\p{L}'\-]+\.?$").unwrap());
+/// A year, as the last word before an in-citation.
+static YEAR_WORD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^(?-u:\d{4})[a-z]?,?$").unwrap());
+
 // ---- Step 47: stripInAuthorInParens ----
 
 /// Java IN_AUTHOR_IN_PARENS (StripAndStash.java:152-154):
@@ -5249,7 +5288,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 11] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 12] = [
         repair_colon_diacritics,
         flag_uncertain_authorship,
         strip_imprint_years,
@@ -5261,6 +5300,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_extinct_dagger,
         stash_synonym_bracket,
         split_note_from_basionym_bracket,
+        unbracket_in_citation,
     ];
     steps
         .into_iter()
