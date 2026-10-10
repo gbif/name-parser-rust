@@ -165,7 +165,11 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // Step 7: a monomial with an underscore is either "Genus_species" (underscore as space:
     // genus + specific epithet, when the after-part starts lowercase) or a GTDB-style phrase
     // name (e.g. "Desulfobacterota_B": uninomial + phrase, when the after-part starts
-    // uppercase).
+    // uppercase). Under the bacterial code a GTDB suffix of capitals stays on the uninomial,
+    // though: `Bacillus_BF` is one of several genera GTDB splits Bacillus into, not Bacillus with
+    // a designation, and the suffixed genus of a binomial (`Acholeplasma_D palmae`) is kept whole
+    // too (#102). Without it the suffix may as well be a BOLD placeholder code
+    // (`Blattellinae_SB`).
     if ctx.name.type_ == NameType::Scientific {
         if let Some(idx) = ctx.name.uninomial.as_ref().and_then(|u| u.find('_')) {
             let uni = ctx.name.uninomial.clone().expect("just matched Some above");
@@ -177,6 +181,11 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
                 ctx.name.genus = Some(before);
                 ctx.name.specific_epithet = Some(after);
                 ctx.name.rank = Rank::Species;
+            } else if ctx.requested_code == Some(NomCode::Bacterial)
+                && after.chars().count() <= 4
+                && after.chars().all(|c| c.is_ascii_uppercase())
+            {
+                // "Bacillus_BF" → one GTDB genus
             } else {
                 // "Desulfobacterota_B" → GTDB-style phrase name
                 ctx.name.uninomial = Some(before);
@@ -310,7 +319,13 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // suffix maps derived from authorship-inferred code — that would silently assign ranks to
     // names whose code we merely guessed.
     if ctx.name.rank == Rank::Unranked {
-        if let Some(uninomial) = ctx.name.uninomial.clone() {
+        // the suffix of a GTDB name is no part of it here: "Bacillaceae_B" is a family
+        if let Some(uninomial) = ctx
+            .name
+            .uninomial
+            .as_deref()
+            .map(|u| u.split('_').next().unwrap_or(u).to_string())
+        {
             let code_for_inference =
                 ctx.requested_code
                     .or(if ctx.viral_shape { ctx.name.code } else { None });

@@ -939,3 +939,29 @@ fn a_code_or_letter_after_sp_behind_a_species_epithet_is_its_phrase() {
         .type_(NameType::Informal)
         .nothing_else();
 }
+
+/// #102: under the bacterial code, as ChecklistBank parses GTDB, a suffix of capitals belongs to
+/// the genus: `Bacillus_BF` is one of the genera GTDB splits Bacillus into.
+#[test]
+fn a_gtdb_genus_keeps_its_suffix_under_the_bacterial_code() {
+    assert_name_hinted(
+        "Bacillus_BF",
+        None,
+        Some(Rank::Genus),
+        Some(NomCode::Bacterial),
+    )
+    .monomial_rank("Bacillus_BF", Rank::Genus)
+    .code(NomCode::Bacterial)
+    .nothing_else();
+    assert_name_hinted("Bacillaceae_B", None, None, Some(NomCode::Bacterial))
+        .monomial_rank("Bacillaceae_B", Rank::Family)
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    // without it the suffix may be a placeholder code, the designation of the taxon before it
+    assert_informal("Bacillus_BF")
+        .taxon("Bacillus")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("BF")
+        .nothing_else();
+}
