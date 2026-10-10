@@ -15,7 +15,7 @@ A name is parsed into one of three results:
   rest could not be read (`unparsed`).
 - **Informal** — a provisional name with no epithet of its own (`Bacillus sp. 1`): the anchor
   `taxon` and its `taxonRank`, the `rank` the designation stands for and the designation itself,
-  verbatim, as the `phrase`.
+  verbatim, as the `phrase`, and whether it is a `candidatus` name.
 - **Unparsable** — no scientific name at all (a virus, a placeholder, an identifier, a hybrid
   formula): only its `type` and, where known, its `code`.
 
@@ -89,7 +89,8 @@ A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. 
 | `Arvicola terrestris morpha subalpina` | **Parsed** · `SCIENTIFIC` · rank `MORPH` · code `ZOOLOGICAL`<br>genus `Arvicola` · specificEpithet `terrestris` · infraspecificEpithet `subalpina`<br>→ `Arvicola terrestris morph subalpina` |
 | `Acidalia remutaria ab. n. undularia`<br>*aberratio nova* | **Parsed** · `SCIENTIFIC` · rank `ABERRATION` · code `ZOOLOGICAL`<br>genus `Acidalia` · specificEpithet `remutaria` · infraspecificEpithet `undularia`<br>nomenclaturalNote `ab. n.`<br>→ `Acidalia remutaria ab. undularia, ab. n.` |
 | `Pseudomonas syringae pv. tomato` | **Parsed** · `SCIENTIFIC` · rank `PATHOVAR` · code `BACTERIAL`<br>genus `Pseudomonas` · specificEpithet `syringae` · infraspecificEpithet `tomato`<br>→ `Pseudomonas syringae pv. tomato` |
-| `Salmonella enterica subsp. enterica serovar Typhimurium`<br>*a serovar is no part of the scientific name* | **Parsed** · `SCIENTIFIC` · rank `SUBSPECIES`<br>genus `Salmonella` · specificEpithet `enterica` · infraspecificEpithet `enterica`<br>warnings `Removed: serovar Typhimurium`<br>→ `Salmonella enterica subsp. enterica` |
+| `Salmonella enterica subsp. enterica serovar Typhimurium`<br>*a serovar has its own rank; the subspecies has to go* | **Parsed** · `SCIENTIFIC` · rank `SEROVAR` · code `BACTERIAL`<br>genus `Salmonella` · specificEpithet `enterica` · infraspecificEpithet `Typhimurium`<br>warnings `Removed: subsp. enterica`, `name was quadrinomial`<br>→ `Salmonella enterica serovar Typhimurium` |
+| `Actinobacillus pleuropneumoniae serotype 1`<br>*a numbered serovar is the phrase* | **Parsed** · `INFORMAL` · rank `SEROVAR` · code `BACTERIAL`<br>genus `Actinobacillus` · specificEpithet `pleuropneumoniae` · phrase `1`<br>→ `Actinobacillus pleuropneumoniae serovar 1` |
 | `Fusarium oxysporum f. sp. lycopersici` | **Parsed** · `SCIENTIFIC` · rank `FORMA_SPECIALIS` · code `BOTANICAL`<br>genus `Fusarium` · specificEpithet `oxysporum` · infraspecificEpithet `lycopersici`<br>→ `Fusarium oxysporum f.sp. lycopersici` |
 | `Rubus hirtus Rchb. microg pectinatus Sudre & Gavet` | **Parsed** · `SCIENTIFIC` · rank `INFRASPECIFIC_NAME`<br>genus `Rubus` · specificEpithet `hirtus` · infraspecificEpithet `pectinatus`<br>combination: authors `Sudre`, `Gavet`<br>specificAuthorship combination: authors `Rchb.`<br>→ `Rubus hirtus Rchb. pectinatus Sudre & Gavet` |
 
@@ -105,6 +106,7 @@ A capitalised word in brackets after the genus is a subgenus. Infrageneric rank 
 | `Centaurea L. subg. Jacea` | **Parsed** · `SCIENTIFIC` · rank `SUBGENUS`<br>genus `Centaurea` · infragenericEpithet `Jacea`<br>genericAuthorship combination: authors `L.`<br>→ `Centaurea L. subgen. Jacea` |
 | `Cordia (Adans.) Kuntze sect. Salimori` | **Parsed** · `SCIENTIFIC` · rank `SECTION_BOTANY` · code `BOTANICAL`<br>genus `Cordia` · infragenericEpithet `Salimori`<br>genericAuthorship combination: authors `Kuntze`<br>genericAuthorship basionym: authors `Adans.`<br>→ `Cordia (Adans.) Kuntze sect. Salimori` |
 | `Hieracium unr. Verbasciformia`<br>*unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Hieracium` · infragenericEpithet `Verbasciformia`<br>→ `Hieracium infragen. Verbasciformia` |
+| `Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux`<br>*no stirps rank: unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME` · code `BOTANICAL`<br>genus `Cortinarius` · infragenericEpithet `Balteatus`<br>combination: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>basionym: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>→ `Cortinarius infragen. Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux` |
 
 ## Hybrids
 
@@ -259,6 +261,9 @@ A taxon carrying a provisional designation but no epithet of its own is an `Info
 | `Acidimicrobiales bacterium JGI 01_E13` | **Informal** · taxon `Acidimicrobiales` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `bacterium JGI 01_E13`<br>→ `Acidimicrobiales bacterium JGI 01_E13` |
 | `Escherichia coli 18-41`<br>*a strain designation on a species* | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Escherichia` · specificEpithet `coli` · phrase `18-41`<br>→ `Escherichia coli 18-41` |
 | `Aquimarina muelleri DSM 19832` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Aquimarina` · specificEpithet `muelleri` · phrase `DSM 19832`<br>→ `Aquimarina muelleri DSM 19832` |
+| `Spirochaeta 2`<br>*a numbered group of the genus* | **Informal** · taxon `Spirochaeta` · taxonRank `UNRANKED` · rank `UNRANKED`<br>phrase `2`<br>→ `Spirochaeta 2` |
+| `Barea Subgroup 4` | **Informal** · taxon `Barea` · taxonRank `UNRANKED` · rank `UNRANKED`<br>phrase `Subgroup 4`<br>→ `Barea Subgroup 4` |
+| `Candidatus Pelagibacter sp. HTCC7211`<br>*Candidatus is kept as a flag* | **Informal** · taxon `Pelagibacter` · taxonRank `GENUS` · rank `SPECIES` · code `BACTERIAL`<br>phrase `sp. HTCC7211`<br>candidatus<br>→ `"Candidatus Pelagibacter" sp. HTCC7211` |
 
 ## Bacteria
 
@@ -290,6 +295,8 @@ Some strings are no scientific names: they come back as an unparsable result tha
 | `unidentified Rosaceae` | **Unparsable** · type `PLACEHOLDER` |
 | `uncultured bacterium` | **Unparsable** · type `PLACEHOLDER` |
 | `Gen. nov.` | **Unparsable** · type `PLACEHOLDER` |
+| `Subgroup 10`<br>*a numbered group with no taxon before it* | **Unparsable** · type `PLACEHOLDER` |
+| `duplocingulatoides`<br>*a lone lower-case word: an epithet without genus* | **Unparsable** · type `PLACEHOLDER` |
 | `N.N.` | **Unparsable** · type `PLACEHOLDER` |
 | `BOLD:AAA0001` | **Unparsable** · type `IDENTIFIER` |
 | `SH1234567.08FU` | **Unparsable** · type `IDENTIFIER` |
