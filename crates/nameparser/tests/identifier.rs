@@ -8,7 +8,7 @@
 mod common;
 use common::*;
 use nameparser::model::NameType;
-use nameparser::model::NomCode;
+use nameparser::model::{NamePart, NomCode, Rank};
 
 // ---- Part A: anchorless machine identifiers -> NameType::Identifier ---------------------------
 
@@ -18,6 +18,40 @@ fn unite_sh_and_bold_bins_are_identifiers() {
     assert_unparsable("BOLD:AAA0001", NameType::Identifier);
     // a lowercase SH still canonicalises to uppercase AND is now an Identifier (was OTHER)
     assert_unparsable("sh460441.07fu", NameType::Identifier);
+}
+
+#[test]
+fn a_bold_bin_or_sh_after_a_name_is_its_phrase() {
+    // #101: the taxon the barcode cluster was identified to is kept, the code is the designation
+    assert_informal("Decapoda sp. BOLD:AAF5952")
+        .taxon("Decapoda")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. BOLD:AAF5952")
+        .nothing_else();
+    assert_informal("Russula sp. SH1957732.10FU")
+        .taxon("Russula")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. SH1957732.10FU")
+        .nothing_else();
+    assert_informal("Tachinidae BOLD:AAA1234")
+        .taxon("Tachinidae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("BOLD:AAA1234")
+        .nothing_else();
+    assert_name("Aus bus BOLD:AAF5952")
+        .species("Aus", "bus")
+        .phrase("BOLD:AAF5952")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Labeo cf. bata BOLD:AAA1234")
+        .species("Labeo", "bata")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .phrase("BOLD:AAA1234")
+        .type_(NameType::Informal)
+        .nothing_else();
 }
 
 #[test]

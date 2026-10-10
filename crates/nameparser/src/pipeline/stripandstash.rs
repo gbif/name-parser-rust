@@ -53,6 +53,7 @@ use unicode_normalization::UnicodeNormalization;
 /// doc.
 pub(crate) fn run(ctx: &mut ParseContext) {
     let mut s = ctx.working.clone();
+    s = stash_trailing_identifier(ctx, s);
     s = repair_colon_diacritics(ctx, s);
     s = flag_uncertain_authorship(ctx, s);
     s = extract_generic_author(ctx, s);
@@ -1530,6 +1531,26 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
     ctx.name.add_warning(warnings::HOMOGLYHPS);
     ctx.coded_diacritics = true;
     out
+}
+
+/// A BOLD BIN (`BOLD:AAF5952`, `BOLD-2016`) or a UNITE species hypothesis (`SH1957732.10FU`)
+/// after a name. On its own it is an IDENTIFIER (see `preflight`).
+static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)^(.*[^\s])(?-u:\s+)(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)$").unwrap()
+});
+
+/// Sets a trailing BOLD BIN or SH code aside, to be appended to the phrase by Assemble: the
+/// designation of a barcode cluster under the taxon it was identified to, `Decapoda sp.
+/// BOLD:AAF5952` or `Aus bus BOLD:AAF5952`. Java rejected the whole name as OTHER, named by the
+/// code alone, which dropped the taxon (#101); left in place, the code became an author.
+fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
+    match TRAILING_IDENTIFIER.captures(&s) {
+        Some(caps) => {
+            ctx.trailing_identifier = Some(caps[2].to_string());
+            caps[1].to_string()
+        }
+        None => s,
+    }
 }
 
 // ---- Step 15: normaliseDoubleUnderscores ----

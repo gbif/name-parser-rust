@@ -4453,8 +4453,8 @@ Aesculus cf. × hybrida	true	Aesculus cf. × hybrida	Aesculus cf. × hybrida	Aes
 Daphnia (Daphnia) x krausi Flossner 1993	true	Daphnia × krausi Flossner, 1993	Daphnia × krausi	Daphnia krausi	Daphnia (Daphnia) × krausi Flossner, 1993	Flossner, 1993
 Barbus cf macrotaenia × toppini	false					
 Gemmula cf. cosmoi NP-2008	true	Gemmula cf. cosmoi NP-2008	Gemmula cf. cosmoi NP-2008	Gemmula cosmoi	Gemmula cf. cosmoi NP-2008	
-Coleoptera sp. BOLD:AAV0432	false					
-Coleoptera Bold:AAV0432	false					
+Coleoptera sp. BOLD:AAV0432	true	Coleoptera sp. BOLD:AAV0432	Coleoptera sp. BOLD:AAV0432	Coleoptera	Coleoptera sp. BOLD:AAV0432	
+Coleoptera Bold:AAV0432	true	Coleoptera Bold:AAV0432	Coleoptera Bold:AAV0432	Coleoptera	Coleoptera Bold:AAV0432	
 Ceylonesmus vector Chamberlin, 1941	true	Ceylonesmus vector Chamberlin, 1941	Ceylonesmus vector	Ceylonesmus vector	Ceylonesmus vector Chamberlin, 1941	Chamberlin, 1941
 Arv1virus	false					
 Turtle herpesviruses	false					
@@ -4971,7 +4971,7 @@ SH19186714.17FU	false
 SH191814.08FU	false					
 SH191814.04FU	false					
 BOLD:ACW2100	false					
-Festuca sp. BOLD:ACW2100	false					
+Festuca sp. BOLD:ACW2100	true	Festuca sp. BOLD:ACW2100	Festuca sp. BOLD:ACW2100	Festuca	Festuca sp. BOLD:ACW2100	
 sh460441.07fu	false					
 Boldenaria	true	Boldenaria	Boldenaria	Boldenaria	Boldenaria	
 Boldea	true	Boldea	Boldea	Boldea	Boldea	
@@ -5834,7 +5834,7 @@ Rühlella	true	Rühlella	Rühlella	Ruhlella	Rühlella
 Buteo borealis ? ventralis	true	Buteo borealis ? ventralis	Buteo borealis ? ventralis	Buteo borealis ventralis	Buteo borealis ? ventralis	
 Aesculus cf. × hybrida	true	Aesculus cf. × hybrida	Aesculus cf. × hybrida	Aesculus hybrida	Aesculus cf. × hybrida	
 Daphnia (Daphnia) x krausi Flossner 1993	true	Daphnia × krausi Flossner, 1993	Daphnia × krausi	Daphnia krausi	Daphnia (Daphnia) × krausi Flossner, 1993	Flossner, 1993
-Coleoptera Bold:AAV0432	false					
+Coleoptera Bold:AAV0432	true	Coleoptera Bold:AAV0432	Coleoptera Bold:AAV0432	Coleoptera	Coleoptera Bold:AAV0432	
 Ceylonesmus vector Chamberlin, 1941	true	Ceylonesmus vector Chamberlin, 1941	Ceylonesmus vector	Ceylonesmus vector	Ceylonesmus vector Chamberlin, 1941	Chamberlin, 1941
 Carabus satyrus satyrus KURNAKOV, 1962	true	Carabus satyrus satyrus Kurnakov, 1962	Carabus satyrus satyrus	Carabus satyrus satyrus	Carabus satyrus satyrus Kurnakov, 1962	Kurnakov, 1962
 Fakus prioni	true	Fakus prioni	Fakus prioni	Fakus prioni	Fakus prioni	

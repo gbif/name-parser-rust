@@ -244,6 +244,20 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         phrase.push_str(&tail);
     }
 
+    // Step 8c: a BOLD BIN or SH code set aside by `stash_trailing_identifier` designates the
+    // name: it ends the phrase (`sp. BOLD:AAF5952`), or is the phrase of a determined name. A
+    // designated `Genus sp.` is no longer missing anything, as `Genus sp. RMCC TR1811` is not.
+    if let Some(id) = ctx.trailing_identifier.take() {
+        ctx.name.phrase = Some(match ctx.name.phrase.take() {
+            Some(p) => format!("{p} {id}"),
+            None => id,
+        });
+        ctx.name.warnings.retain(|w| w != warnings::INDETERMINED);
+        if ctx.name.type_ == NameType::Scientific {
+            ctx.name.type_ = NameType::Informal;
+        }
+    }
+
     // Step 9: a year range in the authorship ("1845-1847") was interpreted down to just its
     // first year — flag it so callers know the year was reduced from a range.
     if auth_state.is_some_and(|s| s.year_range) {

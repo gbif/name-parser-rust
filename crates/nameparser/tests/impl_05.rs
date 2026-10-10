@@ -297,14 +297,14 @@ fn o_tu() {
         NameType::Identifier,
         "BOLD:ACW2100",
     );
-    // ...but a BOLD code TRAILING a taxonomic anchor is still stripped to the inner surrogate and
-    // reported as OTHER (the anchored-trailing-code path is unchanged in 5.0.0).
-    assert_unparsable_name(
-        "Festuca sp. BOLD:ACW2100",
-        Rank::Unranked,
-        NameType::Other,
-        "BOLD:ACW2100",
-    );
+    // ...but a BOLD code TRAILING a taxonomic anchor designates it, and the anchor is kept (#101;
+    // Java reported OTHER, named by the code alone).
+    assert_informal("Festuca sp. BOLD:ACW2100")
+        .taxon("Festuca")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. BOLD:ACW2100")
+        .nothing_else();
     assert_unparsable_name(
         "sh460441.07fu",
         Rank::Unranked,

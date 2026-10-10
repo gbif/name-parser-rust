@@ -652,16 +652,6 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     if s.contains(' ') && OTU_SPECIMEN_SUFFIX.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
     }
-    // Multi-word input whose last token is a known OTU code (e.g. "Festuca sp. BOLD:ACW2100").
-    if s.contains(' ') {
-        let last = last_word(&s);
-        if OTU_BOLD.is_match(last) {
-            return Err(ParseError::new(NameType::Other, None, last));
-        }
-        if OTU_SH.is_match(last) {
-            return Err(ParseError::new(NameType::Other, None, last.to_uppercase()));
-        }
-    }
 
     // Hybrid formula — only when the cross sits between two distinct name spans.
     if looks_like_hybrid_formula(&s) {
@@ -1014,10 +1004,10 @@ mod tests {
     }
 
     #[test]
-    fn trailing_bold_code_in_multiword_input_is_rejected_with_last_word_as_name() {
-        let err = check("Festuca sp. BOLD:ACW2100").unwrap_err();
-        assert_eq!(err.type_, NameType::Other);
-        assert_eq!(err.name, "BOLD:ACW2100");
+    fn trailing_bold_code_in_multiword_input_passes_on_to_the_parser() {
+        // #101: StripAndStash makes the code the phrase of the taxon before it
+        assert!(check("Festuca sp. BOLD:ACW2100").is_ok());
+        assert!(check("Russula sp. SH1957732.10FU").is_ok());
     }
 
     // ---------- category: informal (5.0.0 — anchored groupings RESCUED, anchorless → OTHER) --------
