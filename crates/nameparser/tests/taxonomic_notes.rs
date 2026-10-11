@@ -618,3 +618,29 @@ fn text_after_the_year_is_no_author() {
         .phrase("sp. Davies, 2011 (Waite Nematode Collection WNC 519)")
         .nothing_else();
 }
+
+#[test]
+fn a_note_inside_a_square_bracketed_authorship_leaves_the_bracket_whole() {
+    // #111: the note took the closing square bracket along
+    assert_name_auth(
+        "Aricidea (Aricidea) albatrossae",
+        "[Webster, 1879, sensu stricto]",
+    )
+    .species_ig("Aricidea", "Aricidea", "albatrossae")
+    .comb_authors(Some("1879"), &["Webster"])
+    .sensu("sensu stricto")
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name_auth("Aus bus", "[Smith, 1879, sensu lato]")
+        .species("Aus", "bus")
+        .comb_authors(Some("1879"), &["Smith"])
+        .sensu("sensu lato")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Aricidea (Aricidea) [Webster, 1879, sensu stricto]")
+        .infrageneric_at("Aricidea", Rank::Subgenus, "Aricidea")
+        .comb_authors(Some("1879"), &["Webster"])
+        .sensu("sensu stricto")
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

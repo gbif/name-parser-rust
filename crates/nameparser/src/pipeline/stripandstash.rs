@@ -3812,6 +3812,13 @@ static NOTE_IN_BASIONYM_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\(([^()]*?\p{L}[^()]*?)[,;]?(?-u:\s+)((?i:nec|non|not|sensu|sec|auctt?\.?)(?-u:\s)[^()]*)\)").unwrap()
 });
 
+/// [`NOTE_IN_BASIONYM_BRACKET`] in the square brackets of an authorship: `[Webster, 1879, sensu
+/// stricto]`. The bracket starts with the author, so a remark in brackets, `[lapsus, …, not Kolmer,
+/// 1985]`, stays the note as a whole.
+static NOTE_IN_SQUARE_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[(\p{Lu}[^\[\]]*?)[,;]?(?-u:\s+)((?i:nec|non|not|sensu|sec|auctt?\.?)(?-u:\s)[^\[\]]*)\]").unwrap()
+});
+
 /// A second citation after a semicolon in a basionym bracket: `(Boulenger, 1890; Kramer, 1977)`.
 /// Group 1 the first citation, ending in its year, group 2 the second.
 static SECOND_CITATION: LazyLock<Regex> = LazyLock::new(|| {
@@ -3917,9 +3924,14 @@ static NOTE_LEAD: LazyLock<Regex> =
 /// Takes a note out of the bracket of a basionym authorship, which it broke: the note pattern took
 /// it from its keyword to the end, closing bracket included, and the bracketed author became the
 /// combination author, `(Martynova, 1976` (#95). The bracket keeps the author, the note goes to
-/// the taxonomic note. An author part that is a note itself takes the whole bracket along.
+/// the taxonomic note. An author part that is a note itself takes the whole bracket along. The same
+/// for a square bracketed authorship, `[Webster, 1879, sensu stricto]` (#111).
 fn split_note_from_basionym_bracket(ctx: &mut ParseContext, s: String) -> String {
-    let Some(caps) = NOTE_IN_BASIONYM_BRACKET.captures(&s) else {
+    let (caps, open, close) = if let Some(caps) = NOTE_IN_BASIONYM_BRACKET.captures(&s) {
+        (caps, '(', ')')
+    } else if let Some(caps) = NOTE_IN_SQUARE_BRACKET.captures(&s) {
+        (caps, '[', ']')
+    } else {
         return s;
     };
     let whole = caps.get(0).unwrap();
@@ -3931,7 +3943,10 @@ fn split_note_from_basionym_bracket(ctx: &mut ParseContext, s: String) -> String
     let (kept, note) = if NOTE_LEAD.is_match(author) {
         (String::new(), format!("{author}, {}", java_trim(&caps[2])))
     } else {
-        (format!("({author})"), java_trim(&caps[2]).to_string())
+        (
+            format!("{open}{author}{close}"),
+            java_trim(&caps[2]).to_string(),
+        )
     };
     ctx.name.add_taxonomic_note(&collapse_whitespace(&note));
     let out = format!("{}{kept}{}", &s[..whole.start()], &s[whole.end()..]);
