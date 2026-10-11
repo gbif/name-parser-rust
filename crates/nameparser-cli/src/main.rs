@@ -481,7 +481,8 @@ fn append_error(out: &mut String, e: &ParseError) {
 
 fn append_informal(out: &mut String, inf: &Informal) {
     // Field order mirrors the core `Informal` struct's `#[derive(Serialize)]` (taxon, taxonRank,
-    // rank, phrase, code), then the derived `canonical` — kept in sync by the render tests.
+    // rank, phrase, code, candidatus), then the derived `canonical` — kept in sync by the render
+    // tests.
     out.push_str(",\"informal\":{\"taxon\":");
     out.push_str(
         &serde_json::to_string(&inf.taxon).expect("a String always serializes to a JSON string"),
@@ -500,6 +501,8 @@ fn append_informal(out: &mut String, inf: &Informal) {
         out.push_str(",\"code\":");
         out.push_str(&serde_json::to_string(code).expect("NomCode always serializes to JSON"));
     }
+    out.push_str(",\"candidatus\":");
+    out.push_str(if inf.candidatus { "true" } else { "false" });
     out.push_str(",\"canonical\":");
     out.push_str(
         &serde_json::to_string(&inf.canonical_name())
@@ -1446,7 +1449,7 @@ mod tests {
         );
         assert_eq!(
             row,
-            r#"{"line":3,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp. RMCC TR1811","canonical":"Rhizobium sp. RMCC TR1811"}}"#
+            r#"{"line":3,"input":"Rhizobium sp. RMCC TR1811","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp. RMCC TR1811","candidatus":false,"canonical":"Rhizobium sp. RMCC TR1811"}}"#
         );
     }
 
@@ -1463,7 +1466,7 @@ mod tests {
         );
         assert_eq!(
             row,
-            r#"{"line":1,"input":"Rhizobium sp.","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp.","canonical":"Rhizobium sp."}}"#
+            r#"{"line":1,"input":"Rhizobium sp.","informal":{"taxon":"Rhizobium","taxonRank":"GENUS","rank":"SPECIES","phrase":"sp.","candidatus":false,"canonical":"Rhizobium sp."}}"#
         );
     }
 

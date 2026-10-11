@@ -195,6 +195,10 @@ class ParityTest {
     if (!Objects.equals(gCode, code)) {
       return "code: binding=" + gCode + " oracle=" + code;
     }
+    boolean candidatus = p.has("candidatus") && p.get("candidatus").getAsBoolean();
+    if (inf.candidatus() != candidatus) {
+      return "candidatus: binding=" + inf.candidatus() + " oracle=" + candidatus;
+    }
     return null;
   }
 

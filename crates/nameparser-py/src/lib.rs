@@ -454,6 +454,13 @@ impl PyInformal {
         Ok(pythonize::pythonize(py, &self.inner.code)?.unbind())
     }
 
+    /// Whether the name has Candidatus status (`Candidatus Pelagibacter sp. HTCC7211`); the word
+    /// itself is in neither `taxon` nor `phrase`.
+    #[getter]
+    fn candidatus(&self) -> bool {
+        self.inner.candidatus
+    }
+
     /// The canonical string form of this informal name — e.g. `"Rhizobium sp. RMCC TR1811"`,
     /// `"Ichneumonidae sp."`, `"Bartonella group"`. Parallels [`PyParsedName::canonical_name`] so
     /// callers render either result variant with the same method; always a string (never `None`,
@@ -463,7 +470,7 @@ impl PyInformal {
     }
 
     /// The complete `Informal` structure straight from the core's `serde::Serialize` impl, keyed by
-    /// its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`) — the parity oracle + escape
+    /// its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`, `candidatus`) — the parity oracle + escape
     /// hatch, matching [`PyParsedName::to_dict`].
     fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         Ok(pythonize::pythonize(py, &self.inner)?.unbind())

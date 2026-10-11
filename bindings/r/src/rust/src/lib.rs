@@ -208,7 +208,7 @@ impl Cols {
     }
 
     /// 5.0.0 informal / semistructured row: the flat anchor (`taxon`/`taxonRank`) + `rank`/`phrase`/
-    /// `code` are populated; every ParsedName-specific atom (genus/epithets/authorship/state/
+    /// `code`/`candidatus` are populated; every ParsedName-specific atom (genus/epithets/authorship/state/
     /// canonical renderings) is NA — the whole point of `Informal` is that the anchor lives in ONE
     /// place, never a mislabelled `genus`. `parsed` is FALSE (no ParsedName); `result` is
     /// `"informal"`. Deliberate mirror of the core's `to_informal` (crates/nameparser/src/lib.rs).
@@ -245,7 +245,7 @@ impl Cols {
         ] {
             col.push(None);
         }
-        self.candidatus.push(None);
+        self.candidatus.push(Some(inf.candidatus));
         self.original_spelling.push(None);
         self.extinct.push(None);
         self.published_in_year.push(None);

@@ -94,6 +94,10 @@ pub struct Informal {
     /// The nomenclatural code when known, else `None`.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code: Option<NomCode>,
+    /// A provisional prokaryote name with Candidatus status (`Candidatus Pelagibacter sp.
+    /// HTCC7211`), as [`ParsedName::candidatus`]; the word itself is in neither [`Self::taxon`] nor
+    /// [`Self::phrase`]. Primitive `boolean` in Java — always serializes, including `false`.
+    pub candidatus: bool,
 }
 
 #[cfg(test)]

@@ -33,7 +33,7 @@ A name is parsed into one of three results:
   rest could not be read (`unparsed`).
 - **Informal** — a provisional name with no epithet of its own (`Bacillus sp. 1`): the anchor
   `taxon` and its `taxonRank`, the `rank` the designation stands for and the designation itself,
-  verbatim, as the `phrase`.
+  verbatim, as the `phrase`, and whether it is a `candidatus` name.
 - **Unparsable** — no scientific name at all (a virus, a placeholder, an identifier, a hybrid
   formula): only its `type` and, where known, its `code`.
 
@@ -167,6 +167,8 @@ def render_informal(inf) -> list[str]:
     lines = [" · ".join(head)]
     if inf.phrase:
         lines.append("phrase " + code(inf.phrase))
+    if inf.candidatus:
+        lines.append("candidatus")
     lines.append("→ " + code(inf.canonical_name()))
     return lines
 

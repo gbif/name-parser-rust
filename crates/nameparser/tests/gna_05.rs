@@ -363,29 +363,75 @@ fn open_taxonomy_with_ranks_unfinished() {
 }
 
 #[test]
-fn ignoring_serovar_serotype() {
-    // group: Ignoring serovar/serotype. Bacterial subspecific epidemiological
-    // designators (serotype/serovar [strain]) are stripped — they aren't formal
-    // nomenclatural ranks — and named in a warning (#81).
-    assert_name("Aggregatibacter actinomycetemcomitans serotype d str. SA508")
-        .species("Aggregatibacter", "actinomycetemcomitans")
-        .warning(&["Removed: serotype d str. SA508"])
+fn a_serovar_is_an_infraspecific_name() {
+    // Ported from GNA's "Ignoring serovar/serotype" group. Java stripped serovars and serotypes
+    // silently; the model has the rank SEROVAR, so they are kept (#81). A named serovar is the
+    // infraspecific epithet; a number, a letter or an antigenic formula the phrase, as a numbered
+    // variety's number is; a strain after either joins the phrase.
+    assert_name("Leptospira interrogans serovar Fugis")
+        .infra_species("Leptospira", "interrogans", Rank::Serovar, "Fugis")
+        .code(NomCode::Bacterial)
         .nothing_else();
-    assert_name("Streptococcus pyogenes (serotype M18)")
-        .species("Streptococcus", "pyogenes")
-        .warning(&["Removed: (serotype M18)"])
+    assert_name("Leptospira interrogans (serovar Pomona)")
+        .infra_species("Leptospira", "interrogans", Rank::Serovar, "Pomona")
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    // the subspecies has to go: one infraspecific slot
+    assert_name("Salmonella enterica subsp. enterica serovar Typhimurium")
+        .infra_species("Salmonella", "enterica", Rank::Serovar, "Typhimurium")
+        .code(NomCode::Bacterial)
+        .warning(&["Removed: subsp. enterica", "name was quadrinomial"])
+        .nothing_else();
+    assert_name("Salmonella enterica subsp. enterica serovar Typhimurium str. JCM 1652")
+        .infra_species("Salmonella", "enterica", Rank::Serovar, "Typhimurium")
+        .phrase("str. JCM 1652")
+        .type_(NameType::Informal)
+        .code(NomCode::Bacterial)
+        .warning(&["Removed: subsp. enterica", "name was quadrinomial"])
         .nothing_else();
     assert_name("Actinobacillus pleuropneumoniae serovar 2 strain S1536")
-        .species("Actinobacillus", "pleuropneumoniae")
-        .warning(&["Removed: serovar 2 strain S1536"])
+        .binomial("Actinobacillus", None, "pleuropneumoniae", Rank::Serovar)
+        .phrase("2 strain S1536")
+        .type_(NameType::Informal)
+        .code(NomCode::Bacterial)
         .nothing_else();
-    assert_name("Leptospira interrogans serovar Fugis")
-        .species("Leptospira", "interrogans")
-        .warning(&["Removed: serovar Fugis"])
+    assert_name("Aggregatibacter actinomycetemcomitans serotype d str. SA508")
+        .binomial(
+            "Aggregatibacter",
+            None,
+            "actinomycetemcomitans",
+            Rank::Serovar,
+        )
+        .phrase("d str. SA508")
+        .type_(NameType::Informal)
+        .code(NomCode::Bacterial)
         .nothing_else();
-    assert_name("Salmonella enterica subsp. enterica serovar Typhimurium")
-        .infra_species("Salmonella", "enterica", Rank::Subspecies, "enterica")
-        .warning(&["Removed: serovar Typhimurium"])
+    assert_name("Salmonella enterica subsp. salamae serovar 4,12:z:1,7")
+        .binomial("Salmonella", None, "enterica", Rank::Serovar)
+        .phrase("4,12:z:1,7")
+        .type_(NameType::Informal)
+        .code(NomCode::Bacterial)
+        .warning(&["Removed: subsp. salamae", "name was quadrinomial"])
+        .nothing_else();
+    // "Untypable" says the serovar has no name
+    assert_name("Salmonella enterica subsp. enterica serovar Untypable")
+        .binomial("Salmonella", None, "enterica", Rank::Serovar)
+        .phrase("Untypable")
+        .type_(NameType::Informal)
+        .code(NomCode::Bacterial)
+        .warning(&["Removed: subsp. enterica", "name was quadrinomial"])
+        .nothing_else();
+    assert_name("Streptococcus pyogenes (serotype M18)")
+        .binomial("Streptococcus", None, "pyogenes", Rank::Serovar)
+        .phrase("M18")
+        .type_(NameType::Informal)
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    // "Sv." is an author's initials, Sven Nilsson
+    assert_name("Angulospora aquatica Sv. Nilsson, 1962")
+        .species("Angulospora", "aquatica")
+        .comb_authors(Some("1962"), &["Sv.Nilsson"])
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 

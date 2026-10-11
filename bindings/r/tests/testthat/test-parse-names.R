@@ -162,6 +162,7 @@ test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)"
   expect_equal(out$taxon[3], "Rhizobium")
   expect_equal(out$phrase[3], "sp.")
   expect_equal(out$canonical[3], "Rhizobium sp.")  # round-trips to the same canonical
+  expect_equal(out$candidatus[1:3], c(FALSE, FALSE, FALSE))
 
   # parsed + unparsable rows carry NA in the informal-only columns
   expect_true(is.na(out$taxon[4]))
@@ -169,6 +170,14 @@ test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)"
   expect_true(is.na(out$taxon[5]))
   expect_equal(out$canonical[4], "Abies alba Mill.")  # a parsed row still renders its own canonical
   expect_true(is.na(out$canonical[5]))                # an unparsable row has no canonical
+})
+
+test_that("an informal row keeps Candidatus (#76)", {
+  out <- parse_names("Candidatus Pelagibacter sp. HTCC7211")
+  expect_equal(out$result, "informal")
+  expect_equal(out$taxon, "Pelagibacter")
+  expect_equal(out$phrase, "sp. HTCC7211")
+  expect_true(out$candidatus)
 })
 
 test_that("a cf. binomial stays a parsed row, not informal", {

@@ -239,7 +239,7 @@ def _oracle_is_informal(p: dict) -> bool:
 
 def _oracle_to_informal(p: dict) -> dict:
     """Mirror of Rust `to_informal`: the flat Informal in the same wire shape `Informal.to_dict()`
-    emits (taxon, taxonRank, rank, and — omitted when absent — phrase, code)."""
+    emits (taxon, taxonRank, rank, and — omitted when absent — phrase, code; then candidatus)."""
     genus = p.get("genus")
     if genus:
         taxon, taxon_rank = genus, "GENUS"
@@ -252,6 +252,7 @@ def _oracle_to_informal(p: dict) -> dict:
         out["phrase"] = p["phrase"]
     if p.get("code") is not None:
         out["code"] = p["code"]
+    out["candidatus"] = bool(p.get("candidatus"))
     return out
 
 

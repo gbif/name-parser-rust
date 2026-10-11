@@ -306,8 +306,8 @@ fn a_lone_epithet_lacks_its_genus() {
             other => panic!("{name} {auth:?} {rank:?}: expected a placeholder, got {other:?}"),
         }
     }
-    // a lone word alone is still a uninomial
-    assert_name("denisi").monomial("Denisi");
+    // a lone word alone too: there is no taxon to anchor a name on (#100)
+    assert_unparsable("denisi", NameType::Placeholder);
 }
 
 /// A lower-cased genus with its subgenus stays a name: the bracket holds no author.

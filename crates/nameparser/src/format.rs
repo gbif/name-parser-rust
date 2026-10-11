@@ -123,6 +123,7 @@ impl Informal {
             rank: self.rank,
             code: self.code,
             phrase: self.phrase.clone(),
+            candidatus: self.candidatus,
             genus: (self.taxon_rank == Rank::Genus).then(|| self.taxon.clone()),
             uninomial: (self.taxon_rank != Rank::Genus).then(|| self.taxon.clone()),
             ..ParsedName::default()
@@ -1041,6 +1042,7 @@ mod tests {
             rank,
             phrase: phrase.map(str::to_string),
             code: None,
+            candidatus: false,
         };
         // genus-anchored provisional species with a captured phrase tag
         assert_eq!(
@@ -1067,6 +1069,20 @@ mod tests {
         assert_eq!(
             inf("Bartonella", Rank::Genus, Rank::Unranked, Some("group")).canonical_name(),
             "Bartonella group"
+        );
+        // Candidatus status, quoted around the name as on a parsed name (#76)
+        let candidatus = Informal {
+            candidatus: true,
+            ..inf(
+                "Pelagibacter",
+                Rank::Genus,
+                Rank::Species,
+                Some("sp. HTCC7211"),
+            )
+        };
+        assert_eq!(
+            candidatus.canonical_name(),
+            "\"Candidatus Pelagibacter\" sp. HTCC7211"
         );
     }
 

@@ -4582,11 +4582,11 @@ Albinaria brevicollis cf. sica Fuchs & Kaufel 1936	true	Albinaria brevicollis cf
 Albinaria cf brevicollis sica Fuchs & Kaufel 1936	true	Albinaria cf. brevicollis sica Fuchs & Kaufel, 1936	Albinaria cf. brevicollis sica	Albinaria brevicollis sica	Albinaria cf. brevicollis sica Fuchs & Kaufel, 1936	Fuchs & Kaufel, 1936
 Albinaria brevicollis cf	true	Albinaria cf. brevicollis	Albinaria cf. brevicollis	Albinaria brevicollis	Albinaria cf. brevicollis	
 Acastoides spp.	true	Acastoides spp.	Acastoides spp.	Acastoides	Acastoides spp.	
-Aggregatibacter actinomycetemcomitans serotype d str. SA508	true	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans	
+Aggregatibacter actinomycetemcomitans serotype d str. SA508	true	Aggregatibacter actinomycetemcomitans serovar d str. SA508	Aggregatibacter actinomycetemcomitans serovar d str. SA508	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans serovar d str. SA508	
 Bacterium sp. (serotype) aboney Dräger 1951	true	Bacterium sp. (serotype) aboney Dräger 1951	Bacterium sp. (serotype) aboney Dräger 1951	Bacterium	Bacterium sp. (serotype) aboney Dräger 1951	
-Streptococcus pyogenes (serotype M18)	true	Streptococcus pyogenes	Streptococcus pyogenes	Streptococcus pyogenes	Streptococcus pyogenes	
-Actinobacillus pleuropneumoniae serovar 2 strain S1536	true	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	
-Leptospira interrogans serovar Fugis	true	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	
+Streptococcus pyogenes (serotype M18)	true	Streptococcus pyogenes serovar M18	Streptococcus pyogenes serovar M18	Streptococcus pyogenes	Streptococcus pyogenes serovar M18	
+Actinobacillus pleuropneumoniae serovar 2 strain S1536	true	Actinobacillus pleuropneumoniae serovar 2 strain S1536	Actinobacillus pleuropneumoniae serovar 2 strain S1536	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae serovar 2 strain S1536	
+Leptospira interrogans serovar Fugis	true	Leptospira interrogans serovar Fugis	Leptospira interrogans serovar Fugis	Leptospira interrogans Fugis	Leptospira interrogans serovar Fugis	
 Senecio legionensis sensu Samp., non Lange	true	Senecio legionensis	Senecio legionensis	Senecio legionensis	Senecio legionensis sensu Samp., non Lange	
 Pseudomonas methanica (Söhngen 1906) sensu. Dworkin and Foster 1956	true	Pseudomonas methanica (Söhngen, 1906)	Pseudomonas methanica	Pseudomonas methanica	Pseudomonas methanica (Söhngen, 1906) sensu. Dworkin and Foster 1956	(Söhngen, 1906)
 Abarema scutifera sensu auct., non (Blanco)Kosterm.	true	Abarema scutifera	Abarema scutifera	Abarema scutifera	Abarema scutifera sensu auct., non (Blanco)Kosterm.	
@@ -5902,10 +5902,10 @@ Alyxia reinwardti var	true	Alyxia reinwardti var.	Alyxia reinwardti var.	Alyxia 
 Alyxia reinwardti var.	true	Alyxia reinwardti var.	Alyxia reinwardti var.	Alyxia reinwardti	Alyxia reinwardti var.	
 Alyxia reinwardti ssp	true	Alyxia reinwardti ssp.	Alyxia reinwardti ssp.	Alyxia reinwardti	Alyxia reinwardti ssp.	
 Alyxia reinwardti ssp.	true	Alyxia reinwardti ssp.	Alyxia reinwardti ssp.	Alyxia reinwardti	Alyxia reinwardti ssp.	
-Aggregatibacter actinomycetemcomitans serotype d str. SA508	true	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans	
-Streptococcus pyogenes (serotype M18)	true	Streptococcus pyogenes	Streptococcus pyogenes	Streptococcus pyogenes	Streptococcus pyogenes	
-Actinobacillus pleuropneumoniae serovar 2 strain S1536	true	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae	
-Leptospira interrogans serovar Fugis	true	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	Leptospira interrogans	
+Aggregatibacter actinomycetemcomitans serotype d str. SA508	true	Aggregatibacter actinomycetemcomitans serovar d str. SA508	Aggregatibacter actinomycetemcomitans serovar d str. SA508	Aggregatibacter actinomycetemcomitans	Aggregatibacter actinomycetemcomitans serovar d str. SA508	
+Streptococcus pyogenes (serotype M18)	true	Streptococcus pyogenes serovar M18	Streptococcus pyogenes serovar M18	Streptococcus pyogenes	Streptococcus pyogenes serovar M18	
+Actinobacillus pleuropneumoniae serovar 2 strain S1536	true	Actinobacillus pleuropneumoniae serovar 2 strain S1536	Actinobacillus pleuropneumoniae serovar 2 strain S1536	Actinobacillus pleuropneumoniae	Actinobacillus pleuropneumoniae serovar 2 strain S1536	
+Leptospira interrogans serovar Fugis	true	Leptospira interrogans serovar Fugis	Leptospira interrogans serovar Fugis	Leptospira interrogans Fugis	Leptospira interrogans serovar Fugis	
 Senecio legionensis sensu Samp., non Lange	true	Senecio legionensis	Senecio legionensis	Senecio legionensis	Senecio legionensis sensu Samp., non Lange	
 Pseudomonas methanica (Söhngen 1906) sensu. Dworkin and Foster 1956	true	Pseudomonas methanica (Söhngen, 1906)	Pseudomonas methanica	Pseudomonas methanica	Pseudomonas methanica (Söhngen, 1906) sensu. Dworkin and Foster 1956	(Söhngen, 1906)
 Abarema scutifera sensu auct., non (Blanco)Kosterm.	true	Abarema scutifera	Abarema scutifera	Abarema scutifera	Abarema scutifera sensu auct., non (Blanco)Kosterm.	

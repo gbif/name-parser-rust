@@ -45,7 +45,8 @@ Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.
 Arvicola terrestris morpha subalpina
 Acidalia remutaria ab. n. undularia  # aberratio nova
 Pseudomonas syringae pv. tomato
-Salmonella enterica subsp. enterica serovar Typhimurium  # a serovar is no part of the scientific name
+Salmonella enterica subsp. enterica serovar Typhimurium  # a serovar has its own rank; the subspecies has to go
+Actinobacillus pleuropneumoniae serotype 1  # a numbered serovar is the phrase
 Fusarium oxysporum f. sp. lycopersici
 Rubus hirtus Rchb. microg pectinatus Sudre & Gavet
 
@@ -57,6 +58,7 @@ Astragalus sect. Phaca
 Centaurea L. subg. Jacea
 Cordia (Adans.) Kuntze sect. Salimori
 Hieracium unr. Verbasciformia  # unranked
+Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux  # no stirps rank: unranked
 
 ## Hybrids
 > The hybrid sign `×` marks the part of the name that is a nothotaxon (`notho`). A formula naming two parents is no name of its own.
@@ -168,6 +170,9 @@ Wolbachia endosymbiont of Leptogenys gracilis
 Acidimicrobiales bacterium JGI 01_E13
 Escherichia coli 18-41  # a strain designation on a species
 Aquimarina muelleri DSM 19832
+Spirochaeta 2  # a numbered group of the genus
+Barea Subgroup 4
+Candidatus Pelagibacter sp. HTCC7211  # Candidatus is kept as a flag
 
 ## Bacteria
 Candidatus Liberibacter asiaticus
@@ -189,6 +194,8 @@ Biota incertae sedis
 unidentified Rosaceae
 uncultured bacterium
 Gen. nov.
+Subgroup 10  # a numbered group with no taxon before it
+duplocingulatoides  # a lone lower-case word: an epithet without genus
 N.N.
 BOLD:AAA0001
 SH1234567.08FU
