@@ -301,3 +301,32 @@ fn ser_is_a_serovar_in_salmonella_and_under_the_bacterial_code() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn a_misspelt_rank_marker_is_the_marker_it_is_one_letter_off() {
+    // #115: "va." (Index Nominum Algarum) became the epithet and the epithet an author, or was lost
+    // with the authorship given separately
+    assert_name("Aulacodiscus margaritaceus va. distincta J. Rattray")
+        .infra_species("Aulacodiscus", "margaritaceus", Rank::Variety, "distincta")
+        .comb_authors(None, &["J.Rattray"])
+        .nothing_else();
+    assert_name_auth("Aulacodiscus spectabilis va. depressa", "J. Rattray")
+        .infra_species("Aulacodiscus", "spectabilis", Rank::Variety, "depressa")
+        .comb_authors(None, &["J.Rattray"])
+        .nothing_else();
+    assert_name("Campanula balcanica subfo. umbrosa Hruby")
+        .infra_species("Campanula", "balcanica", Rank::Subform, "umbrosa")
+        .comb_authors(None, &["Hruby"])
+        .nothing_else();
+    assert_name("Unio kungurensis varr. chlebnikowi")
+        .infra_species("Unio", "kungurensis", Rank::Variety, "chlebnikowi")
+        .nothing_else();
+    assert_name("Hieracium incisum subs. sprecheri Zahn")
+        .infra_species("Hieracium", "incisum", Rank::Subspecies, "sprecheri")
+        .comb_authors(None, &["Zahn"])
+        .nothing_else();
+    // without its dot a word may be an epithet
+    assert_name("Zacla va")
+        .species("Zacla", "va")
+        .nothing_else();
+}

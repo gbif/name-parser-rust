@@ -155,6 +155,55 @@ pub fn match_infraspecific(word: &str) -> Option<Rank> {
     INFRASPECIFIC.get(word.to_lowercase().as_str()).copied()
 }
 
+/// Abbreviations one letter off a marker that are no marker themselves: `sp.` and `spp.` (read as
+/// `ssp.` between two epithets elsewhere), `cf.`, `pro` of `pro parte`, `nom. cons. prop.`,
+/// `sp. nov.`, `ss.` (sensu stricto) and `mon`, an epithet.
+const NOT_A_MISSPELT_MARKER: [&str; 9] =
+    ["sp", "spp", "cf", "pro", "cons", "prop", "nov", "ss", "mon"];
+
+/// The infraspecific marker a misspelt one stands for: a lowercase ASCII word one letter off a
+/// marker of three letters or more, with the same first letter — `va` or `vat` for `var`, `subfo`
+/// for `subf`, `morp` for `morph` (#115). Off several markers of different ranks, the one it
+/// abbreviates: `subs` is `subsp`, not `subf` or `subv`; else `None` (`sub`, `subp`), as for a
+/// marker or one of [`NOT_A_MISSPELT_MARKER`]. Shorter markers are left out, one letter off them
+/// is too much: `cf` is not `ct`, nor `al` `ab`.
+pub fn match_misspelt_infraspecific(word: &str) -> Option<&'static str> {
+    if word.len() < 2
+        || !word.bytes().all(|b| b.is_ascii_lowercase())
+        || NOT_A_MISSPELT_MARKER.contains(&word)
+        || match_infraspecific_allow_notho(word).is_some()
+        || match_infrageneric_allow_notho(word).is_some()
+    {
+        return None;
+    }
+    let mut hits: Vec<(&'static str, Rank)> = INFRASPECIFIC
+        .iter()
+        .filter(|(m, _)| {
+            m.len() >= 3 && m.as_bytes()[0] == word.as_bytes()[0] && one_edit_apart(word, m)
+        })
+        .map(|(&m, &r)| (m, r))
+        .collect();
+    if hits.iter().any(|(_, r)| *r != hits[0].1) {
+        hits.retain(|(m, _)| m.starts_with(word));
+        if hits.len() != 1 {
+            return None;
+        }
+    }
+    // of several markers of one rank, the shortest, the usual abbreviation
+    hits.iter().map(|(m, _)| *m).min_by_key(|m| (m.len(), *m))
+}
+
+/// Whether two different ASCII words are one insertion, deletion or substitution apart.
+fn one_edit_apart(a: &str, b: &str) -> bool {
+    let (a, b) = (a.as_bytes(), b.as_bytes());
+    let (short, long) = if a.len() <= b.len() { (a, b) } else { (b, a) };
+    match long.len() - short.len() {
+        0 => short.iter().zip(long).filter(|(x, y)| x != y).count() == 1,
+        1 => (0..long.len()).any(|i| long[..i] == short[..i] && long[i + 1..] == short[i..]),
+        _ => false,
+    }
+}
+
 /// Java `RankMarkers.matchInfrageneric(String)` (`RankMarkers.java:136-138`): plain
 /// (non-notho) lookup, case-insensitive.
 pub fn match_infrageneric(word: &str) -> Option<Rank> {
@@ -216,6 +265,29 @@ pub fn match_infraspecific_allow_notho(word: &str) -> Option<(Rank, bool)> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_misspelt_marker_is_one_letter_off_a_marker() {
+        for (word, marker) in [
+            ("va", "var"),
+            ("vat", "var"),
+            ("varr", "var"),
+            ("vars", "var"),
+            ("subfo", "subf"),
+            ("monst", "monstr"),
+            ("morp", "morph"),
+            ("fa", "fma"),
+            ("subs", "subsp"),
+        ] {
+            assert_eq!(match_misspelt_infraspecific(word), Some(marker), "{word}");
+        }
+        // a marker, an ambiguous word, a short marker's neighbour, a known abbreviation
+        for word in [
+            "var", "f", "subp", "sub", "cf", "al", "sp", "spp", "cons", "ser", "ss", "Va", "v",
+        ] {
+            assert_eq!(match_misspelt_infraspecific(word), None, "{word}");
+        }
+    }
+
     use super::*;
 
     #[test]

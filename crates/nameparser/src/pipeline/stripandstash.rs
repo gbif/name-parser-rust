@@ -64,6 +64,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_rank_lineage(ctx, s);
     s = strip_leading_species_label(ctx, s);
     s = lower_capitalised_epithet(ctx, s);
+    s = correct_misspelt_rank_marker(s);
     s = strip_stray_qmark_after_marker(s);
     s = strip_infra_rank_letters(ctx, s);
     s = normalise_letter_subdivision_marker(ctx, s);
@@ -1874,6 +1875,43 @@ static TRAILING_HYBRID_SIGN: LazyLock<Regex> =
 static NEW_AFF: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)n\.(?-u:\s*)(aff|cf)\.(?-u:\s*)").unwrap()
 });
+
+/// A dotted lowercase word between an epithet and the next: `margaritaceus va. distincta`. Group 1
+/// what comes before the epithet, group 2 the epithet and the space after it, group 3 the word,
+/// group 4 the epithet after it, group 5 what follows that: not a dot, which makes it a note's
+/// abbreviation (`ss. auct.`).
+static DOTTED_WORD_BETWEEN_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(^|(?-u:\s))(\p{Ll}[\p{Ll}\-]+(?-u:\s+))([a-z]{2,})\.(?-u:\s*)(\p{Ll}[\p{Ll}\-]+)([^.\p{L}\-]|$)").unwrap()
+});
+
+/// A misspelt infraspecific marker is the marker it is one letter off
+/// ([`super::rank_markers::match_misspelt_infraspecific`]): `Aulacodiscus margaritaceus va.
+/// distincta` (Index Nominum Algarum), `Unio kungurensis varr. chlebnikowi`, `Campanula balcanica
+/// subfo. umbrosa`. The word became the epithet and the epithet an author, or, with the authorship
+/// given separately, was lost (#115). Only between two epithets and followed by a dot. Rust-only.
+fn correct_misspelt_rank_marker(s: String) -> String {
+    if !s.contains('.') {
+        return s;
+    }
+    match DOTTED_WORD_BETWEEN_EPITHETS.replace_all(&s, |c: &regex::Captures| {
+        // an epithet after it, not a connector or note: "Hieracium recensitum ford. ex Boreau"
+        let epithet = &c[4];
+        let marker = super::rank_markers::match_misspelt_infraspecific(&c[3]).filter(|_| {
+            epithet.chars().count() > 2
+                && !matches!(
+                    epithet,
+                    "non" | "nec" | "not" | "sensu" | "auct" | "auctt" | "auctorum" | "emend"
+                )
+        });
+        match marker {
+            Some(marker) => format!("{}{}{marker}. {epithet}{}", &c[1], &c[2], &c[5]),
+            None => c[0].to_string(),
+        }
+    }) {
+        Cow::Borrowed(_) => s,
+        Cow::Owned(fixed) => fixed,
+    }
+}
 
 /// Two rare shapes (#105): a hybrid sign after the genus, `Eriochroma ×` (WCVP), is the
 /// nothogenus `× Eriochroma`, not a nothospecies; and `n.aff.tenuis` is `aff. tenuis`, the `n.`
