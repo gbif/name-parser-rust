@@ -395,7 +395,7 @@ fn auct_with_a_trailing_comma() {
 
 /// A bracketed note opening with "lapsus" is a note as a whole: `[lapsus, non-existent
 /// combination, not Kolmer, 1985]` gave the authors "lapsus" and "non-existent combination" and the
-/// note `not Kolmer, 1985]`, half a bracket.
+/// note `not Kolmer, 1985]`, half a bracket. A lapsus is a nomenclatural note (#112).
 #[test]
 fn a_bracketed_lapsus_note() {
     assert_name_auth(
@@ -403,8 +403,69 @@ fn a_bracketed_lapsus_note() {
         "[lapsus, non-existent combination, not Kolmer, 1985]",
     )
     .species("Flabelligera", "biscayensis")
-    .sensu("lapsus, non-existent combination, not Kolmer, 1985")
+    .nom_note("lapsus, non-existent combination, not Kolmer, 1985")
     .nothing_else();
+}
+
+#[test]
+fn a_misspelling_note_is_a_nomenclatural_note() {
+    // #112: an incorrect spelling is a matter of the name; nothing was misapplied, as "auct."
+    // says. WoRMS writes "[auct. misspelling]" and "[auct. lapsus]" as the authorship.
+    for (authorship, note) in [
+        ("[auct. misspelling]", "auct. misspelling"),
+        ("[auct. lapsus]", "auct. lapsus"),
+        (
+            "[auct. misspelling for 'immatura']",
+            "auct. misspelling for 'immatura'",
+        ),
+        ("auct. err.", "auct. err."),
+        ("[misspelling]", "misspelling"),
+        ("[lapsus]", "lapsus"),
+    ] {
+        assert_name_auth("Abarenicola claparedei", authorship)
+            .species("Abarenicola", "claparedei")
+            .nom_note(note)
+            .nothing_else();
+    }
+    assert_name_auth("Abarenicola claparedei", "Smith, 1900 [misspelling]")
+        .species("Abarenicola", "claparedei")
+        .comb_authors(Some("1900"), &["Smith"])
+        .nom_note("misspelling")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a bracket saying so is a note as a whole, whatever comes first; it gave authors
+    for (authorship, note) in [
+        ("[database misspelling]", "database misspelling"),
+        (
+            "[Filograna auct. misspelling]",
+            "Filograna auct. misspelling",
+        ),
+        (
+            "[subsequent misspelling of 'edwardsii']",
+            "subsequent misspelling of 'edwardsii'",
+        ),
+    ] {
+        assert_name_auth("Abarenicola claparedei", authorship)
+            .species("Abarenicola", "claparedei")
+            .nom_note(note)
+            .nothing_else();
+    }
+    // a misapplication stays a taxonomic note, also one that mentions a misspelling
+    assert_name_auth(
+        "Serpula vermicalluris",
+        "[non Linnaeus, vermicularis auct. misspelling]",
+    )
+    .species("Serpula", "vermicalluris")
+    .sensu("non Linnaeus, vermicularis auct. misspelling")
+    .nothing_else();
+    assert_name_auth("Abarenicola claparedei", "[auct.]")
+        .species("Abarenicola", "claparedei")
+        .sensu("auct.")
+        .nothing_else();
+    assert_name_auth("Abarenicola claparedei", "auct. non Smith")
+        .species("Abarenicola", "claparedei")
+        .sensu("auct. non Smith")
+        .nothing_else();
 }
 
 /// A remark and then a homonym note, in one bracket: the bracket is the note.

@@ -3760,13 +3760,15 @@ fn normalise_leading_auct(note: &str) -> String {
 /// lacks and so read as authors. Rust-only as well: "lapsus" (`[lapsus, non-existent combination,
 /// not Kolmer, 1985]`), and a bracket whose homonym note follows a remark after a comma or semicolon
 /// (`[junior secondary homonym, nec Anthicus elegans Steven, 1806]`), taken whole: the note alone
-/// left its bracket's opening half and the remark behind as authors. `[^\]]` is a negated custom class -> stays OUTSIDE any
+/// left its bracket's opening half and the remark behind as authors. So is a bracket saying a
+/// spelling is a misspelling or lapsus, whatever comes before (`[database misspelling]`,
+/// `[Filograna auct. misspelling]`), which became authors (#112). `[^\]]` is a negated custom class -> stays OUTSIDE any
 /// `(?-u:…)` (`SIC_WITH_COMMENT`/`BRACKETED_NOM_NOTE` precedent from batches 1-2) ->
 /// atom-only `\s`/`\b` scoping, not whole-wrap. No lookaround/backreference -> plain
 /// `regex` crate.
 static BRACKETED_TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident|lapsus)\b[^\]]*|[^\[\]]*[,;](?-u:\s*)(?:non|nec|not)(?-u:\s)[^\[\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
+        r"(?i)(?-u:\s*)\[(?-u:\s*)((?:auctt?|auctorum|sensu|sec|non|nec|not|misspelling|misapplied|misident|lapsus)\b[^\]]*|[^\[\]]*[,;](?-u:\s*)(?:non|nec|not)(?-u:\s)[^\[\]]*|[^\[\]]*\b(?:misspel\p{L}*|lapsus)\b[^\[\]]*)\](?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });

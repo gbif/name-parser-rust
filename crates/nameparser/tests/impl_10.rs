@@ -572,14 +572,14 @@ fn digit_epithets_trailing() {
         .nothing_else();
 }
 
-/// A trailing bracketed comment introduced by a taxonomic-concept keyword
-/// ("[auctt. misspelling for Eunoe]") is not part of the name — the whole bracket
-/// content is captured as the taxonomic note and the leading monomial parses cleanly.
+/// A trailing bracketed comment introduced by a note keyword ("[auctt. misspelling for
+/// Eunoe]") is not part of the name — the whole bracket content is captured as a note and the
+/// leading monomial parses cleanly. A misspelling is a nomenclatural note (#112).
 #[test]
 fn bracketed_auct_note() {
     assert_name("Eunoa [auctt. misspelling for Eunoe]")
         .monomial("Eunoa")
-        .sensu("auctt. misspelling for Eunoe")
+        .nom_note("auctt. misspelling for Eunoe")
         .nothing_else();
 }
 

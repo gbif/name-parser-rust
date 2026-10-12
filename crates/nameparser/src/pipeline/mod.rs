@@ -445,6 +445,7 @@ pub fn run(
         ctx.name.combination_authorship.year = ctx.pending_year.clone();
     }
 
+    move_misspelling_note(&mut ctx.name);
     assemble::finish(&mut ctx, code_state);
 
     if ctx.pending_year.is_some()
@@ -493,6 +494,35 @@ pub fn run(
     restore_lost_letters(&mut ctx);
 
     Ok(ctx.name)
+}
+
+/// A note that a spelling is a misspelling, a lapsus or an error, perhaps of other authors:
+/// `auct. misspelling for 'immatura'`, `lapsus`, `auct. err.`, `Filograna auct. misspelling`,
+/// `species name widely misspelled as diagramma`.
+static MISSPELLING_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(?i)^(?:auctt?\.?(?-u:\s+))?(?:err\.|error|errore)(?:\W|$)|\b(?:misspel\w*|lapsus)\b",
+    )
+    .unwrap()
+});
+
+/// A note on the concept or a homonym, which stays one whatever else it says: `sensu Pierce &
+/// Metcalfe, 1922, misspelling, nec Zeller, 1878`, `non Linnaeus, vermicularis auct. misspelling`.
+static CONCEPT_NOTE_LEAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:sensu|sec|non|nec|not)\b").unwrap());
+
+/// A misspelling, lapsus or error note is a nomenclatural note, not a taxonomic one (#112): an
+/// incorrect spelling is a matter of the name, nothing was misapplied, unlike `auct.` or `auct.
+/// non Smith`. The note steps file them with the taxonomic notes they open like.
+fn move_misspelling_note(name: &mut ParsedName) {
+    if name
+        .taxonomic_note
+        .as_deref()
+        .is_some_and(|n| MISSPELLING_NOTE.is_match(n) && !CONCEPT_NOTE_LEAD.is_match(n))
+    {
+        let note = name.taxonomic_note.take().unwrap();
+        name.add_nomenclatural_note(&note);
+    }
 }
 
 /// Puts the verbatim spelling of a word with a lost letter back into the authors and the phrase it
