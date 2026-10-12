@@ -199,8 +199,13 @@ pub fn run(
     ctx.tokens = tokenize(&ctx.working);
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
+    // a serovar of a genus, "Salmonella ser. Typhimurium": the uninomial is its genus, as in
+    // "Navicula var. fasciata"
+    if ctx.name.rank == Rank::Serovar && ctx.name.genus.is_none() {
+        ctx.name.genus = ctx.name.uninomial.take();
+    }
     if let Some(serovar) = ctx.pending_serovar.take() {
-        if ctx.name.specific_epithet.is_some() && ctx.name.infraspecific_epithet.is_none() {
+        if ctx.name.genus.is_some() && ctx.name.infraspecific_epithet.is_none() {
             ctx.name.infraspecific_epithet = Some(serovar);
             ctx.name.rank = Rank::Serovar;
         }

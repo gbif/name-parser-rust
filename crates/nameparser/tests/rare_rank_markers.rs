@@ -263,3 +263,41 @@ fn a_stirps_with_a_capitalised_epithet_is_an_unranked_infrageneric_name() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn ser_is_a_serovar_in_salmonella_and_under_the_bacterial_code() {
+    // "ser." abbreviates the serovar of Salmonella, by far the largest genus of serovars (Brenner
+    // et al. 2000, Salmonella nomenclature), not the botanical series
+    assert_name("Salmonella enterica ser. Typhimurium")
+        .infra_species("Salmonella", "enterica", Rank::Serovar, "Typhimurium")
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    assert_name("Salmonella enterica subsp. enterica ser. Typhimurium")
+        .infra_species("Salmonella", "enterica", Rank::Serovar, "Typhimurium")
+        .code(NomCode::Bacterial)
+        .warning(&["Removed: subsp. enterica", "name was quadrinomial"])
+        .nothing_else();
+    // a serovar of the genus, as the short form "Salmonella Typhimurium" means
+    assert_name("Salmonella ser. Typhimurium")
+        .infra_under_genus("Salmonella", Rank::Serovar, "Typhimurium")
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    assert_name("Salmonella serovar Typhimurium")
+        .infra_under_genus("Salmonella", Rank::Serovar, "Typhimurium")
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    // under a bacterial code hint in any genus
+    assert_name_code("Leptospira interrogans ser. Pomona", NomCode::Bacterial)
+        .infra_species("Leptospira", "interrogans", Rank::Serovar, "Pomona")
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    assert_name_code("Salmonella ser. Typhimurium", NomCode::Bacterial)
+        .infra_under_genus("Salmonella", Rank::Serovar, "Typhimurium")
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    // a series elsewhere
+    assert_name("Carex ser. Acutae")
+        .infrageneric_at("Carex", Rank::SeriesBotany, "Acutae")
+        .code(NomCode::Botanical)
+        .nothing_else();
+}

@@ -2160,16 +2160,30 @@ static SEROVAR_BARE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-/// A binomial (group 1), perhaps a subspecies (group 2), the serovar or serotype marker, perhaps in
-/// brackets (group 3), the serovar (group 4) and what follows (group 5): "Salmonella enterica subsp.
-/// enterica serovar Typhimurium str. JCM 1652", "Actinobacillus pleuropneumoniae serotype 1",
-/// "Leptospira interrogans (serovar Pomona)".
+/// A binomial or a genus (group 1), perhaps a subspecies (group 2), the serovar or serotype marker,
+/// perhaps in brackets (group 3), the marker itself (group 4), the serovar (group 5) and what
+/// follows (group 6): "Salmonella enterica subsp. enterica serovar Typhimurium str. JCM 1652",
+/// "Actinobacillus pleuropneumoniae serotype 1", "Leptospira interrogans (serovar Pomona)",
+/// "Salmonella ser. Typhimurium". The marker may be the abbreviation `ser.` ([`ser_is_serovar`]).
 static SEROVAR_OF_BINOMIAL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}[\p{Ll}\-]+)((?-u:\s+)(?:subsp|ssp)\.?(?-u:\s+)[^\s()]+)?(?-u:\s+)(\(?)(?i:serovar|serotype)(?-u:\s+)([^\s()]+)(?:(?-u:\s+)([^()]+?))?\)?(?-u:\s*)\.?(?-u:\s*)$",
+        r"^(\p{Lu}\p{Ll}+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+)?)((?-u:\s+)(?:subsp|ssp)\.?(?-u:\s+)[^\s()]+)?(?-u:\s+)(\(?)(?i:(serovar|serotype|ser\.?))(?-u:\s+)([^\s()]+)(?:(?-u:\s+)([^()]+?))?\)?(?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });
+
+/// The abbreviated marker `ser.`, which a serovar shares with the botanical series.
+static SER_ABBREVIATION: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\s)\(?ser\.?(?-u:\s)").unwrap());
+
+/// `ser.` marks a serovar, not a series, in Salmonella, by far the largest genus of serovars,
+/// and under a bacterial code: "Salmonella enterica ser. Typhimurium", "Salmonella ser.
+/// Typhimurium" (Brenner et al. 2000, Salmonella nomenclature, J. Clin. Microbiol. 38: 2465). A
+/// series elsewhere: "Carex ser. Acutae", "Aspergillus herbariorum ser. minor".
+fn ser_is_serovar(ctx: &ParseContext, name: &str) -> bool {
+    ctx.requested_code == Some(NomCode::Bacterial)
+        || name.split_whitespace().next() == Some("Salmonella")
+}
 
 /// The name of a serovar, a word of three letters or more (`Typhimurium`, `kurstaki`), not a
 /// number, an antigenic formula or a letter (`1`, `4,12:z:1,7`, `b`).
@@ -2181,7 +2195,7 @@ static SEROVAR_NAME: LazyLock<Regex> =
 static NO_SEROVAR_NAME: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:(?:un|non-?)type?able|rough)$").unwrap());
 
-/// #81: a serovar of a binomial is kept, with the rank SEROVAR. A named one is the infraspecific
+/// #81: a serovar of a binomial or of a genus is kept, with the rank SEROVAR. A named one is the infraspecific
 /// epithet, set by Pipeline once the binomial is parsed ([`ParseContext::pending_serovar`]); a
 /// numbered one or an antigenic formula is the phrase, as a numbered variety's number is, and the
 /// name INFORMAL. A strain after it joins the phrase. A subspecies before it has to go, as the model
@@ -2189,12 +2203,16 @@ static NO_SEROVAR_NAME: LazyLock<Regex> =
 /// any other shape.
 fn stash_serovar_of_binomial(ctx: &mut ParseContext, s: &str) -> Option<String> {
     let caps = SEROVAR_OF_BINOMIAL.captures(s)?;
+    let abbreviated = caps[4].trim_end_matches('.').eq_ignore_ascii_case("ser");
+    if abbreviated && !ser_is_serovar(ctx, s) {
+        return None;
+    }
     let bracketed = !caps[3].is_empty();
     if bracketed != s.trim_end().trim_end_matches('.').ends_with(')') {
         return None;
     }
-    let serovar = &caps[4];
-    let rest = caps.get(5).map(|m| java_trim(m.as_str()));
+    let serovar = &caps[5];
+    let rest = caps.get(6).map(|m| java_trim(m.as_str()));
     if SEROVAR_NAME.is_match(serovar) && !NO_SEROVAR_NAME.is_match(serovar) {
         ctx.pending_serovar = Some(serovar.to_string());
         if let Some(rest) = rest {
@@ -2233,7 +2251,7 @@ fn stash_serovar_of_binomial(ctx: &mut ParseContext, s: &str) -> Option<String> 
 /// what is removed is named in a warning, `Removed: serovar 4` — Java dropped it silently, leaving
 /// nothing to tell the serovars of one species apart (#81).
 fn strip_serovar_serotype(ctx: &mut ParseContext, mut s: String) -> String {
-    if SEROVAR_TEST.is_match(&s) {
+    if SEROVAR_TEST.is_match(&s) || (SER_ABBREVIATION.is_match(&s) && ser_is_serovar(ctx, &s)) {
         if let Some(binomial) = stash_serovar_of_binomial(ctx, &s) {
             return binomial;
         }
