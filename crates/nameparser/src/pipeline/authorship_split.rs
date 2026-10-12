@@ -31,8 +31,8 @@
 //! former ad-hoc `rank_is_infrageneric_strictly` free function.
 
 use crate::model::{NomCode, Rank};
-use crate::pipeline::rank_markers;
 use crate::pipeline::ParseContext;
+use crate::pipeline::{blacklisted_epithets, rank_markers};
 use crate::token::{self, Token, TokenKind};
 
 /// Java `AuthorshipSplit.findBoundary(List<Token> tokens, ParseContext ctx)`
@@ -411,7 +411,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     // the source has asserted this IS a species, so the word sitting in the
                     // epithet slot is the epithet and the rest is the authorship
                     // ("Zodarion van Bosmans, 2009" -> van + Bosmans, 2009).
-                    if particle_is_epithet_by_rank(tokens, i, ctx, after_genus, have_epithet) {
+                    if particle_is_epithet(tokens, i, ctx, genus_text, after_genus, have_epithet) {
                         name_words += 1;
                         have_epithet = true;
                         after_subgenus = false;
@@ -716,17 +716,19 @@ pub(crate) fn skip_repeated_genus(
 ///     mid author chain ("van den Boom", "von der Linde", "v. d. Boom"), and an epithet is a
 ///     single word, so the chain stays one multi-word author. Note this cannot be a
 ///     particle-table test: "den" is deliberately absent from the table.
-fn particle_is_epithet_by_rank(
+///
+/// Rust-only as well: a real name listed in the epithet whitelist settles it the same way without a
+/// rank hint, by its genus or its original author: `Sympycnus du Curran, 1929`, `Stoermeriana das
+/// (Hering, 1928)` (#116, see [`blacklisted_epithets::whitelisted`]).
+fn particle_is_epithet(
     tokens: &[Token],
     i: usize,
     ctx: &ParseContext,
+    genus: Option<&str>,
     after_genus: bool,
     have_epithet: bool,
 ) -> bool {
     if !after_genus || have_epithet {
-        return false;
-    }
-    if !ctx.requested_rank.is_some_and(|r| r.is_species_or_below()) {
         return false;
     }
     if !token::is_particle(&tokens[i].text) && !is_weak_particle(&tokens[i].text) {
@@ -737,10 +739,24 @@ fn particle_is_epithet_by_rank(
     while j < tokens.len() && tokens[j].kind == TokenKind::Dot {
         j += 1;
     }
-    match tokens.get(j) {
-        Some(next) if next.kind == TokenKind::Word => !starts_lower(next),
-        _ => true,
+    if tokens
+        .get(j)
+        .is_some_and(|next| next.kind == TokenKind::Word && starts_lower(next))
+    {
+        return false;
     }
+    if ctx.requested_rank.is_some_and(|r| r.is_species_or_below()) {
+        return true;
+    }
+    // the original author: the first one in a basionym bracket, else the one that follows, its
+    // initials and all ("K.Schum.")
+    let author: String = tokens[j..]
+        .iter()
+        .skip_while(|t| t.kind == TokenKind::OpenParen)
+        .take_while(|t| matches!(t.kind, TokenKind::Word | TokenKind::Dot))
+        .map(|t| t.text.as_str())
+        .collect();
+    blacklisted_epithets::whitelisted(&tokens[i].text, genus, Some(&author))
 }
 
 /// "den", "dem" and "ver": particles the table lacks, since they are epithets too ("Agnetina den",

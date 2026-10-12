@@ -154,13 +154,11 @@ fn not_is_a_note_like_non() {
         .sensu("not used as valid")
         .code(NomCode::Zoological)
         .nothing_else();
-    // ... but Erwin's Agra not is a species
+    // ... but Erwin's Agra not is a species, whitelisted despite its blacklisted epithet (#116)
     assert_name("Agra not Erwin, 2002")
         .species("Agra", "not")
         .comb_authors(Some("2002"), &["Erwin"])
         .code(NomCode::Zoological)
-        .warning(&[nameparser::model::warnings::BLACKLISTED_EPITHET])
-        .doubtful()
         .nothing_else();
 }
 

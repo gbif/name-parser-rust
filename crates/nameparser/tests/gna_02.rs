@@ -93,12 +93,11 @@ fn exceptions_with_binomials() {
     // group: Exceptions with Binomials — names whose species epithet happens to
     // look like a virus marker, a blacklisted word, or otherwise unusual still
     // parse when an explicit Title-cased author + year follows.
+    // a real name with a blacklisted epithet, whitelisted (#116)
     assert_name("Agra not Erwin, 2002")
         .species("Agra", "not")
         .comb_authors(Some("2002"), &["Erwin"])
         .code(NomCode::Zoological)
-        .warning(&[warnings::BLACKLISTED_EPITHET])
-        .doubtful()
         .nothing_else();
     assert_name("Navicula bacterium Frenguelli")
         .species("Navicula", "bacterium")

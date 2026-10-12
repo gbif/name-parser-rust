@@ -1,0 +1,45 @@
+# Real names whose epithet is on blacklist-epithets.txt ("Caryota no", "Hypanus say"). A listed name
+# is not flagged doubtful, and a listed epithet that is also an author particle ("du", "das", "los")
+# is read as the epithet ("Sympycnus du Curran, 1929"), not as part of the author.
+# See resources/README.md for how the list was built and how to extend it.
+#
+# Columns, tab-separated: epithet, genus, original author (the basionym author when bracketed, else
+# the author), and the name as found, for review only. A name matches a line when its epithet does
+# and either its genus or its original author does: the author carries a line across recombinations
+# ("Raja say Lesueur" covers "Hypanus say (Lesueur, 1817)"). Genus and epithet are matched without
+# case, the author on its surname without case or accents.
+epithet	genus	author	name
+also	Chionobas	Boisduval	Chionobas also Boisduval, 1832
+bin	Lathys	Marusik	Lathys bin Marusik & Logunov, 1991
+das	Bombycopsis	Hering	Bombycopsis das Hering, 1928
+das	Stoermeriana	Hering	Stoermeriana das (Hering, 1928)
+du	Chrysosoma	Curran	Chrysosoma du Curran, 1929
+du	Ficus	K.Schum.	Ficus du K.Schum. & Lauterb.
+du	Plagiozopelma	Curran	Plagiozopelma du (Curran, 1929)
+du	Sympycnus	Curran	Sympycnus du Curran, 1929
+du	Tricyclea	Curran	Tricyclea du Curran, 1931
+habe	Desmeocraera	Kiriakoff	Desmeocraera habe Kiriakoff, 1964
+ja	Abantis	Druce	Abantis ja Druce, 1909
+ja	Lycaenesthes	Bethune-Baker	Lycaenesthes ja Bethune-Baker, 1910
+ja	Milocera	Krüger	Milocera ja Krüger, 2001
+ja	Telipna	Bethune-Baker	Telipna ja Bethune-Baker, 1926
+los	Hepialus	Strecker	Hepialus los Strecker, 1893
+mon	Lepidophallus	Bordoni	Lepidophallus mon Bordoni, 2002
+mon	Megalinus	Bordoni	Megalinus mon (Bordoni, 2002)
+mon	Stenus	Rougemont	Stenus mon Rougemont, 1981
+mon	Sturnidoecus	Gustafsson	Sturnidoecus mon Gustafsson & Bush, 2017
+mon	Teretamon	Mitra	Teretamon mon Mitra & Khamo, 2024
+no	Caryota	Becc.	Caryota no Becc.
+no	Koppe	Deeleman-Reinhold	Koppe no Deeleman-Reinhold, 2001
+no	Nosferatumyia	Korneyev	Nosferatumyia no Korneyev, 2006
+nor	Dischides	Roco-Villablanca	Dischides nor Roco-Villablanca, Rivadeneira & S. N. Nielsen, 2026
+not	Agra	Erwin	Agra not Erwin, 2002
+okay	Rhyphelia	Nobre	Rhyphelia okay Nobre & Ruiz, 2024
+on	Dysschema	Hering	Dysschema on (Hering, 1928)
+on	Pericopis	Hering	Pericopis on Hering, 1928
+say	Dasyatis	Lesueur	Dasyatis say (Lesueur, 1817)
+say	Hypanus	Lesueur	Hypanus say (Lesueur, 1817)
+say	Physa	Blainville	Physa say Blainville, 1826
+say	Raja	Lesueur	Raja say Lesueur, 1817
+till	Laurus	Poir.	Laurus till Poir.
+what	Spatulapica	Zetterstedt	Spatulapica what (Zetterstedt, 1845)

@@ -46,6 +46,27 @@ many valid names is a candidate for the whitelist below.
 - `this` — *Xerolinus this* (Steiner, 2006)
 - `une` — *Trechiama une* Ueno, 2001
 
+## Name whitelist (`whitelist-epithets.tsv`)
+
+Real **names** whose epithet is on the blacklist: *Caryota no* Becc., *Hypanus say* (Lesueur,
+1817), *Agra not* Erwin, 2002. The words stay blacklisted, since they turn up as junk far more often
+than as epithets; a listed name is not flagged. A listed epithet that is also an author particle
+(`du`, `das`, `los`) is read as the epithet rather than as part of the author: `Sympycnus du
+Curran, 1929` was the genus *Sympycnus* by `du Curran`. Rust-only: the Java name-parser has no such
+list. See `whitelisted` in `src/pipeline/blacklisted_epithets.rs` and `particle_is_epithet` in
+`src/pipeline/authorship_split.rs`.
+
+Each line gives the epithet, its genus and its original author (the basionym author when there is
+one, else the author), plus the name as found. A name matches when its epithet does and either its
+genus or its original author does. The genus keeps `Abies du` flagged while `Sympycnus du` is not; the
+author carries a line across recombinations (`Raja say Lesueur` also covers *Hypanus say*
+(Lesueur, 1817)). The author is compared by surname without case or accents.
+
+Seeded in October 2026 (#116) from the ChecklistBank verbatim names with an authorship and a
+blacklisted epithet that match a name in the COL release exactly (33 names), plus *Ficus du*
+K.Schum. & Lauterb. from WFO. To add a name, check it in a checklist (COL, WFO, a taxonomic
+database) and add a line for it.
+
 ## Homoglyph table (`homoglyphs.txt`)
 
 Confusable-character normalisation table, likewise copied from the Java name-parser resource of

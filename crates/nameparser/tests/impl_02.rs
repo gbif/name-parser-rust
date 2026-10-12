@@ -181,6 +181,33 @@ fn blacklisted() {
 }
 
 #[test]
+fn a_whitelisted_name_with_a_blacklisted_epithet_is_no_doubt() {
+    // #116: the words stay blacklisted, the real names using them are listed in the whitelist, by
+    // genus or original author, which carries them across recombinations
+    assert_name("Caryota no Becc.")
+        .species("Caryota", "no")
+        .comb_authors(None, &["Becc."])
+        .nothing_else();
+    assert_name("Hypanus say (Lesueur, 1817)")
+        .species("Hypanus", "say")
+        .bas_authors(Some("1817"), &["Lesueur"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Amphotistius say", "(Lesueur, 1817)")
+        .species("Amphotistius", "say")
+        .bas_authors(Some("1817"), &["Lesueur"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // another genus by another author stays flagged
+    assert_name("Abies no Smith")
+        .species("Abies", "no")
+        .comb_authors(None, &["Smith"])
+        .doubtful()
+        .warning(&[warnings::BLACKLISTED_EPITHET])
+        .nothing_else();
+}
+
+#[test]
 fn author_with_publication() {
     // in publications often give the year the name was published. We propagate that to the authorship instance
     // and for botanical names we simply don't show it in the NameFormatter

@@ -515,9 +515,18 @@ fn flag_blacklisted_epithets(n: &mut ParsedName) {
         }
     }
 
+    // a real name with such an epithet is whitelisted by its genus or original author (#116)
+    let author = n
+        .basionym_authorship
+        .authors
+        .first()
+        .or(n.combination_authorship.authors.first())
+        .cloned();
     let epithets = [n.specific_epithet.clone(), n.infraspecific_epithet.clone()];
     for ep in epithets.into_iter().flatten() {
-        if blacklisted_epithets::contains(&ep) {
+        if blacklisted_epithets::contains(&ep)
+            && !blacklisted_epithets::whitelisted(&ep, n.genus.as_deref(), author.as_deref())
+        {
             n.doubtful = true;
             n.add_warning(warnings::BLACKLISTED_EPITHET);
         }

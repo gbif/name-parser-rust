@@ -25,6 +25,9 @@
 //! *also* discarded the authorship — so `Cantuaria delli Forster, 1968` lost both `delli`
 //! and `Forster, 1968`. See `src/token.rs` for the 50-entry particle table and
 //! `src/pipeline/authorship_split.rs` `find_boundary` for the rule.
+//!
+//! A real name listed in `resources/whitelist-epithets.tsv` settles it too, without a hint, by its
+//! genus or original author: `Sympycnus du Curran, 1929` (#116).
 
 mod common;
 use common::*;
@@ -233,6 +236,38 @@ fn an_epithet_with_its_particle_apart_is_one_word() {
     assert_name("Eutonia van der Wulp, 1874")
         .monomial("Eutonia")
         .comb_authors(Some("1874"), &["van der Wulp"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+// ---- the epithet whitelist (#116) ------------------------------------------------------------
+
+#[test]
+fn a_whitelisted_name_takes_the_particle_as_its_epithet() {
+    // by its genus or, across recombinations, by its original author
+    assert_name("Sympycnus du Curran, 1929")
+        .species("Sympycnus", "du")
+        .comb_authors(Some("1929"), &["Curran"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Stoermeriana das (Hering, 1928)")
+        .species("Stoermeriana", "das")
+        .bas_authors(Some("1928"), &["Hering"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Ficus du K.Schum. & Lauterb.")
+        .species("Ficus", "du")
+        .comb_authors(None, &["K.Schum.", "Lauterb."])
+        .nothing_else();
+    assert_name_auth("Hepialus los", "Strecker, 1893")
+        .species("Hepialus", "los")
+        .comb_authors(Some("1893"), &["Strecker"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // an unlisted name is unchanged: a uninomial with a particled author
+    assert_name("Aus du Smith, 1900")
+        .monomial("Aus")
+        .comb_authors(Some("1900"), &["du Smith"])
         .code(NomCode::Zoological)
         .nothing_else();
 }

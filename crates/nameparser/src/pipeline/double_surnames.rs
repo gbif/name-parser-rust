@@ -53,7 +53,7 @@ fn key(left: &str, right: &str) -> String {
 }
 
 /// Lower case, accents dropped.
-fn fold(word: &str) -> String {
+pub(crate) fn fold(word: &str) -> String {
     word.nfd()
         .filter(|c| !unicode_normalization::char::is_combining_mark(*c))
         .flat_map(char::to_lowercase)

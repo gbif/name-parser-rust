@@ -52,9 +52,89 @@ pub(crate) fn contains(epithet: &str) -> bool {
     EPITHETS.contains(epithet.to_lowercase().as_str())
 }
 
+/// Real names with a blacklisted epithet, embedded at compile time: `Caryota no Becc.`,
+/// `Hypanus say (Lesueur, 1817)` (#116). Rust-only; see `resources/README.md`.
+const WHITELIST_TSV: &str = include_str!("../../resources/whitelist-epithets.tsv");
+
+/// The `epithet genus` and `epithet @author` keys of every whitelisted name.
+static WHITELIST: LazyLock<HashSet<String>> = LazyLock::new(|| {
+    WHITELIST_TSV
+        .lines()
+        .filter(|line| !line.trim().is_empty() && !line.starts_with('#'))
+        .skip(1) // the column header
+        .flat_map(|line| {
+            let mut cols = line.split('\t').map(str::trim);
+            let epithet = cols.next().unwrap_or_default();
+            let genus = cols.next().filter(|g| !g.is_empty());
+            let author = cols.next().filter(|a| !a.is_empty());
+            [
+                genus.map(|g| genus_key(epithet, g)),
+                author.and_then(|a| author_key(epithet, a)),
+            ]
+        })
+        .flatten()
+        .collect()
+});
+
+fn genus_key(epithet: &str, genus: &str) -> String {
+    format!("{} {}", epithet.to_lowercase(), genus.to_lowercase())
+}
+
+/// The key of an author by surname, the last word of two letters or more: `J.E.Gray` -> `gray`,
+/// `Bethune-Baker` -> `bethunebaker`, `K.Schum.` -> `schum`, `Krüger` -> `kruger`.
+fn author_key(epithet: &str, author: &str) -> Option<String> {
+    let surname = author
+        .split(|c: char| c.is_whitespace() || c == '.')
+        .rfind(|w| w.chars().filter(|c| c.is_alphabetic()).count() > 1)?;
+    let surname: String = super::double_surnames::fold(surname)
+        .chars()
+        .filter(|c| c.is_alphabetic())
+        .collect();
+    Some(format!("{} @{surname}", epithet.to_lowercase()))
+}
+
+/// Whether a name with this (blacklisted) epithet is a real one listed in the whitelist, by its
+/// genus or by its original author — the basionym author when there is one, else the author.
+pub(crate) fn whitelisted(epithet: &str, genus: Option<&str>, author: Option<&str>) -> bool {
+    genus.is_some_and(|g| WHITELIST.contains(&genus_key(epithet, g)))
+        || author
+            .and_then(|a| author_key(epithet, a))
+            .is_some_and(|k| WHITELIST.contains(&k))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn whitelisted_by_genus_or_original_author() {
+        assert!(whitelisted("no", Some("Caryota"), None));
+        assert!(whitelisted("No", Some("CARYOTA"), Some("Becc.")));
+        // the author carries it across recombinations
+        assert!(whitelisted("say", Some("Hypanus"), Some("Lesueur")));
+        assert!(whitelisted("say", Some("Amphotistius"), Some("Lesueur")));
+        assert!(whitelisted("ja", Some("Aus"), Some("G.T.Bethune-Baker")));
+        assert!(whitelisted("ja", None, Some("Kruger")));
+        assert!(whitelisted("du", Some("Aus"), Some("K.Schum.")));
+        // another genus by another author, or neither given
+        assert!(!whitelisted("du", Some("Abies"), Some("Smith")));
+        assert!(!whitelisted("du", Some("Abies"), None));
+        assert!(!whitelisted("say", None, None));
+        // listed for another epithet
+        assert!(!whitelisted("no", Some("Hypanus"), Some("Smith")));
+    }
+
+    #[test]
+    fn author_keys() {
+        assert_eq!(author_key("x", "J.E.Gray").as_deref(), Some("x @gray"));
+        assert_eq!(author_key("x", "K.Schum.").as_deref(), Some("x @schum"));
+        assert_eq!(
+            author_key("x", "Bethune-Baker").as_deref(),
+            Some("x @bethunebaker")
+        );
+        assert_eq!(author_key("x", "Krüger").as_deref(), Some("x @kruger"));
+        assert_eq!(author_key("x", "L."), None);
+    }
 
     /// Resource parity: the copied file has exactly 275 lines (NOT 274 — see the module doc
     /// comment on the `wc -l` off-by-one from the missing trailing newline), all data (no
