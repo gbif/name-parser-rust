@@ -136,12 +136,15 @@ pub fn run(
     // echo into `preflight::run` below, matching Java's `Preflight.run(scientificName,
     // ctx)` — that call passes `Pipeline.run`'s own original parameter, not the
     // trimmed+normalized local.
-    let trimmed = normalize_quotes(trimmed);
+    // brackets doubled by the source are single ones, before Preflight reads them: `Atheta
+    // ((incertae sedis)) cursor` is the placeholder `(incertae sedis)`
+    let trimmed = stripandstash::collapse_double_brackets(normalize_quotes(trimmed));
     let fullwidth = name
         .chars()
         .chain(authorship.unwrap_or_default().chars())
         .any(is_fullwidth);
-    let authorship = authorship.map(|a| normalize_quotes(&normalize_input(a)));
+    let authorship = authorship
+        .map(|a| stripandstash::collapse_double_brackets(normalize_quotes(&normalize_input(a))));
 
     // The length of the name as a whole, whichever column its authorship came in — counted once
     // when the name string already repeats it.

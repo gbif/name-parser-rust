@@ -5201,6 +5201,84 @@ fn strip_comma_prefixed_reference(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
+// ---- Doubled brackets ----
+
+/// Reduces brackets doubled by the source to single ones (#113): a pair directly inside another
+/// pair of the same kind, `Atheta ((Datomicra)) particula`, `( (Hudson, 1895) )`, `[[L.]] Mill.`,
+/// and an unmatched bracket next to one of the same kind, as an unclosed `((Roeth & O.Gruss)
+/// Meneguzzo` or a surplus `(Leysser) ) Palisot de Beauvois`. Nested brackets that do enclose
+/// something more are left alone: `((Hedw.) Fr.) Boud.`, `( (Sparrman), 1787)`. Rust-only.
+pub(crate) fn collapse_double_brackets(s: String) -> String {
+    if !s.contains(['(', '[']) {
+        return s;
+    }
+    let chars: Vec<char> = s.chars().collect();
+    let kind = |c: char| match c {
+        '(' | ')' => Some(0),
+        '[' | ']' => Some(1),
+        _ => None,
+    };
+    // the matching partner of every bracket, per kind, or None where it has none
+    let mut partner: Vec<Option<usize>> = vec![None; chars.len()];
+    let mut open: [Vec<usize>; 2] = [Vec::new(), Vec::new()];
+    for (i, &c) in chars.iter().enumerate() {
+        match (c, kind(c)) {
+            ('(' | '[', Some(k)) => open[k].push(i),
+            (_, Some(k)) => {
+                if let Some(o) = open[k].pop() {
+                    partner[o] = Some(i);
+                    partner[i] = Some(o);
+                }
+            }
+            _ => {}
+        }
+    }
+    let next = |i: usize| (i + 1..chars.len()).find(|&j| !chars[j].is_whitespace());
+    let prev = |i: usize| (0..i).rev().find(|&j| !chars[j].is_whitespace());
+    let mut drop = vec![false; chars.len()];
+    let mut drop_span = |from: usize, to: usize| drop[from..=to].iter_mut().for_each(|d| *d = true);
+    for (i, &c) in chars.iter().enumerate() {
+        if !matches!(c, '(' | '[') {
+            continue;
+        }
+        match partner[i] {
+            // the inner of two pairs whose brackets are only whitespace apart on both sides
+            Some(close) => {
+                let outer = prev(i).filter(|&o| chars[o] == c);
+                if let Some(oc) = outer.and_then(|o| partner[o]) {
+                    if next(close) == Some(oc) {
+                        drop_span(outer.unwrap() + 1, i);
+                        drop_span(close, oc - 1);
+                    }
+                }
+            }
+            // an unclosed bracket opening another one
+            None => {
+                if let Some(inner) = next(i).filter(|&j| chars[j] == c) {
+                    drop_span(i, inner - 1);
+                }
+            }
+        }
+    }
+    // a surplus closing bracket after another one
+    for (i, &c) in chars.iter().enumerate() {
+        if matches!(c, ')' | ']') && partner[i].is_none() {
+            if let Some(before) = prev(i).filter(|&j| chars[j] == c) {
+                drop_span(before + 1, i);
+            }
+        }
+    }
+    if !drop.contains(&true) {
+        return s;
+    }
+    chars
+        .iter()
+        .zip(drop)
+        .filter(|(_, d)| !d)
+        .map(|(c, _)| c)
+        .collect()
+}
+
 // ---- Text after the year that closes an authorship ----
 
 /// A bracket opened after the year of an authorship and never closed, at the end: `Dobson, 1878
@@ -6272,6 +6350,45 @@ mod tests {
         run(&mut c);
         assert_eq!(c.working, before_working);
         assert_eq!(c.name, before_name);
+    }
+
+    // ---- Doubled brackets ----
+
+    #[test]
+    fn doubled_brackets_are_collapsed() {
+        let c = |s: &str| collapse_double_brackets(s.to_string());
+        assert_eq!(
+            c("Atheta ((Datomicra)) particula"),
+            "Atheta (Datomicra) particula"
+        );
+        assert_eq!(c("Aus bus (((L.))) Mill."), "Aus bus (L.) Mill.");
+        assert_eq!(c("Aus bus ( (Hudson, 1895) )"), "Aus bus (Hudson, 1895)");
+        assert_eq!(c("Aus bus [[L.]] Mill."), "Aus bus [L.] Mill.");
+        assert_eq!(c("Glenea ((G.) mitonoana"), "Glenea (G.) mitonoana");
+        assert_eq!(
+            c("(Leysser) ) Palisot de Beauvois"),
+            "(Leysser) Palisot de Beauvois"
+        );
+        assert_eq!(c("Aus bus (L.)) Mill."), "Aus bus (L.) Mill.");
+        assert_eq!(
+            c("Aus bus Smith, 1900 [nomen nudum]]"),
+            "Aus bus Smith, 1900 [nomen nudum]"
+        );
+    }
+
+    #[test]
+    fn nested_brackets_enclosing_more_are_kept() {
+        for s in [
+            "Abies alba Mill.",
+            "Calycella citrina ((Hedw.) Fr.) Boud.",
+            "Acanthisitta chloris ( (Sparrman), 1787) chloris",
+            "Ageniella serrula ((Fox), 1897)",
+            "((Citrus unshiu x Citrus sinensis) x Citrus reticulata) x Citrus reticulata",
+            "Influenza A virus (A/Finland/657/2009(H1N1))",
+            "Aus ([Bus]) cus",
+        ] {
+            assert_eq!(collapse_double_brackets(s.to_string()), s);
+        }
     }
 
     // ---- Step 1: flagUncertainAuthorship ----
