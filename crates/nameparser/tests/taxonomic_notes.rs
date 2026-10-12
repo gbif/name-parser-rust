@@ -496,6 +496,36 @@ fn a_note_inside_the_basionym_bracket_leaves_the_bracket_whole() {
 }
 
 #[test]
+fn a_note_inside_a_square_bracketed_authorship_leaves_the_bracket_whole() {
+    // #111: as #95 for a square bracket around the whole authorship (WoRMS), whose note took the
+    // closing bracket along: "sensu stricto]"
+    assert_name_auth("Aricidea (Aricidea)", "[Webster, 1879, sensu stricto]")
+        .infrageneric_at("Aricidea", Rank::Subgenus, "Aricidea")
+        .comb_authors(Some("1879"), &["Webster"])
+        .sensu("sensu stricto")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Aricidea (Aricidea) [Webster, 1879, sensu stricto]")
+        .infrageneric_at("Aricidea", Rank::Subgenus, "Aricidea")
+        .comb_authors(Some("1879"), &["Webster"])
+        .sensu("sensu stricto")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Aus bus", "[Smith, 1879, sensu lato]")
+        .species("Aus", "bus")
+        .comb_authors(Some("1879"), &["Smith"])
+        .sensu("sensu lato")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Aus bus", "[Smith, 1879 nec Jones, 1900]")
+        .species("Aus", "bus")
+        .comb_authors(Some("1879"), &["Smith"])
+        .sensu("nec Jones, 1900")
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
 fn a_quoted_note_is_a_note() {
     // #97: The Plant List quotes its notes; "sensu Blanco" became an author, and in the name
     // string the whole a cultivar epithet

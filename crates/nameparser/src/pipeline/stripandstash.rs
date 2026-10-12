@@ -3830,6 +3830,28 @@ static NOTE_IN_BASIONYM_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\(([^()]*?\p{L}[^()]*?)[,;]?(?-u:\s+)((?i:nec|non|not|sensu|sec|auctt?\.?)(?-u:\s)[^()]*)\)").unwrap()
 });
 
+/// The same in square brackets, around the whole authorship (WoRMS): `[Webster, 1879, sensu
+/// stricto]`, `[Grube, 1855, non Risso, 1826]`. The author part is a citation, capitalised and
+/// ending in its year, so a remark in brackets stays the note it is as a whole: `[lapsus,
+/// non-existent combination, not Kolmer, 1985]`, `[junior secondary homonym, nec …]`.
+static NOTE_IN_SQUARE_BRACKET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\[(?-u:\s*)(\p{Lu}[^\[\]()]*?[,\s](?:1[5-9][0-9]{2}|20[0-9]{2})[a-z]?)[,;]?(?-u:\s+)((?i:nec|non|not|sensu|sec|auctt?\.?)(?-u:\s)[^\[\]]*)\]").unwrap()
+});
+
+/// A lowercase word, of a remark (`Reference for generic combination of Chalcis anselmi Girault,
+/// 1930`) unless it is a particle of a surname (`delle Chiaje`).
+static LOWERCASE_WORD: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\b\p{Ll}{3,}\b").unwrap());
+
+/// Whether the author part of a [`NOTE_IN_SQUARE_BRACKET`] is a remark rather than a citation.
+fn is_remark(author: &str) -> bool {
+    LOWERCASE_WORD.find_iter(author).any(|w| {
+        !matches!(
+            w.as_str(),
+            "van" | "von" | "der" | "den" | "del" | "della" | "delle" | "des" | "dos" | "das"
+        )
+    })
+}
+
 /// A second citation after a semicolon in a basionym bracket: `(Boulenger, 1890; Kramer, 1977)`.
 /// Group 1 the first citation, ending in its year, group 2 the second.
 static SECOND_CITATION: LazyLock<Regex> = LazyLock::new(|| {
@@ -3935,10 +3957,15 @@ static NOTE_LEAD: LazyLock<Regex> =
 /// Takes a note out of the bracket of a basionym authorship, which it broke: the note pattern took
 /// it from its keyword to the end, closing bracket included, and the bracketed author became the
 /// combination author, `(Martynova, 1976` (#95). The bracket keeps the author, the note goes to
-/// the taxonomic note. An author part that is a note itself takes the whole bracket along.
+/// the taxonomic note. An author part that is a note itself takes the whole bracket along. A square
+/// bracket is kept the same way, `[Webster, 1879, sensu stricto]` (#111).
 fn split_note_from_basionym_bracket(ctx: &mut ParseContext, s: String) -> String {
-    let Some(caps) = NOTE_IN_BASIONYM_BRACKET.captures(&s) else {
-        return s;
+    let (caps, open, close) = match NOTE_IN_BASIONYM_BRACKET.captures(&s) {
+        Some(caps) => (caps, '(', ')'),
+        None => match NOTE_IN_SQUARE_BRACKET.captures(&s) {
+            Some(caps) if !is_remark(&caps[1]) => (caps, '[', ']'),
+            _ => return s,
+        },
     };
     let whole = caps.get(0).unwrap();
     // a bracket inside a note is part of it: "sensu Hansen, 1913 (partim.; not Sars, 1882)"
@@ -3949,7 +3976,10 @@ fn split_note_from_basionym_bracket(ctx: &mut ParseContext, s: String) -> String
     let (kept, note) = if NOTE_LEAD.is_match(author) {
         (String::new(), format!("{author}, {}", java_trim(&caps[2])))
     } else {
-        (format!("({author})"), java_trim(&caps[2]).to_string())
+        (
+            format!("{open}{author}{close}"),
+            java_trim(&caps[2]).to_string(),
+        )
     };
     ctx.name.add_taxonomic_note(&collapse_whitespace(&note));
     let out = format!("{}{kept}{}", &s[..whole.start()], &s[whole.end()..]);
