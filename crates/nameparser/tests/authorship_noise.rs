@@ -641,3 +641,55 @@ fn a_lowercase_bracket_after_the_authors_is_no_part_of_them() {
         .partial("(awaiting allocation)")
         .nothing_else();
 }
+
+#[test]
+fn doubled_brackets_are_single_ones() {
+    // #113: a subgenus, a basionym author or a bracketed note doubled by the source reads as the
+    // single bracket. 475 CLB names have a "((", most of them a subgenus: the epithet was lost.
+    assert_name("Atheta ((Datomicra)) particula")
+        .species_ig("Atheta", "Datomicra", "particula")
+        .nothing_else();
+    assert_name("Aurotipula orion ( (Hudson, 1895) )")
+        .species("Aurotipula", "orion")
+        .bas_authors(Some("1895"), &["Hudson"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Aus bus Smith, 1900 [[nomen nudum]]")
+        .species("Aus", "bus")
+        .comb_authors(Some("1900"), &["Smith"])
+        .nom_note("nomen nudum")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // an unclosed one
+    assert_name("Aganisia cyanea f. alba ((Roeth & O.Gruss) Meneguzzo")
+        .infra_species("Aganisia", "cyanea", Rank::Form, "alba")
+        .bas_authors(None, &["Roeth", "O.Gruss"])
+        .comb_authors(None, &["Meneguzzo"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a surplus closing one, in whichever column the authorship comes
+    assert_name("Aus bus Smith, 1900 [nomen nudum]]")
+        .species("Aus", "bus")
+        .comb_authors(Some("1900"), &["Smith"])
+        .nom_note("nomen nudum")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Schedonorus inermis", "(Leysser) ) Palisot de Beauvois")
+        .species("Schedonorus", "inermis")
+        .bas_authors(None, &["Leysser"])
+        .comb_authors(None, &["Palisot de Beauvois"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Abies alba", "((L.)) Mill.")
+        .species("Abies", "alba")
+        .bas_authors(None, &["L."])
+        .comb_authors(None, &["Mill."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // brackets that do enclose more stay nested
+    assert_name("Ageniella serrula ((Fox), 1897)")
+        .species("Ageniella", "serrula")
+        .bas_authors(Some("1897"), &["Fox"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

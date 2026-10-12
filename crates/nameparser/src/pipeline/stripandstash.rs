@@ -2160,16 +2160,30 @@ static SEROVAR_BARE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-/// A binomial (group 1), perhaps a subspecies (group 2), the serovar or serotype marker, perhaps in
-/// brackets (group 3), the serovar (group 4) and what follows (group 5): "Salmonella enterica subsp.
-/// enterica serovar Typhimurium str. JCM 1652", "Actinobacillus pleuropneumoniae serotype 1",
-/// "Leptospira interrogans (serovar Pomona)".
+/// A binomial or a genus (group 1), perhaps a subspecies (group 2), the serovar or serotype marker,
+/// perhaps in brackets (group 3), the marker itself (group 4), the serovar (group 5) and what
+/// follows (group 6): "Salmonella enterica subsp. enterica serovar Typhimurium str. JCM 1652",
+/// "Actinobacillus pleuropneumoniae serotype 1", "Leptospira interrogans (serovar Pomona)",
+/// "Salmonella ser. Typhimurium". The marker may be the abbreviation `ser.` ([`ser_is_serovar`]).
 static SEROVAR_OF_BINOMIAL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}[\p{Ll}\-]+)((?-u:\s+)(?:subsp|ssp)\.?(?-u:\s+)[^\s()]+)?(?-u:\s+)(\(?)(?i:serovar|serotype)(?-u:\s+)([^\s()]+)(?:(?-u:\s+)([^()]+?))?\)?(?-u:\s*)\.?(?-u:\s*)$",
+        r"^(\p{Lu}\p{Ll}+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+)?)((?-u:\s+)(?:subsp|ssp)\.?(?-u:\s+)[^\s()]+)?(?-u:\s+)(\(?)(?i:(serovar|serotype|ser\.?))(?-u:\s+)([^\s()]+)(?:(?-u:\s+)([^()]+?))?\)?(?-u:\s*)\.?(?-u:\s*)$",
     )
     .unwrap()
 });
+
+/// The abbreviated marker `ser.`, which a serovar shares with the botanical series.
+static SER_ABBREVIATION: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\s)\(?ser\.?(?-u:\s)").unwrap());
+
+/// `ser.` marks a serovar, not a series, in Salmonella, by far the largest genus of serovars,
+/// and under a bacterial code: "Salmonella enterica ser. Typhimurium", "Salmonella ser.
+/// Typhimurium" (Brenner et al. 2000, Salmonella nomenclature, J. Clin. Microbiol. 38: 2465). A
+/// series elsewhere: "Carex ser. Acutae", "Aspergillus herbariorum ser. minor".
+fn ser_is_serovar(ctx: &ParseContext, name: &str) -> bool {
+    ctx.requested_code == Some(NomCode::Bacterial)
+        || name.split_whitespace().next() == Some("Salmonella")
+}
 
 /// The name of a serovar, a word of three letters or more (`Typhimurium`, `kurstaki`), not a
 /// number, an antigenic formula or a letter (`1`, `4,12:z:1,7`, `b`).
@@ -2181,7 +2195,7 @@ static SEROVAR_NAME: LazyLock<Regex> =
 static NO_SEROVAR_NAME: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:(?:un|non-?)type?able|rough)$").unwrap());
 
-/// #81: a serovar of a binomial is kept, with the rank SEROVAR. A named one is the infraspecific
+/// #81: a serovar of a binomial or of a genus is kept, with the rank SEROVAR. A named one is the infraspecific
 /// epithet, set by Pipeline once the binomial is parsed ([`ParseContext::pending_serovar`]); a
 /// numbered one or an antigenic formula is the phrase, as a numbered variety's number is, and the
 /// name INFORMAL. A strain after it joins the phrase. A subspecies before it has to go, as the model
@@ -2189,12 +2203,16 @@ static NO_SEROVAR_NAME: LazyLock<Regex> =
 /// any other shape.
 fn stash_serovar_of_binomial(ctx: &mut ParseContext, s: &str) -> Option<String> {
     let caps = SEROVAR_OF_BINOMIAL.captures(s)?;
+    let abbreviated = caps[4].trim_end_matches('.').eq_ignore_ascii_case("ser");
+    if abbreviated && !ser_is_serovar(ctx, s) {
+        return None;
+    }
     let bracketed = !caps[3].is_empty();
     if bracketed != s.trim_end().trim_end_matches('.').ends_with(')') {
         return None;
     }
-    let serovar = &caps[4];
-    let rest = caps.get(5).map(|m| java_trim(m.as_str()));
+    let serovar = &caps[5];
+    let rest = caps.get(6).map(|m| java_trim(m.as_str()));
     if SEROVAR_NAME.is_match(serovar) && !NO_SEROVAR_NAME.is_match(serovar) {
         ctx.pending_serovar = Some(serovar.to_string());
         if let Some(rest) = rest {
@@ -2233,7 +2251,7 @@ fn stash_serovar_of_binomial(ctx: &mut ParseContext, s: &str) -> Option<String> 
 /// what is removed is named in a warning, `Removed: serovar 4` — Java dropped it silently, leaving
 /// nothing to tell the serovars of one species apart (#81).
 fn strip_serovar_serotype(ctx: &mut ParseContext, mut s: String) -> String {
-    if SEROVAR_TEST.is_match(&s) {
+    if SEROVAR_TEST.is_match(&s) || (SER_ABBREVIATION.is_match(&s) && ser_is_serovar(ctx, &s)) {
         if let Some(binomial) = stash_serovar_of_binomial(ctx, &s) {
             return binomial;
         }
@@ -5201,6 +5219,84 @@ fn strip_comma_prefixed_reference(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
+// ---- Doubled brackets ----
+
+/// Reduces brackets doubled by the source to single ones (#113): a pair directly inside another
+/// pair of the same kind, `Atheta ((Datomicra)) particula`, `( (Hudson, 1895) )`, `[[L.]] Mill.`,
+/// and an unmatched bracket next to one of the same kind, as an unclosed `((Roeth & O.Gruss)
+/// Meneguzzo` or a surplus `(Leysser) ) Palisot de Beauvois`. Nested brackets that do enclose
+/// something more are left alone: `((Hedw.) Fr.) Boud.`, `( (Sparrman), 1787)`. Rust-only.
+pub(crate) fn collapse_double_brackets(s: String) -> String {
+    if !s.contains(['(', '[']) {
+        return s;
+    }
+    let chars: Vec<char> = s.chars().collect();
+    let kind = |c: char| match c {
+        '(' | ')' => Some(0),
+        '[' | ']' => Some(1),
+        _ => None,
+    };
+    // the matching partner of every bracket, per kind, or None where it has none
+    let mut partner: Vec<Option<usize>> = vec![None; chars.len()];
+    let mut open: [Vec<usize>; 2] = [Vec::new(), Vec::new()];
+    for (i, &c) in chars.iter().enumerate() {
+        match (c, kind(c)) {
+            ('(' | '[', Some(k)) => open[k].push(i),
+            (_, Some(k)) => {
+                if let Some(o) = open[k].pop() {
+                    partner[o] = Some(i);
+                    partner[i] = Some(o);
+                }
+            }
+            _ => {}
+        }
+    }
+    let next = |i: usize| (i + 1..chars.len()).find(|&j| !chars[j].is_whitespace());
+    let prev = |i: usize| (0..i).rev().find(|&j| !chars[j].is_whitespace());
+    let mut drop = vec![false; chars.len()];
+    let mut drop_span = |from: usize, to: usize| drop[from..=to].iter_mut().for_each(|d| *d = true);
+    for (i, &c) in chars.iter().enumerate() {
+        if !matches!(c, '(' | '[') {
+            continue;
+        }
+        match partner[i] {
+            // the inner of two pairs whose brackets are only whitespace apart on both sides
+            Some(close) => {
+                let outer = prev(i).filter(|&o| chars[o] == c);
+                if let Some(oc) = outer.and_then(|o| partner[o]) {
+                    if next(close) == Some(oc) {
+                        drop_span(outer.unwrap() + 1, i);
+                        drop_span(close, oc - 1);
+                    }
+                }
+            }
+            // an unclosed bracket opening another one
+            None => {
+                if let Some(inner) = next(i).filter(|&j| chars[j] == c) {
+                    drop_span(i, inner - 1);
+                }
+            }
+        }
+    }
+    // a surplus closing bracket after another one
+    for (i, &c) in chars.iter().enumerate() {
+        if matches!(c, ')' | ']') && partner[i].is_none() {
+            if let Some(before) = prev(i).filter(|&j| chars[j] == c) {
+                drop_span(before + 1, i);
+            }
+        }
+    }
+    if !drop.contains(&true) {
+        return s;
+    }
+    chars
+        .iter()
+        .zip(drop)
+        .filter(|(_, d)| !d)
+        .map(|(c, _)| c)
+        .collect()
+}
+
 // ---- Text after the year that closes an authorship ----
 
 /// A bracket opened after the year of an authorship and never closed, at the end: `Dobson, 1878
@@ -6272,6 +6368,45 @@ mod tests {
         run(&mut c);
         assert_eq!(c.working, before_working);
         assert_eq!(c.name, before_name);
+    }
+
+    // ---- Doubled brackets ----
+
+    #[test]
+    fn doubled_brackets_are_collapsed() {
+        let c = |s: &str| collapse_double_brackets(s.to_string());
+        assert_eq!(
+            c("Atheta ((Datomicra)) particula"),
+            "Atheta (Datomicra) particula"
+        );
+        assert_eq!(c("Aus bus (((L.))) Mill."), "Aus bus (L.) Mill.");
+        assert_eq!(c("Aus bus ( (Hudson, 1895) )"), "Aus bus (Hudson, 1895)");
+        assert_eq!(c("Aus bus [[L.]] Mill."), "Aus bus [L.] Mill.");
+        assert_eq!(c("Glenea ((G.) mitonoana"), "Glenea (G.) mitonoana");
+        assert_eq!(
+            c("(Leysser) ) Palisot de Beauvois"),
+            "(Leysser) Palisot de Beauvois"
+        );
+        assert_eq!(c("Aus bus (L.)) Mill."), "Aus bus (L.) Mill.");
+        assert_eq!(
+            c("Aus bus Smith, 1900 [nomen nudum]]"),
+            "Aus bus Smith, 1900 [nomen nudum]"
+        );
+    }
+
+    #[test]
+    fn nested_brackets_enclosing_more_are_kept() {
+        for s in [
+            "Abies alba Mill.",
+            "Calycella citrina ((Hedw.) Fr.) Boud.",
+            "Acanthisitta chloris ( (Sparrman), 1787) chloris",
+            "Ageniella serrula ((Fox), 1897)",
+            "((Citrus unshiu x Citrus sinensis) x Citrus reticulata) x Citrus reticulata",
+            "Influenza A virus (A/Finland/657/2009(H1N1))",
+            "Aus ([Bus]) cus",
+        ] {
+            assert_eq!(collapse_double_brackets(s.to_string()), s);
+        }
     }
 
     // ---- Step 1: flagUncertainAuthorship ----
