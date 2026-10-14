@@ -18,7 +18,7 @@
   -->
   <groupId>org.gbif.nameparser</groupId>
   <artifactId>name-parser-rust</artifactId>
-  <version>0.3.1-SNAPSHOT</version>
+  <version>0.4.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>GBIF Name Parser :: Rust FFM binding</name>
@@ -54,7 +54,7 @@
     <!-- rust.engine.version (the gbif-name-parser engine, tracks crates/nameparser/Cargo.toml) is
          stamped into the main JAR manifest; the git SHA is injected by git-commit-id-maven-plugin.
          Do NOT pre-define git.commit.id.abbrev here — a static value shadows the plugin's. -->
-    <rust.engine.version>0.3.0</rust.engine.version>
+    <rust.engine.version>0.4.0</rust.engine.version>
 
     <!-- Base dir the per-platform classifier JARs read the staged cdylibs from (ci/build-cdylib.sh
          populates it). Defaults to this module's own native-staging/; overridable so `mvn
