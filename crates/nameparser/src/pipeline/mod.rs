@@ -235,7 +235,14 @@ pub fn run(
         apply_authorship(&mut ctx.name, &st);
         if st.unparsed_from >= 0 {
             ctx.name.state = State::Partial;
-            ctx.name.unparsed = st.unparsed_text.clone();
+            // after what the name part left unparsed, not in its place: "Calamintha officinalis
+            // f. brevifrons ilic, basionym"
+            ctx.name.unparsed = match (ctx.name.unparsed.take(), st.unparsed_text.clone()) {
+                (Some(own), Some(rest)) if !contains_ignoring_punctuation(&own, &rest) => {
+                    Some(format!("{own} {rest}"))
+                }
+                (own, rest) => rest.or(own),
+            };
         }
         auth_state = Some(st);
     }
