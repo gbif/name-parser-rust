@@ -707,3 +707,38 @@ fn text_after_the_year_is_no_author() {
         .phrase("sp. Davies, 2011 (Waite Nematode Collection WNC 519)")
         .nothing_else();
 }
+
+#[test]
+fn incl_lists_the_names_a_concept_covers() {
+    // #118: "incl." is the circumscription note "excl." is the counterpart of
+    assert_name("Mycena galericulata, incl. cylichnium")
+        .species("Mycena", "galericulata")
+        .sensu("incl. cylichnium")
+        .nothing_else();
+    assert_name("Mycena galericulata incl. cylichnium")
+        .species("Mycena", "galericulata")
+        .sensu("incl. cylichnium")
+        .nothing_else();
+}
+
+#[test]
+fn bare_sl_is_sensu_lato() {
+    // #118: undotted "sl" is no infraspecific epithet
+    assert_name("Culex pipiens sl")
+        .species("Culex", "pipiens")
+        .sensu("sl")
+        .nothing_else();
+    assert_name("Anopheles maculipennis sl.")
+        .species("Anopheles", "maculipennis")
+        .sensu("sl.")
+        .nothing_else();
+    // followed by a second note, dotted or not
+    assert_name("Xerocomus chrysenteron sl, incl. bubalinus, cisalpinus")
+        .species("Xerocomus", "chrysenteron")
+        .sensu("sl incl. bubalinus, cisalpinus")
+        .nothing_else();
+    assert_name("Xerocomus chrysenteron s.l., incl. bubalinus, cisalpinus")
+        .species("Xerocomus", "chrysenteron")
+        .sensu("s.l. incl. bubalinus, cisalpinus")
+        .nothing_else();
+}

@@ -4264,8 +4264,9 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|(?-i:[Oo]f)(?-u:\s+)(?:authors\b|(?-i:\p{Lu})|d'|(?-i:de|van|von|la|le|du)(?-u:\s)).*",
         r"|according(?-u:\s+)to(?-u:\s+)\p{Lu}.*",
         r"|excl\.(?-u:\s+).*",
+        r"|incl\.(?-u:\s+).*",
         r"|ss\b\.?(?-u:\s+).*",
-        r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?)",
+        r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?|sl\.?)",
         r"|(?-i:sens\.(?-u:\s*)(?:str|lat|l|ampl)\.?)",
         r"|(?-i:ampl\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
         r")(?-u:\s*),?$",
@@ -4537,7 +4538,8 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
         result.pop();
         result = java_trim(&result).to_string();
     }
-    result
+    // another note may stand in front of this one: "Xerocomus chrysenteron s.l., incl. bubalinus"
+    strip_tax_note(ctx, result)
 }
 
 // ---- Step 44: stripAggregateSuffix ----
@@ -6325,28 +6327,35 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     // authorship string — same patterns `run()`'s `strip_tax_note` applies to the main
     // working string. Matched against a space-padded copy (same reasoning as NOM_NOTE
     // above).
-    let padded_tax = format!(" {}", lift_bracketed_notes(&s));
-    if let Some((_, group1_start)) = find_tax_note(&padded_tax, true) {
+    // Another note may stand in front of the one cut off: "s.l., incl. bubalinus".
+    let mut found = Vec::new();
+    loop {
+        let padded_tax = format!(" {}", lift_bracketed_notes(&s));
+        let Some((_, group1_start)) = find_tax_note(&padded_tax, true) else {
+            break;
+        };
         let raw =
             java_trim(java_trim(&padded_tax[group1_start..]).trim_end_matches(',')).to_string();
-        if !raw.is_empty() {
-            let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
-            notes.push(normalise_leading_auct(&with_dots));
-            // Cut `s` right before group(1)'s content. Group(1) is a suffix of
-            // `padded_tax` (TAX_NOTE's trailing `)$` anchors it to end-of-padded-string),
-            // and `padded_tax` is `s` with exactly one ASCII-space byte prepended, so
-            // slicing `padded_tax[..group1_start]` (which still carries that one leading
-            // pad byte) and `java_trim`-ing it away yields exactly the same content as
-            // Java's `s.substring(0, s.length() - m.group(1).length()).trim()` — without
-            // needing any UTF-16-vs-UTF-8 length arithmetic or a same-string byte-offset
-            // subtraction that could underflow.
-            s = java_trim(&padded_tax[..group1_start]).to_string();
-            while s.ends_with(',') {
-                s.pop();
-                s = java_trim(&s).to_string();
-            }
+        if raw.is_empty() {
+            break;
+        }
+        let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
+        found.push(normalise_leading_auct(&with_dots));
+        // Cut `s` right before group(1)'s content. Group(1) is a suffix of
+        // `padded_tax` (TAX_NOTE's trailing `)$` anchors it to end-of-padded-string),
+        // and `padded_tax` is `s` with exactly one ASCII-space byte prepended, so
+        // slicing `padded_tax[..group1_start]` (which still carries that one leading
+        // pad byte) and `java_trim`-ing it away yields exactly the same content as
+        // Java's `s.substring(0, s.length() - m.group(1).length()).trim()` — without
+        // needing any UTF-16-vs-UTF-8 length arithmetic or a same-string byte-offset
+        // subtraction that could underflow.
+        s = java_trim(&padded_tax[..group1_start]).to_string();
+        while s.ends_with(',') {
+            s.pop();
+            s = java_trim(&s).to_string();
         }
     }
+    notes.extend(found.into_iter().rev());
     notes.extend(tail_notes.into_iter().rev());
     // Within the authorship only an exact repeat is dropped ("(auct.) auct."): "sensu Pers. [non
     // sensu Pers.]" holds two different statements.
