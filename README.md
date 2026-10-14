@@ -10,8 +10,8 @@ How real names are parsed, and what the parse result holds, is shown by some 140
 [`docs/parsing-examples.md`](docs/parsing-examples.md).
 
 > **Status: released and in production.** The core parser, the native CLI, and the Java, Python,
-> and R bindings are complete, cross-validated, and published (Java at 0.4.0; CLI, PyPI and
-> crates.io at 0.3.0; R excepted — not yet on CRAN). The ChecklistBank backend has completed its cutover and now parses through this engine.
+> and R bindings are complete, cross-validated, and published at 0.4.0 (R excepted — not yet
+> on CRAN). The ChecklistBank backend has completed its cutover and now parses through this engine.
 
 ## Why
 
@@ -57,7 +57,7 @@ bindings/
 | Binding | Path | Status |
 |---|---|---|
 | Java (Panama/FFM) | `bindings/java` | Complete & parity-validated; a classes JAR plus one cdylib JAR per platform (`linux-x86_64`, `linux-aarch_64`, `osx-x86_64`, `osx-aarch_64`, `windows-x86_64`), picked by `${os.detected.classifier}` — **published to GBIF Nexus** (`org.gbif.nameparser:name-parser-rust:0.4.0`; snapshots auto-deploy on every push to `main`), see [`DISTRIBUTION.md`](DISTRIBUTION.md) |
-| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to [PyPI](https://pypi.org/project/gbif-name-parser/)** (`0.3.0`) — `pip install gbif-name-parser` |
+| Python (PyO3) | `crates/nameparser-py` | Complete & parity-validated (11,302/11,302 vs the Java oracle); **published to [PyPI](https://pypi.org/project/gbif-name-parser/)** (`0.4.0`) — `pip install gbif-name-parser` |
 | R (extendr) | `bindings/r` | Complete & parity-validated (8,017/8,017 vs the Java oracle); install from a local checkout or GitHub. Built and tested on Linux, macOS and Windows; the CRAN tarball passes `R CMD check --as-cran` (`scripts/build-r-tarball.sh`), with win-builder results and the first submission pending — see [`bindings/r/README.md`](bindings/r/README.md) |
 
 ## Native CLI
