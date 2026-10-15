@@ -2617,9 +2617,10 @@ static UNQUOTED_CULTIVAR: LazyLock<Regex> = LazyLock::new(|| {
 
 /// An [`UNQUOTED_CULTIVAR`] followed by its author, who begins with initials: `Bambusa textilis cv.
 /// Maculata L. C. Chia`, `Abutilon megapotamicum cv. Variegatum A.St.-Hil. & Naudin`. The first
-/// initial ends the epithet. Group 1 the epithet, group 2 the author.
+/// initial ends the epithet. So do the botanists' one-word abbreviations of Linnaeus and de
+/// Candolle, `L.` and `DC.`: `Abies alba cv. Orfei L.`. Group 1 the epithet, group 2 the author.
 static UNQUOTED_CULTIVAR_BEFORE_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s+)(\p{Lu}[\p{L}\p{N}\-]*(?:(?-u:\s+)[\p{L}\p{N}][\p{L}\p{N}\-]*)*?)((?-u:\s+)\p{Lu}\.(?-u:\s*)(?:\p{Lu}\.(?-u:\s*))*\p{Lu}\p{Ll}.*)$").unwrap()
+    Regex::new(r"(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s+)(\p{Lu}[\p{L}\p{N}\-]*(?:(?-u:\s+)[\p{L}\p{N}][\p{L}\p{N}\-]*)*?)((?-u:\s+)(?:\p{Lu}\.(?-u:\s*)(?:\p{Lu}\.(?-u:\s*))*\p{Lu}\p{Ll}.*|(?:L|DC)\.(?:(?-u:\s).*)?))$").unwrap()
 });
 
 // ---- Step 22: stripCultivarGroupGrex ----

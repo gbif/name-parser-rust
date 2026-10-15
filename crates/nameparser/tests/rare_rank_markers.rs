@@ -264,6 +264,20 @@ fn an_unquoted_cultivar_epithet() {
         .cultivar_sp("Bambusa", "multiplex", "Golden Goddess")
         .comb_authors(None, &["L.C.Chia", "C.Y.Sia"])
         .nothing_else();
+    // and Linnaeus and de Candolle, abbreviated without initials
+    assert_name("Abies alba cv. Orfei L.")
+        .cultivar_sp("Abies", "alba", "Orfei")
+        .comb_authors(None, &["L."])
+        .nothing_else();
+    assert_name("Abies alba cv. Orfei DC.")
+        .cultivar_sp("Abies", "alba", "Orfei")
+        .comb_authors(None, &["DC."])
+        .nothing_else();
+    assert_name("Abies alba cv. Large Orfei L. ex DC.")
+        .cultivar_sp("Abies", "alba", "Large Orfei")
+        .comb_authors(None, &["DC."])
+        .comb_ex_authors(&["L."])
+        .nothing_else();
 }
 
 /// #93: a stirps with a capitalised epithet, as MycoBank has Bidaud et al.'s Cortinarius atlas,
