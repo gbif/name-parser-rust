@@ -35,6 +35,97 @@ use crate::pipeline::ParseContext;
 use crate::pipeline::{blacklisted_epithets, rank_markers};
 use crate::token::{self, Token, TokenKind};
 
+/// A comma written next to an infraspecific rank marker that is followed by its epithet: in front
+/// of the marker ("Felis tigris, var. montanus", "Equus hemionus, var syriacus") it is dropped,
+/// right after it ("Hieracium nigrescens subsp, linophyton") it stands for the marker's
+/// abbreviation dot. Read as is, the comma ended the name and the infraspecific part was lost to
+/// the authorship or to `unparsed` (gbif/name-parser-rust#118). Only behind a name made of the
+/// genus and lower-case epithets, so an authorship's comma is never touched.
+pub(crate) fn mend_rank_marker_commas(tokens: &mut Vec<Token>) {
+    let mut i = 2;
+    while i < tokens.len() {
+        if tokens[i].kind != TokenKind::Comma || !name_before(tokens, i) {
+            i += 1;
+            continue;
+        }
+        let prev = &tokens[i - 1];
+        let marker_before = |k: usize| tokens.get(k).is_some_and(is_comma_mendable_marker);
+        if prev.kind == TokenKind::Word && marker_before(i - 1) && comma_epithet_at(tokens, i + 1) {
+            // "subsp, linophyton"
+            tokens[i].kind = TokenKind::Dot;
+            tokens[i].text = ".".to_string();
+        } else if (prev.kind == TokenKind::Dot && marker_before(i - 2))
+            || (prev.kind == TokenKind::Word && starts_lower(prev) && !marker_before(i - 1))
+        {
+            // "subsp., linophyton", or the comma in front of a marker with its epithet
+            let mut k = i + 1;
+            let mended = if prev.kind == TokenKind::Dot {
+                comma_epithet_at(tokens, k)
+            } else {
+                marker_before(k) && {
+                    k += 1;
+                    if tokens
+                        .get(k)
+                        .is_some_and(|t| matches!(t.kind, TokenKind::Dot | TokenKind::Comma))
+                    {
+                        k += 1;
+                    }
+                    comma_epithet_at(tokens, k)
+                }
+            };
+            if mended {
+                tokens.remove(i);
+                continue;
+            }
+        }
+        i += 1;
+    }
+}
+
+/// `tokens[..c]` are a genus and lower-case epithets, with any dots, hybrid signs, rank markers or
+/// a bracketed subgenus among them: nothing that could be an author.
+fn name_before(tokens: &[Token], c: usize) -> bool {
+    tokens[0].kind == TokenKind::Word
+        && starts_upper(&tokens[0])
+        && (1..c).all(|k| {
+            let t = &tokens[k];
+            match t.kind {
+                TokenKind::Word => {
+                    (starts_lower(t) && !token::is_particle(&t.text))
+                        || tokens[k - 1].kind == TokenKind::OpenParen
+                }
+                TokenKind::Dot
+                | TokenKind::HybridMark
+                | TokenKind::OpenParen
+                | TokenKind::CloseParen => true,
+                _ => false,
+            }
+        })
+}
+
+/// An infraspecific rank marker word whose comma [`mend_rank_marker_commas`] may mend. Not the
+/// one-letter "m" nor "st", "str" or "*", which stand for other things after a comma too.
+fn is_comma_mendable_marker(t: &Token) -> bool {
+    t.kind == TokenKind::Word
+        && !matches!(
+            t.text.to_lowercase().as_str(),
+            "m" | "st" | "str" | "strain" | "*" | rank_markers::LETTER_SUBDIVISION
+        )
+        && rank_markers::match_infraspecific_allow_notho(&t.text).is_some()
+}
+
+/// A lower-case epithet at `k`: no particle, no "ex"/"et" and no single letter.
+fn comma_epithet_at(tokens: &[Token], k: usize) -> bool {
+    tokens.get(k).is_some_and(|t| {
+        t.kind == TokenKind::Word
+            && starts_lower(t)
+            && t.text.chars().count() > 1
+            && !token::is_particle(&t.text)
+            && !matches!(t.text.as_str(), "ex" | "et" | "and" | "nov" | "sp")
+            && rank_markers::match_infraspecific_allow_notho(&t.text).is_none()
+    })
+}
+
 /// Java `AuthorshipSplit.findBoundary(List<Token> tokens, ParseContext ctx)`
 /// (`AuthorshipSplit.java:17-297`). Walks the token list from the start, tracking just
 /// enough state (word count, whether a genus/subgenus/epithet has been seen, whether the

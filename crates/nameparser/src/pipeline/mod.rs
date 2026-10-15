@@ -197,6 +197,7 @@ pub fn run(
     // + `ctx.mid_author_from`/`ctx.mid_author_to` + `ctx.aggregate` with the name-part
     // fields (Phase 1 Slice 3 Tasks 2-3).
     ctx.tokens = tokenize(&ctx.working);
+    authorship_split::mend_rank_marker_commas(&mut ctx.tokens);
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
     // a serovar of a genus, "Salmonella ser. Typhimurium": the uninomial is its genus, as in
@@ -235,7 +236,14 @@ pub fn run(
         apply_authorship(&mut ctx.name, &st);
         if st.unparsed_from >= 0 {
             ctx.name.state = State::Partial;
-            ctx.name.unparsed = st.unparsed_text.clone();
+            // after what the name part left unparsed, not in its place: "Calamintha officinalis
+            // f. brevifrons ilic, basionym"
+            ctx.name.unparsed = match (ctx.name.unparsed.take(), st.unparsed_text.clone()) {
+                (Some(own), Some(rest)) if !contains_ignoring_punctuation(&own, &rest) => {
+                    Some(format!("{own} {rest}"))
+                }
+                (own, rest) => rest.or(own),
+            };
         }
         auth_state = Some(st);
     }

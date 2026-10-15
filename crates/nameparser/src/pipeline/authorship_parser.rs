@@ -368,7 +368,14 @@ pub(crate) fn is_lower_author_word(w: &str) -> bool {
 /// is a broken character (`KÃ¼tzing`).
 fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool) -> Option<usize> {
     let mut depth = 0i32;
-    let mut seen_author = after_author;
+    // A comma straight after the name ends it as an author would (#118): what follows in lower
+    // case is a note — a population, a morph, a breed ("Columba livia, domesticated populations",
+    // "Buteo buteo, dark morph") — unless it is an author team written all in lower case.
+    let comma_led = !after_author
+        && tokens.get(from).is_some_and(|t| t.kind == TokenKind::Comma)
+        && !lower_author_team(tokens, from + 1, to);
+    let mut seen_author = after_author || comma_led;
+    let mut seen_upper = false;
     for k in from..to {
         let t = &tokens[k];
         match t.kind {
@@ -381,8 +388,17 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
         }
         if starts_upper(&t.text) {
             seen_author = true;
+            seen_upper = true;
             continue;
         }
+        // the whole tail after such a comma, a lone "f." in front of the stray word included
+        let stray = |k: usize| {
+            Some(if comma_led && !seen_upper {
+                from + 1
+            } else {
+                k
+            })
+        };
         // Right after another word it is a surname's tail: a lower-cased one ("De man") or one cut
         // by a broken character ("Hal csy" for Halácsy).
         let after_word = k > from && tokens[k - 1].kind == TokenKind::Word;
@@ -410,7 +426,7 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
             && w.chars().count() >= 3
             && rank_markers::match_infraspecific(w).is_some()
         {
-            return Some(k);
+            return stray(k);
         }
         if seen_author
             && !after_word
@@ -420,10 +436,24 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
             && w.chars().all(|c| c.is_alphabetic() && c.is_lowercase())
             && !is_lower_author_word(w)
         {
-            return Some(k);
+            return stray(k);
         }
     }
     None
+}
+
+/// `tokens[from..to)` is an author team written all in lower case, held together by an ampersand
+/// or a year: "gu, wang & zheng, 2010", "wang et li, 2022" — not "dark morph" or "scoticus et
+/// hibernicus".
+fn lower_author_team(tokens: &[Token], from: usize, to: usize) -> bool {
+    let span = &tokens[from.min(to)..to];
+    span.iter()
+        .any(|t| t.kind == TokenKind::Ampersand || is_year(t))
+        && span.iter().all(|t| match t.kind {
+            TokenKind::Word => !t.text.chars().any(char::is_uppercase),
+            TokenKind::Comma | TokenKind::Dot | TokenKind::Ampersand => true,
+            _ => is_year(t),
+        })
 }
 
 /// Where a new sentence or name starts in the combination span `tokens[from..to)`: at a leading "&",

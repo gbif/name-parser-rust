@@ -693,3 +693,90 @@ fn doubled_brackets_are_single_ones() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn lowercase_words_after_a_comma_are_no_authorship() {
+    // #118: a population, a morph or a breed after the binomial is a note, not an author. GBIF
+    // occurrences: `Columba livia, domesticated populations` alone has 319k.
+    assert_name("Columba livia, domesticated populations")
+        .species("Columba", "livia")
+        .partial("domesticated populations")
+        .nothing_else();
+    assert_name("Felis catus, feral population")
+        .species("Felis", "catus")
+        .partial("feral population")
+        .nothing_else();
+    assert_name("Canis lupus, domestic")
+        .species("Canis", "lupus")
+        .partial("domestic")
+        .nothing_else();
+    assert_name("Buteo buteo, dark morph")
+        .species("Buteo", "buteo")
+        .partial("dark morph")
+        .nothing_else();
+    // a capitalised word further on does not make it an authorship
+    assert_name("Cardamine gunnii, small Tasmanian variant Hewson")
+        .species("Cardamine", "gunnii")
+        .partial("small Tasmanian variant Hewson")
+        .nothing_else();
+    // added to what the name part left unparsed
+    assert_name("Calamintha officinalis f. brevifrons ilic, dark morph")
+        .infra_species("Calamintha", "officinalis", Rank::Form, "brevifrons")
+        .partial("ilic dark morph")
+        .nothing_else();
+    // an author particle is an author's
+    assert_name("Zodarion alba, van Bosmans")
+        .species("Zodarion", "alba")
+        .comb_authors(None, &["van Bosmans"])
+        .nothing_else();
+    // an author team written all in lower case, held together by a year or an ampersand
+    assert_name("Devibursaphelenchus wangi, gu, wang & zheng, 2010")
+        .species("Devibursaphelenchus", "wangi")
+        .comb_authors(Some("2010"), &["gu", "wang", "zheng"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Nemophora apiciprocessa, wang et li, 2022")
+        .species("Nemophora", "apiciprocessa")
+        .comb_authors(Some("2022"), &["wang", "li"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn a_comma_next_to_a_rank_marker_keeps_the_infraspecific_name() {
+    // #118: in front of the marker the comma is dropped
+    assert_name("Felis tigris, var. montanus")
+        .infra_species("Felis", "tigris", Rank::Variety, "montanus")
+        .nothing_else();
+    assert_name("Micronycteris megalotis, f. typica")
+        .infra_species("Micronycteris", "megalotis", Rank::Form, "typica")
+        .nothing_else();
+    assert_name("Equus hemionus, var syriacus")
+        .infra_species("Equus", "hemionus", Rank::Variety, "syriacus")
+        .nothing_else();
+    assert_name("Oncifelis geoffroyi, forma argentea")
+        .infra_species("Oncifelis", "geoffroyi", Rank::Form, "argentea")
+        .nothing_else();
+    assert_name("Abies alba, ssp. alpina (L.) Mill.")
+        .infra_species("Abies", "alba", Rank::Subspecies, "alpina")
+        .comb_authors(None, &["Mill."])
+        .bas_authors(None, &["L."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // right after the marker it stands for the abbreviation dot
+    assert_name("Hieracium nigrescens subsp, linophyton")
+        .infra_species("Hieracium", "nigrescens", Rank::Subspecies, "linophyton")
+        .nothing_else();
+    assert_name("Dalbergia retusa var, lineata Pittier")
+        .infra_species("Dalbergia", "retusa", Rank::Variety, "lineata")
+        .comb_authors(None, &["Pittier"])
+        .nothing_else();
+    assert_name("Abies alba, var, alpina")
+        .infra_species("Abies", "alba", Rank::Variety, "alpina")
+        .nothing_else();
+    // no epithet behind the marker: the tail stays unparsed
+    assert_name("Dasyhelea bulbosa sp, nov.")
+        .species("Dasyhelea", "bulbosa")
+        .partial("nov.")
+        .nothing_else();
+}
