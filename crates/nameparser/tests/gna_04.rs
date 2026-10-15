@@ -522,8 +522,14 @@ fn open_nomenclature_approximate_names() {
 #[test]
 fn surrogate_name_strings() {
     // group: Surrogate Name-Strings — "Bold:CODE" (a BOLD BIN database surrogate) is an anchorless
-    // machine identifier. 5.0.0 classifies it NameType::Identifier (was OTHER in 4.2.0).
-    assert_unparsable_rank("Bold:AAV0432", Rank::Unranked, NameType::Identifier);
+    // machine identifier. 5.0.0 classifies it NameType::Identifier (was OTHER in 4.2.0),
+    // canonical in uppercase (#119).
+    assert_unparsable_name(
+        "Bold:AAV0432",
+        Rank::Unranked,
+        NameType::Identifier,
+        "BOLD:AAV0432",
+    );
 }
 
 #[test]

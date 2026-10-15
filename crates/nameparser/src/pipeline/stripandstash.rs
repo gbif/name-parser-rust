@@ -1768,7 +1768,7 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
     out
 }
 
-/// A BOLD BIN (`BOLD:AAF5952`, `BOLD-2016`) or a UNITE species hypothesis (`SH1957732.10FU`)
+/// A BOLD BIN (`BOLD:AAF5952`, `BOLD-2016`, canonical `BOLD:2016`) or a UNITE species hypothesis (`SH1957732.10FU`)
 /// after a name. On its own it is an IDENTIFIER (see `preflight`).
 static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?i)^(.*[^\s])(?-u:\s+)(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)$").unwrap()
@@ -1781,7 +1781,8 @@ static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
 fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
     match TRAILING_IDENTIFIER.captures(&s) {
         Some(caps) => {
-            ctx.trailing_identifier = Some(caps[2].to_string());
+            // Canonical in uppercase, as on its own (#119).
+            ctx.trailing_identifier = Some(super::preflight::canonical_identifier(&caps[2]));
             caps[1].to_string()
         }
         None => s,

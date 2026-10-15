@@ -120,6 +120,17 @@ static OTU_BOLD: LazyLock<Regex> =
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\d` → scoped.
 static OTU_SH: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^SH(?-u:\d{6,})\.[0-9A-Z.]+$").unwrap());
+
+/// The canonical form of a BOLD BIN or UNITE SH code matched by `OTU_BOLD` / `OTU_SH`: uppercase,
+/// a BIN with a colon after `BOLD` (`bold_aax3687` -> `BOLD:AAX3687`) (#119).
+pub(super) fn canonical_identifier(code: &str) -> String {
+    let up = code.to_uppercase();
+    match up.strip_prefix("BOLD") {
+        Some(rest) if rest.starts_with([':', '_', '-']) => format!("BOLD:{}", &rest[1..]),
+        _ => up,
+    }
+}
+
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\d` (in a class) → scoped.
 static OTU_GTDB_UBA: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:UBA|GTDB|GCA|GCF)(?-u:[\d_-]+)$").unwrap());
@@ -686,20 +697,19 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // OTU/ASV/ESV/zOTU/MAG operational units, and standalone culture-collection accessions
     // (DSM 10, ATCC 11775). Not names, but a more specific 5.0.0 classification than the catch-all
     // Other (in 4.2.0 these were all OTHER). Use the normalised (trimmed) form as the name.
-    if OTU_BOLD.is_match(&s)
-        || OTU_GTDB_UBA.is_match(&s)
+    // BOLD BINs and UNITE SH identifiers are case-insensitive, canonical in uppercase (#119).
+    if OTU_BOLD.is_match(&s) || OTU_SH.is_match(&s) {
+        return Err(ParseError::new(
+            NameType::Identifier,
+            None,
+            canonical_identifier(&s),
+        ));
+    }
+    if OTU_GTDB_UBA.is_match(&s)
         || OTU_MOTU.is_match(&s)
         || CULTURE_ACCESSION_STANDALONE.is_match(&s)
     {
         return Err(ParseError::new(NameType::Identifier, None, s));
-    }
-    // SH identifiers are canonical in uppercase.
-    if OTU_SH.is_match(&s) {
-        return Err(ParseError::new(
-            NameType::Identifier,
-            None,
-            s.to_uppercase(),
-        ));
     }
     // Non-identifier NO_NAME junk (gen. nov. placeholder, `@…`) stays OTHER.
     if GEN_NOV.is_match(&s)
@@ -1025,6 +1035,22 @@ mod tests {
         let err = check("BOLD:ACW2100").unwrap_err();
         assert_eq!(err.type_, NameType::Identifier);
         assert_eq!(err.code, None);
+    }
+
+    #[test]
+    fn lowercase_bold_code_is_uppercased() {
+        // #119: BOLD BINs are case-insensitive, normalised like SH codes.
+        let err = check("bold:aax3687").unwrap_err();
+        assert_eq!(err.type_, NameType::Identifier);
+        assert_eq!(err.name, "BOLD:AAX3687");
+    }
+
+    #[test]
+    fn bold_code_separator_is_a_colon() {
+        for s in ["BOLD_AAX3687", "bold-aax3687", "BOLD:AAX3687"] {
+            assert_eq!(check(s).unwrap_err().name, "BOLD:AAX3687", "{s}");
+        }
+        assert_eq!(canonical_identifier("sh205817.07fu"), "SH205817.07FU");
     }
 
     #[test]
