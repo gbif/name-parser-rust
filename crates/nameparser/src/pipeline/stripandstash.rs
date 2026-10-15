@@ -2581,14 +2581,26 @@ fn normalise_cultivar_spelling(_ctx: &mut ParseContext, s: String) -> String {
         }
         _ => s,
     };
-    match UNQUOTED_CULTIVAR.captures(&s) {
-        Some(caps)
-            if !caps[1]
-                .split_whitespace()
-                .any(|w| matches!(w, "ex" | "et" | "in")) =>
-        {
+    let plain = |epithet: &str| {
+        !epithet
+            .split_whitespace()
+            .any(|w| matches!(w, "ex" | "et" | "in"))
+    };
+    if let Some(caps) = UNQUOTED_CULTIVAR.captures(&s) {
+        if plain(&caps[1]) {
             let start = caps.get(0).unwrap().start();
-            format!("{} cv. '{}'", s[..start].trim_end_matches(','), &caps[1])
+            return format!("{} cv. '{}'", s[..start].trim_end_matches(','), &caps[1]);
+        }
+    }
+    match UNQUOTED_CULTIVAR_BEFORE_AUTHOR.captures(&s) {
+        Some(caps) if plain(&caps[1]) => {
+            let start = caps.get(0).unwrap().start();
+            format!(
+                "{} cv. '{}'{}",
+                s[..start].trim_end_matches(','),
+                &caps[1],
+                &caps[2]
+            )
         }
         _ => s,
     }
@@ -2601,6 +2613,13 @@ fn normalise_cultivar_spelling(_ctx: &mut ParseContext, s: String) -> String {
 /// epithet.
 static UNQUOTED_CULTIVAR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s+)(\p{Lu}[\p{L}\p{N}\-]*(?:(?-u:\s+)[\p{L}\p{N}][\p{L}\p{N}\-]*)*)(?-u:\s*)$").unwrap()
+});
+
+/// An [`UNQUOTED_CULTIVAR`] followed by its author, who begins with initials: `Bambusa textilis cv.
+/// Maculata L. C. Chia`, `Abutilon megapotamicum cv. Variegatum A.St.-Hil. & Naudin`. The first
+/// initial ends the epithet. Group 1 the epithet, group 2 the author.
+static UNQUOTED_CULTIVAR_BEFORE_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s+)(\p{Lu}[\p{L}\p{N}\-]*(?:(?-u:\s+)[\p{L}\p{N}][\p{L}\p{N}\-]*)*?)((?-u:\s+)\p{Lu}\.(?-u:\s*)(?:\p{Lu}\.(?-u:\s*))*\p{Lu}\p{Ll}.*)$").unwrap()
 });
 
 // ---- Step 22: stripCultivarGroupGrex ----

@@ -255,6 +255,15 @@ fn an_unquoted_cultivar_epithet() {
     assert_name("Saccharum officinarum cultivar CP 96-1252")
         .cultivar_sp("Saccharum", "officinarum", "CP 96-1252")
         .nothing_else();
+    // the author's first initial ends it
+    assert_name("Bambusa textilis cv. Maculata L. C. Chia")
+        .cultivar_sp("Bambusa", "textilis", "Maculata")
+        .comb_authors(None, &["L.C.Chia"])
+        .nothing_else();
+    assert_name("Bambusa multiplex cv. Golden Goddess L.C.Chia & C.Y.Sia")
+        .cultivar_sp("Bambusa", "multiplex", "Golden Goddess")
+        .comb_authors(None, &["L.C.Chia", "C.Y.Sia"])
+        .nothing_else();
 }
 
 /// #93: a stirps with a capitalised epithet, as MycoBank has Bidaud et al.'s Cortinarius atlas,
