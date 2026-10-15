@@ -236,6 +236,27 @@ fn a_lowercase_cultivar_and_an_abbreviated_cultivar_group() {
         .nothing_else();
 }
 
+#[test]
+fn an_unquoted_cultivar_epithet() {
+    // #118: "cv" became the infraspecific epithet, the cultivar epithet its author
+    assert_name("Abies alba cv. Orfei")
+        .cultivar_sp("Abies", "alba", "Orfei")
+        .nothing_else();
+    assert_name("Abies alba, cv. Orfei")
+        .cultivar_sp("Abies", "alba", "Orfei")
+        .nothing_else();
+    assert_name("Origanum laevigatum cv Aurea")
+        .cultivar_sp("Origanum", "laevigatum", "Aurea")
+        .nothing_else();
+    // it may run over several words
+    assert_name("Triticum dicoccum cv. Large White Emmer")
+        .cultivar_sp("Triticum", "dicoccum", "Large White Emmer")
+        .nothing_else();
+    assert_name("Saccharum officinarum cultivar CP 96-1252")
+        .cultivar_sp("Saccharum", "officinarum", "CP 96-1252")
+        .nothing_else();
+}
+
 /// #93: a stirps with a capitalised epithet, as MycoBank has Bidaud et al.'s Cortinarius atlas,
 /// is an unranked infrageneric name; the model has no stirps rank.
 #[test]

@@ -2568,7 +2568,7 @@ fn normalise_cultivar_spelling(_ctx: &mut ParseContext, s: String) -> String {
         !caps[0].ends_with(" ex")
             && (rest.is_empty() || rest.starts_with(|c: char| c.is_uppercase()))
     };
-    match LOWERCASE_CULTIVAR.captures(&s) {
+    let s = match LOWERCASE_CULTIVAR.captures(&s) {
         Some(caps) if fits(&caps) => {
             let whole = caps.get(0).unwrap();
             format!(
@@ -2580,8 +2580,28 @@ fn normalise_cultivar_spelling(_ctx: &mut ParseContext, s: String) -> String {
             )
         }
         _ => s,
+    };
+    match UNQUOTED_CULTIVAR.captures(&s) {
+        Some(caps)
+            if !caps[1]
+                .split_whitespace()
+                .any(|w| matches!(w, "ex" | "et" | "in")) =>
+        {
+            let start = caps.get(0).unwrap().start();
+            format!("{} cv. '{}'", s[..start].trim_end_matches(','), &caps[1])
+        }
+        _ => s,
     }
 }
+
+/// A capitalised cultivar epithet without its quotes, to the end of the name: `Abies alba cv.
+/// Orfei`, `Alcea rosea L., cv. Nigra`, `Triticum dicoccum cv. Large White Emmer`, `Saccharum
+/// hybrid cultivar CP 96-1252`. Only words, so no author with an abbreviation dot, a bracket or an
+/// ampersand is taken in, and no apostrophe, which the quoted cultivar could not hold. Group 1 the
+/// epithet.
+static UNQUOTED_CULTIVAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s+)(\p{Lu}[\p{L}\p{N}\-]*(?:(?-u:\s+)[\p{L}\p{N}][\p{L}\p{N}\-]*)*)(?-u:\s*)$").unwrap()
+});
 
 // ---- Step 22: stripCultivarGroupGrex ----
 
