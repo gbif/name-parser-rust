@@ -41,7 +41,25 @@ fn lowercase_identifiers_are_uppercased() {
         NameType::Identifier,
         "SH205817.07FU",
     );
+    // ...with a colon after BOLD
+    assert_unparsable_name(
+        "bold_aax3687",
+        Rank::Unranked,
+        NameType::Identifier,
+        "BOLD:AAX3687",
+    );
+    assert_unparsable_name(
+        "BOLD-AAX3687",
+        Rank::Unranked,
+        NameType::Identifier,
+        "BOLD:AAX3687",
+    );
     // ...also when trailing a name
+    assert_name("Aus bus BOLD_AAF5952")
+        .species("Aus", "bus")
+        .phrase("BOLD:AAF5952")
+        .type_(NameType::Informal)
+        .nothing_else();
     assert_informal("Decapoda sp. bold:aaf5952")
         .taxon("Decapoda")
         .taxon_rank(Rank::Genus)
