@@ -686,20 +686,19 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // OTU/ASV/ESV/zOTU/MAG operational units, and standalone culture-collection accessions
     // (DSM 10, ATCC 11775). Not names, but a more specific 5.0.0 classification than the catch-all
     // Other (in 4.2.0 these were all OTHER). Use the normalised (trimmed) form as the name.
-    if OTU_BOLD.is_match(&s)
-        || OTU_GTDB_UBA.is_match(&s)
-        || OTU_MOTU.is_match(&s)
-        || CULTURE_ACCESSION_STANDALONE.is_match(&s)
-    {
-        return Err(ParseError::new(NameType::Identifier, None, s));
-    }
-    // SH identifiers are canonical in uppercase.
-    if OTU_SH.is_match(&s) {
+    // BOLD BINs and UNITE SH identifiers are case-insensitive, canonical in uppercase (#119).
+    if OTU_BOLD.is_match(&s) || OTU_SH.is_match(&s) {
         return Err(ParseError::new(
             NameType::Identifier,
             None,
             s.to_uppercase(),
         ));
+    }
+    if OTU_GTDB_UBA.is_match(&s)
+        || OTU_MOTU.is_match(&s)
+        || CULTURE_ACCESSION_STANDALONE.is_match(&s)
+    {
+        return Err(ParseError::new(NameType::Identifier, None, s));
     }
     // Non-identifier NO_NAME junk (gen. nov. placeholder, `@…`) stays OTHER.
     if GEN_NOV.is_match(&s)
@@ -1025,6 +1024,14 @@ mod tests {
         let err = check("BOLD:ACW2100").unwrap_err();
         assert_eq!(err.type_, NameType::Identifier);
         assert_eq!(err.code, None);
+    }
+
+    #[test]
+    fn lowercase_bold_code_is_uppercased() {
+        // #119: BOLD BINs are case-insensitive, normalised like SH codes.
+        let err = check("bold:aax3687").unwrap_err();
+        assert_eq!(err.type_, NameType::Identifier);
+        assert_eq!(err.name, "BOLD:AAX3687");
     }
 
     #[test]

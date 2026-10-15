@@ -21,6 +21,41 @@ fn unite_sh_and_bold_bins_are_identifiers() {
 }
 
 #[test]
+fn lowercase_identifiers_are_uppercased() {
+    // #119: BOLD BINs are case-insensitive like SH codes, canonical in uppercase
+    assert_unparsable_name(
+        "bold:aax3687",
+        Rank::Unranked,
+        NameType::Identifier,
+        "BOLD:AAX3687",
+    );
+    assert_unparsable_name(
+        "Bold:AAV0432",
+        Rank::Unranked,
+        NameType::Identifier,
+        "BOLD:AAV0432",
+    );
+    assert_unparsable_name(
+        "sh205817.07fu",
+        Rank::Unranked,
+        NameType::Identifier,
+        "SH205817.07FU",
+    );
+    // ...also when trailing a name
+    assert_informal("Decapoda sp. bold:aaf5952")
+        .taxon("Decapoda")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. BOLD:AAF5952")
+        .nothing_else();
+    assert_name("Aus bus sh1957732.10fu")
+        .species("Aus", "bus")
+        .phrase("SH1957732.10FU")
+        .type_(NameType::Informal)
+        .nothing_else();
+}
+
+#[test]
 fn a_bold_bin_or_sh_after_a_name_is_its_phrase() {
     // #101: the taxon the barcode cluster was identified to is kept, the code is the designation
     assert_informal("Decapoda sp. BOLD:AAF5952")

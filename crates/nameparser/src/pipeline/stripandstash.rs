@@ -1780,7 +1780,8 @@ static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
 fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
     match TRAILING_IDENTIFIER.captures(&s) {
         Some(caps) => {
-            ctx.trailing_identifier = Some(caps[2].to_string());
+            // Canonical in uppercase, as on its own (#119).
+            ctx.trailing_identifier = Some(caps[2].to_uppercase());
             caps[1].to_string()
         }
         None => s,
