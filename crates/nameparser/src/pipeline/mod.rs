@@ -197,6 +197,7 @@ pub fn run(
     // + `ctx.mid_author_from`/`ctx.mid_author_to` + `ctx.aggregate` with the name-part
     // fields (Phase 1 Slice 3 Tasks 2-3).
     ctx.tokens = tokenize(&ctx.working);
+    authorship_split::mend_rank_marker_commas(&mut ctx.tokens);
     let boundary = authorship_split::find_boundary(&ctx.tokens, &ctx);
     name_tokens::classify(&mut ctx, boundary);
     // a serovar of a genus, "Salmonella ser. Typhimurium": the uninomial is its genus, as in

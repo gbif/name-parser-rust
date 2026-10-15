@@ -741,3 +741,42 @@ fn lowercase_words_after_a_comma_are_no_authorship() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn a_comma_next_to_a_rank_marker_keeps_the_infraspecific_name() {
+    // #118: in front of the marker the comma is dropped
+    assert_name("Felis tigris, var. montanus")
+        .infra_species("Felis", "tigris", Rank::Variety, "montanus")
+        .nothing_else();
+    assert_name("Micronycteris megalotis, f. typica")
+        .infra_species("Micronycteris", "megalotis", Rank::Form, "typica")
+        .nothing_else();
+    assert_name("Equus hemionus, var syriacus")
+        .infra_species("Equus", "hemionus", Rank::Variety, "syriacus")
+        .nothing_else();
+    assert_name("Oncifelis geoffroyi, forma argentea")
+        .infra_species("Oncifelis", "geoffroyi", Rank::Form, "argentea")
+        .nothing_else();
+    assert_name("Abies alba, ssp. alpina (L.) Mill.")
+        .infra_species("Abies", "alba", Rank::Subspecies, "alpina")
+        .comb_authors(None, &["Mill."])
+        .bas_authors(None, &["L."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // right after the marker it stands for the abbreviation dot
+    assert_name("Hieracium nigrescens subsp, linophyton")
+        .infra_species("Hieracium", "nigrescens", Rank::Subspecies, "linophyton")
+        .nothing_else();
+    assert_name("Dalbergia retusa var, lineata Pittier")
+        .infra_species("Dalbergia", "retusa", Rank::Variety, "lineata")
+        .comb_authors(None, &["Pittier"])
+        .nothing_else();
+    assert_name("Abies alba, var, alpina")
+        .infra_species("Abies", "alba", Rank::Variety, "alpina")
+        .nothing_else();
+    // no epithet behind the marker: the tail stays unparsed
+    assert_name("Dasyhelea bulbosa sp, nov.")
+        .species("Dasyhelea", "bulbosa")
+        .partial("nov.")
+        .nothing_else();
+}
