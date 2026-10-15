@@ -111,6 +111,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_rank_nova(ctx, s);
     s = strip_quoted_attributed_author(s);
     s = strip_quoted_cultivar(ctx, s);
+    s = strip_bare_cultivar_marker(ctx, s);
     s = strip_extinct_dagger(ctx, s);
     s = strip_tinfr_marker(ctx, s);
     s = strip_doubtful_genus_brackets(ctx, s);
@@ -2545,16 +2546,82 @@ static CULTIVAR_GROUP_SPELLING: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?-u:\s+)(?:\((\p{Lu}\p{L}+(?:(?-u:\s+)\p{Lu}\p{L}+)*)(?-u:\s+)(?:Gp\.?|Group)\)|(\p{Lu}\p{L}+(?:(?-u:\s+)\p{Lu}\p{L}+)*)(?-u:\s+)Gp\.?)(?-u:\s*)$").unwrap()
 });
 
-/// A cultivar epithet in lower case after its marker: `cv. tahiti`. Group 1 its first letter, group
-/// 2 the rest.
-static LOWERCASE_CULTIVAR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\bcv\.?(?-u:\s+)(\p{Ll})([\p{Ll}\-]+)").unwrap());
+/// A cultivar marker misspelt before a capitalised epithet: the plural `cvs.` (`Helianthus
+/// tuberosus L., cvs. Baryshivskyi`), `cv.s.` and `cv. s.`, a doubled dot (`cv. . Sprengeri`) or no
+/// space (`cv.Tigrovyi`). Group 1 the epithet's first letter.
+static CULTIVAR_MARKER_SPELLING: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s)(?:cvs\.?|cv\.(?-u:\s*)s\.|cv\.(?:(?-u:\s*)\.)+|cv\.)(?-u:\s*)(\p{Lu})")
+        .unwrap()
+});
+
+/// A Cultivar Group in lower case behind a species, its marker after it in brackets or not
+/// (`Oryza sativa (japonica cultivar-group)`, `Oryza sativa tropical japonica cultivar-group`) or
+/// in front of it (`Cucumis sativus cv.-gr. pickling cucumber`). Group 1 the species, group 2 or 3
+/// the group's epithet.
+static LOWERCASE_CULTIVAR_GROUP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}[\p{Ll}\-]+)(?-u:\s+)(?:\(?(\p{Ll}+(?:(?-u:\s+)\p{Ll}+)*)(?-u:\s+)cultivar-group\)?|cv\.?-gr\.?(?-u:\s+)(\p{Ll}+(?:(?-u:\s+)\p{Ll}+)*))(?-u:\s*)$").unwrap()
+});
+
+/// A cultivar epithet in lower case after its marker, of one or more words: `cv. tahiti`, `cv.
+/// oreja de burro`. Group 1 the epithet.
+static LOWERCASE_CULTIVAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\b(?:cv|cultivar)\.?(?-u:\s+)(\p{Ll}[\p{Ll}\-]+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]*)*)")
+        .unwrap()
+});
+
+/// A cultivar epithet written the ICNCP way, each word capitalised but for the little ones that
+/// join them: `oreja de burro` -> `Oreja de Burro`.
+fn cultivar_case(epithet: &str) -> String {
+    epithet
+        .split_whitespace()
+        .enumerate()
+        .map(|(i, w)| {
+            let joining = matches!(
+                w,
+                "de" | "del"
+                    | "des"
+                    | "du"
+                    | "da"
+                    | "di"
+                    | "la"
+                    | "le"
+                    | "les"
+                    | "of"
+                    | "the"
+                    | "and"
+                    | "van"
+                    | "von"
+                    | "y"
+            );
+            if i > 0 && joining {
+                w.to_string()
+            } else {
+                let mut c = w.chars();
+                c.next()
+                    .map_or_else(String::new, |f| f.to_uppercase().chain(c).collect())
+            }
+        })
+        .collect::<Vec<_>>()
+        .join(" ")
+}
 
 /// TAXREF and older sources write a cultivar epithet in lower case, `Vanilla planifolia cv.
 /// tahiti`, and a Cultivar Group abbreviated in brackets, `Ananas comosus (Queen Gp)`: the first
 /// made `cv` the infraspecific epithet, the second a basionym author `Queen Gp` (#92). Both are
 /// written the ICNCP way here, `cv. 'Tahiti'` and `Queen Group`, for the cultivar steps to read.
+/// So are an unquoted capitalised epithet (`cv. Orfei`), a misspelt marker (`cvs.`, `cv.Orfei`) and
+/// a Cultivar Group in lower case (`Oryza sativa (japonica cultivar-group)`, #118).
 fn normalise_cultivar_spelling(_ctx: &mut ParseContext, s: String) -> String {
+    let s = CULTIVAR_MARKER_SPELLING
+        .replace_all(&s, " cv. $1")
+        .into_owned();
+    let s = match LOWERCASE_CULTIVAR_GROUP.captures(&s) {
+        Some(caps) => {
+            let group = caps.get(2).or(caps.get(3)).unwrap().as_str();
+            format!("{} {} Group", &caps[1], cultivar_case(group))
+        }
+        None => s,
+    };
     let s = match CULTIVAR_GROUP_SPELLING.captures(&s) {
         Some(caps) => {
             let group = caps.get(1).or(caps.get(2)).unwrap().as_str();
@@ -2562,29 +2629,39 @@ fn normalise_cultivar_spelling(_ctx: &mut ParseContext, s: String) -> String {
         }
         None => s,
     };
-    // only where the cultivar steps can take it: at the end, or before a plain author
-    let fits = |caps: &regex::Captures| {
-        let rest = s[caps.get(0).unwrap().end()..].trim_start();
-        !caps[0].ends_with(" ex")
-            && (rest.is_empty() || rest.starts_with(|c: char| c.is_uppercase()))
-    };
-    let s = match LOWERCASE_CULTIVAR.captures(&s) {
-        Some(caps) if fits(&caps) => {
-            let whole = caps.get(0).unwrap();
-            format!(
-                "{}cv. '{}{}'{}",
-                &s[..whole.start()],
-                caps[1].to_uppercase(),
-                &caps[2],
-                &s[whole.end()..]
-            )
-        }
-        _ => s,
-    };
     let plain = |epithet: &str| {
         !epithet
             .split_whitespace()
-            .any(|w| matches!(w, "ex" | "et" | "in"))
+            .any(|w| matches!(w, "ex" | "et" | "in" | "group"))
+    };
+    // only where the cultivar steps can take it: at the end, or before a plain or bracketed author;
+    // an author's particle stays with the author ("cv. alba de Vries")
+    let s = match LOWERCASE_CULTIVAR.captures(&s) {
+        Some(caps) if plain(&caps[1]) => {
+            let from = caps.get(1).unwrap().start();
+            let mut words: Vec<(usize, &str)> = caps[1]
+                .split_whitespace()
+                .map(|w| (w.as_ptr() as usize - caps[1].as_ptr() as usize + from, w))
+                .collect();
+            while words.len() > 1 && words.last().is_some_and(|(_, w)| token::is_particle(w)) {
+                words.pop();
+            }
+            let epithet = words.iter().map(|(_, w)| *w).collect::<Vec<_>>().join(" ");
+            let after = words.last().map_or(from, |(at, w)| at + w.len());
+            let rest = s[caps.get(1).unwrap().end()..].trim_start();
+            if rest.is_empty() || rest.starts_with(|c: char| c.is_uppercase() || c == '(') {
+                let whole = caps.get(0).unwrap();
+                format!(
+                    "{}cv. '{}'{}",
+                    &s[..whole.start()],
+                    cultivar_case(&epithet),
+                    &s[after..]
+                )
+            } else {
+                s
+            }
+        }
+        _ => s,
     };
     if let Some(caps) = UNQUOTED_CULTIVAR.captures(&s) {
         if plain(&caps[1]) {
@@ -2618,10 +2695,57 @@ static UNQUOTED_CULTIVAR: LazyLock<Regex> = LazyLock::new(|| {
 /// An [`UNQUOTED_CULTIVAR`] followed by its author, who begins with initials: `Bambusa textilis cv.
 /// Maculata L. C. Chia`, `Abutilon megapotamicum cv. Variegatum A.St.-Hil. & Naudin`. The first
 /// initial ends the epithet. So do the botanists' one-word abbreviations of Linnaeus and de
-/// Candolle, `L.` and `DC.`: `Abies alba cv. Orfei L.`. Group 1 the epithet, group 2 the author.
+/// Candolle, `L.` and `DC.`: `Abies alba cv. Orfei L.`, and a bracketed author: `Weigela praecox cv.
+/// Floreal (Lemoine) L.H.Bailey`. Group 1 the epithet, group 2 the author.
 static UNQUOTED_CULTIVAR_BEFORE_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s+)(\p{Lu}[\p{L}\p{N}\-]*(?:(?-u:\s+)[\p{L}\p{N}][\p{L}\p{N}\-]*)*?)((?-u:\s+)(?:\p{Lu}\.(?-u:\s*)(?:\p{Lu}\.(?-u:\s*))*\p{Lu}\p{Ll}.*|(?:L|DC)\.(?:(?-u:\s).*)?))$").unwrap()
+    Regex::new(r"(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s+)(\p{Lu}[\p{L}\p{N}\-]*(?:(?-u:\s+)[\p{L}\p{N}][\p{L}\p{N}\-]*)*?)((?-u:\s+)(?:\p{Lu}\.(?-u:\s*)(?:\p{Lu}\.(?-u:\s*))*\p{Lu}\p{Ll}.*|(?:L|DC)\.(?:(?-u:\s).*)?|\((?-u:\s*)\p{L}.*))$").unwrap()
 });
+
+/// A cultivar marker with no epithet at the end of the name: `Acacia latifolia cv.`, `Rosa hybrid
+/// cultivar`, `Rosa Hollandica, cv.`. Group 1 a `hybrid` in front of it.
+static BARE_CULTIVAR_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r",?((?-u:\s+)hybrid)?(?-u:\s+)(?:cv\.?|cultivar)(?-u:\s*)$").unwrap()
+});
+
+/// A [`BARE_CULTIVAR_MARKER`] says the name is a cultivar whose epithet is not given: it is dropped
+/// and stands in for a CULTIVAR rank the caller did not give, so the name becomes an indetermined
+/// cultivar, like `Abies alba var.` is an indetermined variety. It was read as the epithet `cv` or
+/// `cultivar`, or as an author (#118).
+fn strip_bare_cultivar_marker(ctx: &mut ParseContext, s: String) -> String {
+    if ctx.name.cultivar_epithet.is_some() {
+        return s;
+    }
+    let Some(caps) = BARE_CULTIVAR_MARKER.captures(&s) else {
+        return s;
+    };
+    // after an indet marker it is part of the phrase: `Rosa sp. cultivar`
+    let mut end = caps.get(0).unwrap().start();
+    if matches!(
+        s[..end].split_whitespace().last(),
+        Some("sp." | "sp" | "spp." | "spp")
+    ) {
+        return s;
+    }
+    // `hybrid` stands in for the species epithet unless there is one: `Rosa hybrid cultivar` is
+    // read like `Rosa hybrid 'Peace'`, `Aspidistra mushaensis hybrid cultivar` as Aspidistra
+    // mushaensis
+    if let Some(hybrid) = caps.get(1) {
+        let before = s[..hybrid.start()].trim();
+        let before = before
+            .strip_prefix("x ")
+            .or_else(|| before.strip_prefix('×'))
+            .unwrap_or(before)
+            .trim();
+        if !before.contains(char::is_whitespace) {
+            end = hybrid.end();
+        }
+    }
+    if ctx.requested_rank.is_none() {
+        ctx.requested_rank = Some(Rank::Cultivar);
+    }
+    ctx.name.code = Some(NomCode::Cultivars);
+    java_trim(&s[..end]).to_string()
+}
 
 // ---- Step 22: stripCultivarGroupGrex ----
 
@@ -2687,11 +2811,13 @@ static RANK_MARKER_SUFFIX: LazyLock<Regex> =
 /// author span (kept verbatim for splicing back onto the name part). Rust-only: the author may
 /// start with a particle behind a capitalised epithet ("Acer saccharinum L. cv. 'Asplenifolium' de
 /// Bie"), groups 4 to 6 then; a quoted lower-case word before one is no cultivar (`Haplochromis
-/// "black" van Oijen, 1982`, a fish).
+/// "black" van Oijen, 1982`, a fish). Behind an explicit `cv.` it may be a bracketed basionym
+/// author (`Cyathea cooperi cv. 'Highland Lace' (Hook. ex F.Muell.) Domin`), groups 7 to 9.
 static QUOTED_CULTIVAR_MID: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r#"\s+(?:cv\.?\s+)?(['"])([^'"]+)\1(\s+[\p{Lu}].*)$"#,
         r#"|\s+(?:cv\.?\s+)?(['"])(\p{Lu}[^'"]*)\4(\s+(?:(?:de|den|der|van|von|du|da|dos|la|le|ten|ter|zu|zur)\s+){1,2}[\p{Lu}].*)$"#,
+        r#"|\s+cv\.?\s+(['"])([^'"]+)\7(\s+\(.*)$"#,
     ))
     .unwrap()
 });
@@ -2856,7 +2982,13 @@ fn strip_quoted_cultivar(ctx: &mut ParseContext, mut s: String) -> String {
 
     if let Some(caps) = QUOTED_CULTIVAR_MID.captures(&s).ok().flatten() {
         let match_start = caps.get(0).unwrap().start();
-        let group = |k: usize| caps.get(k).or_else(|| caps.get(k + 3)).unwrap().as_str();
+        let group = |k: usize| {
+            caps.get(k)
+                .or_else(|| caps.get(k + 3))
+                .or_else(|| caps.get(k + 6))
+                .unwrap()
+                .as_str()
+        };
         let epithet = java_trim(group(2)).to_string();
         let tail = group(3).to_string();
         let prefix = java_trim(&s[..match_start]).to_string();

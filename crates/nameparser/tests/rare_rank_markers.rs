@@ -4,7 +4,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NamePart, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NomCode, Rank};
 
 #[test]
 fn rare_infraspecific_markers() {
@@ -264,6 +264,12 @@ fn an_unquoted_cultivar_epithet() {
         .cultivar_sp("Bambusa", "multiplex", "Golden Goddess")
         .comb_authors(None, &["L.C.Chia", "C.Y.Sia"])
         .nothing_else();
+    // or a bracketed basionym author
+    assert_name("Weigela praecox cv. Floreal (Lemoine) L.H.Bailey")
+        .cultivar_sp("Weigela", "praecox", "Floreal")
+        .bas_authors(None, &["Lemoine"])
+        .comb_authors(None, &["L.H.Bailey"])
+        .nothing_else();
     // and Linnaeus and de Candolle, abbreviated without initials
     assert_name("Abies alba cv. Orfei L.")
         .cultivar_sp("Abies", "alba", "Orfei")
@@ -372,5 +378,94 @@ fn a_misspelt_rank_marker_is_the_marker_it_is_one_letter_off() {
     // without its dot a word may be an epithet
     assert_name("Zacla va")
         .species("Zacla", "va")
+        .nothing_else();
+}
+
+#[test]
+fn a_cultivar_marker_without_its_epithet_is_an_indetermined_cultivar() {
+    // #118: `cv` or `cultivar` became the epithet, or an author
+    assert_name("Acacia latifolia cv.")
+        .indet("Acacia", "latifolia", Rank::Cultivar)
+        .code(NomCode::Cultivars)
+        .warning(&[warnings::INDETERMINED])
+        .nothing_else();
+    assert_informal("Hibiscus cv.")
+        .taxon("Hibiscus")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Cultivar)
+        .no_phrase()
+        .code(NomCode::Cultivars)
+        .nothing_else();
+    // `hybrid` is the epithet, as in "Rosa hybrid 'Peace'", unless there is one
+    assert_name("Rosa hybrid cultivar")
+        .indet("Rosa", "hybrid", Rank::Cultivar)
+        .code(NomCode::Cultivars)
+        .warning(&[warnings::INDETERMINED])
+        .nothing_else();
+    assert_name("Aspidistra mushaensis hybrid cultivar")
+        .indet("Aspidistra", "mushaensis", Rank::Cultivar)
+        .code(NomCode::Cultivars)
+        .warning(&[warnings::INDETERMINED])
+        .nothing_else();
+}
+
+#[test]
+fn a_lower_case_cultivar_epithet_of_several_words() {
+    // #118: only the last word was the epithet, of the rank "cv"
+    assert_name("Vanilla planifolia cv. oreja de burro")
+        .cultivar_sp("Vanilla", "planifolia", "Oreja de Burro")
+        .nothing_else();
+    assert_name("Phyllostachys viridis cv robert young McClure")
+        .cultivar_sp("Phyllostachys", "viridis", "Robert Young")
+        .comb_authors(None, &["McClure"])
+        .nothing_else();
+    assert_name("Bambusa blumeana cv wei-fang lin (W.C. Lin) Chia")
+        .cultivar_sp("Bambusa", "blumeana", "Wei-fang Lin")
+        .bas_authors(None, &["W.C.Lin"])
+        .comb_authors(None, &["Chia"])
+        .nothing_else();
+    // an author's particle stays with the author
+    assert_name("Abies alba cv. alba de Vries")
+        .cultivar_sp("Abies", "alba", "Alba")
+        .comb_authors(None, &["de Vries"])
+        .nothing_else();
+    // a quoted epithet before a bracketed author
+    assert_name("Cyathea cooperi cv. 'Highland Lace' (Hook. ex F.Muell.) Domin")
+        .cultivar_sp("Cyathea", "cooperi", "Highland Lace")
+        .bas_authors(None, &["F.Muell."])
+        .bas_ex_authors(None, &["Hook."])
+        .comb_authors(None, &["Domin"])
+        .nothing_else();
+}
+
+#[test]
+fn misspelt_cultivar_markers() {
+    // #118: the plural, a doubled dot or no space after the marker
+    assert_name("Malva verticillata cvs. Ikva")
+        .cultivar_sp("Malva", "verticillata", "Ikva")
+        .nothing_else();
+    assert_name("Cyperus esculentus cv. s. Faraon-FKO")
+        .cultivar_sp("Cyperus", "esculentus", "Faraon-FKO")
+        .nothing_else();
+    assert_name("Cotoneaster horizontales cv. . Hodginsii")
+        .cultivar_sp("Cotoneaster", "horizontales", "Hodginsii")
+        .nothing_else();
+    assert_name("Arachis hypogaea cv.Tigrovyi")
+        .cultivar_sp("Arachis", "hypogaea", "Tigrovyi")
+        .nothing_else();
+    // a Cultivar Group in lower case
+    assert_name("Oryza sativa (japonica cultivar-group)")
+        .cultivar_sp_rank("Oryza", "sativa", Rank::CultivarGroup, "Japonica")
+        .nothing_else();
+    assert_name("Oryza sativa tropical japonica cultivar-group")
+        .cultivar_sp_rank("Oryza", "sativa", Rank::CultivarGroup, "Tropical Japonica")
+        .nothing_else();
+    assert_name("Cucumis sativus cv.-gr. pickling cucumber")
+        .cultivar_sp_rank(
+            "Cucumis",
+            "sativus",
+            Rank::CultivarGroup,
+            "Pickling Cucumber",
+        )
         .nothing_else();
 }
