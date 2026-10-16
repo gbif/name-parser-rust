@@ -61,6 +61,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_quoted_monomial(ctx, s);
     s = apply_missing_genus_placeholder(ctx, s);
     s = strip_leading_genus_qualifier(ctx, s);
+    s = shorten_species_near(s);
     s = strip_rank_lineage(ctx, s);
     s = strip_leading_species_label(ctx, s);
     s = strip_repeated_shouted_epithet(ctx, s);
@@ -472,16 +473,37 @@ fn lone_epithet_of_a_species(ctx: &ParseContext, s: &str) -> bool {
 /// `? Dudresnaya sp.`, `?Monotremata`), or an open-nomenclature `cf.`/`aff.` (`cf. Platypeltis
 /// croftii`, `aff. Tetradonia sp. BOLD:AEF5834`). Tokenised as is, the `?` / `Cf` became the
 /// uninomial and the real genus was read as an author. Mirrors the in-name `Sydonia? alba` /
-/// `Abies cf. alba` handling — the mark becomes the GENERIC epithet qualifier (`cf.`/`aff.`
+/// `Abies cf. alba` handling, and so is an `nr.` (`nr. Orbiculoidea sampsoni`, #131) — the mark
+/// becomes the GENERIC epithet qualifier (`cf.`/`aff.`/`nr.`
 /// normalised to lowercase with a dot) and a `?` also flags the name doubtful; `Pipeline::run` adds
 /// INFORMAL once a species epithet is parsed (see `ParseContext::qualified_genus`). A `?` before a
 /// lowercase epithet (`? alba`) is the missing-genus placeholder handled by
 /// [`apply_missing_genus_placeholder`] and never reaches this capitalised form.
 static LEADING_GENUS_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
     // the genus may still carry HTML (`cf. <em>Dicopia</em> fragilis`) — strip_html runs later
-    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}\p{Ll}.*)$")
+    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff|nr))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}\p{Ll}.*)$")
         .unwrap()
 });
+
+/// A species near the one named, written "sp. nr." or "n. sp. nr." after its epithet: "Phytocoris
+/// ceanothicus, sp. nr.", "Bitoma parallela [sp.nr.]", "Dracaena goldieana spec.nr. Damen" (#131).
+/// Group 1 the binomial, group 2 what follows.
+static SPECIES_NEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?:(?-u:\s+)\(\p{Lu}\p{Ll}+\))?(?-u:\s+)\p{Ll}[\p{Ll}\-]+)(?:(?-u:\s*),(?-u:\s*)|(?-u:\s+))[\[(]?(?-u:\s*)(?:n\.(?-u:\s*))?(?:sp|spec)\.?(?-u:\s*)nr\.?(?-u:\s*)[\])]?((?-u:\s+).*)?$")
+        .unwrap()
+});
+
+/// Writes a [`SPECIES_NEAR`] as the "nr." qualifier of the epithet, as "Trouessartia funiculata nr."
+/// has it: it was an author "sp.nr.", or the epithet "n" of a species by "sp.nr.".
+fn shorten_species_near(s: String) -> String {
+    match SPECIES_NEAR.captures(&s) {
+        // "Anoplotermes group sp. nr. E1 TB-2014": a group, no epithet
+        Some(caps) if !caps[1].ends_with(" group") && !caps[1].ends_with(" complex") => {
+            format!("{} nr.{}", &caps[1], caps.get(2).map_or("", |m| m.as_str()))
+        }
+        _ => s,
+    }
+}
 
 /// See [`LEADING_GENUS_QUALIFIER`].
 fn strip_leading_genus_qualifier(ctx: &mut ParseContext, s: String) -> String {
@@ -2166,6 +2188,36 @@ fn strip_repeated_shouted_epithet(ctx: &mut ParseContext, s: String) -> String {
         prev = Some(word).filter(|w| w.chars().all(|c| c.is_lowercase() || c == '-'));
     }
     s
+}
+
+/// An open-nomenclature qualifier opening a separately supplied authorship, "nr. Mayr, 1870",
+/// "cf. (Emery, 1895)", also as "sp. nr." or alone, "spec.nr. Damen", "[sp.nr.]" (#131): it qualifies
+/// the name's last epithet, as on the name string ("Camponotus vicinus nr. Mayr, 1870"). Group 1
+/// the qualifier, group 2 the authorship after it.
+static AUTHORSHIP_LEADING_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^[\[(]?(?-u:\s*)(?:(?:n\.(?-u:\s*))?(?:sp|spec)\.?(?-u:\s*))?(?i:(cf|aff|nr))\.?(?-u:\s*)[\])]?(?:(?-u:\s+)((?:\p{Lu}|\().*)|(?-u:\s*))$").unwrap()
+});
+
+/// See [`AUTHORSHIP_LEADING_QUALIFIER`].
+pub(crate) fn strip_authorship_leading_qualifier(
+    authorship: &str,
+    name: &mut ParsedName,
+) -> String {
+    let authorship = java_trim(authorship);
+    let Some(caps) = AUTHORSHIP_LEADING_QUALIFIER.captures(authorship) else {
+        return authorship.to_string();
+    };
+    let part = if name.infraspecific_epithet.is_some() {
+        NamePart::Infraspecific
+    } else if name.specific_epithet.is_some() {
+        NamePart::Specific
+    } else {
+        return authorship.to_string();
+    };
+    name.set_epithet_qualifier(part, &format!("{}.", caps[1].to_ascii_lowercase()));
+    name.type_ = NameType::Informal;
+    caps.get(2)
+        .map_or_else(String::new, |rest| java_trim(rest.as_str()).to_string())
 }
 
 /// [`strip_repeated_shouted_epithet`] for a separately supplied authorship: its first word

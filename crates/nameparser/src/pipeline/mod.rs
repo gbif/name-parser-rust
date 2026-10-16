@@ -611,6 +611,7 @@ fn parse_separate_authorship(ctx: &mut ParseContext, authorship: String) -> Opti
     // phrase of a provisional name or the authorship parser
     let authorship = stripandstash::strip_authorship_placeholder(&authorship, &mut ctx.name);
     let authorship = stripandstash::strip_authorship_repeated_epithet(&authorship, &mut ctx.name);
+    let authorship = stripandstash::strip_authorship_leading_qualifier(&authorship, &mut ctx.name);
     if !authorship.chars().all(crate::token::is_whitespace_java)
         && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
         && !append_authorship_to_phrase(&authorship, &mut ctx.name)

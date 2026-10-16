@@ -747,3 +747,74 @@ fn issue_141_non_note_of_the_species() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn issue_131_species_near_is_informal() {
+    use nameparser::model::NamePart::{Generic, Specific};
+    // "nr." (near) qualifies the epithet: an informal name, no infraspecific epithet "nr"
+    assert_name("Camponotus vicinus nr. Mayr, 1870")
+        .species("Camponotus", "vicinus")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .comb_authors(Some("1870"), &["Mayr"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Hydraena puncticollis nr. Sharp 1882")
+        .species("Hydraena", "puncticollis")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .comb_authors(Some("1882"), &["Sharp"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Temnothorax andrei nr. (Emery, 1895)")
+        .species("Temnothorax", "andrei")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .bas_authors(Some("1895"), &["Emery"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Trouessartia funiculata nr.")
+        .species("Trouessartia", "funiculata")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Euglossa (Euglossa) deceptrix nr.")
+        .species_ig("Euglossa", "Euglossa", "deceptrix")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("camponotus nr.fastigatus")
+        .species("Camponotus", "fastigatus")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // "sp. nr.", "spec. nr.": a species near the one named
+    assert_name("Phytocoris ceanothicus, sp. nr.")
+        .species("Phytocoris", "ceanothicus")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Dracaena goldieana spec.nr. Damen")
+        .species("Dracaena", "goldieana")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .comb_authors(None, &["Damen"])
+        .nothing_else();
+    assert_name("Bitoma parallela [sp.nr.]")
+        .species("Bitoma", "parallela")
+        .qualifiers(&[(Specific, "nr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // in front of the genus, as "cf." is
+    assert_name("nr. Orbiculoidea sampsoni")
+        .species("Orbiculoidea", "sampsoni")
+        .qualifiers(&[(Generic, "nr.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_informal("Leucanopsis sp.10 (nr. falacra)")
+        .taxon("Leucanopsis")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp.10 (nr. falacra)")
+        .nothing_else();
+}
