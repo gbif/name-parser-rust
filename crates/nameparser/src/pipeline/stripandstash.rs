@@ -3018,7 +3018,7 @@ fn strip_cultivar_group_grex(ctx: &mut ParseContext, s: String) -> String {
 /// whitespace set. Group 1 = optional "cv. " prefix, group 2 = quote char, group 3 =
 /// cultivar epithet content.
 static QUOTED_CULTIVAR_END: LazyLock<FancyRegex> = LazyLock::new(|| {
-    FancyRegex::new(r#"[ \t\n\x0B\f\r]+(cv\.?[ \t\n\x0B\f\r]+)?(['"])([^'"]+)\2[ \t\n\x0B\f\r]*$"#)
+    FancyRegex::new(r#"[ \t\n\x0B\f\r]+(cv\.?[ \t\n\x0B\f\r]+)?(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}))+)\2[ \t\n\x0B\f\r]*$"#)
         .unwrap()
 });
 
@@ -3045,9 +3045,9 @@ static RANK_MARKER_SUFFIX: LazyLock<Regex> =
 /// author (`Cyathea cooperi cv. 'Highland Lace' (Hook. ex F.Muell.) Domin`), groups 7 to 9.
 static QUOTED_CULTIVAR_MID: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
-        r#"\s+(?:cv\.?\s+)?(['"])([^'"]+)\1(\s+[\p{Lu}].*)$"#,
-        r#"|\s+(?:cv\.?\s+)?(['"])(\p{Lu}[^'"]*)\4(\s+(?:(?:de|den|der|van|von|du|da|dos|la|le|ten|ter|zu|zur)\s+){1,2}[\p{Lu}].*)$"#,
-        r#"|\s+cv\.?\s+(['"])([^'"]+)\7(\s+\(.*)$"#,
+        r#"\s+(?:cv\.?\s+)?(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}))+)\1(\s+[\p{Lu}].*)$"#,
+        r#"|\s+(?:cv\.?\s+)?(['"])(\p{Lu}(?:[^'"]|(?<=\p{L})'(?=\p{L}))*)\4(\s+(?:(?:de|den|der|van|von|du|da|dos|la|le|ten|ter|zu|zur)\s+){1,2}[\p{Lu}].*)$"#,
+        r#"|\s+cv\.?\s+(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}))+)\7(\s+\(.*)$"#,
     ))
     .unwrap()
 });
@@ -6474,7 +6474,7 @@ static PHRASE_NAME: LazyLock<Regex> = LazyLock::new(|| {
         r"\s+(sp|spec|subsp|ssp|var|form|f)\.?",
         r"\s+(",
         r#"[\p{Lu}A-Z\d'"][^(]*\(.+\)[^$]*?"#,
-        r#"|['"][^'"]+['"]"#,
+        r#"|['"](?:\p{L}'\p{L}|[^'"])+['"]"#,
         r")\s*$",
     ))
     .unwrap()
