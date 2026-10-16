@@ -401,6 +401,8 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     && (!rank_markers::needs_epithet_after(w)
                         || has_epithet_after_marker(tokens, i, false))
                 {
+                    // a designation after a bare marker on the genus is the name's, as on a species
+                    let designated = have_epithet || is_bare_marker_after_genus(ctx, tokens, i);
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
@@ -423,7 +425,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     } else if let Some(len) = single_letter_designation(tokens, i) {
                         i += len;
                         have_epithet = true;
-                    } else if have_epithet && i < n && tokens[i].kind == TokenKind::Number {
+                    } else if designated && i < n && tokens[i].kind == TokenKind::Number {
                         // gbif/name-parser-rust#16: a NUMBERED indeterminate infraspecific —
                         // "Abies alba var. 3", "Abies alba subsp. 7". The number is the
                         // designation, not authorship; keep it in the name section so
@@ -435,15 +437,12 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         // a bogus year), leaving "Abies alba var." to collide with every other
                         // numbered variety of the species.
                         //
-                        // `have_epithet` confines this to a marker that really is trailing a
-                        // BINOMIAL. Without a species epithet ("Aquificales str. OlB-6",
-                        // "planctomycete str. 394") NameTokens takes its "rank marker before any
-                        // lower epithet" branch and makes the marker itself the epithet, so
-                        // nothing downstream would consume the designation and it would be
-                        // dropped outright — worse than the bogus author it gets today. Those
-                        // monomials are left exactly as they were; the 3-token spelling of the
-                        // same thing is already handled earlier by
-                        // `StripAndStash::stash_trailing_rank_marker_code`.
+                        // `designated` confines this to a marker trailing a binomial, or one
+                        // [`is_bare_marker_after_genus`] ("Navicula var. 3 Smith", #174), which
+                        // NameTokens reads as an indetermined infraspecific name with the
+                        // designation as its phrase. Any other marker without a species epithet
+                        // is the species epithet there ("Foa fo"), and the designation would be
+                        // dropped.
                         i += 1;
                         // The tokenizer splits a digit+letter designation ("3a" -> NUMBER + WORD);
                         // a lowercase tail at the very end belongs to the designation, not to an
@@ -454,7 +453,11 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         {
                             i += 1;
                         }
-                    } else if have_epithet
+                        // under a bare genus the phrase runs to the end, as after `Abies sp. 3`
+                        if !have_epithet {
+                            i = n;
+                        }
+                    } else if designated
                         && i + 1 == n
                         && tokens[i].kind == TokenKind::Word
                         && is_strain_code(&tokens[i].text)
@@ -1178,6 +1181,29 @@ pub(crate) fn is_capitalised_old_epithet(tokens: &[Token], k: usize, genus: Opti
                 && rank_markers::match_infraspecific_allow_notho(strip_dot(&m.text)).is_some()
         })
         && has_epithet_after_marker(tokens, marker_at, false)
+}
+
+/// An infraspecific rank marker straight after the genus with no epithet after it, marking an
+/// indetermined infraspecific name (`Navicula var.`, `Achatina f.`, #174) rather than being the
+/// species epithet (`Foa fo`): dotted, or one of the markers no epithet is spelled like. A species
+/// rank hint keeps the epithet reading — ChecklistBank has abbreviated species epithets such as
+/// `Zygaena f.` + `Holik & Sheljuzhko 1958`.
+///
+/// Only with nothing after it in `ts` or a designation — a number or a strain code (`Navicula var.
+/// 3`, `Aquificales str. OlB-6`). Anything else is left to the species-epithet reading, which
+/// keeps a qualified epithet (`Tortrix var. ? stelviana`).
+pub(crate) fn is_bare_marker_after_genus(ctx: &ParseContext, ts: &[Token], i: usize) -> bool {
+    let dotted = ts.get(i + 1).is_some_and(|t| t.kind == TokenKind::Dot);
+    let unambiguous = ["var", "ssp", "subsp", "subvar", "nothosubsp", "nothovar"]
+        .iter()
+        .any(|m| ts[i].text.eq_ignore_ascii_case(m));
+    let designated = match ts.get(i + 1 + usize::from(dotted)) {
+        None => true,
+        Some(t) => {
+            t.kind == TokenKind::Number || (t.kind == TokenKind::Word && is_strain_code(&t.text))
+        }
+    };
+    (dotted || unambiguous) && designated && ctx.requested_rank.is_none_or(|r| r.is_infraspecific())
 }
 
 /// The word at `k` repeats an earlier lower-case epithet with a capital initial: the capitalised

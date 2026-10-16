@@ -530,6 +530,36 @@ fn indet_names() {
         nameparser::parse("Navicula var. fasciata Grunow", None, None, None),
         nameparser::ParseResult::Parsed(_)
     ));
+    // …and a bare rank marker under a genus is an indetermined name of that rank, no species
+    // epithet "var" (#174)
+    for (input, rank) in [
+        ("Navicula var.", Rank::Variety),
+        ("Navicula var", Rank::Variety),
+        ("Navicula ssp.", Rank::Subspecies),
+        ("Achatina f.", Rank::Form),
+    ] {
+        assert_name(input)
+            .genus_rank(input.split(' ').next().unwrap(), rank)
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    let navicula = nameparser::parse_name("Navicula var.", None, None, None).unwrap();
+    assert_eq!(navicula.canonical_name().as_deref(), Some("Navicula var."));
+    // the phrase runs to the end, as in `Abies sp. 3 Smith`
+    assert_name("Navicula var. 3 Smith")
+        .genus_rank("Navicula", Rank::Variety)
+        .phrase("var. 3 Smith")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Aquificales str. OlB-6")
+        .genus_rank("Aquificales", Rank::Strain)
+        .phrase("str. OlB-6")
+        .type_(NameType::Informal)
+        .nothing_else();
+    // a species rank hint keeps an abbreviated species epithet
+    assert_name_rank("Zygaena f.", Rank::Species)
+        .species("Zygaena", "f")
+        .nothing_else();
 
     let n = nameparser::parse_name("Polygonum spec.", None, None, None)
         .expect("`Polygonum spec.` should parse");

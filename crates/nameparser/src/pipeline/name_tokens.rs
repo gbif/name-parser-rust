@@ -817,14 +817,19 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         // lusus Finlay, 1927"); a dotted one is a marker ("Abies alba subsp. var.").
                         lower_epithets.push(w.to_lowercase());
                         i += 1;
-                    } else if !lower_epithets.is_empty() {
+                    } else if !lower_epithets.is_empty()
+                        || authorship_split::is_bare_marker_after_genus(ctx, ts, i)
+                    {
                         // Trailing rank marker with no following epithet = indetermined
-                        // infraspecific
+                        // infraspecific, also straight after the genus (`Navicula var.`)
                         indet = true;
                         inline_rank = Some(rm_infra);
                         inline_rank_notho = notho_flag;
                         inline_morpha = w.eq_ignore_ascii_case("m");
                         marker_idx_in_epithets = lower_epithets.len() as i32;
+                        // without a species the marker leads the phrase, as `stash_trailing_rank_
+                        // marker_code` keeps it in `Navicula var. 3` (the verbatim-phrase rule)
+                        let phrase_from = lower_epithets.is_empty().then_some(ts[i].start);
                         i += 1;
                         if i < ts.len() && ts[i].kind == TokenKind::Dot {
                             i += 1;
@@ -857,7 +862,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             && ts[i].kind == TokenKind::Word
                             && token::is_numeral_epithet(&ts[i].text);
                         if ctx.name.phrase.is_none() && i < ts.len() && !numeral_epithet_follows {
-                            let start = ts[i].start;
+                            let start = phrase_from.unwrap_or(ts[i].start);
                             let end = ts[ts.len() - 1].end;
                             ctx.name.phrase = Some(ctx.working[start..end].to_string());
                             ctx.name.type_ = NameType::Informal;
