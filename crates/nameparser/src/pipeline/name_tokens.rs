@@ -58,6 +58,7 @@ use regex::Regex;
 
 use crate::model::{warnings, NamePart, NameType, Rank, State};
 use crate::pipeline::authorship_split;
+use crate::pipeline::blacklisted_epithets;
 use crate::pipeline::rank_markers;
 use crate::pipeline::stripandstash;
 use crate::pipeline::ParseContext;
@@ -516,10 +517,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 let separate_authorship = ctx.authorship_input.as_deref().is_some_and(|a| {
                     !java_trim(stripandstash::without_authorship_placeholder(a)).is_empty()
                 });
+                // A listed species is one without its author too ("Trichosternus spec", #155).
                 let is_published_spec_epithet = w.eq_ignore_ascii_case("spec")
                     && genus.is_some()
                     && lower_epithets.is_empty()
-                    && (!name_section_covers_all || separate_authorship)
+                    && (!name_section_covers_all
+                        || separate_authorship
+                        || blacklisted_epithets::whitelisted("spec", genus.as_deref(), None))
                     && i + 1 == ts.len();
                 if (w.eq_ignore_ascii_case("sp")
                     || w.eq_ignore_ascii_case("spp")

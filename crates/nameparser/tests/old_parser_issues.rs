@@ -691,3 +691,23 @@ fn issue_143_rank_linea() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn issue_155_trichosternus_spec_is_a_species() {
+    // listed as a real name, a species without its author too
+    assert_name("Trichosternus spec")
+        .species("Trichosternus", "spec")
+        .nothing_else();
+    assert_name("Trichosternus spec Darlington, 1962")
+        .species("Trichosternus", "spec")
+        .comb_authors(Some("1962"), &["Darlington"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // any other genus with a bare "spec" is an indeterminate species
+    assert_informal("Abies spec")
+        .taxon("Abies")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("spec")
+        .nothing_else();
+}

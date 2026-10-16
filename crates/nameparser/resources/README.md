@@ -67,6 +67,11 @@ blacklisted epithet that match a name in the COL release exactly (33 names), plu
 K.Schum. & Lauterb. from WFO. To add a name, check it in a checklist (COL, WFO, a taxonomic
 database) and add a line for it.
 
+The eight species of the COL release with the epithet `spec` were added too (#155): an undotted
+`spec` with an authorship after it is the epithet anyway, but a listed genus keeps it the epithet
+when the name comes without one ("Trichosternus spec"), where any other `Genus spec` is an
+indeterminate species.
+
 ## Homoglyph table (`homoglyphs.txt`)
 
 Confusable-character normalisation table, likewise copied from the Java name-parser resource of

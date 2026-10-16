@@ -1,4 +1,5 @@
-# Real names whose epithet is on blacklist-epithets.txt ("Caryota no", "Hypanus say"). A listed name
+# Real names whose epithet is on blacklist-epithets.txt ("Caryota no", "Hypanus say") or is the
+# indet marker "spec" ("Trichosternus spec", which stays a species without its author). A listed name
 # is not flagged doubtful, and a listed epithet that is also an author particle ("du", "das", "los")
 # is read as the epithet ("Sympycnus du Curran, 1929"), not as part of the author.
 # See resources/README.md for how the list was built and how to extend it.
@@ -41,5 +42,13 @@ say	Dasyatis	Lesueur	Dasyatis say (Lesueur, 1817)
 say	Hypanus	Lesueur	Hypanus say (Lesueur, 1817)
 say	Physa	Blainville	Physa say Blainville, 1826
 say	Raja	Lesueur	Raja say Lesueur, 1817
+spec	Apozomus	Harvey	Apozomus spec Harvey, 1992
+spec	Castelnaudia	Darlington	Castelnaudia spec (Darlington, 1962)
+spec	Gobiosoma	Ginsburg	Gobiosoma spec (Ginsburg, 1939)
+spec	Hemicloeina	Platnick	Hemicloeina spec Platnick, 2002
+spec	Iulus	Verhoeff	Iulus spec Verhoeff, 1897
+spec	Lampona	Platnick	Lampona spec Platnick, 2000
+spec	Notozomus	Harvey	Notozomus spec (Harvey, 1992)
+spec	Trichosternus	Darlington	Trichosternus spec Darlington, 1962
 till	Laurus	Poir.	Laurus till Poir.
 what	Spatulapica	Zetterstedt	Spatulapica what (Zetterstedt, 1845)
