@@ -83,7 +83,7 @@ class NameParserRustSmokeTest {
 
     ParsedName bot = parser.parse("Physalospora rubiginosa (Fr.) anon.", null, null, null).orElseThrow();
     assertTrue(bot.getCombinationAuthorship().isAnonymous());
-    assertTrue(bot.getCombinationAuthorship().getAuthors().isEmpty());
+    assertFalse(bot.getCombinationAuthorship().hasAuthors());
     assertEquals(NomCode.BOTANICAL, bot.getCode());
     assertEquals("(Fr.) anon.", bot.authorshipComplete());
   }
@@ -124,6 +124,21 @@ class NameParserRustSmokeTest {
     assertNull(ref.getCombinationAuthorship().getInAuthors());
     assertNull(ref.getBasionymAuthorship().getInAuthors());
     assertEquals("Gard. Dict. ed. 8", ref.getPublishedIn());
+  }
+
+  @Test
+  void emptyAuthorListsStayNull() {
+    // gbif/name-parser#109: an author list the name does not have is never allocated
+    ParsedName pn = parser.parse("Abies alba Mill.", null, null, null).orElseThrow();
+    assertEquals(List.of("Mill."), pn.getCombinationAuthorship().getAuthors());
+    assertNull(pn.getCombinationAuthorship().getExAuthors());
+    assertNull(pn.getCombinationAuthorship().getInAuthors());
+    assertNull(pn.getBasionymAuthorship().getAuthors());
+    assertNull(pn.getBasionymAuthorship().getExAuthors());
+    assertFalse(pn.getBasionymAuthorship().exists());
+
+    ParsedName ex = parser.parse("Acacia aneura F.Muell. ex Benth.", null, null, null).orElseThrow();
+    assertEquals(List.of("F.Muell."), ex.getCombinationAuthorship().getExAuthors());
   }
 
   @Test
@@ -315,7 +330,7 @@ class NameParserRustSmokeTest {
     assertEquals("muelleri", pn.getSpecificEpithet());
     assertEquals("DSM 19832", pn.getPhrase());
     assertEquals(NameType.INFORMAL, pn.getType());
-    assertTrue(pn.getCombinationAuthorship().getAuthors().isEmpty(),
+    assertFalse(pn.getCombinationAuthorship().hasAuthors(),
         "the accession must not be parsed as an author, got " + pn.getCombinationAuthorship().getAuthors());
   }
 }

@@ -32,11 +32,11 @@ import java.util.List;
  *
  * <p><b>Setter semantics matter here</b> (see {@link #decode}): {@code ParsedName}'s epithet
  * setters (e.g. {@code setGenus}) strip a leading {@code ×} and call {@code addNotho(...)} as a
- * side effect, and {@code addAuthor}/{@code addExAuthor} have an inverted-blank-check bug that
- * makes them no-ops for real (non-blank) authors -- so authors/ex-authors are populated via
- * {@code setAuthors}/{@code setExAuthors}, and {@code notho} is rebuilt explicitly and exactly
- * from the wire's {@code notho_bits} after the epithet setters have already run, rather than
- * trusted to those setters' side effects.
+ * side effect, so {@code notho} is rebuilt explicitly and exactly from the wire's {@code notho_bits}
+ * after the epithet setters have already run, rather than trusted to those setters' side effects.
+ * The author lists are set whole, and left null when the wire's run is empty, as
+ * {@link Authorship} keeps them null until set (name-parser-api 5.6): most names have no basionym
+ * authors, almost none ex- or in-authors, so most of these lists are never allocated.
  */
 final class StructCodec {
 
@@ -358,10 +358,10 @@ final class StructCodec {
     }
 
     Cursor cur = new Cursor(RUN_SLOTS_OFFSET);
-    List<String> authorsComb = readStringRun(seg, cur, len, "combination authors");
-    List<String> exAuthorsComb = readStringRun(seg, cur, len, "combination ex-authors");
-    List<String> authorsBas = readStringRun(seg, cur, len, "basionym authors");
-    List<String> exAuthorsBas = readStringRun(seg, cur, len, "basionym ex-authors");
+    List<String> authorsComb = readStringRunOrNull(seg, cur, len, "combination authors");
+    List<String> exAuthorsComb = readStringRunOrNull(seg, cur, len, "combination ex-authors");
+    List<String> authorsBas = readStringRunOrNull(seg, cur, len, "basionym authors");
+    List<String> exAuthorsBas = readStringRunOrNull(seg, cur, len, "basionym ex-authors");
     List<String> warnings = readStringRun(seg, cur, len, "warnings");
 
     int eqCount = seg.get(LE_INT, cur.pos);
@@ -570,10 +570,10 @@ final class StructCodec {
     int flags = seg.get(LE_INT, cur.pos);
     cur.pos += 4;
 
-    List<String> authorsComb = readStringRun(seg, cur, len, "nested combination authors");
-    List<String> exAuthorsComb = readStringRun(seg, cur, len, "nested combination ex-authors");
-    List<String> authorsBas = readStringRun(seg, cur, len, "nested basionym authors");
-    List<String> exAuthorsBas = readStringRun(seg, cur, len, "nested basionym ex-authors");
+    List<String> authorsComb = readStringRunOrNull(seg, cur, len, "nested combination authors");
+    List<String> exAuthorsComb = readStringRunOrNull(seg, cur, len, "nested combination ex-authors");
+    List<String> authorsBas = readStringRunOrNull(seg, cur, len, "nested basionym authors");
+    List<String> exAuthorsBas = readStringRunOrNull(seg, cur, len, "nested basionym ex-authors");
     List<String> inAuthorsComb = readStringRunOrNull(seg, cur, len, "nested combination in-authors");
     List<String> inAuthorsBas = readStringRunOrNull(seg, cur, len, "nested basionym in-authors");
 
@@ -600,8 +600,7 @@ final class StructCodec {
     return ca;
   }
 
-  /** Builds an {@link Authorship} via its plain setters -- NOT {@code addAuthor}/{@code
-   *  addExAuthor}, which have an inverted-blank-check bug making them no-ops for real authors. */
+  /** Builds an {@link Authorship} via its plain setters, each author list null when empty. */
   private static Authorship authorship(List<String> authors, List<String> exAuthors, List<String> inAuthors,
                                        String year, String imprintYear, boolean bracketedYear, boolean anonymous,
                                        String sanctioningAuthor) {
