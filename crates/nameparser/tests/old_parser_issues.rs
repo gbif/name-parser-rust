@@ -675,3 +675,19 @@ fn issue_157_failed_names() {
         .warning(&[warnings::CAPITALISED_EPITHET])
         .nothing_else();
 }
+
+#[test]
+fn issue_143_rank_linea() {
+    // until gbif/name-parser#107 adds the rank, an unranked infrageneric name
+    assert_name("linea Parodiae Mottram")
+        .infrageneric("Parodiae")
+        .rank(Rank::InfragenericName)
+        .comb_authors(None, &["Mottram"])
+        .nothing_else();
+    // after a genus "linea" is an epithet
+    assert_name("Catasticta linea Brown 1939")
+        .species("Catasticta", "linea")
+        .comb_authors(Some("1939"), &["Brown"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

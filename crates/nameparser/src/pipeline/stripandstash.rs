@@ -437,6 +437,7 @@ fn apply_missing_genus_placeholder(ctx: &mut ParseContext, s: String) -> String 
         && (MISSING_GENUS_EPITHET.is_match(&s) || lone_epithet_of_a_species(ctx, &s))
         && !MISSING_GENUS_NOTE_KEYWORD.is_match(&s)
         && !token::is_particle(first_word(&s))
+        && !matches!(LEADING_INFRAGEN_MARKER.is_match(&s), Ok(true))
     {
         missing = Some(format!("? {s}"));
         emit_warning = true;
@@ -6236,6 +6237,9 @@ fn infrageneric_marker_rank(word: &str) -> Option<Rank> {
         "supersect" | "suprasect" => Some(Rank::SupersectionBotany),
         "ser" | "series" => Some(Rank::SeriesBotany),
         "subser" | "subseries" => Some(Rank::SubseriesBotany),
+        // Mottram's lineae of the cacti ("linea Parodiae Mottram"), until gbif/name-parser#107
+        // adds the rank (#143); only opening the name, elsewhere "linea" is an epithet
+        "linea" => Some(Rank::InfragenericName),
         _ => None,
     }
 }
@@ -6273,7 +6277,7 @@ fn bot_to_zool(rank: Rank) -> Option<Rank> {
 /// needs `fancy_regex`. No nested/ambiguous quantifiers -> no ReDoS exposure.
 static LEADING_INFRAGEN_MARKER: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"(?i)^(subg|subgen|subgenus|sect|section|subsect|subsection|supersect|suprasect|ser|series|subser|subseries)\.?\s+(?=[\p{Lu}])",
+        r"(?i)^(subg|subgen|subgenus|sect|section|subsect|subsection|supersect|suprasect|ser|series|subser|subseries|linea)\.?\s+(?=[\p{Lu}])",
     )
     .unwrap()
 });
