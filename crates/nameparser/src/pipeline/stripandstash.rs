@@ -5737,7 +5737,14 @@ static YEARS_ONLY: LazyLock<Regex> = LazyLock::new(|| {
 fn strip_ipni_citation(ctx: &mut ParseContext, s: String) -> String {
     let caps = match IPNI_CITATION.captures(&s) {
         Ok(Some(c)) => c,
-        _ => return strip_page_year_citation(ctx, s),
+        _ => {
+            let s = strip_page_year_citation(ctx, s);
+            return if ctx.name.published_in.is_none() {
+                strip_reference_after_year(ctx, s)
+            } else {
+                s
+            };
+        }
     };
     let group1 = caps.get(1).unwrap();
     // A citation has a title: "Broun, 1909 (1910)" is a year with its imprint year in brackets
@@ -5771,12 +5778,17 @@ fn strip_ipni_citation(ctx: &mut ParseContext, s: String) -> String {
 }
 
 /// The end of IPNI's other citation form: volume, page and a bare year, "1: 563. 1865." (or after
-/// a bracketed year, "8: 349 (2017). 2017"). Group 1 is the year.
-static PAGE_YEAR_TAIL: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\d\s*:\s*[^:]*?\.\s+(\d{4})\.?\s*$").unwrap());
+/// a bracketed year, "8: 349 (2017). 2017"). Group 1 is the year. The volume may carry its issue
+/// and the year follow the page without a full stop (#147): "Phytotaxa 181 (1): 18 2014", "Proc.
+/// Linn. Soc. London 161: 166 1949", "Cathaya 6: 115 - 124 1994".
+static PAGE_YEAR_TAIL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"\d(?:\s*\(\d+(?:\s*[-\x{2013}]\s*\d+)?\))?\s*:\s*(?:[^:]*?\.\s+|\d+(?:\s*[-\x{2013}]\s*\d+)?\s+)(\d{4})\.?\s*$")
+        .unwrap()
+});
 
-/// A volume and page: "21: 409".
-static VOLUME_PAGE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\d\s*:\s*\d").unwrap());
+/// A volume and page: "21: 409", "21 (3): 409".
+static VOLUME_PAGE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\d(?:\s*\(\d+\))?\s*:\s*\d").unwrap());
 
 /// An author-team connector, after which the title's comma comes.
 static TEAM_CONNECTOR: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s(?:&|and|et)\s").unwrap());
@@ -5826,6 +5838,24 @@ fn strip_page_year_citation(ctx: &mut ParseContext, s: String) -> String {
     ctx.name.set_published_in(java_trim(reference));
     ctx.set_pending_publication_year(&tail[1]);
     java_trim(&s[..comma]).to_string()
+}
+
+/// A journal and its numbering after an author's year, with no year of its own: "Smith, 1850
+/// Journal of Zoology 8(5): 563", "Kuntze 1891, Rev. Gen. 2: 946" (#147). Group 1 is the name and
+/// authorship up to the year, group 2 the reference.
+static REFERENCE_AFTER_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*\d{4}\)?)(?-u:\s*),?(?-u:\s+)(\p{Lu}[^:\d()]*[\p{L}.](?-u:\s+)\d+(?-u:\s*)(?:\(\d+(?:[-\x{2013}]\d+)?\))?(?-u:\s*):(?-u:\s*)\d+(?:(?-u:\s*)[-\x{2013}](?-u:\s*)\d+)?)\.?(?-u:\s*)$")
+        .unwrap()
+});
+
+/// See [`REFERENCE_AFTER_YEAR`]: the reference is `publishedIn`, where the journal's title was
+/// read as an author and its numbering dropped or left unparsed. Tried after IPNI's forms.
+fn strip_reference_after_year(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = REFERENCE_AFTER_YEAR.captures(&s) else {
+        return s;
+    };
+    ctx.name.set_published_in(java_trim(&caps[2]));
+    java_trim(&caps[1]).to_string()
 }
 
 // ---- Step 50: stripPeriodSeparatedReference ----
