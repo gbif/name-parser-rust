@@ -457,6 +457,7 @@ pub fn run(
 
     move_misspelling_note(&mut ctx.name);
     assemble::finish(&mut ctx, code_state);
+    reverse_zoological_ex(&mut ctx);
 
     if ctx.pending_year.is_some()
         && ctx.pending_year_from_publication
@@ -523,6 +524,79 @@ pub fn run(
 /// A note that a spelling is a misspelling, a lapsus or an error, perhaps of other authors:
 /// `auct. misspelling for 'immatura'`, `lapsus`, `auct. err.`, `Filograna auct. misspelling`,
 /// `species name widely misspelled as diagramma`.
+/// A year before an `ex` and none after it: `Walbaum, 1792 ex Klein`, `(Owen, 1833 ex Leach)`.
+/// Group 1 is the comma before the year, if any.
+static YEAR_BEFORE_EX: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(,?)(?-u:\s*)(?:1[5-9]\d\d|20[0-2]\d)\)?(?-u:\s*),?(?-u:\s+)ex\.?(?-u:\s+)\p{Lu}[^\d()]*\)?(?-u:\s*)$")
+        .unwrap()
+});
+
+/// A manuscript or letter cited after an ex-author: `ex Chiereghini ms`, `ex Forbes MS)`, `ex
+/// Mertens in litt.`
+static EX_MANUSCRIPT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s)ex\.?(?-u:\s+)[^()]*?(?-u:\s)(?:ms|MS|Ms|msc|mss|MSS|(?i:in(?-u:\s+)(?:litt?|sched))|i\.(?-u:\s?)l)(?-u:\b)")
+        .unwrap()
+});
+
+/// An `ex` citation published in the work of the author before the `ex`: `Bleeker ex Kuhl & van
+/// Hasselt in Bleeker, 1875`. Group 1 is the author before the `ex`, group 2 the work.
+static EX_IN_OWN_WORK: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"(\p{Lu}[\p{Ll}'\-]{2,})(?-u:\s*),?(?-u:\s+)ex\.?(?-u:\s+)[^()]*?(?-u:\s)in(?-u:\s+)(.+)$",
+    )
+    .unwrap()
+});
+
+/// #166: zoologists write the ex citation the other way round, `Author ex ExAuthor`, the author who
+/// published the name first. Where the authorship itself says so, the authors and ex-authors are
+/// swapped: a year before the `ex` and none after it (`Walbaum, 1792 ex Klein`) on a zoological
+/// name, or one whose code is unknown when the year follows a comma as zoologists cite it; or an
+/// `ex` published in the work of the author before it (`Bleeker ex Kuhl & van Hasselt in Bleeker,
+/// 1875`) on a zoological name. Botanists cite `Kützing, 1833 ex Ralfs`, the year the ex-author's,
+/// and `C.F.P. Martius ex J.G. Baker in C.F.P. Martius, 1873`, so both stay as they are under any
+/// other code. A manuscript cited after the ex-author is read so earlier, by StripAndStash.
+fn reverse_zoological_ex(ctx: &mut ParseContext) {
+    let zoological = match ctx.name.code {
+        Some(NomCode::Zoological) => true,
+        None => false,
+        Some(_) => return,
+    };
+    let Some(text) = [ctx.authorship_input.as_deref(), Some(ctx.original.as_str())]
+        .into_iter()
+        .flatten()
+        .find(|t| t.contains(" ex ") || t.contains(" ex. "))
+    else {
+        return;
+    };
+    // a manuscript after the ex-author was turned round by StripAndStash already
+    if EX_MANUSCRIPT.is_match(text) {
+        return;
+    }
+    let at = if let Some(caps) = YEAR_BEFORE_EX.captures(text) {
+        if !zoological && caps[1].is_empty() {
+            return;
+        }
+        caps.get(0).unwrap().start()
+    } else if let Some(caps) = EX_IN_OWN_WORK.captures(text) {
+        if !zoological || !caps[2].contains(&caps[1]) {
+            return;
+        }
+        caps.get(0).unwrap().start()
+    } else {
+        return;
+    };
+    // inside a bracket the ex citation is the basionym's
+    let before = &text[..at];
+    let authorship = if before.matches('(').count() > before.matches(')').count() {
+        &mut ctx.name.basionym_authorship
+    } else {
+        &mut ctx.name.combination_authorship
+    };
+    if !authorship.authors.is_empty() && !authorship.ex_authors.is_empty() {
+        std::mem::swap(&mut authorship.authors, &mut authorship.ex_authors);
+    }
+}
+
 static MISSPELLING_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"(?i)^(?:auctt?\.?(?-u:\s+))?(?:err\.|error|errore)(?:\W|$)|\b(?:misspel\w*|lapsus)\b",

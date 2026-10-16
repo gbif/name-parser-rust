@@ -6359,6 +6359,23 @@ pub(crate) fn strip_bracketed_manuscript_marker(s: &str, name: &mut ParsedName) 
             last = caps.get(4).unwrap().end();
             continue;
         }
+        // "(W. Thompson, 1840, ex Forbes MS)": Forbes's manuscript, the name Thompson's, as the
+        // zoologists write it (#166) — rewritten "(Forbes MS, W. Thompson, 1840)"; "MS" were the
+        // initials of "M.S.Forbes", and are after a dotted author ("Cuv. MS"), so "ms". A bare "(ex
+        // Kirby MS)" stays.
+        if inside && ex_said && open_at >= last && caps[4].trim_start() == ")" {
+            let content = &s[open_at + 1..marker.start()];
+            if let Some((pre, post)) = content.rsplit_once(" ex ") {
+                let pre = java_trim(pre).trim_end_matches(',');
+                if pre.chars().any(char::is_uppercase) && !post.contains(" ex ") {
+                    out.push_str(&s[last..=open_at]);
+                    out.push_str(&format!("{} ms, {pre}", java_trim(post)));
+                    out.push_str(&caps[4]);
+                    last = caps.get(4).unwrap().end();
+                    continue;
+                }
+            }
+        }
         if !inside || after_author || ex_said {
             continue;
         }
@@ -6414,6 +6431,14 @@ pub(crate) fn strip_trailing_manuscript_marker(s: &str, name: &mut ParsedName) -
     if let Some(caps) = MANUSCRIPT_MARKER.captures(s) {
         let whole = caps.get(0).unwrap();
         let tag = collapse_whitespace(&caps[1].to_lowercase());
+        // "Nardo, 1847 ex Chiereghini ms": the manuscript is the ex-author's, the one before it
+        // published the name, in the zoologists' order (#166) — written as "Stephens (ex Kirby MS)
+        // 1828" is, so neither the flag nor the note is set
+        if !tag.starts_with("ined") && tag != "unpublished" {
+            if let Some(ex) = EX_MANUSCRIPT_AUTHOR.captures(java_trim(&s[..whole.start()])) {
+                return format!("{} (ex {})", &ex[1], &ex[2]);
+            }
+        }
         name.manuscript = true;
         // once: sources repeat it in the separate authorship
         if !name
@@ -6429,6 +6454,14 @@ pub(crate) fn strip_trailing_manuscript_marker(s: &str, name: &mut ParsedName) -
     }
     s.to_string()
 }
+
+/// An authorship ending in "ex" and the author whose manuscript or letter a trailing marker cites:
+/// "Nardo, 1847 ex Chiereghini", "Grateloup ex Mertens". Group 1 is what precedes, ending in an
+/// author or a year, group 2 the ex-author.
+static EX_MANUSCRIPT_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*(?:\p{Lu}[\p{L}.'\-]*|\d{4}\)?))(?-u:\s+)ex\.?(?-u:\s+)(\p{Lu}[^()\d]*?)$")
+        .unwrap()
+});
 
 /// A trailing "ex" left without its author once a manuscript marker is removed. Rust-only.
 static DANGLING_EX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(?-u:\s+ex\.?)$").unwrap());
