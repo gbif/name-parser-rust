@@ -95,9 +95,10 @@ static INFRASPECIFIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         // (Breuning's "Eunidia simplex m. bifuscomaculata"), the botanists' monstrositas or
         // modificatio below the forma ("Phalaris canariensis L. m. bracteata Jansen & Wacht.") —
         // so it gets the rank they share; monstrositas and modificatio have none of their own.
-        // Not INFRASPECIFIC_NAME, which a zoological name turns into a subspecies. Not "mon" or
-        // "monstrositas", which are epithets too ("Euchroeus mon", "Chordeuma pallidum
-        // monstrositas Rothenbühler, 1899"); see [`needs_species_epithet`] for "m".
+        // Assemble makes a zoological one MORPH. Not INFRASPECIFIC_NAME, which a zoological name
+        // turns into a subspecies. Not "mon" or "monstrositas", which are epithets too
+        // ("Euchroeus mon", "Chordeuma pallidum monstrositas Rothenbühler, 1899"); see
+        // [`needs_species_epithet`] for "m".
         ("m", Rank::InfrasubspecificName),
         ("morpha", Rank::Morph),
         ("monstr", Rank::InfrasubspecificName),

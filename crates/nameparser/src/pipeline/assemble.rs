@@ -325,6 +325,15 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     {
         ctx.name.rank = Rank::Subgenus;
     }
+    // A zoological "m." is the morpha; the botanists' monstrositas and modificatio have no rank
+    // of their own. Rust-only.
+    if ctx.morpha_marker
+        && ctx.name.rank == Rank::InfrasubspecificName
+        && ctx.name.code == Some(NomCode::Zoological)
+        && ctx.name.infraspecific_epithet.is_some()
+    {
+        ctx.name.rank = Rank::Morph;
+    }
 
     // Step 14: suffix-based rank inference for monomials: use the explicitly-requested code
     // when provided, otherwise fall back to globally unambiguous suffixes only (-aceae,

@@ -116,6 +116,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     let mut marker_idx_in_epithets: i32 = -1;
     let mut inline_rank: Option<Rank> = None;
     let mut inline_rank_notho = false;
+    // the inline marker is "m.", a zoological name's morpha (see `ParseContext::morpha_marker`)
+    let mut inline_morpha = false;
     let mut indet = false;
     // a lone-letter species designation (`Collettea a`), see step 8 below
     let mut letter_designation = false;
@@ -744,6 +746,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         }
                         inline_rank = Some(rm_infra);
                         inline_rank_notho = notho_flag;
+                        inline_morpha = w.eq_ignore_ascii_case("m");
                         marker_idx_in_epithets = lower_epithets.len() as i32;
                         pending_mid_name_author = None;
                         i += 1;
@@ -799,6 +802,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         indet = true;
                         inline_rank = Some(rm_infra);
                         inline_rank_notho = notho_flag;
+                        inline_morpha = w.eq_ignore_ascii_case("m");
                         marker_idx_in_epithets = lower_epithets.len() as i32;
                         i += 1;
                         if i < ts.len() && ts[i].kind == TokenKind::Dot {
@@ -970,6 +974,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             infraspecific = Some(lower_epithets[midx].clone());
         }
         rank = inline_rank;
+        ctx.morpha_marker = inline_morpha;
         if lower_epithets.len() as i32 > marker_idx_in_epithets + 1 {
             let mut rem = String::new();
             for epithet in &lower_epithets[(midx + 1)..] {

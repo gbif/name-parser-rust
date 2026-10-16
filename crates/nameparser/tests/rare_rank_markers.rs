@@ -81,7 +81,7 @@ fn race_marker() {
 
 /// Markers below the subspecies in older literature: `m.` (morpha, monstrositas or modificatio),
 /// `monstr.`, `mod.`, `morpha`. `m.` used to be glued onto the species author as an initial or
-/// read as the epithet, the real epithet as an author.
+/// read as the epithet, the real epithet as an author. A zoological `m.` is the morpha.
 #[test]
 fn infrasubspecific_markers_of_older_literature() {
     // the stray "?." is dropped
@@ -95,16 +95,24 @@ fn infrasubspecific_markers_of_older_literature() {
         .specific_authors(None, &["L."])
         .comb_authors(None, &["Jansen", "Wacht."])
         .nothing_else();
-    // Breuning's morphae: not turned into a subspecies by the zoological code
+    // Breuning's morphae: under the zoological code "m." is the morpha
     assert_name("Eunidia simplex m. bifuscomaculata Breuning, 1957")
-        .infra_species(
-            "Eunidia",
-            "simplex",
-            Rank::InfrasubspecificName,
-            "bifuscomaculata",
-        )
+        .infra_species("Eunidia", "simplex", Rank::Morph, "bifuscomaculata")
         .comb_authors(Some("1957"), &["Breuning"])
         .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_code("Proetus midas m. elongatus", NomCode::Zoological)
+        .infra_species("Proetus", "midas", Rank::Morph, "elongatus")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // with no code it stays the shared rank
+    assert_name("Proetus midas m. elongatus")
+        .infra_species(
+            "Proetus",
+            "midas",
+            Rank::InfrasubspecificName,
+            "elongatus",
+        )
         .nothing_else();
     assert_name("Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.")
         .infra_species(
