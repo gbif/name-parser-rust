@@ -974,3 +974,55 @@ fn issue_134_australian_phrase_names_are_informal() {
         .type_(NameType::Informal)
         .nothing_else();
 }
+
+#[test]
+fn issue_123_a_shouted_common_name_is_no_author() {
+    // a common name in capitals and brackets on a taxon above the genus is removed, with a warning:
+    // it read as basionym authors, or as a subgenus
+    let clitellata = "(OLIGOCHAETE, LEECH AND BRANCHIOBDELLID)";
+    for (name, authorship, uninomial, rank, removed) in [
+        (
+            "Clitellata",
+            Some(clitellata),
+            "Clitellata",
+            Rank::Class,
+            clitellata,
+        ),
+        (
+            "Clitellata (OLIGOCHAETE, LEECH AND BRANCHIOBDELLID)",
+            None,
+            "Clitellata",
+            Rank::Class,
+            clitellata,
+        ),
+        (
+            "Dermestidae",
+            Some("(CARPET BEETLES)"),
+            "Dermestidae",
+            Rank::Family,
+            "(CARPET BEETLES)",
+        ),
+        (
+            "Thysanoptera",
+            Some("(THRIPS)"),
+            "Thysanoptera",
+            Rank::Order,
+            "(THRIPS)",
+        ),
+    ] {
+        assert_name_hinted(name, authorship, Some(rank), Some(NomCode::Zoological))
+            .monomial_rank(uninomial, rank)
+            .code(NomCode::Zoological)
+            .warning(&[&format!("{}{removed}", warnings::REMOVED_PREFIX)])
+            .nothing_else();
+    }
+    // without a rank, a family-group ending tells
+    assert_name("Formicidae (ANTS)")
+        .monomial("Formicidae")
+        .warning(&["Removed: (ANTS)"])
+        .nothing_else();
+    // on a genus a shouted bracket is a subgenus
+    assert_name("Tetramorium (XIPHOMYRMEX)")
+        .infrageneric_at("Tetramorium", Rank::InfragenericName, "XIPHOMYRMEX")
+        .nothing_else();
+}

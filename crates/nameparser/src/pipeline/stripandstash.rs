@@ -63,6 +63,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = apply_missing_genus_placeholder(ctx, s);
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_bracketed_genus_doubt(ctx, s);
+    s = strip_shouted_vernacular(ctx, s);
     s = stash_genus_designation(ctx, s);
     s = shorten_species_near(s);
     s = strip_rank_lineage(ctx, s);
@@ -1488,6 +1489,68 @@ fn stash_underscore_designation(ctx: &mut ParseContext, s: String) -> String {
     ctx.name.phrase = Some(caps[2].to_string());
     ctx.name.type_ = NameType::Informal;
     caps[1].to_string()
+}
+
+/// A common name in capitals and brackets after a uninomial, `Clitellata (OLIGOCHAETE, LEECH AND
+/// BRANCHIOBDELLID)`, `Formicidae (ANTS)`, `Dermestidae (CARPET BEETLES)` (#123): words of capitals,
+/// no digit. Group 1 is the bracket.
+static SHOUTED_VERNACULAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\(\p{Lu}[\p{Lu} ,&'\-]*\p{Lu}\))$").unwrap());
+
+/// A uninomial and a [`SHOUTED_VERNACULAR`] in the name string. Group 1 is the uninomial, 2 the
+/// bracket.
+static UNINOMIAL_SHOUTED_VERNACULAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)(\(\p{Lu}[\p{Lu} ,&'\-]*\p{Lu}\))(?-u:\s*)$").unwrap()
+});
+
+/// The endings of a family-group or higher name, by which a uninomial is above the genus without a
+/// rank to say so.
+static SUPRAGENERIC_ENDING: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?:idae|inae|oidea|oideae|aceae|ales|ineae|ptera|poda|phyta|mycetes|phyceae)$")
+        .unwrap()
+});
+
+/// A [`SHOUTED_VERNACULAR`] is no basionym author (ICZN Art. 51.3 brackets only species-group
+/// authors) and no subgenus when the uninomial is above the genus, by its rank or its ending: it is
+/// removed with a warning. On a genus a shouted bracket stays, a subgenus (`Tetramorium
+/// (XIPHOMYRMEX)`) or an author.
+fn is_vernacular_bracket_of(ctx: &ParseContext, uninomial: &str) -> bool {
+    match ctx.requested_rank {
+        Some(r) if r.not_other_or_unranked() => r.is_suprageneric(),
+        _ => SUPRAGENERIC_ENDING.is_match(uninomial),
+    }
+}
+
+/// See [`UNINOMIAL_SHOUTED_VERNACULAR`].
+fn strip_shouted_vernacular(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = UNINOMIAL_SHOUTED_VERNACULAR.captures(&s) else {
+        return s;
+    };
+    if !is_vernacular_bracket_of(ctx, &caps[1]) {
+        return s;
+    }
+    ctx.name
+        .add_warning(&format!("{}{}", warnings::REMOVED_PREFIX, &caps[2]));
+    caps[1].to_string()
+}
+
+/// A separately supplied authorship that is a [`SHOUTED_VERNACULAR`] of a uninomial above the genus
+/// (`Clitellata` + `(OLIGOCHAETE, LEECH AND BRANCHIOBDELLID)`): removed with a warning, returns
+/// `true`.
+pub(crate) fn strip_shouted_vernacular_authorship(
+    ctx: &mut ParseContext,
+    authorship: &str,
+) -> bool {
+    let a = java_trim(authorship);
+    let Some(uninomial) = ctx.name.uninomial.clone() else {
+        return false;
+    };
+    if !SHOUTED_VERNACULAR.is_match(a) || !is_vernacular_bracket_of(ctx, &uninomial) {
+        return false;
+    }
+    ctx.name
+        .add_warning(&format!("{}{a}", warnings::REMOVED_PREFIX));
+    true
 }
 
 /// A separately supplied authorship that is nothing but a bracketed family-group name

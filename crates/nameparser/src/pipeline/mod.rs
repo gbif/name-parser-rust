@@ -621,7 +621,7 @@ fn restore_lost_letters(ctx: &mut ParseContext) {
 /// Runs a separately supplied authorship through the name string's annotation steps and the
 /// authorship parser onto `ctx` (see the comment at the call site in [`run`]). Returns its parsed
 /// state, or `None` when nothing was left to parse as an authorship: a placeholder, a bracketed
-/// family-group authorship, or one an informal name's phrase took.
+/// family-group authorship or common name, or one an informal name's phrase took.
 fn parse_separate_authorship(ctx: &mut ParseContext, authorship: String) -> Option<AuthState> {
     // a placeholder ("Missing", "Not specified") is dropped first, so it never reaches the
     // phrase of a provisional name or the authorship parser
@@ -630,6 +630,7 @@ fn parse_separate_authorship(ctx: &mut ParseContext, authorship: String) -> Opti
     let authorship = stripandstash::strip_authorship_leading_qualifier(&authorship, &mut ctx.name);
     if !authorship.chars().all(crate::token::is_whitespace_java)
         && !stripandstash::stash_bracketed_family_group_authorship(&authorship, &mut ctx.name)
+        && !stripandstash::strip_shouted_vernacular_authorship(ctx, &authorship)
         && !append_authorship_to_phrase(&authorship, &mut ctx.name)
     {
         let auth_clean = stripandstash::strip_authorship_leading_steps(ctx, authorship);
