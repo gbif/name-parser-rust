@@ -196,6 +196,7 @@ fn names_with_an_unparsed_tail() {
         .published_in("De Amicis, 1885")
         .published_in_year(Some(1885))
         .sensu("vide Neviani (1900)")
+        .comb_in_authors(&["De Amicis"])
         .nothing_else();
 }
 
@@ -758,6 +759,7 @@ fn bacterial_genus() {
         .published_in("Hauduroy 1937")
         .published_in_year(Some(1937))
         .code(NomCode::Botanical)
+        .comb_in_authors(&["Hauduroy"])
         .nothing_else();
 }
 

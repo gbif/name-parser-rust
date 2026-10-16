@@ -46,6 +46,7 @@ fn separate_authorship_in_citation_goes_to_published_in() {
         .comb_authors(Some("1883"), &["Grunow"])
         .published_in("Van Heurck, 1883")
         .published_in_year(Some(1883))
+        .comb_in_authors(&["Van Heurck"])
         .nothing_else();
 }
 
@@ -58,11 +59,13 @@ fn the_host_team_does_not_become_authors_of_the_name() {
     .published_in("Cuvier & Valenciennes, 1850")
     .published_in_year(Some(1850))
     .comb_authors(Some("1850"), &["Valenciennes"])
+    .comb_in_authors(&["Cuvier", "Valenciennes"])
     .nothing_else();
     assert_authorship("Hustedt in Schmidt et al., 1925", &["Hustedt"])
         .published_in("Schmidt et al., 1925")
         .comb_authors(Some("1925"), &["Hustedt"])
         .published_in_year(Some(1925))
+        .comb_in_authors(&["Schmidt", "al."])
         .nothing_else();
     assert_authorship("Nees & Mart. in Nova Acta", &["Nees", "Mart."])
         .published_in("Nova Acta")
@@ -76,16 +79,19 @@ fn an_abbreviated_author_keeps_its_own_name() {
     assert_authorship("Trel. in J.F.Macbr.", &["Trel."])
         .published_in("J.F.Macbr.")
         .comb_authors(None, &["Trel."])
+        .comb_in_authors(&["J.F.Macbr."])
         .nothing_else();
     // Was `D.C.Benth.in` ex Pohl: the host `DC.` was read as the initials of `Benth.in`.
     assert_ex_authorship("Pohl ex Benth. in DC.", Some("Pohl"), &["Benth."])
         .published_in("DC.")
         .comb_authors(None, &["Benth."])
         .comb_ex_authors(&["Pohl"])
+        .comb_in_authors(&["DC."])
         .nothing_else();
     assert_authorship("Müll.Arg. in DC.", &["Müll.Arg."])
         .published_in("DC.")
         .comb_authors(None, &["Müll.Arg."])
+        .comb_in_authors(&["DC."])
         .nothing_else();
 }
 
@@ -128,6 +134,7 @@ fn a_redundant_authorship_does_not_repeat_the_reference() {
     .comb_authors(Some("1883"), &["Grunow"])
     .published_in("Van Heurck, 1883")
     .published_in_year(Some(1883))
+    .comb_in_authors(&["Van Heurck"])
     .nothing_else();
 
     // The copies need not be identical: 5,514 distinct ChecklistBank names repeat the citation
@@ -140,6 +147,7 @@ fn a_redundant_authorship_does_not_repeat_the_reference() {
     .comb_authors(Some("1792"), &["Hwass"])
     .published_in("Bruguiere, 1792")
     .published_in_year(Some(1792))
+    .comb_in_authors(&["Bruguiere"])
     .nothing_else();
     // the combination's in-citation is the name's publication, not the basionym's
     assert_name_auth(
@@ -151,6 +159,8 @@ fn a_redundant_authorship_does_not_repeat_the_reference() {
     .comb_authors(None, &["P.B.Ham."])
     .published_in("Hamilton, Poulin, Charles & Angell")
     .code(NomCode::Botanical)
+    .comb_in_authors(&["Hamilton", "Poulin", "Charles", "Angell"])
+    .bas_in_authors(&["Van Heurck"])
     .nothing_else();
 }
 
@@ -162,6 +172,7 @@ fn a_capitalised_or_bracketed_in_is_a_citation_too() {
         .comb_authors(Some("1819"), &["Leach"])
         .published_in("Bowdich, 1819")
         .published_in_year(Some(1819))
+        .comb_in_authors(&["Bowdich"])
         .nothing_else();
     assert_name("Zornia diphylla var. leptophylla Benth. In Mart. Fl. Bras.")
         .infra_species("Zornia", "diphylla", Rank::Variety, "leptophylla")
@@ -178,6 +189,7 @@ fn a_capitalised_or_bracketed_in_is_a_citation_too() {
         .species("Glycine", "debilis")
         .comb_authors(None, &["Dryander"])
         .published_in("Aiton")
+        .comb_in_authors(&["Aiton"])
         .nothing_else();
 }
 
@@ -192,12 +204,14 @@ fn an_in_citation_in_its_own_bracket() {
     .comb_authors(Some("1999"), &["Reid"])
     .published_in("Reid, Strayer, McArthur, Stibbe & Lewis, 1999")
     .published_in_year(Some(1999))
+    .comb_in_authors(&["Reid", "Strayer", "McArthur", "Stibbe", "Lewis"])
     .nothing_else();
     assert_name_auth("Nirmus anagrapsus", "Nitzsch (in Giebel), 1866")
         .species("Nirmus", "anagrapsus")
         .comb_authors(Some("1866"), &["Nitzsch"])
         .published_in("Giebel, 1866")
         .published_in_year(Some(1866))
+        .comb_in_authors(&["Giebel"])
         .nothing_else();
     // NCBI's higher taxon of a homonym is no citation
     assert_informal("Bostrychia sp. (in: Rhodophyta)")
@@ -206,4 +220,190 @@ fn an_in_citation_in_its_own_bracket() {
         .rank(Rank::Species)
         .phrase("sp. (in: Rhodophyta)")
         .nothing_else();
+}
+
+// ---- in-authors (#172) ------------------------------------------------------------------------
+//
+// The authors of the work an `in` citation names are the in-authors of the authorship that cites
+// it, the combination's or the basionym's (name-parser-api 5.6 `Authorship.inAuthors`): a name is
+// cited by its author or by the work's, "Natterer in Kuhl, 1817" or "Kuhl, 1817". Only an author
+// team gets them, a reference does not; `publishedIn` keeps the whole citation either way.
+
+#[test]
+fn in_authors_of_the_combination_and_the_basionym() {
+    assert_name("Pipistrellus kuhlii (Natterer in Kuhl, 1817)")
+        .species("Pipistrellus", "kuhlii")
+        .bas_authors(Some("1817"), &["Natterer"])
+        .bas_in_authors(&["Kuhl"])
+        .published_in("Kuhl, 1817")
+        .published_in_year(Some(1817))
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Atriplex prostrata Boucher ex DC. in Lam. & DC.")
+        .species("Atriplex", "prostrata")
+        .comb_authors(None, &["DC."])
+        .comb_ex_authors(&["Boucher"])
+        .comb_in_authors(&["Lam.", "DC."])
+        .published_in("Lam. & DC.")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Navicula cryptocephala Grunow in Van Heurck, 1883")
+        .species("Navicula", "cryptocephala")
+        .comb_authors(Some("1883"), &["Grunow"])
+        .comb_in_authors(&["Van Heurck"])
+        .published_in("Van Heurck, 1883")
+        .published_in_year(Some(1883))
+        .nothing_else();
+    assert_name("Achnanthes brevipes var. intermedia (Kützing) Cleve in Cleve & Grunow, 1880")
+        .infra_species("Achnanthes", "brevipes", Rank::Variety, "intermedia")
+        .bas_authors(None, &["Kützing"])
+        .comb_authors(Some("1880"), &["Cleve"])
+        .comb_in_authors(&["Cleve", "Grunow"])
+        .published_in("Cleve & Grunow, 1880")
+        .published_in_year(Some(1880))
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // the basionym's, while the combination has none
+    assert_name("Nitzschia sigma (Grunow in Van Heurck) W.Sm.")
+        .species("Nitzschia", "sigma")
+        .bas_authors(None, &["Grunow"])
+        .bas_in_authors(&["Van Heurck"])
+        .comb_authors(None, &["W.Sm."])
+        .published_in("Van Heurck")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Amphora ovalis (Kütz.) Kütz. in Rabenh.")
+        .species("Amphora", "ovalis")
+        .bas_authors(None, &["Kütz."])
+        .comb_authors(None, &["Kütz."])
+        .comb_in_authors(&["Rabenh."])
+        .published_in("Rabenh.")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // both: the basionym's host is no longer lost to the combination's citation
+    assert_name("Aus bus (Smith in Jones, 1900) Brown in Miller, 1920")
+        .species("Aus", "bus")
+        .bas_authors(Some("1900"), &["Smith"])
+        .bas_in_authors(&["Jones"])
+        .comb_authors(Some("1920"), &["Brown"])
+        .comb_in_authors(&["Miller"])
+        .published_in("Miller, 1920")
+        .published_in_year(Some(1920))
+        .nothing_else();
+}
+
+#[test]
+fn in_authors_of_large_teams() {
+    assert_name("Navicula hustedtii Hustedt in Schmidt et al., 1925")
+        .species("Navicula", "hustedtii")
+        .comb_authors(Some("1925"), &["Hustedt"])
+        .comb_in_authors(&["Schmidt", "al."])
+        .published_in("Schmidt et al., 1925")
+        .published_in_year(Some(1925))
+        .nothing_else();
+    assert_name_auth(
+        "Aus bus",
+        "Cavalier-Smith & Bass in Bass, Chao, Nikolaev, Yabuki, Ishida, Berney, Pakzad, Wylezich & \
+         Cavalier-Smith, 2009",
+    )
+    .species("Aus", "bus")
+    .comb_authors(Some("2009"), &["Cavalier-Smith", "Bass"])
+    .comb_in_authors(&[
+        "Bass",
+        "Chao",
+        "Nikolaev",
+        "Yabuki",
+        "Ishida",
+        "Berney",
+        "Pakzad",
+        "Wylezich",
+        "Cavalier-Smith",
+    ])
+    .published_in(
+        "Bass, Chao, Nikolaev, Yabuki, Ishida, Berney, Pakzad, Wylezich & Cavalier-Smith, 2009",
+    )
+    .published_in_year(Some(2009))
+    .nothing_else();
+    // the editors of a work are the authors it is cited by
+    assert_name_auth(
+        "Allomalia gemmaria",
+        "Alonso-Zarazaga in Löbl & Smetana (eds.), 2011",
+    )
+    .species("Allomalia", "gemmaria")
+    .comb_authors(Some("2011"), &["Alonso-Zarazaga"])
+    .comb_in_authors(&["Löbl", "Smetana"])
+    .published_in("Löbl & Smetana (eds.), 2011")
+    .published_in_year(Some(2011))
+    .nothing_else();
+    // Linnaeus, the one author cited by a single letter
+    assert_name_auth("Aecidium berberidis", "J.F. Gmelin in L.")
+        .species("Aecidium", "berberidis")
+        .comb_authors(None, &["J.F.Gmelin"])
+        .comb_in_authors(&["L."])
+        .published_in("L.")
+        .nothing_else();
+}
+
+#[test]
+fn a_reference_has_no_in_authors() {
+    assert_name("Abies alba Mill. in Gard. Dict. ed. 8: no. 1. 1768")
+        .species("Abies", "alba")
+        .comb_authors(Some("1768"), &["Mill."])
+        .published_in("Gard. Dict. ed. 8: no. 1. 1768")
+        .published_in_year(Some(1768))
+        .nothing_else();
+    assert_name("Puffinus lherminieri Lesson, 1839 in Ann. Sci. Nat.")
+        .species("Puffinus", "lherminieri")
+        .comb_authors(Some("1839"), &["Lesson"])
+        .published_in("Ann. Sci. Nat.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Rhizoclonium hieroglyphicum (C.Agardh) Kütz. in Phycol. Germ.")
+        .species("Rhizoclonium", "hieroglyphicum")
+        .bas_authors(None, &["C.Agardh"])
+        .comb_authors(None, &["Kütz."])
+        .published_in("Phycol. Germ.")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Adelium cupreum", "Gray in Griffith's Cuvier 1832")
+        .species("Adelium", "cupreum")
+        .comb_authors(Some("1832"), &["Gray"])
+        .published_in("Griffith's Cuvier 1832")
+        .published_in_year(Some(1832))
+        .nothing_else();
+    // a contribution to a contribution: whose work is meant is left open
+    assert_name_auth("Achnanthes obtusa", "Ehrenberg in Ralfs in Pritchard, 1861")
+        .species("Achnanthes", "obtusa")
+        .comb_authors(Some("1861"), &["Ehrenberg"])
+        .published_in("Ralfs in Pritchard, 1861")
+        .published_in_year(Some(1861))
+        .nothing_else();
+    // a bare initial is no author
+    assert_name_auth("Alauda bilopha", "Temminck in T. & Laugier 1823")
+        .species("Alauda", "bilopha")
+        .comb_authors(Some("1823"), &["Temminck"])
+        .published_in("T. & Laugier 1823")
+        .published_in_year(Some(1823))
+        .nothing_else();
+}
+
+#[test]
+fn in_authors_alike_on_both_paths() {
+    for (name, authorship) in [
+        ("Pipistrellus kuhlii", "(Natterer in Kuhl, 1817)"),
+        ("Atriplex prostrata", "Boucher ex DC. in Lam. & DC."),
+        ("Navicula cryptocephala", "Grunow in Van Heurck, 1883"),
+        ("Nitzschia sigma", "(Grunow in Van Heurck) W.Sm."),
+        ("Amphora ovalis", "(Kütz.) Kütz. in Rabenh."),
+        ("Aus bus", "(Smith in Jones, 1900) Brown in Miller, 1920"),
+        ("Abies alba", "Mill. in Gard. Dict. ed. 8: no. 1. 1768"),
+        ("Puffinus lherminieri", "Lesson, 1839 in Ann. Sci. Nat."),
+        ("Navicula hustedtii", "Hustedt in Schmidt et al., 1925"),
+        (
+            "Rheocyclops carolinianus",
+            "Reid (in: Reid, Strayer, McArthur, Stibbe & Lewis), 1999",
+        ),
+    ] {
+        assert_paths_agree(name, authorship);
+    }
 }

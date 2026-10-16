@@ -39,7 +39,8 @@ A name is parsed into one of three results:
 
 The authorship of a name is split in two: the **combination** authorship and the **basionym**
 authorship, the author of the original name, cited in brackets. Each holds the `authors`, the
-`exAuthors` (who proposed a name someone else published), the `year`, an `imprintYear`, the flags
+`exAuthors` (who proposed a name someone else published), the `inAuthors` (the authors of the
+work it was published in), the `year`, an `imprintYear`, the flags
 `bracketedYear` and `anonymous`, and in mycology a `sanctioningAuthor`. The author of the species
 in an infraspecific name, and the author of the genus in an infrageneric one, are kept apart as
 `specificAuthorship` and `genericAuthorship`.
@@ -64,6 +65,9 @@ def authorship_line(label: str, a: dict) -> str | None:
     ex = a.get("exAuthors") or []
     if ex:
         parts.append("ex " + ", ".join(code(x) for x in ex))
+    in_authors = a.get("inAuthors") or []
+    if in_authors:
+        parts.append("in " + ", ".join(code(x) for x in in_authors))
     if a.get("year"):
         parts.append("year " + code(a["year"]))
     if a.get("bracketedYear"):

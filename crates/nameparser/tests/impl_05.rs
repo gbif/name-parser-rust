@@ -65,6 +65,7 @@ fn in_author_inside_basionym() {
         .code(NomCode::Zoological)
         .published_in("Fourcroy, 1785")
         .published_in_year(Some(1785))
+        .bas_in_authors(&["Fourcroy"])
         .nothing_else();
 }
 

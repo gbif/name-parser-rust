@@ -75,10 +75,13 @@ Symphoricarpos sp. cv. 'mother of pearl'
 Rhododendron Loderi Group
 
 ## Authors
-> Authors are kept as written, with spacing around initials and dots normalised. Ex-authors proposed a name someone else published, an `in` citation goes to `publishedIn`. Particles, filius and all-capital names get their usual form.
+> Authors are kept as written, with spacing around initials and dots normalised. Ex-authors proposed a name someone else published. An `in` citation goes to `publishedIn`, and when it names an author team rather than a reference, its authors are the `inAuthors` of the combination or the basionym. Particles, filius and all-capital names get their usual form.
 Acacia aneura F.Muell. ex Benth.
 Festuca pachyphylla	Degen ex Nyár. ex Csürös, Gergely & Pop  # a chain of ex-authors
 Pisania billehousti Souverbie, in Souverbie and Montrouzier, 1864
+Pipistrellus kuhlii	(Natterer in Kuhl, 1817)  # the basionym's in-author
+Atriplex prostrata	Boucher ex DC. in Lam. & DC.
+Abies alba Mill. in Gard. Dict. ed. 8: no. 1. 1768  # a reference, no in-authors
 Conus textile Linnaeus, 1758
 Rotalina cultrata d'Orb. 1840
 Oxyporus Fabricius, 1775

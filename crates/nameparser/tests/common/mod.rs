@@ -396,8 +396,12 @@ enum Np {
     Sic,
     Auth,
     ExAuth,
+    /// The in-authors of the combination's `in` citation.
+    InAuth,
     Bas,
     ExBas,
+    /// The in-authors of the basionym's `in` citation.
+    BasInAuth,
     /// The combination half of `generic_authorship`.
     GenericComb,
     /// The basionym half of `generic_authorship`.
@@ -608,6 +612,18 @@ impl NameAssertion {
     pub fn comb_ex_authors(self, authors: &[&str]) -> Self {
         assert_eq!(self.n.combination_authorship.ex_authors, str_vec(authors));
         self.mark(&[Np::ExAuth])
+    }
+
+    /// The authors of the work the combination was published in: `Kuhl` of "Natterer in Kuhl".
+    pub fn comb_in_authors(self, authors: &[&str]) -> Self {
+        assert_eq!(self.n.combination_authorship.in_authors, str_vec(authors));
+        self.mark(&[Np::InAuth])
+    }
+
+    /// The authors of the work the basionym was published in: `Jones` of "(Smith in Jones, 1900)".
+    pub fn bas_in_authors(self, authors: &[&str]) -> Self {
+        assert_eq!(self.n.basionym_authorship.in_authors, str_vec(authors));
+        self.mark(&[Np::BasInAuth])
     }
 
     pub fn bas_authors(self, year: Option<&str>, authors: &[&str]) -> Self {
@@ -1033,6 +1049,7 @@ impl NameAssertion {
             combination_authorship,
             untested(Np::Auth),
             untested(Np::ExAuth),
+            untested(Np::InAuth),
             untested(Np::ImprintYear),
             untested(Np::BracketedYear),
             untested(Np::Sanct),
@@ -1042,6 +1059,7 @@ impl NameAssertion {
             basionym_authorship,
             untested(Np::Bas),
             untested(Np::ExBas),
+            untested(Np::BasInAuth),
             untested(Np::BasImprintYear),
             untested(Np::BasBracketedYear),
             untested(Np::BasSanct),
@@ -1125,13 +1143,15 @@ impl NameAssertion {
 }
 
 /// [`NameAssertion::nothing_else`] for one [`Authorship`]: the authors/year/anonymous flag, the
-/// ex-authors, the imprint year and the sanctioning author are each at their default unless an
-/// assertion covered them.
+/// ex-authors, the in-authors, the imprint year and the sanctioning author are each at their default
+/// unless an assertion covered them.
+#[allow(clippy::too_many_arguments)]
 fn check_authorship_default(
     label: &str,
     a: &Authorship,
     main_untested: bool,
     ex_untested: bool,
+    in_untested: bool,
     imprint_untested: bool,
     bracketed_untested: bool,
     sanct_untested: bool,
@@ -1139,6 +1159,7 @@ fn check_authorship_default(
     let Authorship {
         authors,
         ex_authors,
+        in_authors,
         year,
         imprint_year,
         bracketed_year,
@@ -1166,6 +1187,12 @@ fn check_authorship_default(
         assert!(
             ex_authors.is_empty(),
             "unexpected {label} exAuthors: {ex_authors:?}"
+        );
+    }
+    if in_untested {
+        assert!(
+            in_authors.is_empty(),
+            "unexpected {label} inAuthors: {in_authors:?}"
         );
     }
     if imprint_untested {
@@ -1211,6 +1238,7 @@ fn check_combined_authorship_default(
             a,
             untested,
             ex_untested,
+            true,
             true,
             true,
             true,
@@ -1602,6 +1630,9 @@ impl NameAssertion {
         if untested(Np::ExAuth) && !a.ex_authors.is_empty() {
             out.push(format!(".comb_ex_authors({})", lits(&a.ex_authors)));
         }
+        if untested(Np::InAuth) && !a.in_authors.is_empty() {
+            out.push(format!(".comb_in_authors({})", lits(&a.in_authors)));
+        }
         if untested(Np::ImprintYear) {
             if let Some(y) = &a.imprint_year {
                 out.push(format!(".imprint_year({})", lit(y)));
@@ -1622,6 +1653,9 @@ impl NameAssertion {
                 opt_lit(&b.year),
                 lits(&b.ex_authors)
             ));
+        }
+        if untested(Np::BasInAuth) && !b.in_authors.is_empty() {
+            out.push(format!(".bas_in_authors({})", lits(&b.in_authors)));
         }
         if untested(Np::BasImprintYear) {
             if let Some(y) = &b.imprint_year {

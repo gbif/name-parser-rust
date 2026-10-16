@@ -95,6 +95,10 @@ def _assert_getters_match_to_dict(name: str, pn: "nameparser.ParsedName", d: dic
             f"{name!r}: pn.{attr}.ex_authors = {authorship.ex_authors!r} but "
             f"to_dict()[{wire_key!r}]['exAuthors'] = {sub.get('exAuthors')!r}"
         )
+        assert authorship.in_authors == sub.get("inAuthors", []), (
+            f"{name!r}: pn.{attr}.in_authors = {authorship.in_authors!r} but "
+            f"to_dict()[{wire_key!r}]['inAuthors'] = {sub.get('inAuthors')!r}"
+        )
         assert authorship.year == sub.get("year"), (
             f"{name!r}: pn.{attr}.year = {authorship.year!r} but "
             f"to_dict()[{wire_key!r}]['year'] = {sub.get('year')!r}"
@@ -138,6 +142,7 @@ EXPLICIT_SAMPLE: list[str] = [
     "Vulpes vulpes silaceus Miller, 1907",  # combination_authorship (authors + year)
     "Rhinobatos typus (Anonymous [Bennett], 1830)",  # anonymous basionym, attributed author
     "Acleris aspersana (Hübner, [1819])",  # bracketed basionym year
+    "Aus bus (Smith in Jones, 1900) Brown in Miller, 1920",  # in-authors on both authorships
 ]
 
 # Cap on the sample size — "~50" per the brief. The 5 small, curated corpora

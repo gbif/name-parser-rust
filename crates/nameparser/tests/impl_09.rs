@@ -564,6 +564,7 @@ fn test_nomenclatural_notes_pattern() {
     .comb_authors(Some("1935"), &["R.Richter", "E.Richter"])
     .published_in("Sampelayo 1935")
     .published_in_year(Some(1935))
+    .comb_in_authors(&["Sampelayo"])
     .nothing_else();
     assert_nom_note("nom. illeg.", "Hallo (nom.illeg.)")
         .monomial_rank("Hallo", Rank::Unranked)

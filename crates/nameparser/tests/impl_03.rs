@@ -227,12 +227,14 @@ fn in_references() {
         .species("Xolisma", "turquini")
         .comb_authors(None, &["Small"])
         .published_in("Britton & Wilson")
+        .comb_in_authors(&["Britton", "Wilson"])
         .nothing_else();
 
     assert_name("Negundo aceroides var. violaceum G.Kirchn. in Petzold & G.Kirchn.")
         .infra_species("Negundo", "aceroides", Rank::Variety, "violaceum")
         .comb_authors(None, &["G.Kirchn."])
         .published_in("Petzold & G.Kirchn.")
+        .comb_in_authors(&["Petzold", "G.Kirchn."])
         .nothing_else();
 
     assert_name("Abies denheyeri Eghbalian, Khanjani and Ueckermann in Eghbalian, Khanjani & Ueckermann, 2017")
@@ -240,6 +242,7 @@ fn in_references() {
         .comb_authors(Some("2017"), &["Eghbalian", "Khanjani", "Ueckermann"])
         .published_in("Eghbalian, Khanjani & Ueckermann, 2017")
         .published_in_year(Some(2017))
+        .comb_in_authors(&["Eghbalian", "Khanjani", "Ueckermann"])
         .nothing_else();
 
     assert_name("Mica Budde-Lund in Voeltzkow, 1908")
@@ -247,6 +250,7 @@ fn in_references() {
         .comb_authors(Some("1908"), &["Budde-Lund"])
         .published_in("Voeltzkow, 1908")
         .published_in_year(Some(1908))
+        .comb_in_authors(&["Voeltzkow"])
         .nothing_else();
 }
 
@@ -594,6 +598,7 @@ fn placeholder() {
     .warning(&[warnings::MISSING_GENUS])
     .published_in_year(Some(2017))
     .type_(NameType::Placeholder)
+    .comb_in_authors(&["Eghbalian", "Khanjani", "Ueckermann"])
     .nothing_else();
 
     assert_unparsable("\"? gryphoidis", NameType::Placeholder);

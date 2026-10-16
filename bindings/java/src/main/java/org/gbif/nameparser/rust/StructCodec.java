@@ -135,10 +135,10 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 7) {
+    if (abi != 8) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 7 -- rebuild the cdylib "
+              + ", StructCodec was written against 8 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
@@ -315,7 +315,7 @@ final class StructCodec {
   static ParsedName decode(MemorySegment seg, int len) {
     // Reject a buffer too small to even hold the fixed header + string-table region before any
     // fixed-offset read below can walk past the reported length. Every legitimate success-path
-    // buffer is >= 216 bytes (RUN_SLOTS_OFFSET is 184), so this only ever fires on a
+    // buffer is >= 224 bytes (RUN_SLOTS_OFFSET is 184), so this only ever fires on a
     // corrupt/truncated buffer -- and makes the fixed-region reads that follow safe by construction.
     if (len < RUN_SLOTS_OFFSET) {
       throw new IllegalStateException("corrupt struct buffer: reported length " + len
@@ -381,6 +381,9 @@ final class StructCodec {
       eqValues[i] = value;
       cur.pos += EPITHET_QUALIFIER_ENTRY_SIZE;
     }
+    // ABI 8: the in-authors of the combination and the basionym, after the epithet qualifier
+    List<String> inAuthorsComb = readStringRunOrNull(seg, cur, len, "combination in-authors");
+    List<String> inAuthorsBas = readStringRunOrNull(seg, cur, len, "basionym in-authors");
 
     CombinedAuthorship genericAuthorship = readNestedGroup(seg, cur, len);
     CombinedAuthorship specificAuthorship = readNestedGroup(seg, cur, len);
@@ -438,10 +441,10 @@ final class StructCodec {
       pn.setEpithetQualifier(enumByOrdinal(NamePart.values(), eqParts[i], "epithetQualifier namePart"), eqValues[i]);
     }
 
-    pn.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, strings[SLOT_YEAR_COMB],
+    pn.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, inAuthorsComb, strings[SLOT_YEAR_COMB],
         strings[SLOT_IMPRINT_YEAR_COMB], (authorshipFlags & BRACKETED_YEAR_COMBINATION_BIT) != 0,
         (authorshipFlags & ANON_COMBINATION_BIT) != 0, strings[SLOT_SANCTIONING_AUTHOR_COMB]));
-    pn.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, strings[SLOT_YEAR_BAS],
+    pn.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, inAuthorsBas, strings[SLOT_YEAR_BAS],
         strings[SLOT_IMPRINT_YEAR_BAS], (authorshipFlags & BRACKETED_YEAR_BASIONYM_BIT) != 0,
         (authorshipFlags & ANON_BASIONYM_BIT) != 0, strings[SLOT_SANCTIONING_AUTHOR_BAS]));
 
@@ -511,6 +514,16 @@ final class StructCodec {
     return out;
   }
 
+  /** {@link #readStringRun}, but {@code null} for an empty run (a lone zero count): a list the
+   *  {@link Authorship} keeps null until set, so a name without any allocates none. */
+  private static List<String> readStringRunOrNull(MemorySegment seg, Cursor cur, int len, String slot) {
+    if (seg.get(LE_INT, cur.pos) == 0) {
+      cur.pos += 4;
+      return null;
+    }
+    return readStringRun(seg, cur, len, slot);
+  }
+
   /** Validates a wire-read {@code count} of fixed-size entries fits the bytes remaining in the
    *  reported buffer BEFORE it is used to size any allocation. {@code entryBytes} is the minimum
    *  on-wire size of one entry ({@link #STRING_REF_SIZE} for a plain string ref,
@@ -542,7 +555,7 @@ final class StructCodec {
 
   /** Reads one nested authorship group ({@code generic_authorship}/{@code specific_authorship})
    *  at {@code cur.pos}, advancing past it: a {@code present} flag, and -- only if present -- the
-   *  anonymous flags, four run-slot tables and six fixed string refs, reconstructed here as a
+   *  anonymous flags, six run-slot tables and six fixed string refs, reconstructed here as a
    *  whole {@link CombinedAuthorship}. Returns {@code null} for an absent group. */
   private static CombinedAuthorship readNestedGroup(MemorySegment seg, Cursor cur, int len) {
     int present = seg.get(LE_INT, cur.pos);
@@ -561,6 +574,8 @@ final class StructCodec {
     List<String> exAuthorsComb = readStringRun(seg, cur, len, "nested combination ex-authors");
     List<String> authorsBas = readStringRun(seg, cur, len, "nested basionym authors");
     List<String> exAuthorsBas = readStringRun(seg, cur, len, "nested basionym ex-authors");
+    List<String> inAuthorsComb = readStringRunOrNull(seg, cur, len, "nested combination in-authors");
+    List<String> inAuthorsBas = readStringRunOrNull(seg, cur, len, "nested basionym in-authors");
 
     String yearComb = readOptString(seg, cur.pos);
     cur.pos += STRING_REF_SIZE;
@@ -576,10 +591,10 @@ final class StructCodec {
     cur.pos += STRING_REF_SIZE;
 
     CombinedAuthorship ca = new CombinedAuthorship();
-    ca.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, yearComb, imprintYearComb,
+    ca.setCombinationAuthorship(authorship(authorsComb, exAuthorsComb, inAuthorsComb, yearComb, imprintYearComb,
         (flags & BRACKETED_YEAR_COMBINATION_BIT) != 0, (flags & ANON_COMBINATION_BIT) != 0,
         sanctioningAuthorComb));
-    ca.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, yearBas, imprintYearBas,
+    ca.setBasionymAuthorship(authorship(authorsBas, exAuthorsBas, inAuthorsBas, yearBas, imprintYearBas,
         (flags & BRACKETED_YEAR_BASIONYM_BIT) != 0, (flags & ANON_BASIONYM_BIT) != 0,
         sanctioningAuthorBas));
     return ca;
@@ -587,11 +602,13 @@ final class StructCodec {
 
   /** Builds an {@link Authorship} via its plain setters -- NOT {@code addAuthor}/{@code
    *  addExAuthor}, which have an inverted-blank-check bug making them no-ops for real authors. */
-  private static Authorship authorship(List<String> authors, List<String> exAuthors, String year, String imprintYear,
-                                       boolean bracketedYear, boolean anonymous, String sanctioningAuthor) {
+  private static Authorship authorship(List<String> authors, List<String> exAuthors, List<String> inAuthors,
+                                       String year, String imprintYear, boolean bracketedYear, boolean anonymous,
+                                       String sanctioningAuthor) {
     Authorship a = new Authorship();
     a.setAuthors(authors);
     a.setExAuthors(exAuthors);
+    a.setInAuthors(inAuthors);
     a.setYear(year);
     a.setImprintYear(imprintYear);
     a.setBracketedYear(bracketedYear);

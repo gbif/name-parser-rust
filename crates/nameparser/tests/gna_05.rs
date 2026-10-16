@@ -191,6 +191,7 @@ fn treating_al_as_et_al_binomials() {
         .comb_authors(None, &["Rech.f.", "al."])
         .published_in("Rech. f.")
         .code(NomCode::Botanical)
+        .comb_in_authors(&["Rech.f."])
         .nothing_else();
 }
 

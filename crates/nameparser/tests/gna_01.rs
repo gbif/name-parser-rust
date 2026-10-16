@@ -455,6 +455,7 @@ fn binomials_with_authorship() {
         .comb_authors(Some("1845"), &["von dem Busch"])
         .published_in("Philippi, 1845")
         .published_in_year(Some(1845))
+        .comb_in_authors(&["Philippi"])
         .nothing_else();
 
     assert_name("Phora sororcula v d Wulp 1871")
@@ -486,6 +487,7 @@ fn binomials_with_authorship() {
         .comb_authors(Some("1973"), &["Kul'kov"])
         .published_in("Kul'kov & Obut, 1973")
         .published_in_year(Some(1973))
+        .comb_in_authors(&["Kul'kov", "Obut"])
         .nothing_else();
 
     assert_name("Xylaria potentillae A S. Xu")

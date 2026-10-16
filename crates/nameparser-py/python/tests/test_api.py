@@ -339,6 +339,23 @@ def test_anonymous_authorship():
     assert nameparser.parse("Abies alba Mill.").combination_authorship.anonymous is False
 
 
+def test_in_authors():
+    # the authors of the work a name was published in (ICN Art. 46.2, ICZN Recommendation 51E)
+    pn = nameparser.parse("Aus bus (Smith in Jones, 1900) Brown in Miller & Lee, 1920")
+    assert pn.basionym_authorship.in_authors == ["Jones"]
+    assert pn.combination_authorship.in_authors == ["Miller", "Lee"]
+    assert pn.combination_authorship.to_dict()["inAuthors"] == ["Miller", "Lee"]
+    assert 'in_authors=["Miller", "Lee"]' in repr(pn.combination_authorship)
+    assert pn.published_in == "Miller & Lee, 1920"
+    assert pn.authorship_complete() == "(Smith in Jones, 1900) Brown in Miller & Lee, 1920"
+    sep = nameparser.parse("Atriplex prostrata", authorship="Boucher ex DC. in Lam. & DC.")
+    assert sep.combination_authorship.in_authors == ["Lam.", "DC."]
+    # a reference has none, and the key is left out of to_dict()
+    ref = nameparser.parse("Abies alba Mill. in Gard. Dict. ed. 8").combination_authorship
+    assert ref.in_authors == []
+    assert "inAuthors" not in ref.to_dict()
+
+
 def test_bracketed_year():
     # a year from external evidence, cited in square brackets (ICZN Recommendation 22A.2.3)
     ca = nameparser.parse("Phyllomacromia", authorship="Westwood, [1851]").combination_authorship

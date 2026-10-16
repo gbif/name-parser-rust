@@ -106,6 +106,7 @@ fn no_hybrids() {
         .comb_authors(Some("2016"), &["F.Zhang", "Z-X.Pan"])
         .published_in("Zhang, F, Pan, Z-X, Wu, J, Ding, Y-H, Yu, D-Y & Wang, B-X, 2016")
         .published_in_year(Some(2016))
+        .comb_in_authors(&["F.Zhang", "Z-X.Pan", "J.Wu", "Y-H.Ding", "D-Y.Yu", "B-X.Wang"])
         .nothing_else();
 }
 
@@ -269,6 +270,7 @@ fn author_with_publication() {
         .comb_authors(Some("2018"), &["Guang-Xu Wang"])
         .published_in("Wang, He, Tang & Percival, 2018")
         .published_in_year(Some(2018))
+        .comb_in_authors(&["Wang", "He", "Tang", "Percival"])
         .nothing_else();
 
     assert_name(
@@ -278,6 +280,7 @@ fn author_with_publication() {
     .comb_authors(Some("2020"), &["St Laurent", "Kawahara"])
     .published_in("St Laurent, Mielke, Herbin, Dexter & Kawahara 2020")
     .published_in_year(Some(2020))
+    .comb_in_authors(&["St Laurent", "Mielke", "Herbin", "Dexter", "Kawahara"])
     .nothing_else();
 
     assert_name("Charlottea Whalen & Carter in Carter, Whalen & Guex, 1998")
@@ -285,6 +288,7 @@ fn author_with_publication() {
         .comb_authors(Some("1998"), &["Whalen", "Carter"])
         .published_in("Carter, Whalen & Guex, 1998")
         .published_in_year(Some(1998))
+        .comb_in_authors(&["Carter", "Whalen", "Guex"])
         .nothing_else();
 }
 

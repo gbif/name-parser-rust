@@ -11,6 +11,7 @@ pub(crate) mod code_inference;
 pub(crate) mod context;
 pub(crate) mod culture_collections;
 pub(crate) mod double_surnames;
+pub(crate) mod in_citation;
 pub(crate) mod name_tokens;
 pub(crate) mod preflight;
 pub(crate) mod rank_markers;
@@ -469,6 +470,19 @@ pub fn run(
     if ctx.pending_imprint_year.is_some() && ctx.name.combination_authorship.imprint_year.is_none()
     {
         ctx.name.combination_authorship.imprint_year = ctx.pending_imprint_year.clone();
+    }
+
+    // The authors of the work an `in` citation names belong to the authorship that cites it, the
+    // combination's or the basionym's — once it has authors, as an in-author follows an author.
+    if let Some(team) = ctx.pending_in_authors.take() {
+        if ctx.name.combination_authorship.has_authors_or_anon() {
+            ctx.name.combination_authorship.in_authors = team;
+        }
+    }
+    if let Some(team) = ctx.pending_basionym_in_authors.take() {
+        if ctx.name.basionym_authorship.has_authors_or_anon() {
+            ctx.name.basionym_authorship.in_authors = team;
+        }
     }
 
     // Irregular authorships split off during stripping: the species author of a

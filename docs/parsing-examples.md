@@ -21,7 +21,8 @@ A name is parsed into one of three results:
 
 The authorship of a name is split in two: the **combination** authorship and the **basionym**
 authorship, the author of the original name, cited in brackets. Each holds the `authors`, the
-`exAuthors` (who proposed a name someone else published), the `year`, an `imprintYear`, the flags
+`exAuthors` (who proposed a name someone else published), the `inAuthors` (the authors of the
+work it was published in), the `year`, an `imprintYear`, the flags
 `bracketedYear` and `anonymous`, and in mycology a `sanctioningAuthor`. The author of the species
 in an infraspecific name, and the author of the genus in an infrageneric one, are kept apart as
 `specificAuthorship` and `genericAuthorship`.
@@ -131,13 +132,16 @@ The hybrid sign `×` marks the part of the name that is a nothotaxon (`notho`). 
 
 ## Authors
 
-Authors are kept as written, with spacing around initials and dots normalised. Ex-authors proposed a name someone else published, an `in` citation goes to `publishedIn`. Particles, filius and all-capital names get their usual form.
+Authors are kept as written, with spacing around initials and dots normalised. Ex-authors proposed a name someone else published. An `in` citation goes to `publishedIn`, and when it names an author team rather than a reference, its authors are the `inAuthors` of the combination or the basionym. Particles, filius and all-capital names get their usual form.
 
 | Name | Parsed as |
 |---|---|
 | `Acacia aneura F.Muell. ex Benth.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Acacia` · specificEpithet `aneura`<br>combination: authors `Benth.` · ex `F.Muell.`<br>→ `Acacia aneura F.Muell. ex Benth.` |
 | `Festuca pachyphylla`<br>authorship given separately: `Degen ex Nyár. ex Csürös, Gergely & Pop`<br>*a chain of ex-authors* | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Festuca` · specificEpithet `pachyphylla`<br>combination: authors `Csürös`, `Gergely`, `Pop` · ex `Degen`, `Nyár.`<br>→ `Festuca pachyphylla Degen & Nyár. ex Csürös, Gergely & Pop` |
-| `Pisania billehousti Souverbie, in Souverbie and Montrouzier, 1864` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Pisania` · specificEpithet `billehousti`<br>combination: authors `Souverbie` · year `1864`<br>publishedIn `Souverbie and Montrouzier, 1864`<br>publishedInYear `1864`<br>→ `Pisania billehousti Souverbie, 1864` |
+| `Pisania billehousti Souverbie, in Souverbie and Montrouzier, 1864` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Pisania` · specificEpithet `billehousti`<br>combination: authors `Souverbie` · in `Souverbie`, `Montrouzier` · year `1864`<br>publishedIn `Souverbie and Montrouzier, 1864`<br>publishedInYear `1864`<br>→ `Pisania billehousti Souverbie in Souverbie & Montrouzier, 1864` |
+| `Pipistrellus kuhlii`<br>authorship given separately: `(Natterer in Kuhl, 1817)`<br>*the basionym's in-author* | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Pipistrellus` · specificEpithet `kuhlii`<br>basionym: authors `Natterer` · in `Kuhl` · year `1817`<br>publishedIn `Kuhl, 1817`<br>publishedInYear `1817`<br>→ `Pipistrellus kuhlii (Natterer in Kuhl, 1817)` |
+| `Atriplex prostrata`<br>authorship given separately: `Boucher ex DC. in Lam. & DC.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Atriplex` · specificEpithet `prostrata`<br>combination: authors `DC.` · ex `Boucher` · in `Lam.`, `DC.`<br>publishedIn `Lam. & DC.`<br>→ `Atriplex prostrata Boucher ex DC. in Lam. & DC.` |
+| `Abies alba Mill. in Gard. Dict. ed. 8: no. 1. 1768`<br>*a reference, no in-authors* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>combination: authors `Mill.` · year `1768`<br>publishedIn `Gard. Dict. ed. 8: no. 1. 1768`<br>publishedInYear `1768`<br>→ `Abies alba Mill., 1768` |
 | `Conus textile Linnaeus, 1758` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Conus` · specificEpithet `textile`<br>combination: authors `Linnaeus` · year `1758`<br>→ `Conus textile Linnaeus, 1758` |
 | `Rotalina cultrata d'Orb. 1840` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Rotalina` · specificEpithet `cultrata`<br>combination: authors `d'Orb.` · year `1840`<br>→ `Rotalina cultrata d'Orb., 1840` |
 | `Oxyporus Fabricius, 1775` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED` · code `ZOOLOGICAL`<br>uninomial `Oxyporus`<br>combination: authors `Fabricius` · year `1775`<br>→ `Oxyporus Fabricius, 1775` |

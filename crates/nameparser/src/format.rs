@@ -534,6 +534,12 @@ fn append_authorship(
         sb.push_str(&join_authors(&auth.authors, max));
         authors_appended = true;
     }
+    // the authors of the work the name was published in follow the authors and precede the year,
+    // "Natterer in Kuhl, 1817" (ICN Art. 46.2, ICZN Recommendation 51E)
+    if authors_appended && !auth.in_authors.is_empty() {
+        sb.push_str(" in ");
+        sb.push_str(&join_authors(&auth.in_authors, max));
+    }
     if include_year {
         if let Some(year) = &auth.year {
             if authors_appended {

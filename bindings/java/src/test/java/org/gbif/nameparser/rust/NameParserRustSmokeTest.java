@@ -106,6 +106,27 @@ class NameParserRustSmokeTest {
   }
 
   @Test
+  void inAuthorsCrossTheWire() throws UnparsableNameException {
+    // ABI 8: Authorship.inAuthors, the authors of the work a name was published in
+    ParsedName pn = parser.parse("Aus bus (Smith in Jones, 1900) Brown in Miller & Lee, 1920", null, null, null)
+        .orElseThrow();
+    assertEquals(List.of("Jones"), pn.getBasionymAuthorship().getInAuthors());
+    assertEquals(List.of("Miller", "Lee"), pn.getCombinationAuthorship().getInAuthors());
+    assertEquals("Miller & Lee, 1920", pn.getPublishedIn());
+    assertEquals("(Smith in Jones, 1900) Brown in Miller & Lee, 1920", pn.authorshipComplete());
+
+    ParsedName sep = parser.parse("Atriplex prostrata", "Boucher ex DC. in Lam. & DC.", null, null).orElseThrow();
+    assertEquals(List.of("Lam.", "DC."), sep.getCombinationAuthorship().getInAuthors());
+    assertEquals("Boucher ex DC. in Lam. & DC.", sep.authorshipComplete());
+
+    // a reference has no in-authors, and a name without any allocates no list
+    ParsedName ref = parser.parse("Abies alba Mill. in Gard. Dict. ed. 8", null, null, null).orElseThrow();
+    assertNull(ref.getCombinationAuthorship().getInAuthors());
+    assertNull(ref.getBasionymAuthorship().getInAuthors());
+    assertEquals("Gard. Dict. ed. 8", ref.getPublishedIn());
+  }
+
+  @Test
   void sanctioningAuthorsCrossTheWireOnEachAuthorship() throws UnparsableNameException {
     // ABI 6: the basionym's sanctioning author is kept inside its brackets (ICN Art. 15)
     ParsedName pn = parser.parse("Merulius lacrimans (Wulfen : Fr.) Schum.", null, null, null).orElseThrow();

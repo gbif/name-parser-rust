@@ -156,6 +156,7 @@ fn an_of_note_needs_authors_and_no_corporate_name() {
     .comb_authors(Some("1977"), &["Ye"])
     .published_in("Sichuan Institute of Biology Herpetology Department, 1977")
     .published_in_year(Some(1977))
+    .comb_in_authors(&["Sichuan Institute of Biology Herpetology Department"])
     .nothing_else();
     // inside the basionym's bracket it is the note too, its year the cited concept's
     assert_name_auth("Thelastoma bulhoesi", "(Mag of Dollfus 1952)")
@@ -471,6 +472,7 @@ fn a_page_after_the_year_is_the_page() {
     .published_in("Thiery Cuenot & Lambert 1928")
     .published_in_year(Some(1928))
     .published_in_page("123")
+    .comb_in_authors(&["Thiery Cuenot", "Lambert"])
     .nothing_else();
     // brackets holding only the year are the name's own citation
     assert_name("Hieracium kolthoffianum Hyl. (1943 p. 155)")
@@ -628,6 +630,7 @@ fn a_lowercase_bracket_after_the_authors_is_no_part_of_them() {
         .published_in_year(Some(1914))
         .nom_note("in litteris")
         .manuscript()
+        .comb_in_authors(&["Daday"])
         .nothing_else();
     assert_name_auth("Asterina penicillaris", "Sladen, 1889 (part)")
         .species("Asterina", "penicillaris")

@@ -917,6 +917,7 @@ fn in_authors_citation() {
         .comb_authors(Some("1908"), &["Sharp"])
         .published_in("Sharp & Scott, 1908")
         .published_in_year(Some(1908))
+        .comb_in_authors(&["Sharp", "Scott"])
         .nothing_else();
 }
 
