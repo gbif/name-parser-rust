@@ -250,6 +250,18 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     }
                     continue;
                 }
+                // "n. sp." before any epithet is the species marker "sp." of a new species
+                // ("Jardinella n. sp. keel", #139): walk on to the "sp"
+                if t.text == "n"
+                    && !have_epithet
+                    && tokens.get(i + 1).is_some_and(|d| d.kind == TokenKind::Dot)
+                    && tokens.get(i + 2).is_some_and(|m| {
+                        m.kind == TokenKind::Word && m.text.eq_ignore_ascii_case("sp")
+                    })
+                {
+                    i += 2;
+                    continue;
+                }
                 // cf./aff. qualifiers and indet markers — keep walking
                 if w.eq_ignore_ascii_case("cf")
                     || w.eq_ignore_ascii_case("aff")
@@ -259,10 +271,12 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet")
+                    || (t.text == "nsp" && !have_epithet)
                 {
                     let is_sp = w.eq_ignore_ascii_case("sp")
                         || w.eq_ignore_ascii_case("spp")
-                        || w.eq_ignore_ascii_case("spec");
+                        || w.eq_ignore_ascii_case("spec")
+                        || t.text == "nsp";
                     let is_cf_or_aff = w.eq_ignore_ascii_case("cf")
                         || w.eq_ignore_ascii_case("aff")
                         || w.eq_ignore_ascii_case("nr");

@@ -128,6 +128,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     let mut cf_aff_qualifier: Option<String> = None;
     // A cf./aff./nr./near with no epithet after it opens the informal phrase (see below).
     let mut qualifier_phrase = false;
+    // where an "n. sp." marker began, its "sp" still to come
+    let mut nova_start: Option<usize> = None;
     // how many epithets came before the qualifier: it qualifies the next one, or the last if none
     // follows ("Arctostaphylos preglauca cf.")
     let mut qualifier_at = 0usize;
@@ -461,6 +463,19 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     }
                     continue;
                 }
+                // "n. sp." before any epithet: the marker of a new species, opening its phrase
+                // ("Jardinella n. sp. keel", #139)
+                if t.text == "n"
+                    && lower_epithets.is_empty()
+                    && ts.get(i + 1).is_some_and(|d| d.kind == TokenKind::Dot)
+                    && ts.get(i + 2).is_some_and(|m| {
+                        m.kind == TokenKind::Word && m.text.eq_ignore_ascii_case("sp")
+                    })
+                {
+                    nova_start = Some(t.start);
+                    i += 2;
+                    continue;
+                }
                 // 2. indet markers — sp./spec./indet
                 // A number right after the marker (past an optional dot) is a placeholder tag:
                 // "Genus sp. 1" (monomial) or "Genus epithet species 12" (after a binomial). Preserve
@@ -510,13 +525,14 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
-                    || w.eq_ignore_ascii_case("indet"))
+                    || w.eq_ignore_ascii_case("indet")
+                    || (w == "nsp" && lower_epithets.is_empty()))
                     && !is_published_spec_epithet
                     && (lower_epithets.is_empty()
                         || marker_idx_in_epithets >= 0
                         || number_follows_marker)
                 {
-                    let marker_start = ts[i].start;
+                    let marker_start = nova_start.take().unwrap_or(ts[i].start);
                     indet = true;
                     ctx.name.type_ = NameType::Informal;
                     i += 1;
@@ -542,7 +558,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     let is_species_marker = w.eq_ignore_ascii_case("sp")
                         || w.eq_ignore_ascii_case("spp")
                         || w.eq_ignore_ascii_case("spec")
-                        || w.eq_ignore_ascii_case("species");
+                        || w.eq_ignore_ascii_case("species")
+                        || w == "nsp";
                     // A cultivar epithet (extracted upstream from "Genus sp. cv. 'Name'") is the
                     // operative designation, not the "sp." — so it is NOT an informal indet and the
                     // marker must not be captured as a phrase (assemble step 17 clears INFORMAL for

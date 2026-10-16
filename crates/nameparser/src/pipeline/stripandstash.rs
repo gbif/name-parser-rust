@@ -106,6 +106,8 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = unbracket_in_citation(ctx, s);
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
+    s = normalise_manuscript_word(ctx, s);
+    s = move_manuscript_marker_behind_author(s);
     s = normalise_cultivar_spelling(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
     s = lower_shouted_qualifier(s);
@@ -1099,6 +1101,7 @@ fn is_indet_species_marker(w: &str) -> bool {
         || w.eq_ignore_ascii_case("spp")
         || w.eq_ignore_ascii_case("spec")
         || w.eq_ignore_ascii_case("species")
+        || w == "nsp"
 }
 
 /// gbif/name-parser-rust#16 (no Java counterpart): an INDETERMINATE INFRAGENERIC OR
@@ -2595,10 +2598,10 @@ static HORTUS_EX: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(r"\bhortus[a]?\b(?=[ \t\n\x0B\f\r]+ex[ \t\n\x0B\f\r]+)").unwrap()
 });
 
-/// Java HT_MARKER (StripAndStash.java:333): `\bht\.`, no flags. No lookaround or
-/// backreference -> plain `regex` crate. Has `\b`, no `\p{...}`, no unescaped wildcard ->
-/// whole-wrap.
-static HT_MARKER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?-u:\bht\.)").unwrap());
+/// Java HT_MARKER (StripAndStash.java:333): `\bht\.`, no flags. Rust-only: the undotted "ht" as
+/// a word of its own, "Adiantum sanctae ht" (#139), not the "ht" of a code ("ht-BGNA3").
+static HT_MARKER: LazyLock<FancyRegex> =
+    LazyLock::new(|| FancyRegex::new(r"\bht\.|(?<=\s)ht(?=$|[\s;,])").unwrap());
 
 /// Java `StripAndStash.normaliseHortExPlaceholder` (StripAndStash.java:975-988).
 /// Working-string-only (no `ctx.name` mutation, no warnings): normalises every spelling
@@ -2611,7 +2614,42 @@ fn normalise_hort_ex_placeholder(_ctx: &mut ParseContext, s: String) -> String {
     let s = fancy_replace_all(&CV_EX, &s, |_| "hort.".to_string());
     let s = fancy_replace_all(&HORT_EX, &s, |_| "hort.".to_string());
     let s = fancy_replace_all(&HORTUS_EX, &s, |_| "hort.".to_string());
-    HT_MARKER.replace_all(&s, "hort.").into_owned()
+    fancy_replace_all(&HT_MARKER, &s, |_| "hort.".to_string())
+}
+
+/// "manuscript" spelled out is the "ms" mark of a manuscript name, "Grove manuscript in Rattray,
+/// 1890" (65 ChecklistBank names, #139): written as "ms" so every rule about the mark applies.
+static MANUSCRIPT_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?-u:\b)manuscript(?-u:\b)").unwrap());
+
+fn normalise_manuscript_word(_ctx: &mut ParseContext, s: String) -> String {
+    MANUSCRIPT_WORD.replace_all(&s, "ms").into_owned()
+}
+
+/// A manuscript mark between the epithet and its author, "Enoplolindenius castronus ms Leclercq"
+/// (#139): the author's manuscript name, the mark goes behind the author. Group 1 the name, 2 the
+/// mark, 3 the authorship.
+static MANUSCRIPT_BEFORE_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(\p{Lu}\p{Ll}+(?:(?-u:\s+)\(\p{Lu}\p{Ll}+\))?(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+)+)(?-u:\s+)(ms\.?)(?-u:\s+)(\p{Lu}.*)$",
+    )
+    .unwrap()
+});
+
+/// [`MANUSCRIPT_BEFORE_AUTHOR`] opening a separately supplied authorship, "ms Leclercq".
+static LEADING_MANUSCRIPT_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?-u:\s*)(ms\.?)(?-u:\s+)(\p{Lu}.*)$").unwrap());
+
+fn move_leading_manuscript_marker(_ctx: &mut ParseContext, s: String) -> String {
+    LEADING_MANUSCRIPT_MARKER
+        .replace(&s, "${2} ${1}")
+        .into_owned()
+}
+
+fn move_manuscript_marker_behind_author(s: String) -> String {
+    MANUSCRIPT_BEFORE_AUTHOR
+        .replace(&s, "${1} ${3} ${2}")
+        .into_owned()
 }
 
 /// A Cultivar Group abbreviated or in brackets at the end: `(Queen Gp)`, `Queen Gp.`, `(Capitata
@@ -3459,7 +3497,7 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// Latin status word in any case, "Akeratidae Nomen Nudum", whose capital the general alternative
 /// stops at — Java read "Nudum" as an author. Rust-only too: the "n." spelling of nova, "sp. n.",
 /// "n. sp.", "n.sp." ("Anomia atacamensis n.sp. HERM 1969", where Java read an epithet "n" and an
-/// author "sp.Herm"). Rust-only also: a note glued to the comma before it, "Liu & Xu,sp. nov." —
+/// author "sp.Herm"), and "nsp" ("Pseudosinella biunguiculata nsp", #139). Rust-only also: a note glued to the comma before it, "Liu & Xu,sp. nov." —
 /// the full-width comma of Chinese sources folds to one with no space after it — and a note before
 /// the year of a basionym bracket, "(Chao，comb．nov．,1986)" (#127).
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
@@ -3469,7 +3507,7 @@ static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
         r"|(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
         r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
-        r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?",
+        r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?|nsp\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
         r")\s*(?=$|,\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
     ))
@@ -3482,9 +3520,10 @@ static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
 static SP_NOV_PREFIX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:sp|spec)(?-u:\b)\.?(?-u:\s+)nov.*$").unwrap());
 
-/// The "n." spelling of a nova note, "sp. n." or "n. sp.", matched by [`NOM_NOTE`].
+/// The "n." spelling of a nova note, "sp. n." or "n. sp." or "nsp", matched by [`NOM_NOTE`].
 static NOVA_ABBREVIATED: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(?:(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?)$").unwrap()
+    Regex::new(r"^(?:(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?|nsp\.?)$")
+        .unwrap()
 });
 
 /// Java SINGLE_TITLE_WORD (StripAndStash.java:340): `^[\p{Lu}][\p{Ll}]+$`, no flags.
@@ -6350,7 +6389,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 16] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 18] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -6360,6 +6399,8 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_angle_bracket_authorship,
         strip_html,
         normalise_hort_ex_placeholder,
+        normalise_manuscript_word,
+        move_leading_manuscript_marker,
         strip_extinct_dagger,
         stash_synonym_bracket,
         split_note_from_basionym_bracket,

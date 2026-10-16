@@ -352,3 +352,74 @@ fn issue_127_full_width_punctuation() {
         .warning(&[warnings::HOMOGLYHPS])
         .nothing_else();
 }
+
+#[test]
+fn issue_139_names_found_by_robert_mesibov() {
+    assert_name("Solanum juzepczukii f. ckaisalla Lechn.")
+        .infra_species("Solanum", "juzepczukii", Rank::Form, "ckaisalla")
+        .comb_authors(None, &["Lechn."])
+        .nothing_else();
+    // "ht" is short for "hort."
+    assert_name("Adiantum sanctae ht")
+        .species("Adiantum", "sanctae")
+        .comb_authors(None, &["hort."])
+        .nothing_else();
+    assert_name("Citrus clementina hort. ex Tanaka")
+        .species("Citrus", "clementina")
+        .comb_authors(None, &["Tanaka"])
+        .comb_ex_authors(&["hort."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Pittosporum hosmeri var. st.-johnii")
+        .infra_species("Pittosporum", "hosmeri", Rank::Variety, "st.-johnii")
+        .nothing_else();
+    // "manuscript" spelled out, before the author
+    assert_name("Enoplolindenius castronus manuscript Leclercq")
+        .species("Enoplolindenius", "castronus")
+        .comb_authors(None, &["Leclercq"])
+        .manuscript()
+        .nom_note("ms")
+        .nothing_else();
+    assert_name("Dendrobiastes hyperythrus mjöbergi")
+        .infra_species(
+            "Dendrobiastes",
+            "hyperythrus",
+            Rank::InfraspecificName,
+            "mjöbergi",
+        )
+        .nothing_else();
+    assert_name("Eremobates microscopulata ms")
+        .species("Eremobates", "microscopulata")
+        .manuscript()
+        .nom_note("ms")
+        .nothing_else();
+    // "nsp" is short for "n. sp."; before the epithet it opens a provisional name
+    assert_informal("Anania nsp hortulata")
+        .taxon("Anania")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("nsp hortulata")
+        .nothing_else();
+    assert_name("Pseudosinella biunguiculata nsp")
+        .species("Pseudosinella", "biunguiculata")
+        .nom_note("nsp.")
+        .nothing_else();
+    assert_name("Brachymenium saint-pierrei Thériot, 1931")
+        .species("Brachymenium", "saint-pierrei")
+        .comb_authors(Some("1931"), &["Thériot"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // the same marker as "n. sp."
+    assert_informal("Jardinella n. sp. keel")
+        .taxon("Jardinella")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("n. sp. keel")
+        .nothing_else();
+    assert_name("Coscinodiscus densus Grove & Sturt manuscript in Rattray, 1890")
+        .species("Coscinodiscus", "densus")
+        .comb_authors(Some("1890"), &["Rattray"])
+        .comb_ex_authors(&["Grove", "Sturt"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
