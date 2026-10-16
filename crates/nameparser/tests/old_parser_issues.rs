@@ -569,3 +569,29 @@ fn issue_142_emendation_in_the_basionym_bracket() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn issue_149_sine_ref_is_no_author() {
+    assert_authorship(
+        "(T.Anderson ex C.B.Clarke & sine ref.) Bremek.",
+        &["Bremek."],
+    )
+    .comb_authors(None, &["Bremek."])
+    .bas_authors(None, &["C.B.Clarke"])
+    .bas_ex_authors(None, &["T.Anderson"])
+    .nom_note("sine ref.")
+    .nothing_else();
+    assert_name("Ipomopsis bridgesii (A. Gray, sine ref.) Wherry")
+        .species("Ipomopsis", "bridgesii")
+        .comb_authors(None, &["Wherry"])
+        .bas_authors(None, &["A.Gray"])
+        .nom_note("sine ref.")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // "sine" is an epithet too
+    assert_name("Tactusa sine Fibiger, 2010")
+        .species("Tactusa", "sine")
+        .comb_authors(Some("2010"), &["Fibiger"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

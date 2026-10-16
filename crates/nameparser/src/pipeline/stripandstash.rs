@@ -109,6 +109,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_manuscript_word(ctx, s);
     s = move_manuscript_marker_behind_author(s);
     s = unbracket_manuscript_marker(ctx, s);
+    s = strip_sine_note(ctx, s);
     s = normalise_cultivar_spelling(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
     s = lower_shouted_qualifier(s);
@@ -2665,6 +2666,33 @@ static GLUED_IN_LITTERIS: LazyLock<Regex> =
 fn unbracket_manuscript_marker(_ctx: &mut ParseContext, s: String) -> String {
     let s = BRACKETED_MANUSCRIPT_MARK_ONLY.replace_all(&s, " ${1}");
     GLUED_IN_LITTERIS.replace_all(&s, "${1} ${2}").into_owned()
+}
+
+/// A "sine ref." (without reference) and its kin after an author, "(T.Anderson ex C.B.Clarke &
+/// sine ref.) Bremek.", "(A. Gray, sine ref.) Wherry", "Elenkin, sine typo" (#149): how the name
+/// was published, no author. Group 1 the note.
+static SINE_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s*[,&]?\s+|,)(sine(?-u:\s+)(?:ref|descr|diagn|typo?|loc|anno)(?-u:\b)\.?)")
+        .unwrap()
+});
+
+/// Moves a [`SINE_NOTE`] into the nomenclatural note, once: sources repeat it in the separate
+/// authorship.
+fn strip_sine_note(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = SINE_NOTE.captures(&s) else {
+        return s;
+    };
+    let note = collapse_whitespace(&caps[1]);
+    if !ctx
+        .name
+        .nomenclatural_note
+        .as_deref()
+        .is_some_and(|existing| contains_words(existing, &note))
+    {
+        ctx.name.add_nomenclatural_note(&note);
+    }
+    let whole = caps.get(0).unwrap();
+    format!("{}{}", &s[..whole.start()], &s[whole.end()..])
 }
 
 fn move_manuscript_marker_behind_author(s: String) -> String {
@@ -6490,7 +6518,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 19] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 20] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -6503,6 +6531,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         normalise_manuscript_word,
         move_leading_manuscript_marker,
         unbracket_manuscript_marker,
+        strip_sine_note,
         strip_extinct_dagger,
         stash_synonym_bracket,
         split_note_from_basionym_bracket,
