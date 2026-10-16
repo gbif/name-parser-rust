@@ -622,3 +622,17 @@ fn issue_136_pro_minore_parte() {
         .doubtful()
         .nothing_else();
 }
+
+#[test]
+fn issue_151_a_lower_case_last_author() {
+    assert_name("Callogorgia flabellum grandis Kükenthal & gorzawsky, 1908")
+        .infra_species("Callogorgia", "flabellum", Rank::Subspecies, "grandis")
+        .comb_authors(Some("1908"), &["Kükenthal", "gorzawsky"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Scytinelytra Amyot & serville 1843")
+        .monomial("Scytinelytra")
+        .comb_authors(Some("1843"), &["Amyot", "serville"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

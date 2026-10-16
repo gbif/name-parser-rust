@@ -428,10 +428,21 @@ fn stray_lower_word(tokens: &[Token], from: usize, to: usize, after_author: bool
         {
             return stray(k);
         }
+        // the last author of a team, written in lower case: "Kükenthal & gorzawsky, 1908" (#151)
+        let last_author = k > from
+            && (tokens[k - 1].kind == TokenKind::Ampersand
+                || (tokens[k - 1].kind == TokenKind::Word
+                    && matches!(tokens[k - 1].text.as_str(), "and" | "et")))
+            && match tokens.get(k + 1) {
+                Some(nx) if nx.kind == TokenKind::Comma => tokens.get(k + 2).is_some_and(is_year),
+                Some(nx) => is_year(nx),
+                None => false,
+            };
         if seen_author
             && !after_word
             && !glued_before
             && !glued_after
+            && !last_author
             && w.chars().count() >= 3
             && w.chars().all(|c| c.is_alphabetic() && c.is_lowercase())
             && !is_lower_author_word(w)
