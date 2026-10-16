@@ -595,3 +595,16 @@ fn issue_149_sine_ref_is_no_author() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn issue_145_sensu_lato_in_the_sense_of() {
+    assert_name("Acacia acinacea s.l. sensu Maslin (1996)")
+        .species("Acacia", "acinacea")
+        .sensu("s.l. sensu Maslin (1996)")
+        .nothing_else();
+    assert_name("Xanthium orientale L. s. l. sensu Tomasello")
+        .species("Xanthium", "orientale")
+        .comb_authors(None, &["L."])
+        .sensu("s. l. sensu Tomasello")
+        .nothing_else();
+}

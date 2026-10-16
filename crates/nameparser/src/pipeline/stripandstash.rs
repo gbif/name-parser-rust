@@ -4532,8 +4532,15 @@ fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
         let marker = caps.get(1).unwrap().as_str();
         let note = WHITESPACE.replace_all(marker, "").to_lowercase();
         let remainder = java_trim(caps.get(2).unwrap().as_str()).to_string();
-        ctx.name.add_taxonomic_note(&note);
         let whole = caps.get(0).unwrap();
+        // a concept note after the marker continues it, both as written, as a separate authorship
+        // has them: "Acacia acinacea s.l. sensu Maslin (1996)" (#145)
+        if SENSU_LATO_NOTE_TAIL.is_match(&remainder) {
+            ctx.name
+                .add_taxonomic_note(&format!("{marker} {remainder}"));
+            return java_trim(&s[..whole.start()]).to_string();
+        }
+        ctx.name.add_taxonomic_note(&note);
         let name = java_trim(&s[..whole.start()]);
         // Rust-only: the authorship after a marker straight behind the epithet (or genus) stays for the
         // authorship parser ("Acantholimon ulicinum s.l. (Schultes) Boiss."); Java left it unparsed.
@@ -4551,6 +4558,12 @@ fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
     }
     s
 }
+
+/// A concept note continuing a [`SENSU_LATO_REMAINDER`]'s marker: "sensu Maslin (1996)", "auct.",
+/// "non Mill.".
+static SENSU_LATO_NOTE_TAIL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:sensu|sec|auctt?|auctorum|non|nec|fide|emend)(?-u:\b)").unwrap()
+});
 
 /// The start of an authorship: a capitalised author, or a basionym bracket of capitalised authors
 /// and a year — not a phrase like "(Kulnura form)".
