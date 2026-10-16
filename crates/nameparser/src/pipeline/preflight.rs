@@ -224,6 +224,11 @@ static PARTICLE_LED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+/// A French name led by its article, "Le dragon Bonnaterre, 1788", "Le pégase volant" (#160): no
+/// genus is called "Le" or "Les". "La" and "Des" are genera ("La paloma Bleszynski, 1966", "Des
+/// griffini Lowry & Kilgallen, 2014").
+static FRENCH_ARTICLE_LED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:Le|Les)(?-u:\s+)\p{L}").unwrap());
 /// A taxon's environmental samples: group 1 = a "Candidatus" prefix, group 2 = the taxon, group 3
 /// = the label.
 static ENVIRONMENTAL_SAMPLES: LazyLock<Regex> = LazyLock::new(|| {
@@ -615,7 +620,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         return Err(ParseError::new(type_, None, s));
     }
     // An author's name alone, its particle leading ("van Berg", "del Rosario Author"): no taxon.
-    if PARTICLE_LED_AUTHOR.is_match(&s) {
+    if PARTICLE_LED_AUTHOR.is_match(&s) || FRENCH_ARTICLE_LED.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, original));
     }
     // A phytoplasma, or a symbiont named after its host ("Persea americana phytoplasma", "'Bois

@@ -711,3 +711,15 @@ fn issue_155_trichosternus_spec_is_a_species() {
         .phrase("spec")
         .nothing_else();
 }
+
+#[test]
+fn issue_160_a_french_name_is_no_scientific_name() {
+    assert_unparsable("Le dragon Bonnaterre, 1788", NameType::Other);
+    assert_unparsable("Le Dragon Bonnaterre, 1788", NameType::Other);
+    // "La" and "Des" are genera
+    assert_name("La paloma Bleszynski, 1966")
+        .species("La", "paloma")
+        .comb_authors(Some("1966"), &["Bleszynski"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
