@@ -818,3 +818,144 @@ fn issue_131_species_near_is_informal() {
         .phrase("sp.10 (nr. falacra)")
         .nothing_else();
 }
+
+#[test]
+fn issue_134_australian_phrase_names_are_informal() {
+    // a genus and its phrase
+    for (input, taxon, rank, phrase) in [
+        (
+            "Pultenaea sp. 'Olinda' (Coveny 6616)",
+            "Pultenaea",
+            Rank::Species,
+            "sp. 'Olinda' (Coveny 6616)",
+        ),
+        (
+            "Marsilea sp. Neutral Junction (D.E.Albrecht 9192)",
+            "Marsilea",
+            Rank::Species,
+            "sp. Neutral Junction (D.E.Albrecht 9192)",
+        ),
+        (
+            "Dampiera sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)",
+            "Dampiera",
+            Rank::Species,
+            "sp. Central Wheatbelt (L.W.Sage, F.Hort, C.A.Hollister LWS2321)",
+        ),
+        // the phrase of a rank other than species leaves out its marker, which the rank gives
+        (
+            "Baeckea ssp. 2 (LJM 2019)",
+            "Baeckea",
+            Rank::Subspecies,
+            "2 (LJM 2019)",
+        ),
+        (
+            "Baeckea var 2 (LJM 2019)",
+            "Baeckea",
+            Rank::Variety,
+            "2 (LJM 2019)",
+        ),
+        (
+            "Baeckea sp. Bunney Road (S.Patrick 4059)",
+            "Baeckea",
+            Rank::Species,
+            "sp. Bunney Road (S.Patrick 4059)",
+        ),
+        (
+            "Prostanthera sp. Bundjalung Nat. Pk. (B.J.Conn 3471)",
+            "Prostanthera",
+            Rank::Species,
+            "sp. Bundjalung Nat. Pk. (B.J.Conn 3471)",
+        ),
+        (
+            "Toechima sp. East Alligator (J.Russell-Smith 8418) NT Herbarium",
+            "Toechima",
+            Rank::Species,
+            "sp. East Alligator (J.Russell-Smith 8418) NT Herbarium",
+        ),
+        (
+            "Goodenia sp. Bachsten Creek (M.D. Barrett 685) WA Herbarium",
+            "Goodenia",
+            Rank::Species,
+            "sp. Bachsten Creek (M.D. Barrett 685) WA Herbarium",
+        ),
+        (
+            "Baeckea sp. Beringbooding (AR Main 11/9/1957)",
+            "Baeckea",
+            Rank::Species,
+            "sp. Beringbooding (AR Main 11/9/1957)",
+        ),
+        (
+            "Sida sp. Walhallow Station (C.Edgood 28/Oct/94)",
+            "Sida",
+            Rank::Species,
+            "sp. Walhallow Station (C.Edgood 28/Oct/94)",
+        ),
+        (
+            "Sida sp. B (C.Dunlop 1739)",
+            "Sida",
+            Rank::Species,
+            "sp. B (C.Dunlop 1739)",
+        ),
+        (
+            "Baeckea sp. Calingiri (F.Hort 1710)",
+            "Baeckea",
+            Rank::Species,
+            "sp. Calingiri (F.Hort 1710)",
+        ),
+        (
+            "Baeckea sp. East Yuna (R Spjut & C Edson 7077)",
+            "Baeckea",
+            Rank::Species,
+            "sp. East Yuna (R Spjut & C Edson 7077)",
+        ),
+        (
+            "Acacia sp. Goodlands (BR Maslin 7761) [aff. resinosa]",
+            "Acacia",
+            Rank::Species,
+            "sp. Goodlands (BR Maslin 7761) [aff. resinosa]",
+        ),
+        (
+            "Acacia sp. Manmanning (BR Maslin 7711) [aff. multispicata]",
+            "Acacia",
+            Rank::Species,
+            "sp. Manmanning (BR Maslin 7711) [aff. multispicata]",
+        ),
+        // the subgenus is no part of the anchor
+        (
+            "Atrichornis (Rahcinta) sp Glory (BR Maslin 7711)",
+            "Atrichornis",
+            Rank::Species,
+            "Glory (BR Maslin 7711)",
+        ),
+        (
+            "Acacia sp. \"Morning Glory\"",
+            "Acacia",
+            Rank::Species,
+            "sp. \"Morning Glory\"",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Genus)
+            .rank(rank)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // a species and its phrase: an informal name, parsed, as the anchor holds only a genus
+    assert_name("Grevillea brachystylis subsp. Busselton (G.J.Keighery s.n. 28/8/1985)")
+        .binomial("Grevillea", None, "brachystylis", Rank::Subspecies)
+        .phrase("Busselton (G.J.Keighery s.n. 28/8/1985)")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Acacia mutabilis subsp. Young River (G.F.Craig 2052)")
+        .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
+        .phrase("Young River (G.F.Craig 2052)")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Acacia mutabilis Maslin subsp. Young River (G.F.Craig 2052)")
+        .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
+        .specific_authors(None, &["Maslin"])
+        .phrase("Young River (G.F.Craig 2052)")
+        .type_(NameType::Informal)
+        .nothing_else();
+}
