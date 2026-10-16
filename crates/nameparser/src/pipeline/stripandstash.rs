@@ -4952,6 +4952,28 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
     {
         return s;
     }
+    // the species' note before an infraspecific name: "Thlaspi alpestre L. non Jacq. var.
+    // calaminare Lej." (#141) — the note ends at the rank marker, the name goes on after it
+    if let Some(tail) = NOTE_INFRASPECIFIC_TAIL.captures(&raw) {
+        let infra = tail.get(1).unwrap();
+        let note = java_trim(raw[..infra.start()].trim_end().trim_end_matches(','));
+        // a note that names someone, or "auct." — not a bare keyword ("Chromodoris non subsp.
+        // quadricolor", "Lepidocyrtus sensu subsp. lato")
+        let complete = note.starts_with("auct")
+            || note
+                .split_whitespace()
+                .skip(1)
+                .any(|w| w.starts_with(|c: char| c.is_uppercase() || c == '('));
+        // after a species, not a genus: "Gaudryina non Gaudryina baccata var. maxima" cites a name
+        let after_species = s[..match_start].split_whitespace().count() >= 2;
+        if complete && after_species {
+            let rest = format!("{} {}", java_trim(&s[..match_start]), infra.as_str());
+            let with_dots = INITIAL_DOT_SPACE.replace_all(note, "$1.$2");
+            ctx.name
+                .add_taxonomic_note(&normalise_leading_auct(&with_dots));
+            return strip_tax_note(ctx, rest);
+        }
+    }
     let with_dots = INITIAL_DOT_SPACE.replace_all(&raw, "$1.$2");
     let norm = normalise_leading_auct(&with_dots);
     ctx.name.taxonomic_note = Some(match ctx.name.taxonomic_note.take() {
@@ -4966,6 +4988,14 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
     // another note may stand in front of this one: "Xerocomus chrysenteron s.l., incl. bubalinus"
     strip_tax_note(ctx, result)
 }
+
+/// An infraspecific rank marker and its epithet inside a taxonomic note, where the name goes on:
+/// "non Jacq. var. calaminare Lej.", "auct., non Fr. f. stenhammari (Stenh.) Clauzade". Group 1 the
+/// name's rest from the marker.
+static NOTE_INFRASPECIFIC_TAIL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s+)((?:var|subsp|ssp|f|fo|forma|subvar|subf)\.(?-u:\s*)\p{Ll}[\p{Ll}\-]{2,}(?:(?-u:\s).*)?)$")
+        .unwrap()
+});
 
 // ---- Step 44: stripAggregateSuffix ----
 
