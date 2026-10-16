@@ -104,6 +104,97 @@ fn a_journal_with_volume_and_page_after_the_year_is_the_reference() {
 }
 
 #[test]
+fn an_abbreviated_title_after_the_authors_is_the_reference() {
+    // a title without volume and page was read as one more author (#147)
+    assert_name_auth("Lophocolea martiana", "Nees, Syn. Hepat.")
+        .species("Lophocolea", "martiana")
+        .comb_authors(None, &["Nees"])
+        .published_in("Syn. Hepat.")
+        .nothing_else();
+    assert_name_auth("Bauhinia vahlii", "Wight & Arn., Cat. Ind. Pl.")
+        .species("Bauhinia", "vahlii")
+        .comb_authors(None, &["Wight", "Arn."])
+        .published_in("Cat. Ind. Pl.")
+        .nothing_else();
+    assert_name_auth("Lepidozia cancellata", "Colenso, Trans. & Proc.")
+        .species("Lepidozia", "cancellata")
+        .comb_authors(None, &["Colenso"])
+        .published_in("Trans. & Proc.")
+        .nothing_else();
+    // the year closing it is the year
+    assert_name_auth(
+        "Quercus texana",
+        "Buckley, Proc. Acad. Nat. Sci. Philadelphia 1860",
+    )
+    .species("Quercus", "texana")
+    .comb_authors(Some("1860"), &["Buckley"])
+    .published_in("Proc. Acad. Nat. Sci. Philadelphia 1860")
+    .published_in_year(Some(1860))
+    .nothing_else();
+    // Bull. abbreviates Bulliard too, Bull. Misc. opens a title
+    assert_name_auth("Bauhinia cancellata", "Ridl., Bull. Misc. Inf. Kew 1929")
+        .species("Bauhinia", "cancellata")
+        .comb_authors(Some("1929"), &["Ridl."])
+        .published_in("Bull. Misc. Inf. Kew 1929")
+        .published_in_year(Some(1929))
+        .nothing_else();
+    // words of titles from IPNI
+    assert_name_auth("Geranium mascatense", "Boissier, Diagn. Pl. Orient.")
+        .species("Geranium", "mascatense")
+        .comb_authors(None, &["Boissier"])
+        .published_in("Diagn. Pl. Orient.")
+        .nothing_else();
+    assert_name_auth(
+        "Monstera snethlagei",
+        "Krause, Notizbl. Bot. Gart. Berlin-Dahlem 1925",
+    )
+    .species("Monstera", "snethlagei")
+    .comb_authors(Some("1925"), &["Krause"])
+    .published_in("Notizbl. Bot. Gart. Berlin-Dahlem 1925")
+    .published_in_year(Some(1925))
+    .nothing_else();
+    // a page with no volume, the page was left unparsed
+    assert_name("Schizanthus Ruiz & Pav., Fl. Peruv. Prodr.: 4. 1794")
+        .monomial("Schizanthus")
+        .comb_authors(Some("1794"), &["Ruiz", "Pav."])
+        .published_in("Fl. Peruv. Prodr.: 4. 1794")
+        .published_in_year(Some(1794))
+        .nothing_else();
+    assert_name_auth("Solanum wrightii", "Benth., Fl. Hongk. 243. 1861.")
+        .species("Solanum", "wrightii")
+        .comb_authors(Some("1861"), &["Benth."])
+        .published_in("Fl. Hongk. 243. 1861")
+        .published_in_year(Some(1861))
+        .nothing_else();
+}
+
+#[test]
+fn a_given_name_abbreviated_like_a_title_is_an_author() {
+    // Archana Singh and Ed. Navarro, not the titles Arch. and Ed.
+    assert_name_auth("Stenella capparicola", "S.K. Singh, Arch. Singh & Kamal")
+        .species("Stenella", "capparicola")
+        .comb_authors(None, &["S.K.Singh", "Arch.Singh", "Kamal"])
+        .nothing_else();
+    assert_name_auth(
+        "Aschersoniodoxa peruviana",
+        "Al-Shehbaz, Ed.Navarro & A.Cano",
+    )
+    .species("Aschersoniodoxa", "peruviana")
+    .comb_authors(None, &["Al-Shehbaz", "Ed.Navarro", "A.Cano"])
+    .nothing_else();
+    // a surname abbreviated like a title word before the team's last author
+    assert_name_auth("Sorosphaera viticola", "Kirchm., Neuh. & L. Huber")
+        .species("Sorosphaera", "viticola")
+        .comb_authors(None, &["Kirchm.", "Neuh.", "L.Huber"])
+        .nothing_else();
+    // and a given name that is no title word at all
+    assert_name_auth("Genlisea barthlottii", "Porembski, Eb. Fisch. & Gemmel")
+        .species("Genlisea", "barthlottii")
+        .comb_authors(None, &["Porembski", "Eb.Fisch.", "Gemmel"])
+        .nothing_else();
+}
+
+#[test]
 fn an_approved_lists_citation_with_a_comma_is_bacterial_too() {
     // 298 CLB rows
     assert_name_auth(

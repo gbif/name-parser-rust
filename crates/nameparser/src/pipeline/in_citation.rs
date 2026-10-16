@@ -28,6 +28,27 @@ static TITLE_WORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         .collect()
 });
 
+const TITLE_ABBREVIATIONS_TXT: &str = include_str!("../../resources/title-abbreviations.txt");
+
+/// More abbreviated words of titles, from IPNI (`diagn`, `notizbl`), and the two opening words of
+/// titles whose first word abbreviates an author too (`bull misc`, `comm bot`).
+static TITLE_ABBREVIATIONS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    TITLE_ABBREVIATIONS_TXT
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect()
+});
+
+/// The first two words of a title, in lower case and without their dots: a word of a title
+/// ([`TITLE_WORDS`], [`TITLE_ABBREVIATIONS`]), or an author's abbreviation opening a title with
+/// the word after it (`Bull. Misc.`, not Bulliard).
+pub(crate) fn opens_title(first: &str, second: &str) -> bool {
+    TITLE_WORDS.contains(first)
+        || TITLE_ABBREVIATIONS.contains(first)
+        || TITLE_ABBREVIATIONS.contains(format!("{first} {second}").as_str())
+}
+
 /// The year closing a cited work: `, 1817`, ` 1883.`, ` (1830)`, `, [1851]`, `, 1900a`, `1838-1840`.
 static TRAILING_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"[\s,]*[(\[]?(?-u:\d{4})[a-z]?(?:\s*[-–]\s*(?-u:\d{2,4}))?[)\]]?\.?\s*$").unwrap()

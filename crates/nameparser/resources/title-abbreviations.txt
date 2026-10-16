@@ -1,0 +1,2102 @@
+# Abbreviated words of titles, and the opening words of titles whose first word abbreviates
+# an author too. Generated from IPNI (2017-11-06) by scripts/build-title-abbreviations.py,
+# which says how; do not edit by hand. Lower case, without the full stop. See README.md.
+abb
+abbev
+abbild
+abr
+abruzz
+abstr
+abt
+abth
+abyss
+acac
+acanth
+accad
+acclim
+acclimat
+acon
+add
+addit
+adj
+adn
+adriat
+adumbr
+adv
+advanc
+advancem
+advent
+aeg
+aethiop
+afd
+affin
+afghan
+afh
+afl
+afric
+agen
+agr
+agrar
+agric
+agriculture
+agron
+agrost
+agrostogr
+agrostol
+ajan
+ak
+akad
+aksakov
+alban
+alc
+alg
+aliment
+aliq
+allg
+allgem
+alpenfl
+alsat
+alt
+amaryll
+amaz
+amazon
+amboin
+amen
+amoen
+amstelod
+amur
+amér
+analect
+analyt
+anat
+andam
+anim
+animadv
+animadvers
+anl
+anleit
+anniv
+annot
+antarct
+antill
+antiq
+apend
+apocyn
+apont
+aport
+apoth
+append
+appl
+apr
+apunt
+aquar
+ar
+arab
+arac
+arag
+aragon
+arbeit
+arbeitsgem
+arbor
+arbr
+arbust
+archip
+archipel
+arct
+ariz
+ark
+arkans
+armen
+armyansk
+aroid
+arq
+arquiv
+arr
+as
+asp
+asperif
+ass
+assoc
+asterac
+astrag
+astrol
+atl
+atlant
+att
+aufl
+aufs
+aufz
+austral
+australas
+austriac
+austro-hung
+ausw
+avanc
+azerb
+azerbajdzansk
+aziatsk
+azor
+baic
+baier
+balear
+bambus
+banat
+barrill
+bass
+baumz
+beaut
+bef
+befoerd
+beford
+beibl
+beil
+bel
+belgrad
+bemerk
+bengal
+beob
+beobacht
+bericht
+berlin
+besanc
+beschreib
+beskr
+betul
+beytr
+bibl
+bibliog
+bibliogr
+bibliot
+biblioth
+bidr
+bign
+bignon
+biodivers
+biogeogr
+biosci
+biosyst
+bluh
+blumeng
+blumengartn
+blumenzeit
+blutenpfl
+blätt
+boccad
+boem
+bohem
+boliv
+bolog
+bologn
+bomb
+boomsoort
+bord
+boruss
+bosn
+bost
+boston
+botanique
+botany
+bound
+boëm
+brandenb
+brasil
+braz
+brazil
+breed
+brewst
+bromel
+brunsv
+brux
+budapest
+bul
+bulg
+bulgar
+bur
+but
+byull
+cact
+cacteenk
+caes
+cah
+caled
+calif
+camald
+campagn
+canad
+canar
+cant
+cantabrig
+caoutch
+caratt
+caric
+carlsr
+carniol
+carniv
+carol
+casan
+castrif
+catar
+cauc
+caucas
+cech
+cens
+cent
+centaur
+centr
+centralbl
+centralkarp
+cerc
+cereal
+cern
+ceskoslov
+cestr
+ceyl
+challeng
+char
+charcov
+chard
+checkl
+chem
+chenop
+cherson
+chil
+chim
+chin
+chl
+chlor
+chorol
+chron
+ci
+cienc
+cient
+cinch
+circ
+citrol
+civ
+ciênc
+clapp
+classif
+classific
+clim
+club
+co
+cochinch
+colch
+colchic
+colecc
+colomb
+colon
+columb
+com
+combret
+comerc
+comis
+comit
+commem
+comment
+commentat
+commiss
+commun
+compl
+compos
+compreh
+comun
+cone-bear
+cong
+congol
+congr
+conhec
+conif
+conoc
+conocim
+conserv
+consp
+conspect
+contin
+conv
+convolv
+cor
+corm
+coroll
+corom
+corresp
+costaric
+cot
+cour
+cr
+cracov
+crassulac
+crem
+cret
+crit
+crittog
+crot
+crucif
+crucifer
+crypt
+cryptog
+cuad
+cucurb
+cucurbitac
+cupress
+cur
+cusc
+cycad
+cycl
+cyclop
+cyp
+cyper
+cyperac
+cytol
+cytotax
+d'esp
+d'hortic
+dal'nevost
+dalarn
+dalm
+dalmat
+danic
+dansk
+darstell
+dauph
+decad
+decem
+decouv
+def
+defin
+delect
+delic
+delph
+demonstr
+dendr
+dendrol
+denkschr
+dep
+depend
+dept
+descript
+desert
+deut
+deutsch-sudw
+deutsch-sudwestafr
+deutschl
+diag
+diagn
+diam
+diaph
+diar
+diask
+dicc
+dicot
+dig
+digit
+dikot
+dipsac
+dir
+disc
+disp
+dist
+distr
+distrib
+div
+divers
+divulg
+doc
+docum
+dokl
+domin
+drog
+duham
+dépend
+dépt
+east
+ech
+ecl
+eclog
+ecol
+econ
+ecuat
+ecuator
+edin
+egyet
+egypt
+ekol
+eksped
+elem
+element
+emp
+emul
+ench
+enchir
+encyc
+engin
+ens
+entdeck
+entw
+enumerat
+env
+environ
+environm
+epim
+eprouv
+erb
+erdk
+erfurt
+erganz
+ergeb
+ergebn
+eric
+ertek
+ertes
+eryng
+esc
+escul
+espan
+españ
+espec
+ess
+esseq
+estac
+estad
+estestvoisp
+estud
+etc
+ethnogr
+etrusc
+etud
+euph
+euphorb
+eur
+euum
+evol
+evr
+exact
+exc
+exch
+excl
+excurs
+excursionsfl
+exerc
+exhib
+exkurs
+exkursionsfl
+exot
+exp
+exper
+explor
+expos
+exs
+extr
+fabac
+fac
+fak
+fan
+fanerog
+fanerogamfl
+farm
+farnkr
+fasc
+feb
+fedsch
+fenn
+festschr
+filic
+filip
+filos
+finland
+fint
+firenz
+fis
+fitogeogr
+fium
+fizjogr
+flachl
+flind
+florest
+floric
+florist
+florul
+flumin
+fol
+for
+forh
+forhandl
+form
+formos
+forsch
+forschungsr
+forstbot
+forstl
+forstw
+found
+frankf
+franç
+frem
+friburg
+friedrich-schiller-univ
+front
+fruct
+fruit
+frut
+frutic
+fund
+fuzet
+fysiogr
+förh
+galic
+ganad
+gart
+gartenb
+gartens
+gartenz
+gartenzeit
+gartn
+gartner-zeit
+gaz
+geb
+gefaesspfl
+gefasskrypt
+gefasspfl
+gefässpfl
+gel
+geneesk
+genet
+genootsch
+gent
+gentian
+gentianac
+genuen
+genuens
+geobiol
+geobot
+geog
+geol
+geran
+geraniac
+german
+ges
+gesamtb
+gesch
+geschied
+gew
+gewächsk
+giorn
+glasn
+glavn
+glumac
+gorg
+gos
+gosud
+gothob
+gothoburg
+gov
+grad
+graes
+gramin
+gran
+grass
+groenl
+grow
+grundz
+gruz
+guadel
+guat
+guatem
+gui
+guian
+guttap
+guttif
+gymn
+gymnosp
+gén
+géogr
+haarl
+hafr
+handl
+handlingar
+handw
+hann
+harbk
+harting
+haun
+havn
+hdb
+hebd
+heidelb
+heilk
+helmstad
+helvet
+herbac
+herbor
+herceg
+hercegov
+hieracioth
+himal
+hinduk
+hispan
+hochgebirgsfl
+hochsch
+hofmus
+hofmuseums
+hollr
+holsat
+holzart
+homenag
+hongk
+hortic
+hr
+hrvatsk
+hung
+hungar
+hybrid
+iber
+ic
+ident
+identific
+ii
+iii
+ikonogr
+il
+illus
+illust
+illustr
+ilustr
+imag
+imp
+imperf
+improv
+inaug
+inconf
+incoragg
+index
+indig
+indones
+indust
+industr
+ined
+inf
+inform
+instit
+int
+integr
+inter
+interam
+intercol
+intern
+internat
+interpr
+intr
+intro
+introd
+invent
+invest
+investig
+iran
+irid
+is
+isl
+isp
+ispyt
+ist
+istr
+iv
+ix
+izv
+izvest
+jaarb
+jahresb
+jam
+jamaic
+jap
+japan
+jehol
+jeniss
+job
+jorn
+jubil
+junc
+jurass
+kais
+kaiserl
+kakt
+kakteenforsch
+kakteenk
+kakteenveg
+karak
+karnt
+kat
+kauk
+kautschuk-exped
+kavk
+kavkaz
+kazakh
+kazakhsk
+kazakhst
+kazakkst
+kazakst
+kehut
+kennt
+kenntn
+kert
+kgl
+kilim
+kiobenh
+kirgiz
+kirgizsk
+kjob
+kjoeb
+klein
+knaut
+koenigsb
+komiss
+kon
+kong
+kongel
+kongl
+konigl
+konsp
+kor
+kotsch
+kozlem
+krasnoyarsk
+krit
+kruidk
+krypt
+krzem
+kul't
+kulturpfl
+kungl
+kvet
+königl
+közlem
+l'alger
+l'hortic
+land
+landesmus
+landw
+landwirtsch
+lapp
+laubholzk
+laurac
+laurin
+leafl
+lect
+legum
+legumin
+lehrb
+leipz
+leningradsk
+leop
+lesn
+lett
+lexic
+lexik
+lez
+lief
+lieut
+lig
+ligust
+liliac
+lisb
+liter
+lithuan
+loire-inf
+londin
+louis
+lusit
+luxemb
+lyc
+lycopod
+lyon
+maatsch
+mad
+madag
+madagasc
+madeir
+mader
+madjel
+magaz
+magell
+magy
+mal
+malab
+malabar
+malay
+malpigh
+mammill
+mammillarienfr
+manshur
+marb
+marit
+marocc
+mass
+mater
+mattogross
+maurit
+medd
+meded
+medicin
+medit
+mediterr
+melang
+melast
+melet
+mens
+merid
+meth
+methodique
+mexic
+midd
+midl
+mimos
+min
+mineral
+minist
+minn
+minneskr
+mitteil
+mitteilungsbl
+mittel-eur
+mitteleur
+mitth
+mittheil
+mocamb
+mod
+moden
+moessl
+monast
+monatsb
+monatschr
+monatsschr
+mongol
+monocot
+monog
+monspel
+montp
+montpell
+morav
+morb
+morfol
+morph
+morphol
+mosc
+mosk
+moskovsk
+mount
+mts
+muench
+munic
+murith
+muz
+myrt
+méd
+médit
+mém
+mérid
+méth
+nac
+nachtr
+nacion
+nadelholzk
+nanc
+nap
+napol
+narb
+narciss
+narr
+nation
+natl
+natural
+naturf
+naturforsch
+naturg
+naturgesch
+naturh
+naturl
+naturvid
+naturvidensk
+naturwiss
+natuurk
+nauch
+nauchno-issl
+nauk
+naz
+neap
+neapol
+ned
+neerl
+neotrop
+nepal
+neu
+neuh
+newsl
+newslett
+niederost
+nigl
+nilot
+no
+nomencl
+nord-am
+nordamer
+nordostdeut
+norf
+normand
+norsk
+north-east
+northw
+norw
+norweg
+nos
+notis
+notiz
+notizbl
+notul
+nub
+nucl
+nuev
+num
+nuov
+nár
+néerl
+növényt
+obl
+obsc
+obshch
+obsl
+ocas
+occ
+occas
+occid
+ocean
+odl
+oecon
+oefvers
+oekon
+oest
+oestr
+off
+offert
+ofvers
+onomat
+op
+opr
+opred
+or
+orchid
+orchidac
+ord
+oreg
+org
+organ
+orig
+orl
+orn
+ornam
+ornament
+ornem
+orob
+orquid
+ortic
+osserv
+ost-afr
+ostafr
+osterr
+ostseeprov
+otd
+otdel
+otdyel
+ottom
+oural
+overs
+overz
+oxal
+pacif
+pakist
+palaest
+palat
+palest
+palyn
+pam
+pand
+panic
+pap
+parad
+parq
+partie
+pastb
+patag
+patrim
+paul
+pedem
+penerb
+pengetah
+pengum
+penins
+perspect
+peruan
+peruv
+pesq
+pfl
+pflanz
+pflanzen
+pflanzenfam
+pflanzenk
+pflanzenr
+pflanzensyst
+pflanzenw
+phaen
+phanerog
+phanerogam
+pharmac
+pheg
+philad
+philipp
+philom
+philos
+phylog
+phylogen
+phys
+physicienne
+physiogr
+physiol
+phyt
+phytog
+phytogeogr
+phytogr
+phytol
+phytosoc
+phytotax
+piant
+pict
+pin
+piperac
+pis
+plant
+plantag
+plantel
+plat
+pleurothallid
+pochv
+podost
+polon
+polsk
+polygonac
+polyp
+polypet
+polypod
+polyt
+polytechn
+pomol
+popul
+portef
+portug
+portulacac
+post
+pract
+praef
+prael
+pragm
+prakt
+prat
+pref
+preisv
+preisverz
+prel
+prelim
+presb
+preserv
+preuss
+prikl
+prim
+princ
+princip
+prir
+prirod
+priv
+prix-cour
+progr
+promen
+prosp
+prot
+protect
+pterid
+pteridogr
+pteridol
+publ'd
+pug
+pugill
+pyr
+pyren
+přír
+queensl
+quinol
+quit
+rab
+racc
+railr
+rais
+ranunc
+ranunculac
+rapp
+rar
+rast
+rasteniev
+rastit
+razn
+recherch
+refug
+regensb
+regiom
+regn
+rehm
+reipubl
+reis
+rel
+relat
+relaz
+reliq
+rem
+rend
+rendic
+repos
+republ
+resp
+respubl
+result
+ret
+reun
+revist
+rhein
+rheinl
+rhod
+richnov
+riesengeb
+ripul
+riun
+roczn
+roman
+rond
+rosac
+rosl
+rossijsk
+rostl
+rozpr
+rośl
+rub
+rubiac
+rundbr
+russk
+russl
+ruth
+rys
+révis
+sadov
+sagg
+sahar
+salic
+sallsk
+saml
+samml
+sapot
+saxifr
+saxifrag
+sborn
+sc
+scandinav
+scepus
+sched
+schles
+schlesw
+schluess
+schoolfl
+schrift
+schutzgeb
+schwed
+schweiz
+scient
+scit
+scitam
+scorzon
+scot
+scott
+scrin
+script
+scroph
+scrophulariac
+seanc
+secc
+sect
+segrez
+sekt
+sel
+sel'skokhoz
+select
+selek
+selekts
+selsk
+seman
+senckenberg
+seneg
+sep
+sept
+septentr
+serb
+serj
+sert
+sess
+settlem
+severn
+shokub
+sib
+sibir
+sic
+sicil
+sicul
+siebenb
+sign
+siles
+silvest
+silvestr
+sin
+sist
+sitch
+sitzb
+skand
+sketch
+skr
+skrifr
+skrift
+skriv
+skrivt
+skup
+slav
+slov
+smithson
+sofiisk
+solan
+solanac
+somal
+somiol
+sonderbeih
+song
+soobshch
+sosud
+south
+southeast
+southwest
+sovet
+sovetsk
+spermat
+spermatophyt
+spic
+spicil
+spis
+společn
+spor
+spp
+spraw
+sredn
+sta
+standard
+stapel
+starg
+stat
+statth
+stepp
+stiint
+stint
+stir
+stirp
+stor
+struct
+stud
+subgen
+subtrop
+suburb
+suc
+succ
+sudamer
+suec
+suedl
+sukk
+sukkul
+sukkulent
+sukkulentenk
+super
+supl
+supp
+surin
+surv
+svalb
+svensk
+sverig
+sylv
+symp
+synop
+syr
+system
+szech
+sächs
+sällsk
+tabl
+tadshik
+tadzh
+tadzhik
+talysch
+tasm
+tasman
+taurin
+taux
+tax
+taxon
+tech
+techn
+technol
+tecn
+tecnol
+telegr
+tellur
+tenn
+tent
+term
+termesz
+termeszettud
+terr
+territ
+tert
+teutschl
+tex
+thail
+then
+theod
+theor
+therap
+thodique
+thüring
+tic
+tidskr
+tidsskr
+tiflissk
+tijdschr
+tirol
+tokyo
+tomsk
+topog
+topogr
+tor
+torin
+tosc
+toul
+tract
+tradit
+trait
+transsilv
+trat
+treb
+trem
+trib
+trop
+trud
+tsentral
+tubing
+tud
+tudom
+tuinb
+tulip
+tunis
+turkest
+turkm
+turkmen
+turkmensk
+türk
+uchen
+ucr
+uebers
+ukrain
+ultram
+umb
+umbell
+umbellif
+umet
+ungar
+unilab
+univers
+unters
+untersuch
+ural
+urug
+us
+usual
+ut
+util
+utiliz
+uzb
+uzbekist
+uzbekistan
+uzbeksk
+valer
+var
+varied
+vaterl
+vaucl
+vaud
+ved
+veg
+vegetaux
+ven
+venet
+venez
+verb
+verbenac
+vergl
+veron
+vers
+versl
+verz
+verzeichn
+veröff
+vestn
+vetensk
+vetenskapsakad
+veterin
+vetpl
+vext
+vi
+viag
+vid
+vierteljahrsschr
+vii
+viii
+viln
+virgin
+vit
+vitic
+volh
+vollst
+vopr
+vorles
+vosg
+vost
+vratislav
+vses
+vsesoyuzn
+vulg
+vyssh
+vég
+waldem
+wash
+westafr
+wet
+wetensch
+wetensk
+wildem
+wiss
+wissensch
+wissenschaften
+wochenschr
+wratislav
+yaoshan
+yearb
+yugo-vost
+yunnan
+zagreb
+zakavk
+zam
+zborn
+zeal
+zel
+zem
+zentr
+zeyl
+zhurn
+znan
+élém
+énum
+étud
+öfvers
+österr
+übers
+üniv
+čas
+şti
+acc brit
+adnot bot
+adnot cat
+adnot fl
+afr sp
+alp pl
+alph aufz
+am bot
+am botanist
+am eagle
+am select
+angl ex
+app ad
+app alt
+app fl
+app flind
+app frankl
+app ind
+app parry
+aralo-casp callig
+arb am
+arb arbust
+arb bot
+arb brit
+arb k
+arb naturf
+arboret brit
+asiat res
+aspl du
+auct fl
+auct syn
+aug pyrami
+backeb neue
+bak syn
+bamb gard
+bat eur
+beauv fl
+bedd ferns
+beissn handb
+belg j
+berl jahrb
+berl mag
+berol ex
+beschr afr
+beschr casp
+beschr gatt
+beschr graes
+beschr gras
+beschr laend
+beschr nation
+beschr riedgräs
+beschr russ
+boehm gew
+boll accad
+boll giard
+boll mus
+boll ort
+boll orto
+boll reale
+boll soc
+boll stud
+bonap n
+bremek in
+brev pl
+briq etud
+brit cact
+brit fern
+brit ferns
+brit fl
+brit herb
+brit rub
+bull acad
+bull acc
+bull afr
+bull agric
+bull alpine
+bull amer
+bull annuel
+bull applied
+bull arts
+bull arunachal
+bull assoc
+bull auckland
+bull bernice
+bull bi-mens
+bull biogeogr
+bull bishop
+bull bot
+bull brit
+bull bromeliad
+bull buit
+bull bur
+bull calif
+bull catal
+bull centr
+bull cercle
+bull cf
+bull charleston
+bull chichibu
+bull chin
+bull cl
+bull coll
+bull colorado
+bull congr
+bull cupressus
+bull dept
+bull div
+bull dépt
+bull econ
+bull exp
+bull fac
+bull fan
+bull florida
+bull forest
+bull geol
+bull gov
+bull géogr
+bull herb
+bull hiroshima
+bull imp
+bull inst
+bull int
+bull intern
+bull internat
+bull jard
+bull kanagawa
+bull kochi
+bull korea
+bull kwanak
+bull lab
+bull leeds
+bull louisiana
+bull madras
+bull mayenne-sci
+bull mens
+bull misc
+bull montana
+bull murith
+bull mus
+bull nanjing
+bull nat
+bull nation
+bull natl
+bull neerl
+bull new
+bull nippon
+bull okayama
+bull org
+bull ort
+bull orto
+bull osaka
+bull pacific
+bull polytechn
+bull princ
+bull pure
+bull r
+bull reale
+bull res
+bull s
+bull sc
+bull sci
+bull seanc
+bull sect
+bull sem
+bull shanghai
+bull soc
+bull stat
+bull séances
+bull tadjik
+bull taiwan
+bull texas
+bull tokyo
+bull torrey
+bull trav
+bull trimestriel
+bull u
+bull univ
+bull west
+bull yale
+bull écon
+caill voy
+casp app
+casp cauc
+cath univ
+chiov fl
+cl crucif
+cl umbel
+class pl
+class umbell
+clav agrost
+clav agrostogr
+clav anal
+clav gen
+col engr
+col ill
+coll bot
+coll dried
+coll mém
+coll orchid
+coll pl
+coll suppl
+comm acac
+comm bot
+comm leg
+comm phytogr
+comm pl
+comm soc
+comm veron
+comp fl
+corr linnaeus
+cult aroids
+cult conif
+cult ferns
+cult pl
+cult prot
+cult sp
+curr sci
+curr topics
+dec gen
+dec pl
+del fl
+del ind
+del insub
+del sem
+deless ic
+desc cat
+desc hydrol
+desc malay
+desc phys
+desc pl
+desc taur
+deutsch dendrol
+deutsch gartner-zeit
+dinsm pl
+diss bellad
+diss blaeria
+diss bot
+diss brev
+diss brun
+diss chen
+diss comp
+diss daph
+diss de
+diss echin
+diss echit
+diss eric
+diss gard
+diss glad
+diss herm
+diss hydroc
+diss irid
+diss ixia
+diss melanth
+diss moraea
+diss nov
+diss observ
+diss phyl
+diss pl
+diss prot
+diss rest
+diss ricin
+diss rub
+diss univ
+dup voy
+edinb n
+eichw skizze
+elench crna
+elench hort
+elench horti
+elench pl
+elench scepus
+ell sketch
+en pl
+eng bot
+engl bot
+engl fl
+engl veg
+esp congol
+esp nouv
+europ medit
+exsicc distrib
+exsicc genav
+exsicc herb
+exsicc nobis
+fam brom
+fam bromel
+fam eriocaulac
+fam euphorbiaceae
+fam fl
+fam gen
+fam huperziac
+fam nat
+fam pl
+fam podost
+fam rosac
+fed mus
+fig fl
+fig pl
+fil afr
+fil berol
+fil deck
+fil eur
+fil exot
+fil gen
+fil graeff
+fil hort
+fil lechl
+fil sp
+fil spec
+flor cab
+flor mag
+flor rep
+flow pl
+forest fl
+forest irrig
+forest j
+fors oecon
+freyc voy
+gatt cous
+gatt escallonia
+gatt perovsk
+gatt pomac
+genev monog
+geogr bot
+geogr distr
+geogr enum
+geogr farne
+geogr mem
+god biol
+god sofiisk
+god zborn
+gott gel
+gram afr
+gram bolivia
+gram bonar
+gram brit
+gram ecuat
+gram ecuator
+gram fr
+gram monogr
+gram panic
+gram skand
+gram u
+gram unifl
+gram urug
+guid bot
+hegetschw fl
+hier alp
+hier gall
+hierac alp
+hierac centr
+hierac croat
+hierac mitt
+hierac norweg
+hierac schweiz
+hierac westsudeten
+hook exot
+it princip
+ital botanist
+itin mediterr
+itin pl
+itin princ
+jard bot
+jard fleur
+jard fruit
+jard malmaison
+jard st
+kneuck allgem
+kr gew
+lad fl
+lav ist
+lehm reliq
+lex gen
+lin fl
+link klotzsch
+linn praelect
+list orch
+loes in
+lond cat
+lond journ
+madr ex
+maill reunion
+man am
+man bot
+man brit
+man calif
+man cult
+man determin
+man essences
+man fl
+man grass
+man grasses
+man herb
+man herbor
+man higher
+man ind
+man mat
+man n
+man new
+man non-dipterocarp
+man nílagiri
+man orchid
+man pl
+man pterid
+man s
+man trees
+man vasc
+mat etude
+mat fl
+mat hist
+mat med
+mat term
+math term
+math termeszettud
+maxim reise
+med bot
+med fl
+med jahrb
+med mat
+med pl
+med repos
+medic bot
+mel biol
+mel bot
+melb chem
+mett pheg
+mex pl
+mich acad
+millsp living
+miss de
+miss em
+miss sci
+miss stud
+mon anon
+mon bisc
+mon camp
+mon elaph
+nannf in
+nom bot
+nom ed
+nom nov
+nom pl
+nord karlvaxtfl
+nutt pl
+oesterr bot
+orch afr
+orch ambon
+orch culture
+orch digest
+orch gen
+orch gers
+orch guide
+orch hybr
+orch java
+orch s
+orch thail
+palm arch
+palm fam
+palm hassler
+palm j
+palm mattogross
+palm paraguay
+par ex
+pav nuev
+phan cuming
+phan et
+phan terr
+pharm j
+pharm post
+pharm rundschau
+pinet woburn
+pol bot
+poll orch
+prod cap
+prod fl
+prod gossyp
+prod gotting
+prod lobel
+prod monog
+prod phyt
+prod pl
+prod scitam
+prod southhamp
+prod stirp
+prod syst
+prod umbellif
+prod veg
+prog resum
+prol fl
+pter porto
+quart bull
+quart charleston
+quart j
+quib chlor
+recens crypt
+recens spec
+rech dipterocarp
+rech fam
+rech fl
+rech glob
+rech pl
+ref nauchno-issl
+reg trimestre
+res bull
+res hist
+res j
+res kyoto
+res notes
+res pap
+res pines
+res rep
+res sci
+res stud
+res voy
+ric caprifico
+rod empetrum
+rod karagana
+rom arch
+rom mag
+rom pl
+ros monog
+ros monogr
+sag stor
+sal eur
+sal europ
+salom nom
+schischk in
+schomb faun
+schr akad
+sec cens
+sec cent
+secr agric
+seg contr
+sem gvozd
+sem hort
+sem rar
+ser inconf
+sm pl
+southw naturalist
+southw sci
+st helena
+stand cycl
+steud nom
+summ veg
+suom kasvio
+sv bot
+sv fanerogamfl
+taschenb cactuslieb
+taschenb deut
+taschenb fl
+th dur
+thes cap
+thes zeyl
+tisch in
+trab comm
+trab congr
+trab dep
+trab dept
+trab inst
+trab jard
+trab monogr
+trab mus
+tratt alb
+trautv regel
+urb in
+vasc fl
+vasc pl
+veget nord
+viagg stati
+vict natural
+vict naturalist
+vict pl
+vilm blumengärtn
+vollm fl
+werderm in
+west austral
+west minerva
+zahlbr in
+zap imp
+zap kharbin
+zap novorossijsk
