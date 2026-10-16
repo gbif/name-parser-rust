@@ -188,7 +188,7 @@ test_that("informal names are parsed rows with their anchor", {
 test_that("an informal row keeps Candidatus (#76)", {
   out <- parse_names("Candidatus Pelagibacter sp. HTCC7211")
   expect_equal(out$type, "INFORMAL")
-  expect_equal(out$anchor, "Pelagibacter")
+  expect_equal(out$anchor, "\"Candidatus Pelagibacter\"")  # the anchor keeps the status
   expect_equal(out$phrase, "sp. HTCC7211")
   expect_true(out$candidatus)
 })
