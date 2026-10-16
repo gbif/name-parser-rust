@@ -706,7 +706,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 // 3. infraspecific rank marker (with notho-prefix support)
                 if let Some((rm_infra, notho_flag)) =
                     rank_markers::match_infraspecific_allow_notho(w).filter(|_| {
-                        !lower_epithets.is_empty() || !rank_markers::needs_species_epithet(w)
+                        (!lower_epithets.is_empty() || !rank_markers::needs_species_epithet(w))
+                            && (!rank_markers::needs_epithet_after(w)
+                                || has_infraspecific_epithet_after(ts, i))
                     })
                 {
                     // The capitalised final epithet of an autonym ("var. Tenuicaulis").
