@@ -4685,18 +4685,32 @@ fn unwrap_keyword_only_bracket(s: &str) -> String {
     KEYWORD_ONLY_BRACKET.replace_all(s, "$1 ").into_owned()
 }
 
-/// An emendation inside the basionym's brackets, after its year: "(Sakagami, 1956 Em. Chisaka,
-/// 1960)". Lifted out behind the bracket, where [`TAX_NOTE`] takes it as the note it is. Rust-only:
-/// Java read "Em." as Chisaka's initials and 1960 as an imprint year.
+/// An emendation inside the basionym's brackets, after its year or author: "(Sakagami, 1956 Em.
+/// Chisaka, 1960)", "(Aubl. emend. Splitg.) Sandwith" (#142). Lifted out to the end, behind the
+/// combination's author, where [`TAX_NOTE`] takes it as the note it is. Rust-only: Java read "Em."
+/// as Chisaka's initials and 1960 as an imprint year, and took "emend. Splitg.) Sandwith" for the
+/// note. Group 1 the basionym's authorship, group 2 the emendation.
 static BRACKETED_EMENDATION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"\(([^()]*?(?-u:\d{4}))(?-u:\s*),?(?-u:\s+)((?:[Ee]m\.|emend\.?)(?-u:\s+)\p{Lu}[^()]*)\)",
+        r"\(([^()]*?[\p{L}.\d])(?-u:\s*),?(?-u:\s+)((?:[Ee]m\.|emend\.?)(?-u:\s+)\p{Lu}[^()]*)\)",
     )
     .unwrap()
 });
 
 fn lift_bracketed_emendation(s: &str) -> String {
-    BRACKETED_EMENDATION.replace(s, "($1) $2").into_owned()
+    let Some(caps) = BRACKETED_EMENDATION.captures(s) else {
+        return s.to_string();
+    };
+    let whole = caps.get(0).unwrap();
+    let rest = java_trim(&s[whole.end()..]);
+    let mut out = format!("{}({})", &s[..whole.start()], &caps[1]);
+    if !rest.is_empty() {
+        out.push(' ');
+        out.push_str(rest);
+    }
+    out.push(' ');
+    out.push_str(java_trim(&caps[2]));
+    out
 }
 
 /// A concept note inside the basionym's brackets, after its author: "(Mag of Dollfus 1952)", "(Hall

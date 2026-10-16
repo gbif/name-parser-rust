@@ -551,3 +551,21 @@ fn issue_153_unknown_authors() {
     // an unknown cultivar stays a placeholder
     assert_unparsable("Saccharum hybrid cultivar (unknown)", NameType::Placeholder);
 }
+
+#[test]
+fn issue_142_emendation_in_the_basionym_bracket() {
+    assert_name("Pachyptera kerere (Aubl. emend. Splitg.) Sandwith")
+        .species("Pachyptera", "kerere")
+        .comb_authors(None, &["Sandwith"])
+        .bas_authors(None, &["Aubl."])
+        .sensu("emend. Splitg.")
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Paulschulzia pseudovolvox (Schulz Em. Teil.) Skuja")
+        .species("Paulschulzia", "pseudovolvox")
+        .comb_authors(None, &["Skuja"])
+        .bas_authors(None, &["Schulz"])
+        .sensu("Em. Teil.")
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
