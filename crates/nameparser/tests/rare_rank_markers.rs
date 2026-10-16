@@ -107,12 +107,7 @@ fn infrasubspecific_markers_of_older_literature() {
         .nothing_else();
     // with no code it stays the shared rank
     assert_name("Proetus midas m. elongatus")
-        .infra_species(
-            "Proetus",
-            "midas",
-            Rank::InfrasubspecificName,
-            "elongatus",
-        )
+        .infra_species("Proetus", "midas", Rank::InfrasubspecificName, "elongatus")
         .nothing_else();
     assert_name("Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.")
         .infra_species(
