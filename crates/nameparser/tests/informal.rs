@@ -1007,11 +1007,6 @@ fn a_numbered_label_after_a_uninomial_is_its_phrase() {
         ("Allograpta 75-6", "Allograpta", "75-6"),
         ("Nostoc SAG 60.79", "Nostoc", "SAG 60.79"),
         ("Cryptosporidium Pig 1", "Cryptosporidium", "Pig 1"),
-        (
-            "Acrocirridae gen. 1 KJO-2009",
-            "Acrocirridae",
-            "gen. 1 KJO-2009",
-        ),
     ] {
         assert_informal(input)
             .taxon(taxon)
@@ -1020,6 +1015,13 @@ fn a_numbered_label_after_a_uninomial_is_its_phrase() {
             .phrase(phrase)
             .nothing_else();
     }
+    // an unnamed genus is of rank GENUS (#174)
+    assert_informal("Acrocirridae gen. 1 KJO-2009")
+        .taxon("Acrocirridae")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Genus)
+        .phrase("gen. 1 KJO-2009")
+        .nothing_else();
     // a genomospecies is a species of the genus
     assert_informal("Acinetobacter genomosp. 3")
         .taxon("Acinetobacter")
@@ -1072,5 +1074,73 @@ fn a_year_or_a_numeral_epithet_after_a_uninomial_stays() {
         .species("Callidium", "2-fasciatum")
         .comb_authors(Some("1964"), &["Zimsen"])
         .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn an_unnamed_genus_after_its_taxon_is_the_phrase() {
+    // `gen.` and its designation, read as the species `gen` and an author before (#174)
+    for (input, rank, phrase) in [
+        ("Carabidae gen. sp.", Rank::Species, "gen. sp."),
+        (
+            "Amblyopinina gen. sp. 83 JJS-2019",
+            Rank::Species,
+            "gen. sp. 83 JJS-2019",
+        ),
+        (
+            "Elachistidae gen. elachJanzen01 sp. Janzen592",
+            Rank::Species,
+            "gen. elachJanzen01 sp. Janzen592",
+        ),
+        (
+            "Braconidae gen. n. sp. JS10_00530",
+            Rank::Species,
+            "gen. n. sp. JS10_00530",
+        ),
+        (
+            "Entiminae gen. 3 stolidus",
+            Rank::Species,
+            "gen. 3 stolidus",
+        ),
+        ("Carabidae gen. 3", Rank::Genus, "gen. 3"),
+        (
+            "Tachinidae gen. tachinidWood18",
+            Rank::Genus,
+            "gen. tachinidWood18",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(input.split(' ').next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(rank)
+            .phrase(phrase)
+            .nothing_else();
+        let pn = nameparser::parse_name(input, None, None, None).unwrap();
+        assert_eq!(pn.canonical_name().as_deref(), Some(input));
+    }
+
+    // a genus-group name after `gen.` is an infrageneric name, unranked as after `unr.`
+    assert_name("Achatinella gen. Baldwinia Ancey, 1899")
+        .infrageneric_at("Achatinella", Rank::Subgenus, "Baldwinia")
+        .comb_authors(Some("1899"), &["Ancey"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Plusiocampa gen. Pentachaetocampa")
+        .infrageneric_at("Plusiocampa", Rank::InfragenericName, "Pentachaetocampa")
+        .nothing_else();
+    // …but with only a year after it, the word is the genus's author
+    assert_name_hinted(
+        "Aegeria gen. Fabricius, 1807",
+        None,
+        Some(Rank::Genus),
+        None,
+    )
+    .monomial_rank("Aegeria", Rank::Genus)
+    .comb_authors(Some("1807"), &["Fabricius"])
+    .code(NomCode::Zoological)
+    .nothing_else();
+    // a bare `gen.` labels the genus
+    assert_name("Ojrotella gen.")
+        .monomial_rank("Ojrotella", Rank::Genus)
         .nothing_else();
 }

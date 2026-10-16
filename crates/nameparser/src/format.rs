@@ -50,10 +50,10 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// "Formicidae sp. cf.". And with the generic organism labels that open the phrase of an unnamed
 /// species (`Wolbachia endosymbiont of Leptogenys gracilis`, `Acidimicrobiales bacterium JGI
 /// 01_E13`), which rendered "Wolbachia sp. endosymbiont of …". And with the new-species markers
-/// `n. sp.` and `nsp` (#139).
+/// `n. sp.` and `nsp` (#139), and the unnamed genus of `Carabidae gen. sp.` (#174).
 static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)^(?:(?:species|spec|spp|sp|nsp|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)).*$",
+        r"(?i)^(?:(?:species|spec|spp|sp|nsp|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
     )
     .unwrap()
 });

@@ -62,6 +62,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_quoted_monomial(ctx, s);
     s = apply_missing_genus_placeholder(ctx, s);
     s = strip_leading_genus_qualifier(ctx, s);
+    s = stash_genus_designation(ctx, s);
     s = shorten_species_near(s);
     s = strip_rank_lineage(ctx, s);
     s = strip_leading_species_label(ctx, s);
@@ -521,6 +522,86 @@ fn strip_leading_genus_qualifier(ctx: &mut ParseContext, s: String) -> String {
     }
     ctx.qualified_genus = true;
     caps[3].to_string()
+}
+
+/// A taxon followed by `gen.` and what it says about an unnamed genus in it: `Carabidae gen. sp.`,
+/// `Amblyopinina gen. sp. 83 JJS-2019`, `Elachistidae gen. elachJanzen01 sp. Janzen592`,
+/// `Carabidae gen. 3` — or the name of a genus-group taxon in it: `Achatinella gen. Baldwinia Ancey,
+/// 1899` (#174). Group 1 is the taxon, group 2 what follows `gen`.
+static GENUS_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)gen(?:\.(?-u:\s*)|(?-u:\s+))(\S.*?)(?-u:\s*)$").unwrap()
+});
+
+/// A uninomial labelled with its rank, `Ojrotella gen.`. Group 1 is the uninomial.
+static BARE_GENUS_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)gen\.?(?-u:\s*)$").unwrap());
+
+/// What a [`GENUS_DESIGNATION`] may not start with: the placeholders Preflight owns (`gen. indet.`,
+/// `gen. inc.`, `gen. et sp. indet.`).
+static GENUS_DESIGNATION_EXCLUDED: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:indet|inc|incertae|et|&)(?-u:\b)").unwrap());
+
+/// A new genus, `gen. n.` / `gen. nov.`: the nom-note step's, unless a new species of it follows
+/// (`Monimiaceae gen. nov. sp. (Mt Hemmant)`).
+static GENUS_DESIGNATION_NOVA: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^(?:n|nov)\.?(?:(?-u:\s)|$)").unwrap());
+
+/// A species marker in a [`GENUS_DESIGNATION`]: the unnamed taxon is a species of the unnamed genus.
+/// A lowercase epithet at the end does too (`Entiminae gen. 3 stolidus`).
+static GENUS_DESIGNATION_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i:(?:^|(?-u:\s)|n_)(?:sp|spp|spec|nsp)(?:\.|(?-u:\s)|_|$))|(?-u:\s)\p{Ll}{3,}$")
+        .unwrap()
+});
+
+/// An author after `gen.`, the genus's own: a capitalised word and straight after it its year,
+/// `Fabricius, 1807`.
+static GENUS_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\p{Lu}\p{Ll}+\.?(?-u:\s*),?(?-u:\s*)(?-u:\d{4})(?-u:\b)").unwrap()
+});
+
+/// A genus-group name after `gen.`: a capitalised word of letters, no code.
+static GENUS_GROUP_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}{2,}(?:(?-u:\s)|$)").unwrap());
+
+/// See [`GENUS_DESIGNATION`]. Read as is, `gen` became the species epithet and the rest its author.
+/// A designation is the phrase of an informal name on the taxon, as the glued `Rossellidae_n_gen`
+/// is ([`GLUED_NEW_GENUS`]): marker included, of rank SPECIES when it designates a species too,
+/// else GENUS. A genus-group name is an unranked infrageneric name, as after `unr.`, unless a
+/// species marker follows (`Eucoilinae gen. Schick sp. 4 MB390` designates a species).
+fn stash_genus_designation(ctx: &mut ParseContext, s: String) -> String {
+    if let Some(caps) = BARE_GENUS_MARKER.captures(&s) {
+        // `Ojrotella gen.`: the rank of the uninomial
+        if ctx.requested_rank.is_none_or(|r| r == Rank::Genus) {
+            ctx.name.rank = Rank::Genus;
+            return caps[1].to_string();
+        }
+        return s;
+    }
+    let Some(caps) = GENUS_DESIGNATION.captures(&s) else {
+        return s;
+    };
+    let rest = caps.get(2).unwrap().as_str();
+    let species = GENUS_DESIGNATION_SPECIES.is_match(rest);
+    if GENUS_DESIGNATION_EXCLUDED.is_match(rest)
+        || (!species && GENUS_DESIGNATION_NOVA.is_match(rest))
+    {
+        return s;
+    }
+    if !species && GENUS_AUTHOR.is_match(rest) {
+        // `Aegeria gen. Fabricius, 1807`: the genus and its author
+        if ctx.requested_rank.is_none_or(|r| r == Rank::Genus) {
+            ctx.name.rank = Rank::Genus;
+        }
+        return format!("{} {rest}", &caps[1]);
+    }
+    if !species && GENUS_GROUP_WORD.is_match(rest) {
+        return format!("{} unr. {rest}", &caps[1]);
+    }
+    let phrase_start = caps.get(1).unwrap().end();
+    ctx.name.phrase = Some(java_trim(&s[phrase_start..]).to_string());
+    ctx.name.rank = if species { Rank::Species } else { Rank::Genus };
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
 }
 
 /// A classification path written as abbreviated rank markers, `supf. Arrenuroidea fam. Arrenuridae`
