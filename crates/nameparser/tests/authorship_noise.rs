@@ -780,3 +780,37 @@ fn a_comma_next_to_a_rank_marker_keeps_the_infraspecific_name() {
         .partial("nov.")
         .nothing_else();
 }
+
+#[test]
+fn the_epithet_repeated_in_capitals_is_no_author() {
+    // 172 ChecklistBank names, most of them lactobacilli whose authorship column holds the epithet
+    // and the year (#123)
+    assert_name(
+        "Paramormyrops gabonensis GABONENSIS TAVERNE, THYS VAN DEN AUDENAERDE, & HEYMER 1977",
+    )
+    .species("Paramormyrops", "gabonensis")
+    .comb_authors(
+        Some("1977"),
+        &["Taverne", "Thys van den Audenaerde", "Heymer"],
+    )
+    .code(NomCode::Zoological)
+    .warning(&["Removed: GABONENSIS"])
+    .nothing_else();
+    assert_name_auth("Loigolactobacillus binensis", "BINENSIS 2020")
+        .species("Loigolactobacillus", "binensis")
+        .comb_authors(Some("2020"), &[])
+        .warning(&["Removed: BINENSIS"])
+        .nothing_else();
+    assert_name("Coryphocera affinis AFFINIS,1848")
+        .species("Coryphocera", "affinis")
+        .comb_authors(Some("1848"), &[])
+        .warning(&["Removed: AFFINIS"])
+        .nothing_else();
+    // only in capitals: a capitalised epithet is put in lower case
+    assert_name("Aurelia coerulea COERULEA VON LENDENFELD 1884")
+        .species("Aurelia", "coerulea")
+        .comb_authors(Some("1884"), &["von Lendenfeld"])
+        .code(NomCode::Zoological)
+        .warning(&["Removed: COERULEA"])
+        .nothing_else();
+}

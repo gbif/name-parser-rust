@@ -63,6 +63,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_rank_lineage(ctx, s);
     s = strip_leading_species_label(ctx, s);
+    s = strip_repeated_shouted_epithet(ctx, s);
     s = lower_capitalised_epithet(ctx, s);
     s = correct_misspelt_rank_marker(s);
     s = strip_stray_qmark_after_marker(s);
@@ -2108,6 +2109,77 @@ fn lower_capitalised_epithet(ctx: &mut ParseContext, s: String) -> String {
         Some(tail) => format!("{}{lowered} {tail}", &caps[1]),
         None => format!("{}{lowered}", &caps[1]),
     }
+}
+
+/// The epithet repeated in capitals at the start of the authorship, `Paramormyrops gabonensis
+/// GABONENSIS TAVERNE, …`, `Loigolactobacillus binensis` + `BINENSIS 2020` (#123): no author but a
+/// copy of the epithet some sources put into the authorship. It is removed, named in a warning.
+/// The word's letters up to a separator are compared, `AFFINIS,1848` counts.
+fn strip_repeated_shouted_epithet(ctx: &mut ParseContext, s: String) -> String {
+    let mut words = s
+        .split_whitespace()
+        .map(|w| (w.as_ptr() as usize - s.as_ptr() as usize, w));
+    let Some((_, genus)) = words.next() else {
+        return s;
+    };
+    if !genus.starts_with(|c: char| c.is_uppercase()) {
+        return s;
+    }
+    let mut prev: Option<&str> = None;
+    for (start, word) in words {
+        if let Some(len) = prev.and_then(|epithet| repeated_epithet_len(word, epithet)) {
+            ctx.name
+                .add_warning(&format!("{}{}", warnings::REMOVED_PREFIX, &word[..len]));
+            return format!(
+                "{} {}",
+                s[..start].trim_end(),
+                s[start + len..].trim_start()
+            )
+            .trim_end()
+            .to_string();
+        }
+        // the authorship begins, not with the epithet
+        if word.starts_with(|c: char| c.is_uppercase()) {
+            break;
+        }
+        prev = Some(word).filter(|w| w.chars().all(|c| c.is_lowercase() || c == '-'));
+    }
+    s
+}
+
+/// [`strip_repeated_shouted_epithet`] for a separately supplied authorship: its first word
+/// repeats the name's last epithet.
+pub(crate) fn strip_authorship_repeated_epithet(authorship: &str, name: &mut ParsedName) -> String {
+    let epithet = name
+        .infraspecific_epithet
+        .as_deref()
+        .or(name.specific_epithet.as_deref());
+    let authorship = java_trim(authorship);
+    match epithet.and_then(|e| repeated_epithet_len(authorship, e)) {
+        Some(len) => {
+            name.add_warning(&format!(
+                "{}{}",
+                warnings::REMOVED_PREFIX,
+                &authorship[..len]
+            ));
+            java_trim(&authorship[len..]).to_string()
+        }
+        None => authorship.to_string(),
+    }
+}
+
+/// The byte length of the capital word opening `word` when it is `epithet` in capitals and ends
+/// there, at a space or at a separator: `GABONENSIS`, `GABONENSIS TAVERNE`, `AFFINIS,1848`.
+fn repeated_epithet_len(word: &str, epithet: &str) -> Option<usize> {
+    let len = word
+        .find(|c: char| !(c.is_alphabetic() || c == '-'))
+        .unwrap_or(word.len());
+    let (head, rest) = word.split_at(len);
+    (epithet.chars().count() >= 3
+        && head.chars().all(|c| c.is_uppercase() || c == '-')
+        && head.to_lowercase() == epithet
+        && (rest.is_empty() || rest.starts_with(|c: char| c.is_whitespace() || ",;(".contains(c))))
+    .then_some(len)
 }
 
 // ---- Step 15: normaliseDoubleUnderscores ----
