@@ -34,9 +34,54 @@ fn rare_infraspecific_markers() {
         .nothing_else();
 }
 
+/// `r.` is the race of older zoological literature (Oberthür, Forel, Verity), a geographic race
+/// that is read as a subspecies today. It used to be taken for the infraspecific epithet, and the
+/// real epithet for an author.
+#[test]
+fn race_marker() {
+    assert_name("Lycaena rippertii r. fabressei Oberthür, 1910")
+        .infra_species("Lycaena", "rippertii", Rank::Subspecies, "fabressei")
+        .comb_authors(Some("1910"), &["Oberthür"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // written out, too: Pic's beetles, and the races of French floras (a proles in botany)
+    assert_name("Leptura erratica race bottcheri Pic, 1911")
+        .infra_species("Leptura", "erratica", Rank::Subspecies, "bottcheri")
+        .comb_authors(Some("1911"), &["Pic"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Zygorhynchus vuilleminii race agamus Namysl.")
+        .infra_species(
+            "Zygorhynchus",
+            "vuilleminii",
+            Rank::InfraspecificName,
+            "agamus",
+        )
+        .comb_authors(None, &["Namysl."])
+        .nothing_else();
+    // the numbered physiological race of a plant pathogen is no rank
+    assert_name("Fusarium oxysporum f. sp. cubense race 4")
+        .infra_species("Fusarium", "oxysporum", Rank::FormaSpecialis, "cubense")
+        .code(NomCode::Botanical)
+        .partial("race")
+        .nothing_else();
+    // with no epithet after it, "r." ends an abbreviated author name
+    assert_name("Rubus deznensis Ny r.")
+        .species("Rubus", "deznensis")
+        .comb_authors(None, &["Ny r."])
+        .nothing_else();
+    // or, before an author, is the epithet itself, abbreviated like the repeated one of a
+    // nominotypical subspecies
+    assert_name("Diacamma rugosum r. Karavajev & Karawajew 1935")
+        .infra_species("Diacamma", "rugosum", Rank::Subspecies, "r")
+        .comb_authors(Some("1935"), &["Karavajev", "Karawajew"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
 /// Markers below the subspecies in older literature: `m.` (morpha, monstrositas or modificatio),
 /// `monstr.`, `mod.`, `morpha`. `m.` used to be glued onto the species author as an initial or
-/// read as the epithet, the real epithet as an author.
+/// read as the epithet, the real epithet as an author. A zoological `m.` is the morpha.
 #[test]
 fn infrasubspecific_markers_of_older_literature() {
     // the stray "?." is dropped
@@ -50,16 +95,24 @@ fn infrasubspecific_markers_of_older_literature() {
         .specific_authors(None, &["L."])
         .comb_authors(None, &["Jansen", "Wacht."])
         .nothing_else();
-    // Breuning's morphae: not turned into a subspecies by the zoological code
+    // Breuning's morphae: under the zoological code "m." is the morpha
     assert_name("Eunidia simplex m. bifuscomaculata Breuning, 1957")
-        .infra_species(
-            "Eunidia",
-            "simplex",
-            Rank::InfrasubspecificName,
-            "bifuscomaculata",
-        )
+        .infra_species("Eunidia", "simplex", Rank::Morph, "bifuscomaculata")
         .comb_authors(Some("1957"), &["Breuning"])
         .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_code("Proetus midas m. elongatus", NomCode::Zoological)
+        .infra_species("Proetus", "midas", Rank::Morph, "elongatus")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // with no code it stays the shared rank
+    assert_name("Proetus midas m. elongatus")
+        .infra_species(
+            "Proetus",
+            "midas",
+            Rank::InfrasubspecificName,
+            "elongatus",
+        )
         .nothing_else();
     assert_name("Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.")
         .infra_species(

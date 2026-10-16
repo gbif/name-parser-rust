@@ -95,15 +95,22 @@ static INFRASPECIFIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         // (Breuning's "Eunidia simplex m. bifuscomaculata"), the botanists' monstrositas or
         // modificatio below the forma ("Phalaris canariensis L. m. bracteata Jansen & Wacht.") —
         // so it gets the rank they share; monstrositas and modificatio have none of their own.
-        // Not INFRASPECIFIC_NAME, which a zoological name turns into a subspecies. Not "mon" or
-        // "monstrositas", which are epithets too ("Euchroeus mon", "Chordeuma pallidum
-        // monstrositas Rothenbühler, 1899"); see [`needs_species_epithet`] for "m".
+        // Assemble makes a zoological one MORPH. Not INFRASPECIFIC_NAME, which a zoological name
+        // turns into a subspecies. Not "mon" or "monstrositas", which are epithets too
+        // ("Euchroeus mon", "Chordeuma pallidum monstrositas Rothenbühler, 1899"); see
+        // [`needs_species_epithet`] for "m".
         ("m", Rank::InfrasubspecificName),
         ("morpha", Rank::Morph),
         ("monstr", Rank::InfrasubspecificName),
         ("mod", Rank::InfrasubspecificName),
         ("modif", Rank::InfrasubspecificName),
         ("modificatio", Rank::InfrasubspecificName),
+        // The race of older zoological literature (Oberthür's "Lycaena rippertii r. fabressei",
+        // Forel's ants, Verity's butterflies), read as a subspecies today: the generic rank, which
+        // a zoological name turns into one. The race of French floras is a proles, so not that
+        // rank either. See [`needs_species_epithet`].
+        ("r", Rank::InfraspecificName),
+        ("race", Rank::InfraspecificName),
         // "st." used in some old fungal works as a generic infraspecific marker.
         ("st", Rank::InfraspecificName),
         // "*" between two lowercase epithets is an old infraspecific separator.
@@ -139,10 +146,19 @@ static INFRAGENERIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
     ])
 });
 
-/// A marker only once the species epithet is there: right after the genus "m." is the species
-/// epithet abbreviated ("Albana m. subsp. griseum Iablokoff, 1950", "Acaeroplastes m. sardous").
+/// A marker only once the species epithet is there: right after the genus "m." and "r." are the
+/// species epithet abbreviated ("Albana m. subsp. griseum Iablokoff, 1950", "Acaeroplastes m.
+/// sardous").
 pub fn needs_species_epithet(word: &str) -> bool {
-    word.eq_ignore_ascii_case("m")
+    word.eq_ignore_ascii_case("m") || word.eq_ignore_ascii_case("r")
+}
+
+/// A marker only before its epithet. Without one, "r." abbreviates the repeated epithet of a
+/// nominotypical subspecies ("Diacamma rugosum r. Karavajev & Karawajew 1935") or ends an author
+/// ("Rubus deznensis Ny r."), and "race" numbers the physiological race of a plant pathogen
+/// ("Fusarium oxysporum f. sp. cubense race 4").
+pub fn needs_epithet_after(word: &str) -> bool {
+    needs_species_epithet(word) || word.eq_ignore_ascii_case("race")
 }
 
 /// Java `RankMarkers.matchInfraspecific(String)` (`RankMarkers.java:132-134`): plain

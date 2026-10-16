@@ -751,6 +751,7 @@ const KNOWN_INFRASPECIFIC_MARKERS: &[&str] = &[
     "str",
     "st",
     "m",
+    "r",
     "morpha",
     "monstr",
     "mod",

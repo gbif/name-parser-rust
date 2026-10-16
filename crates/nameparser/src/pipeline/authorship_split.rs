@@ -104,12 +104,12 @@ fn name_before(tokens: &[Token], c: usize) -> bool {
 }
 
 /// An infraspecific rank marker word whose comma [`mend_rank_marker_commas`] may mend. Not the
-/// one-letter "m" nor "st", "str" or "*", which stand for other things after a comma too.
+/// one-letter "m" or "r" nor "st", "str" or "*", which stand for other things after a comma too.
 fn is_comma_mendable_marker(t: &Token) -> bool {
     t.kind == TokenKind::Word
         && !matches!(
             t.text.to_lowercase().as_str(),
-            "m" | "st" | "str" | "strain" | "*" | rank_markers::LETTER_SUBDIVISION
+            "m" | "r" | "st" | "str" | "strain" | "*" | rank_markers::LETTER_SUBDIVISION
         )
         && rank_markers::match_infraspecific_allow_notho(&t.text).is_some()
 }
@@ -384,6 +384,8 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 // Infraspecific rank marker (incl. "notho" prefix variants)
                 if rank_markers::match_infraspecific_allow_notho(w).is_some()
                     && (have_epithet || !rank_markers::needs_species_epithet(w))
+                    && (!rank_markers::needs_epithet_after(w)
+                        || has_epithet_after_marker(tokens, i, false))
                 {
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
@@ -1278,9 +1280,10 @@ fn has_epithet_after_marker(tokens: &[Token], marker_idx: usize, infrageneric: b
     }
     if k >= n {
         // "f" is ambiguous: could be forma-rank or the "filius" author suffix. Treat a
-        // trailing "f." as filius (not a rank marker) to avoid misclassification.
-        let mw = tokens[marker_idx].text.to_lowercase();
-        return mw != "f";
+        // trailing "f." as filius (not a rank marker) to avoid misclassification. Likewise a
+        // trailing "m.", "r." or "race" (see `rank_markers::needs_epithet_after`).
+        let mw = &tokens[marker_idx].text;
+        return !mw.eq_ignore_ascii_case("f") && !rank_markers::needs_epithet_after(mw);
     }
     let t = &tokens[k];
     if t.kind != TokenKind::Word {

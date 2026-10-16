@@ -120,6 +120,10 @@ pub(crate) struct ParseContext {
     /// aneura F.Muell. ex Benth. var. latifolia J.M.Black"), when code inference reads another
     /// authorship: its evidence votes too.
     pub species_code_state: Option<AuthState>,
+    /// The infraspecific rank marker was "m.": the morpha of zoologists (Breuning's "Eunidia
+    /// simplex m. bifuscomaculata"), but monstrositas or modificatio in botany, so NameTokens gives
+    /// it the shared INFRASUBSPECIFIC_NAME. Assemble makes it MORPH once the code is zoological.
+    pub morpha_marker: bool,
 }
 
 impl ParseContext {
@@ -169,6 +173,7 @@ impl ParseContext {
             approved_lists: false,
             species_code_state: None,
             coded_diacritics: false,
+            morpha_marker: false,
         }
     }
 
