@@ -3895,10 +3895,11 @@ fn strip_trailing_species_word(_ctx: &mut ParseContext, s: String) -> String {
 /// too, so under `(?i)` it folds ASCII-only (matching Java's default CASE_INSENSITIVE,
 /// which is ASCII-only unless UNICODE_CASE is also set — it isn't here). No
 /// lookaround/backreference -> plain `regex` crate. Rust-only: without the comma too ("Aconitum
-/// gracile Rchb. pro parte", "Rchb. p.p.") and as "pro max./maj./min. parte".
+/// gracile Rchb. pro parte", "Rchb. p.p.") and as "pro max./maj./min. parte", also abbreviated
+/// ("Angelica p. min. p.", #136).
 static PRO_PARTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:\s*,\s*|\s+)(?:pro(?:\s+(?:max|maj|min)\.?)?\s+parte|p\.\s*p\.[A-Z]?)\s*)$",
+        r"(?i)(?-u:(?:\s*,\s*|\s+)(?:pro(?:\s+(?:max|maj|min)\.?)?\s+parte|p\.\s*(?:(?:max|maj|min)\.\s*)?p\.[A-Z]?)\s*)$",
     )
     .unwrap()
 });

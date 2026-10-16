@@ -608,3 +608,17 @@ fn issue_145_sensu_lato_in_the_sense_of() {
         .sensu("s. l. sensu Tomasello")
         .nothing_else();
 }
+
+#[test]
+fn issue_136_pro_minore_parte() {
+    // "pro minima parte", like "p.p." the concept is the name's only in part
+    assert_name("Angelica p. min. p.")
+        .monomial("Angelica")
+        .doubtful()
+        .nothing_else();
+    assert_name("Aconitum hians Rchb. p. max. p.")
+        .species("Aconitum", "hians")
+        .comb_authors(None, &["Rchb."])
+        .doubtful()
+        .nothing_else();
+}
