@@ -3459,17 +3459,19 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// Latin status word in any case, "Akeratidae Nomen Nudum", whose capital the general alternative
 /// stops at — Java read "Nudum" as an author. Rust-only too: the "n." spelling of nova, "sp. n.",
 /// "n. sp.", "n.sp." ("Anomia atacamensis n.sp. HERM 1969", where Java read an epithet "n" and an
-/// author "sp.Herm").
+/// author "sp.Herm"). Rust-only also: a note glued to the comma before it, "Liu & Xu,sp. nov." —
+/// the full-width comma of Chinese sources folds to one with no space after it — and a note before
+/// the year of a basionym bracket, "(Chao，comb．nov．,1986)" (#127).
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
-        r"\s+(",
+        r"(?:\s+|(?<=,))(",
         r"(?i:nomen\s+(?:nudum|novum|dubium|oblitum|illegitimum|invalidum|conservandum|rejiciendum|protectum|inquirendum)\b\.?)",
         r"|(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
         r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
         r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
-        r")\s*(?=$|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
+        r")\s*(?=$|,\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
     ))
     .unwrap()
 });

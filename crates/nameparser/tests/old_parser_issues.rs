@@ -3,7 +3,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NameType, NomCode, Rank};
+use nameparser::model::{warnings, NameType, NomCode, Rank};
 
 #[test]
 fn issue_126_temp_is_an_author() {
@@ -309,5 +309,46 @@ fn issue_170_sensu_lato_with_a_space() {
     assert_name("Acacia acinacea s.l.")
         .species("Acacia", "acinacea")
         .sensu("s.l.")
+        .nothing_else();
+}
+
+#[test]
+fn issue_127_full_width_punctuation() {
+    assert_name_auth("Angerianus longicornis", "Liu & Xu，sp. nov.")
+        .species("Angerianus", "longicornis")
+        .comb_authors(None, &["Liu", "Xu"])
+        .nom_note("sp. nov.")
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+    assert_name_auth("Angerianus longicornis", "Liu & Mu，sp.nov.")
+        .species("Angerianus", "longicornis")
+        .comb_authors(None, &["Liu", "Mu"])
+        .nom_note("sp. nov.")
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+    assert_name_auth("Angerianus longicornis", "L. Li & S. H. Li, sp. nov.")
+        .species("Angerianus", "longicornis")
+        .comb_authors(None, &["L.Li", "S.H.Li"])
+        .nom_note("sp. nov.")
+        .nothing_else();
+    assert_name_auth("Abies alba", "Spaeth，1914")
+        .species("Abies", "alba")
+        .comb_authors(Some("1914"), &["Spaeth"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+    assert_name_auth("Abies alba", "（Spaeth）")
+        .species("Abies", "alba")
+        .bas_authors(None, &["Spaeth"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+    // the note inside the basionym bracket, before its year
+    assert_name_auth("Ilema badia", "(Chao，comb．nov．,1986)")
+        .species("Ilema", "badia")
+        .bas_authors(Some("1986"), &["Chao"])
+        .nom_note("comb. nov.")
+        .code(NomCode::Zoological)
+        .warning(&[warnings::HOMOGLYHPS])
         .nothing_else();
 }
