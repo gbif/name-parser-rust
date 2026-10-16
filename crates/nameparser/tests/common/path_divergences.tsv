@@ -23,7 +23,7 @@ nosplit	? alba Smith				-	structural
 nosplit	Acidalia remutaria ab. n. undularia				-	structural
 nosplit	Ambrysus-Stål, 1862				-	structural
 nosplit	Ammodramus caudacutus (s.s.) diversus				-	structural
-nosplit	Anchimolgidae gen. nov. New Caledonia-Rjh-, 2004				-	structural
+separate	Anchimolgidae gen. nov. New Caledonia-Rjh-, 2004				combinationAuthorship,nomenclaturalNote	structural: "nov." opening the authorship column is no new-genus note
 nosplit	Aster Gen.nov.				-	structural
 nosplit	Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852				-	structural
 nosplit	Ovis Aries Linnæus, 1758		SPECIES	ZOOLOGICAL	-	structural: "Ovis Aries" alone is a genus and its author, the epithet shows only with the authorship after it
@@ -31,5 +31,7 @@ nosplit	Pentapanax angelicifoliusGriseb.				-	structural
 nosplit	Polypodium pectinatum (L. f.) typica Rosent				-	structural
 nosplit	fungi Meigen, 1830				-	structural
 nosplit	Loranthus incanus Schumach. & Thonn.  sessilis Sprague				-	structural
-nosplit	Stebbinsoseris gen. nov. ined.				-	structural
+separate	Stebbinsoseris gen. nov. ined.				combinationAuthorship,nomenclaturalNote	structural: "nov." opening the authorship column is no new-genus note
+redundant	Stebbinsoseris gen. nov. ined.				combinationAuthorship	structural: "nov." opening the authorship column is no new-genus note
 nosplit	Zygonyx spec Dijkstra & Kipping				-	structural
+separate	Aegeria gen. Fabricius, 1807		GENUS		combinationAuthorship	structural: a rank label "gen." opening the authorship column is no part of the name

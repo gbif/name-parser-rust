@@ -51,6 +51,56 @@ fn a_reference_with_volume_and_page_is_no_author() {
         .published_in_year(Some(1865))
         .code(NomCode::Botanical)
         .nothing_else();
+    // with the issue of the volume, a page range, the year after the page without a full stop
+    // (#147); the page or the issue was left unparsed
+    assert_name_auth(
+        "Roussoella siamensis",
+        "Phook., Jian K. Liu & K. D. Hyde, Phytotaxa 181 (1): 18 2014",
+    )
+    .species("Roussoella", "siamensis")
+    .comb_authors(Some("2014"), &["Phook.", "Jian K.Liu", "K.D.Hyde"])
+    .published_in("Phytotaxa 181 (1): 18 2014")
+    .published_in_year(Some(2014))
+    .nothing_else();
+    assert_name_auth(
+        "Polylepis besseri",
+        "Hieron., Bot. Jahrb. Syst. 21 (3): 312. 1896.",
+    )
+    .species("Polylepis", "besseri")
+    .comb_authors(Some("1896"), &["Hieron."])
+    .published_in("Bot. Jahrb. Syst. 21 (3): 312. 1896")
+    .published_in_year(Some(1896))
+    .nothing_else();
+    assert_name_auth("Wisterieae", "Zhu, Cathaya 6: 115 - 124 1994")
+        .monomial("Wisterieae")
+        .comb_authors(Some("1994"), &["Zhu"])
+        .published_in("Cathaya 6: 115 - 124 1994")
+        .published_in_year(Some(1994))
+        .nothing_else();
+}
+
+#[test]
+fn a_journal_with_volume_and_page_after_the_year_is_the_reference() {
+    // the title was read as an author, the volume and page dropped (#147)
+    assert_name("Aus bus Smith, 1850 Journal of Zoology 8(5): 563")
+        .species("Aus", "bus")
+        .comb_authors(Some("1850"), &["Smith"])
+        .published_in("Journal of Zoology 8(5): 563")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Aus bus Smith 1850 Bull. Soc. ent. Fr. 8(5): 563")
+        .species("Aus", "bus")
+        .comb_authors(Some("1850"), &["Smith"])
+        .published_in("Bull. Soc. ent. Fr. 8(5): 563")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a zoologist's page after the year stays the page
+    assert_name_auth("Typhlops gracilis", "STERNFELD 1910: 70")
+        .species("Typhlops", "gracilis")
+        .comb_authors(Some("1910"), &["Sternfeld"])
+        .published_in_page("70")
+        .code(NomCode::Zoological)
+        .nothing_else();
 }
 
 #[test]

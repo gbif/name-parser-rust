@@ -238,6 +238,102 @@ fn a_bracket_opening_with_ex_holds_the_ex_authors() {
         .nothing_else();
 }
 
+/// Zoologists write "Author ex ExAuthor", the author who published the name first (#166). Turned
+/// round where the authorship says so: a manuscript or letter cited after the ex-author, a year
+/// before the `ex` and none after it, or the work of the author before the `ex`.
+#[test]
+fn zoologists_put_the_publishing_author_first() {
+    // the manuscript is the ex-author's, under any code
+    assert_name("Sabella aggregata Nardo, 1847 ex Chiereghini ms")
+        .species("Sabella", "aggregata")
+        .comb_authors(Some("1847"), &["Nardo"])
+        .comb_ex_authors(&["Chiereghini"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name_auth("Conferva nebulosa", "Grateloup ex Mertens in litt.")
+        .species("Conferva", "nebulosa")
+        .comb_authors(None, &["Grateloup"])
+        .comb_ex_authors(&["Mertens"])
+        .nothing_else();
+    assert_name_hinted(
+        "Holothuria brunneus",
+        Some("(W. Thompson, 1840, ex Forbes MS)"),
+        Some(Rank::Species),
+        Some(NomCode::Zoological),
+    )
+    .species("Holothuria", "brunneus")
+    .bas_authors(Some("1840"), &["W.Thompson"])
+    .bas_ex_authors(Some("1840"), &["Forbes"])
+    .code(NomCode::Zoological)
+    .nothing_else();
+    // a year before the ex and none after it: zoological, or the comma says so
+    assert_name_hinted(
+        "Cerystion",
+        Some("Walbaum 1792 ex Klein"),
+        Some(Rank::Genus),
+        Some(NomCode::Zoological),
+    )
+    .monomial_rank("Cerystion", Rank::Genus)
+    .comb_authors(Some("1792"), &["Walbaum"])
+    .comb_ex_authors(&["Klein"])
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name("Testudo chitra Hamilton, 1831 ex Gray")
+        .species("Testudo", "chitra")
+        .comb_authors(Some("1831"), &["Hamilton"])
+        .comb_ex_authors(&["Gray"])
+        .nothing_else();
+    // the work of the author before the ex, on a zoological name
+    assert_name_hinted(
+        "Pristipoma unicolor",
+        Some("Bleeker ex Kuhl & van Hasselt in Bleeker 1875"),
+        Some(Rank::Species),
+        Some(NomCode::Zoological),
+    )
+    .species("Pristipoma", "unicolor")
+    .comb_authors(Some("1875"), &["Bleeker"])
+    .comb_ex_authors(&["Kuhl", "van Hasselt"])
+    .comb_in_authors(&["Bleeker"])
+    .published_in("Bleeker 1875")
+    .published_in_year(Some(1875))
+    .code(NomCode::Zoological)
+    .nothing_else();
+
+    // botanists cite the ex-author's year, and A ex B in A, as written
+    assert_name_hinted(
+        "Desmidiaceae",
+        Some("Kützing 1833 ex Ralfs"),
+        Some(Rank::Family),
+        Some(NomCode::Botanical),
+    )
+    .monomial_rank("Desmidiaceae", Rank::Family)
+    .comb_authors(Some("1833"), &["Ralfs"])
+    .comb_ex_authors(&["Kützing"])
+    .code(NomCode::Botanical)
+    .nothing_else();
+    assert_name_hinted(
+        "Telmatophila",
+        Some("C.F.P. Martius ex J.G. Baker in C.F.P. Martius, 1873"),
+        Some(Rank::Genus),
+        Some(NomCode::Botanical),
+    )
+    .monomial_rank("Telmatophila", Rank::Genus)
+    .comb_authors(Some("1873"), &["J.G.Baker"])
+    .comb_ex_authors(&["C.F.P.Martius"])
+    .comb_in_authors(&["C.F.P.Martius"])
+    .published_in("C.F.P. Martius, 1873")
+    .published_in_year(Some(1873))
+    .code(NomCode::Botanical)
+    .nothing_else();
+    // and a plain ex, without a cue, the botanists' way
+    assert_name("Abies alba Smith ex Jones")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Jones"])
+        .comb_ex_authors(&["Smith"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
+
 #[test]
 fn a_question_mark_after_an_author_before_the_year_is_uncertain() {
     // #80: 107 CLB authorships with "Author? year" lost the "?" without a trace

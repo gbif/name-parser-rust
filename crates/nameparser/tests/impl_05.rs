@@ -210,6 +210,36 @@ fn unclosed_cultivar_quote() {
         .nothing_else();
 }
 
+// An apostrophe between letters inside the quotes belongs to the cultivar epithet, in straight,
+// curly or double quotes (#174); it made the quoted epithet the author.
+#[test]
+fn apostrophe_inside_a_quoted_cultivar() {
+    assert_name("Correa 'Gill's Gem'")
+        .cultivar("Correa", "Gill's Gem")
+        .nothing_else();
+
+    for input in [
+        "Rosa 'King's Ransom'",
+        "Rosa ‘King’s Ransom’",
+        "Rosa \"King's Ransom\"",
+    ] {
+        assert_name(input)
+            .cultivar("Rosa", "King's Ransom")
+            .nothing_else();
+    }
+
+    assert_name("Rosa 'King's Ransom' Smith")
+        .cultivar("Rosa", "King's Ransom")
+        .comb_authors(None, &["Smith"])
+        .nothing_else();
+
+    // an apostrophe author after a cultivar stays the author
+    assert_name("Abies alba 'Peace' O'Brien")
+        .cultivar_sp("Abies", "alba", "Peace")
+        .comb_authors(None, &["O'Brien"])
+        .nothing_else();
+}
+
 // "ht." is an occasional abbreviation of the horticultural marker "hort." written
 // directly on the author span. It must parse like its spelled-out twin
 // ("Gymnogramma alstoni hort.Birkenh.; Gard.") instead of leaking "ht" in as a bogus
