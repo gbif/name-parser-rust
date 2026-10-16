@@ -262,3 +262,40 @@ fn an_all_capital_particle_inside_a_name_is_no_initials() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn a_short_all_capital_surname_is_no_initials() {
+    assert_name(
+        "Tanytermitalis philetaerus JIANG, ZHANG, ELDREDGE, SONG, LI, TIHELKA, HUANG, WANG, \
+         ENGEL, and CAI 2021",
+    )
+    .species("Tanytermitalis", "philetaerus")
+    .comb_authors(
+        Some("2021"),
+        &[
+            "Jiang", "Zhang", "Eldredge", "Song", "Li", "Tihelka", "Huang", "Wang", "Engel", "Cai",
+        ],
+    )
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name("Gongylosoma mukutense GRISMER, DAS & LEONG 2003")
+        .species("Gongylosoma", "mukutense")
+        .comb_authors(Some("2003"), &["Grismer", "Das", "Leong"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Linyphia bilobata ROY, SEN, SAHA & RAYCHAUDHURI 2015")
+        .species("Linyphia", "bilobata")
+        .comb_authors(Some("2015"), &["Roy", "Sen", "Saha", "Raychaudhuri"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_authorship("(ALVAREZ, REY & CEI 1992)", &[])
+        .bas_authors(Some("1992"), &["Alvarez", "Rey", "Cei"])
+        .nothing_else();
+    // initials without a vowel stay initials, and so do the initials of a mixed-case team
+    assert_authorship("SMITH, JH 1990", &["J.H.Smith"])
+        .comb_authors(Some("1990"), &["J.H.Smith"])
+        .nothing_else();
+    assert_authorship("Tongiorgi, MA", &["M.A.Tongiorgi"])
+        .comb_authors(None, &["M.A.Tongiorgi"])
+        .nothing_else();
+}

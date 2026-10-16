@@ -677,6 +677,7 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             && GENERATIONAL_SUFFIXES.contains(&w[1].text.to_uppercase().as_str())
     });
     let brackets = BracketedAuthors::read(tokens, from, to);
+    let shouted_team = is_shouted_team(&tokens[from..to]);
 
     while i < to {
         // "Stephens (ex Kirby MS) 1828": the bracket names the ex-author whose manuscript name the
@@ -1064,7 +1065,9 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                 t.text.to_lowercase()
             } else if particle {
                 shouted_particle_case(&t.text, opens)
-            } else if particle_run {
+            } else if particle_run
+                || (shouted_team && cur.is_empty() && is_lone_short_surname(tokens, i, from, to))
+            {
                 title_case_shouted(&t.text)
             } else {
                 normalise_author_case(&t.text)
@@ -1856,6 +1859,53 @@ fn is_shouted_particle(tokens: &[Token], i: usize, to: usize) -> bool {
         && is_all_upper(&tokens[k].text)
         && (tokens[k].text.chars().count() >= 3
             || (tokens[k].text == "ST" && k + 1 < to && tokens[k + 1].kind == TokenKind::Dot))
+}
+
+/// A team written in capitals ("JIANG, ZHANG, ELDREDGE, SONG, LI, and CAI"): every word in
+/// capitals but the lower-case connectors, and at least one of four letters or more.
+fn is_shouted_team(tokens: &[Token]) -> bool {
+    let words = || tokens.iter().filter(|t| t.kind == TokenKind::Word);
+    words().any(|t| t.text.chars().count() >= 4 && is_all_upper(&t.text))
+        && words().all(|t| {
+            is_all_upper(&t.text) || matches!(t.text.as_str(), "and" | "et" | "ex" | "in" | "y")
+        })
+}
+
+/// In an [`is_shouted_team`], a word of two or three capitals with a vowel standing alone between
+/// separators is a short surname, not the initials of the author before it: "SONG, LI, TIHELKA",
+/// "XUAN, CAI, and HUANG", "GRISMER, DAS & LEONG" (#123). A generation ("III"), the "AL" of an "ET
+/// AL" and a word without a vowel ("NG", "JH") are none.
+fn is_lone_short_surname(tokens: &[Token], i: usize, from: usize, to: usize) -> bool {
+    let connector = |t: &Token| {
+        matches!(
+            t.kind,
+            TokenKind::Comma | TokenKind::Ampersand | TokenKind::Semicolon
+        ) || (t.kind == TokenKind::Word
+            && (t.text.eq_ignore_ascii_case("and") || t.text.eq_ignore_ascii_case("et")))
+    };
+    let text = &tokens[i].text;
+    (2..=3).contains(&text.chars().count())
+        && is_all_upper(text)
+        && text
+            .chars()
+            .any(|c| "AEIOUYÀÁÂÃÄÅÆÈÉÊËÌÍÎÏÒÓÔÕÖØÙÚÛÜÝ".contains(c))
+        && !GENERATIONAL_SUFFIXES.contains(&text.as_str())
+        && text != "AL"
+        && (i == from
+            || connector(&tokens[i - 1])
+            || matches!(
+                tokens[i - 1].kind,
+                TokenKind::OpenParen | TokenKind::OpenBracket
+            ))
+        && (i + 1 == to
+            || connector(&tokens[i + 1])
+            || matches!(
+                tokens[i + 1].kind,
+                TokenKind::CloseParen | TokenKind::CloseBracket
+            )
+            // a year, not the number of a culture ("CIP 64.3", "AG 4")
+            || (tokens[i + 1].kind == TokenKind::Number
+                && tokens[i + 1].text.chars().count() == 4))
 }
 
 /// A [`is_shouted_particle`] in its usual case: lower case ("de Saussure", "van der Wulp"), but

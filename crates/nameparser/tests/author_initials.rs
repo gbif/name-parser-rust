@@ -85,11 +85,12 @@ fn a_capital_run_after_ampersand_is_an_author_not_initials() {
     assert_authorship("Dunal & A.DC.", &["Dunal", "A.DC."])
         .comb_authors(None, &["Dunal", "A.DC."])
         .nothing_else();
-    assert_authorship("MULSANT & REY 1852", &["Mulsant", "REY"])
-        .comb_authors(Some("1852"), &["Mulsant", "REY"])
+    // in an all-capital team the short surname is title-cased too (#123)
+    assert_authorship("MULSANT & REY 1852", &["Mulsant", "Rey"])
+        .comb_authors(Some("1852"), &["Mulsant", "Rey"])
         .nothing_else();
-    assert_authorship("ZHOU & LIU 1981", &["Zhou", "LIU"])
-        .comb_authors(Some("1981"), &["Zhou", "LIU"])
+    assert_authorship("ZHOU & LIU 1981", &["Zhou", "Liu"])
+        .comb_authors(Some("1981"), &["Zhou", "Liu"])
         .nothing_else();
 }
 
