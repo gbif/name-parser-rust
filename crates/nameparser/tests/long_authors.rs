@@ -209,3 +209,56 @@ fn a_long_all_capital_team_is_title_cased() {
     )
     .nothing_else();
 }
+
+#[test]
+fn an_all_capital_particle_inside_a_name_is_no_initials() {
+    assert_name(
+        "Corvoheteromeyenia australis (BONETTO AND EZCURRA DE DRAGO 1966) Bonetto & Ezcurra de \
+         Drago 1966",
+    )
+    .species("Corvoheteromeyenia", "australis")
+    .comb_authors(Some("1966"), &["Bonetto", "Ezcurra de Drago"])
+    .bas_authors(Some("1966"), &["Bonetto", "Ezcurra de Drago"])
+    .nothing_else();
+    assert_name("Prionodactylus kockii VAN LIDTH DE JEUDE 1904")
+        .species("Prionodactylus", "kockii")
+        .comb_authors(Some("1904"), &["van Lidth de Jeude"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Heloderma suspectum cinctum BOGERT & MARTIN DEL CAMPO 1956")
+        .infra_species("Heloderma", "suspectum", Rank::Subspecies, "cinctum")
+        .comb_authors(Some("1956"), &["Bogert", "Martin del Campo"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Geophis juarezi NIETO-MONTES DE OCA 2003")
+        .species("Geophis", "juarezi")
+        .comb_authors(Some("2003"), &["Nieto-Montes de Oca"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // "DEN" is no particle elsewhere, it is an epithet too
+    assert_name("Paramormyrops gabonensis TAVERNE, THYS VAN DEN AUDENAERDE, & HEYMER 1977")
+        .species("Paramormyrops", "gabonensis")
+        .comb_authors(
+            Some("1977"),
+            &["Taverne", "Thys van den Audenaerde", "Heymer"],
+        )
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // an abbreviated Saint after the particle
+    assert_name("Novoeumeces schneideri pavimentatus (GEOFFROY DE ST. HILAIRE 1827)")
+        .infra_species(
+            "Novoeumeces",
+            "schneideri",
+            Rank::Subspecies,
+            "pavimentatus",
+        )
+        .bas_authors(Some("1827"), &["Geoffroy de St.Hilaire"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // an Italian particle is lower case inside a name, unlike the one opening it ("Di Iorio")
+    assert_name("Falagria elegans BAUDI DI SELVE 1857")
+        .species("Falagria", "elegans")
+        .comb_authors(Some("1857"), &["Baudi di Selve"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

@@ -936,12 +936,23 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                 i += 1 + usize::from(generation_i && dotted);
                 continue;
             }
+            // An all-capital particle between two all-capital words of a name is the particle
+            // of a compound surname, not the initials of the word before it: "LIDTH DE JEUDE",
+            // "ALVAREZ DEL TORO", "THYS VAN DEN AUDENAERDE" (#123).
+            let mid_particle = !cur.is_empty()
+                && !only_initials(&cur)
+                && i > from
+                && tokens[i - 1].kind == TokenKind::Word
+                && tokens[i - 1].text.chars().count() >= 3
+                && is_all_upper(&tokens[i - 1].text)
+                && is_shouted_particle(tokens, i, to);
             // No-comma "<Surname> <Initials>" inversion pattern: if cur already holds a
             // Latin surname AND the incoming token is a short all-caps word, treat it as
             // the initials trailing the surname and flush as a single inverted author. A
             // trailing dot in cur means we are mid-abbreviation (e.g. "v.d." awaiting
             // "L"), not after a complete surname — skip the inversion in that case.
-            if !cur.is_empty()
+            if !mid_particle
+                && !cur.is_empty()
                 && text.chars().count() <= 3
                 && is_all_upper(&text)
                 && contains_lower(&cur)
@@ -1043,11 +1054,15 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
             }
             // If full ALL-CAPS author name (e.g. FISCHER) length > 1, normalise to title case
             // an all-capital particle opening an author takes its usual case, and a short surname
-            // after it is no initials: "DE VIS" -> "de Vis". In the middle of a name ("NIETO-MONTES
-            // DE OCA") it is left to the initials reading.
+            // after it is no initials: "DE VIS" -> "de Vis". In the middle of a name it is lower
+            // case: "NIETO-MONTES DE OCA" -> "Nieto-Montes de Oca", "BAUDI DI SELVE" -> "Baudi di
+            // Selve".
             let opens = cur.is_empty() || only_initials(&cur);
-            let particle = (opens || particle_run) && is_shouted_particle(tokens, i, to);
-            let text = if particle {
+            let particle =
+                mid_particle || ((opens || particle_run) && is_shouted_particle(tokens, i, to));
+            let text = if mid_particle {
+                t.text.to_lowercase()
+            } else if particle {
                 shouted_particle_case(&t.text, opens)
             } else if particle_run {
                 title_case_shouted(&t.text)
@@ -1817,14 +1832,16 @@ fn append_author_words(tokens: &[Token], from: usize, to: usize, sb: &mut String
 }
 
 /// An all-capital particle before an all-capital surname, perhaps after more particles: "DE
-/// SAUSSURE", "VAN DER WULP". Alone or before a mixed-case surname ("DE Saussure") it may be
-/// initials and is left as it is; so are a single letter and the connectors "IN", "OF", "UND".
+/// SAUSSURE", "VAN DER WULP", "DE ST. HILAIRE". Alone or before a mixed-case surname ("DE
+/// Saussure") it may be initials and is left as it is; so are a single letter and the connectors
+/// "IN", "OF", "UND". "DEN" and "DEM", which the particle table lacks because they are epithets
+/// too, count here ("VAN DEN BOSCH").
 fn is_shouted_particle(tokens: &[Token], i: usize, to: usize) -> bool {
     let particle = |t: &Token| {
         t.kind == TokenKind::Word
             && is_all_upper(&t.text)
             && t.text.chars().count() > 1
-            && is_particle(&t.text)
+            && (is_particle(&t.text) || matches!(t.text.as_str(), "DEN" | "DEM"))
             && !matches!(t.text.as_str(), "IN" | "OF" | "UND")
     };
     if i >= to || !particle(&tokens[i]) {
@@ -1837,7 +1854,8 @@ fn is_shouted_particle(tokens: &[Token], i: usize, to: usize) -> bool {
     k < to
         && tokens[k].kind == TokenKind::Word
         && is_all_upper(&tokens[k].text)
-        && tokens[k].text.chars().count() >= 3
+        && (tokens[k].text.chars().count() >= 3
+            || (tokens[k].text == "ST" && k + 1 < to && tokens[k + 1].kind == TokenKind::Dot))
 }
 
 /// A [`is_shouted_particle`] in its usual case: lower case ("de Saussure", "van der Wulp"), but
@@ -2934,6 +2952,13 @@ mod tests {
             ("DE DALLA TORRE", "de Dalla Torre"),
             ("LE CONTE", "Le Conte"),
             ("DE LA TORRE", "de la Torre"),
+            ("VAN DEN BOSCH", "van den Bosch"),
+            // inside a name (#123)
+            ("LIDTH DE JEUDE", "Lidth de Jeude"),
+            ("NIETO-MONTES DE OCA", "Nieto-Montes de Oca"),
+            ("THYS VAN DEN AUDENAERDE", "Thys van den Audenaerde"),
+            ("BAUDI DI SELVE", "Baudi di Selve"),
+            ("BORY DE ST. VINCENT", "Bory de St.Vincent"),
         ] {
             assert_eq!(authors(&parse_str(raw)), &[author.to_string()], "{raw}");
         }
