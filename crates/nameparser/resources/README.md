@@ -123,3 +123,21 @@ plus common journal and book title words. Words that abbreviate authors as well 
 Bulliard, `linn` Linnaeus, `ser` Seringe, `rich` Richard, `cl` Cleve, `lec` LeConte, `deg` Degener),
 as the file's header says. A word is matched against each part of a parsed author split at dots,
 hyphens and spaces, lower-cased.
+
+The list also tells where a cited work's title starts after the authors' comma (`Nees, Syn. Hepat.`,
+#147), together with the title abbreviations below.
+
+## Title abbreviations (`title-abbreviations.txt`)
+
+More abbreviated words of titles (`diagn`, `notizbl`, `tijdschr`), and the first two words of titles
+whose first word abbreviates an author too (`bull misc` for Bull. Misc. Inform. Kew, where `Bull.` is
+also Bulliard). After the last comma of an authorship, a run of abbreviated words that opens like this
+or with a word of `citation-title-words.txt` is the reference, not one more author; see
+`strip_abbreviated_title` in `src/pipeline/stripandstash.rs`.
+
+Generated in October 2026 (#147) by `scripts/build-title-abbreviations.py`, which documents the
+rules, from the publication titles of an IPNI dump of 2017-11-06 (1.7M names, 31k titles): a word
+abbreviated in three titles or more that no author abbreviation in IPNI or TL-2 (the TL-2 authors
+export, Smithsonian Libraries) abbreviates with a full stop. Nothing from TL-2 is in the file; it only
+keeps words out. Titles of persons and places (`dr`, `prof`, `mt`) are left out by hand in the script.
+Regenerate rather than edit.

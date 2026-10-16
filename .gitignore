@@ -60,3 +60,7 @@ bindings/r/**/*.rds
 
 # personal working notes, not tracked
 todo.md
+
+# Third-party literature data (IPNI, TL-2) for scripts/build-title-abbreviations.py — not ours to
+# redistribute, never commit
+/_lit_sources/

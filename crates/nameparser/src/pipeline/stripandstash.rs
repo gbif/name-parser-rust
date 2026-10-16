@@ -5874,16 +5874,22 @@ static ABBREVIATED_TITLE: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
-/// A given name abbreviated like a title word, then a surname and the team's connector: "Arch.
-/// Singh & Kamal" (Archana Singh), "Ed. Navarro & Chanco" — an author, where a title goes on with
-/// its abbreviated words ("Trans. & Proc.", "Bot. Mus. Leafl.").
-static GIVEN_NAME_IN_TEAM: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^\s*\p{Lu}\p{Ll}+\.\s*\p{Lu}\p{Ll}+\s+(?:&|et|and)\s").unwrap());
+/// The end of an author team: its connector, then initials and names, perhaps a year, but no
+/// abbreviated word — "Arch. Singh & Kamal" (Archana Singh), "Kirchm., Neuh. & L. Huber",
+/// "Balloni, Mater. & Margheri 1971" — where a title goes on abbreviated ("Trans. & Proc.",
+/// "Trans. Lit. & Phil. Soc. N. Y.").
+static TEAM_END: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"\s(?:&|et|and)\s+(?:\p{Lu}\.\s*)*\p{Lu}[\p{L}'\-]*",
+        r"(?:\s+(?:\p{Lu}\.\s*)*\p{Lu}[\p{L}'\-]*)*(?:,?\s*\d{4})?\s*$",
+    ))
+    .unwrap()
+});
 
 /// See [`ABBREVIATED_TITLE`]: the title after the last comma outside brackets is `publishedIn`
-/// when its first word is a word of a title (`Syn.`, `Fl.`, `Hort.` …), as botanists cite a work
+/// when it opens like a title (`Syn.`, `Fl.`, `Diagn.`, `Bull. Misc.` …), as botanists cite a work
 /// after the authors — `Nees, Syn. Hepat.`, which Java read as the author `Syn.Hepat.`. A given
-/// name abbreviated like a title word is no title ([`GIVEN_NAME_IN_TEAM`]). The year
+/// or surname abbreviated like a title word before the team's end is no title ([`TEAM_END`]). The year
 /// closing the numbering is the publication year. Rust-only.
 fn strip_abbreviated_title(ctx: &mut ParseContext, s: String) -> String {
     let mut depth = 0i32;
@@ -5903,12 +5909,17 @@ fn strip_abbreviated_title(ctx: &mut ParseContext, s: String) -> String {
     let Some(caps) = ABBREVIATED_TITLE.captures(tail) else {
         return s;
     };
-    let first = tail.trim_start().split('.').next().unwrap_or_default();
+    let mut words = tail
+        .split(|c: char| c == '.' || c.is_whitespace())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase);
+    let first = words.next().unwrap_or_default();
+    let second = words.next().unwrap_or_default();
     let head = &s[..comma];
     // a list of several citations is beyond telling authors from titles, as in
     // [`strip_page_year_citation`]
-    if !in_citation::is_title_word(&first.to_lowercase())
-        || GIVEN_NAME_IN_TEAM.is_match(tail)
+    if !in_citation::opens_title(&first, &second)
+        || TEAM_END.is_match(tail)
         || java_trim(head).is_empty()
         || s.contains(';')
         || PAGE_YEAR_TAIL.is_match(head)

@@ -131,12 +131,28 @@ fn an_abbreviated_title_after_the_authors_is_the_reference() {
     .published_in("Proc. Acad. Nat. Sci. Philadelphia 1860")
     .published_in_year(Some(1860))
     .nothing_else();
-    // Bull. abbreviates Bulliard too, so a Bulletin waits for a list of titles
+    // Bull. abbreviates Bulliard too, Bull. Misc. opens a title
     assert_name_auth("Bauhinia cancellata", "Ridl., Bull. Misc. Inf. Kew 1929")
         .species("Bauhinia", "cancellata")
-        .comb_authors(Some("1929"), &["Ridl.", "Bull.Misc.Inf.Kew"])
-        .code(NomCode::Zoological)
+        .comb_authors(Some("1929"), &["Ridl."])
+        .published_in("Bull. Misc. Inf. Kew 1929")
+        .published_in_year(Some(1929))
         .nothing_else();
+    // words of titles from IPNI
+    assert_name_auth("Geranium mascatense", "Boissier, Diagn. Pl. Orient.")
+        .species("Geranium", "mascatense")
+        .comb_authors(None, &["Boissier"])
+        .published_in("Diagn. Pl. Orient.")
+        .nothing_else();
+    assert_name_auth(
+        "Monstera snethlagei",
+        "Krause, Notizbl. Bot. Gart. Berlin-Dahlem 1925",
+    )
+    .species("Monstera", "snethlagei")
+    .comb_authors(Some("1925"), &["Krause"])
+    .published_in("Notizbl. Bot. Gart. Berlin-Dahlem 1925")
+    .published_in_year(Some(1925))
+    .nothing_else();
     // a page with no volume, the page was left unparsed
     assert_name("Schizanthus Ruiz & Pav., Fl. Peruv. Prodr.: 4. 1794")
         .monomial("Schizanthus")
@@ -166,6 +182,11 @@ fn a_given_name_abbreviated_like_a_title_is_an_author() {
     .species("Aschersoniodoxa", "peruviana")
     .comb_authors(None, &["Al-Shehbaz", "Ed.Navarro", "A.Cano"])
     .nothing_else();
+    // a surname abbreviated like a title word before the team's last author
+    assert_name_auth("Sorosphaera viticola", "Kirchm., Neuh. & L. Huber")
+        .species("Sorosphaera", "viticola")
+        .comb_authors(None, &["Kirchm.", "Neuh.", "L.Huber"])
+        .nothing_else();
     // and a given name that is no title word at all
     assert_name_auth("Genlisea barthlottii", "Porembski, Eb. Fisch. & Gemmel")
         .species("Genlisea", "barthlottii")
