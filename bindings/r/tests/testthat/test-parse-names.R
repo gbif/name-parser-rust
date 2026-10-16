@@ -117,6 +117,19 @@ test_that("ex-author, basionym-year, and sanctioning-author columns are populate
   expect_true(is.na(out$basionymSanctioningAuthor[4]))
 })
 
+test_that("an in citation's author team becomes the in-authors", {
+  out <- parse_names(c(
+    "Aus bus (Smith in Jones, 1900) Brown in Miller & Lee, 1920",
+    "Abies alba Mill. in Gard. Dict. ed. 8"
+  ))
+  expect_equal(out$basionymInAuthors[1], "Jones")
+  expect_equal(out$combinationInAuthors[1], "Miller, Lee")
+  expect_equal(out$authorshipComplete[1], "(Smith in Jones, 1900) Brown in Miller & Lee, 1920")
+  # a reference has none
+  expect_true(is.na(out$combinationInAuthors[2]))
+  expect_equal(out$publishedIn[2], "Gard. Dict. ed. 8")
+})
+
 test_that("a sanctioned basionym keeps its sanctioning author", {
   out <- parse_names("Merulius lacrimans (Wulfen : Fr.) Schum.")
   expect_equal(out$basionymAuthors, "Wulfen")

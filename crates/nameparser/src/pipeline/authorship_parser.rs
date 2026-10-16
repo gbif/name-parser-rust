@@ -2265,7 +2265,12 @@ fn matching_bracket(tokens: &[Token], open: usize, to: usize) -> Option<usize> {
 /// nested brackets, no note word, no in-citation ("[Péron in] Lamarck"), and ending in a word or
 /// a dot ("[Bethune-] Baker" and "[Lambillion &] Cabeau" are no author runs). `trailing_ex` admits
 /// a final `ex` ("[Sawada ex] Goh").
-fn looks_like_author_run(tokens: &[Token], from: usize, to: usize, trailing_ex: bool) -> bool {
+pub(crate) fn looks_like_author_run(
+    tokens: &[Token],
+    from: usize,
+    to: usize,
+    trailing_ex: bool,
+) -> bool {
     if from >= to || !matches!(tokens[to - 1].kind, TokenKind::Word | TokenKind::Dot) {
         return false;
     }

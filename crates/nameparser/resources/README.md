@@ -108,3 +108,18 @@ listed, deliberately: two people written with `y` (`Spix y Agassiz`, `Quoy y Gai
 Serna`, `Núñez y Barro`, `Expósito Hermosa y Martínez Borrego`). To add a person, add a line with
 the surnames as cited and any misspelt or abbreviated forms seen in the data as variants; spellings
 that differ only in case or accents need no variant.
+
+## Citation title words (`citation-title-words.txt`)
+
+Words of the title of a work, abbreviated or not (`dict`, `sci`, `nat`, `fl`, `prodr`, `herb`), that
+are no author's surname. An `in` citation whose text holds one of them names a reference rather than
+an author team ("Mill. in Gard. Dict.", "Lesson in Ann. Sci. Nat."), so it gets no in-authors; see
+`src/pipeline/in_citation.rs` for how a citation is read and the other signs of a reference (digits,
+a colon, brackets, a possessive, a bare initial).
+
+Built in October 2026 (#172) from the 29,783 distinct `in` citations of the ChecklistBank verbatim
+names: their most frequent abbreviated words, checked by hand against the citations holding them,
+plus common journal and book title words. Words that abbreviate authors as well stay out (`bull`
+Bulliard, `linn` Linnaeus, `ser` Seringe, `rich` Richard, `cl` Cleve, `lec` LeConte, `deg` Degener),
+as the file's header says. A word is matched against each part of a parsed author split at dots,
+hyphens and spaces, lower-cased.

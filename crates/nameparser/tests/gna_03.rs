@@ -632,6 +632,7 @@ fn treating_apud_with() {
         .comb_authors(Some("1990"), &["Goh"])
         .published_in("W.H. Hsieh 1990")
         .published_in_year(Some(1990))
+        .comb_in_authors(&["W.H.Hsieh"])
         .nothing_else();
 }
 
@@ -652,6 +653,7 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .comb_authors(Some("1864"), &["Souverbie"])
         .published_in("Souverbie and Montrouzier, 1864")
         .published_in_year(Some(1864))
+        .comb_in_authors(&["Souverbie", "Montrouzier"])
         .nothing_else();
     // Modern interpretation of "X ex Y": the post-ex author Y is the validating
     // author and is captured as the comb (or basionym) author; X becomes the

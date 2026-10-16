@@ -56,6 +56,8 @@ struct Cols {
     state: Vec<Option<String>>,
     combination_authors: Vec<Option<String>>,
     combination_ex_authors: Vec<Option<String>>,
+    /// The authors of the work the name was published in: `Natterer in Kuhl, 1817` -> `Kuhl`.
+    combination_in_authors: Vec<Option<String>>,
     combination_year: Vec<Option<String>>,
     /// The year is established from external evidence, cited in brackets: `Westwood, [1851]`.
     combination_bracketed_year: Vec<Option<bool>>,
@@ -65,6 +67,7 @@ struct Cols {
     combination_sanctioning_author: Vec<Option<String>>,
     basionym_authors: Vec<Option<String>>,
     basionym_ex_authors: Vec<Option<String>>,
+    basionym_in_authors: Vec<Option<String>>,
     basionym_year: Vec<Option<String>>,
     basionym_bracketed_year: Vec<Option<bool>>,
     basionym_anonymous: Vec<Option<bool>>,
@@ -97,9 +100,9 @@ impl Cols {
             nomenclatural_note: v!(), published_in: v!(), published_in_year: v!(),
             published_in_page: v!(), unparsed: v!(), doubtful: v!(), manuscript: v!(),
             state: v!(), combination_authors: v!(), combination_ex_authors: v!(),
-            combination_year: v!(), combination_bracketed_year: v!(), combination_anonymous: v!(),
+            combination_in_authors: v!(), combination_year: v!(), combination_bracketed_year: v!(), combination_anonymous: v!(),
             combination_sanctioning_author: v!(), basionym_authors: v!(),
-            basionym_ex_authors: v!(), basionym_year: v!(), basionym_bracketed_year: v!(),
+            basionym_ex_authors: v!(), basionym_in_authors: v!(), basionym_year: v!(), basionym_bracketed_year: v!(),
             basionym_anonymous: v!(),
             basionym_sanctioning_author: v!(), warnings: v!(),
             canonical: v!(), canonical_without_authorship: v!(), canonical_minimal: v!(),
@@ -148,6 +151,7 @@ impl Cols {
         self.state.push(enum_name(&pn.state));
         self.combination_authors.push(join_authors(&pn.combination_authorship.authors));
         self.combination_ex_authors.push(join_authors(&pn.combination_authorship.ex_authors));
+        self.combination_in_authors.push(join_authors(&pn.combination_authorship.in_authors));
         self.combination_year.push(pn.combination_authorship.year.clone());
         self.combination_bracketed_year.push(Some(pn.combination_authorship.bracketed_year));
         self.combination_anonymous.push(Some(pn.combination_authorship.anonymous));
@@ -155,6 +159,7 @@ impl Cols {
             .push(pn.combination_authorship.sanctioning_author.clone());
         self.basionym_authors.push(join_authors(&pn.basionym_authorship.authors));
         self.basionym_ex_authors.push(join_authors(&pn.basionym_authorship.ex_authors));
+        self.basionym_in_authors.push(join_authors(&pn.basionym_authorship.in_authors));
         self.basionym_year.push(pn.basionym_authorship.year.clone());
         self.basionym_bracketed_year.push(Some(pn.basionym_authorship.bracketed_year));
         self.basionym_anonymous.push(Some(pn.basionym_authorship.anonymous));
@@ -185,8 +190,9 @@ impl Cols {
             &mut self.nomenclatural_note, &mut self.published_in, &mut self.published_in_page,
             &mut self.unparsed, &mut self.state,
             &mut self.combination_authors, &mut self.combination_ex_authors,
+            &mut self.combination_in_authors,
             &mut self.combination_year, &mut self.basionym_authors,
-            &mut self.basionym_ex_authors, &mut self.basionym_year,
+            &mut self.basionym_ex_authors, &mut self.basionym_in_authors, &mut self.basionym_year,
             &mut self.combination_sanctioning_author,
             &mut self.basionym_sanctioning_author, &mut self.warnings,
             &mut self.canonical, &mut self.canonical_without_authorship,
@@ -235,8 +241,9 @@ impl Cols {
             &mut self.taxonomic_note, &mut self.nomenclatural_note, &mut self.published_in,
             &mut self.published_in_page, &mut self.unparsed, &mut self.state,
             &mut self.combination_authors, &mut self.combination_ex_authors,
+            &mut self.combination_in_authors,
             &mut self.combination_year, &mut self.basionym_authors,
-            &mut self.basionym_ex_authors, &mut self.basionym_year,
+            &mut self.basionym_ex_authors, &mut self.basionym_in_authors, &mut self.basionym_year,
             &mut self.combination_sanctioning_author,
             &mut self.basionym_sanctioning_author, &mut self.warnings,
             &mut self.canonical_without_authorship,
@@ -298,9 +305,9 @@ fn parse_names_impl(
             "epithetQualifier", "extinct", "taxonomicNote", "nomenclaturalNote",
             "publishedIn", "publishedInYear", "publishedInPage", "unparsed", "doubtful",
             "manuscript", "state", "combinationAuthors", "combinationExAuthors",
-            "combinationYear", "combinationBracketedYear", "combinationAnonymous",
+            "combinationInAuthors", "combinationYear", "combinationBracketedYear", "combinationAnonymous",
             "combinationSanctioningAuthor", "basionymAuthors", "basionymExAuthors",
-            "basionymYear", "basionymBracketedYear", "basionymAnonymous",
+            "basionymInAuthors", "basionymYear", "basionymBracketedYear", "basionymAnonymous",
             "basionymSanctioningAuthor", "warnings", "canonical", "canonicalWithoutAuthorship",
             "canonicalMinimal", "canonicalComplete", "authorshipComplete",
         ],
@@ -314,9 +321,9 @@ fn parse_names_impl(
             r!(c.nomenclatural_note), r!(c.published_in), r!(c.published_in_year),
             r!(c.published_in_page), r!(c.unparsed), r!(c.doubtful), r!(c.manuscript),
             r!(c.state), r!(c.combination_authors), r!(c.combination_ex_authors),
-            r!(c.combination_year), r!(c.combination_bracketed_year), r!(c.combination_anonymous),
+            r!(c.combination_in_authors), r!(c.combination_year), r!(c.combination_bracketed_year), r!(c.combination_anonymous),
             r!(c.combination_sanctioning_author), r!(c.basionym_authors),
-            r!(c.basionym_ex_authors), r!(c.basionym_year), r!(c.basionym_bracketed_year),
+            r!(c.basionym_ex_authors), r!(c.basionym_in_authors), r!(c.basionym_year), r!(c.basionym_bracketed_year),
             r!(c.basionym_anonymous),
             r!(c.basionym_sanctioning_author), r!(c.warnings),
             r!(c.canonical), r!(c.canonical_without_authorship), r!(c.canonical_minimal),

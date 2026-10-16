@@ -166,6 +166,7 @@ fn other_brackets_are_left_alone() {
         .published_in("Lamarck, 1819")
         .published_in_year(Some(1819))
         .code(NomCode::Zoological)
+        .bas_in_authors(&["Lamarck"])
         .nothing_else();
     // bare initials in brackets are no pre-starting-point author
     assert_name_auth("Aus bus", "[C.] Smith")

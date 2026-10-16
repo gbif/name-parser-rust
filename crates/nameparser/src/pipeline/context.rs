@@ -89,6 +89,13 @@ pub(crate) struct ParseContext {
     /// in `Storr, 1970 ["1969"]` / `(imprint 1969)`). Applied onto the name's combination
     /// authorship once it exists — imprint years live on `Authorship`.
     pub pending_imprint_year: Option<String>,
+    /// The in-authors of the combination's `in` citation ("Natterer in Kuhl, 1817" → `Kuhl`), set
+    /// once the citation is stripped: `Some` with an empty team when it named a reference rather
+    /// than authors. Applied onto the combination authorship once it exists.
+    pub pending_in_authors: Option<Vec<String>>,
+    /// The in-authors of the basionym's `in` citation ("(Smith in Jones, 1900) Brown"), as
+    /// [`Self::pending_in_authors`].
+    pub pending_basionym_in_authors: Option<Vec<String>>,
     /// Species author extracted from a below-species name where it sits before the
     /// terminal epithet (e.g. the "L." in "Acer campestre L. cv. 'Elsrijk' Broerse").
     /// Parsed and set as `ParsedName::specific_authorship` by Pipeline.
@@ -165,6 +172,8 @@ impl ParseContext {
             mid_author_from: -1,
             mid_author_to: -1,
             pending_imprint_year: None,
+            pending_in_authors: None,
+            pending_basionym_in_authors: None,
             pending_specific_author: None,
             pending_generic_author: None,
             pending_serovar: None,
@@ -181,6 +190,21 @@ impl ParseContext {
     /// on a first-writer-wins basis (Java: `if (pendingImprintYear == null && year != null)
     /// pendingImprintYear = year;` — the `year != null` half is unreachable here since Rust
     /// callers pass a non-nullable `&str`). Used by `StripAndStash::strip_imprint_years`.
+    /// Records the in-authors of a stripped `in` citation, the combination's or the basionym's, on
+    /// a first-writer-wins basis like the citation in `publishedIn`: the name string's citation is
+    /// stripped before a separately supplied authorship's, and the name string's reference is the
+    /// one kept. An empty `team` (the citation was a reference) still counts as written.
+    pub(crate) fn set_pending_in_authors(&mut self, basionym: bool, team: Vec<String>) {
+        let slot = if basionym {
+            &mut self.pending_basionym_in_authors
+        } else {
+            &mut self.pending_in_authors
+        };
+        if slot.is_none() {
+            *slot = Some(team);
+        }
+    }
+
     pub(crate) fn set_pending_imprint_year(&mut self, year: &str) {
         if self.pending_imprint_year.is_none() {
             self.pending_imprint_year = Some(year.to_string());

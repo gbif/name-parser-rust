@@ -202,6 +202,10 @@ class ParityTest {
     return null;
   }
 
+  private static boolean isEmptyArray(JsonElement e) {
+    return e.isJsonArray() && e.getAsJsonArray().isEmpty();
+  }
+
   /** Mirror of {@code ParseError::clamped_to_unparsable}: a parsable oracle error type becomes OTHER. */
   private static String clampType(String t) {
     return ("INFORMAL".equals(t) || "SCIENTIFIC".equals(t)) ? "OTHER" : t;
@@ -216,7 +220,8 @@ class ParityTest {
     boolean aNull = a == null || a.isJsonNull();
     boolean bNull = b == null || b.isJsonNull();
     if (aNull || bNull) {
-      return aNull && bNull;
+      // an author list the binding leaves null (gbif/name-parser#109) is the oracle's empty one
+      return (aNull || isEmptyArray(a)) && (bNull || isEmptyArray(b));
     }
     if (a.isJsonObject() && b.isJsonObject()) {
       JsonObject oa = a.getAsJsonObject();

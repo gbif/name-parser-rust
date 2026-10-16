@@ -39,6 +39,7 @@ use fancy_regex::Regex as FancyRegex;
 use regex::Regex;
 
 use crate::model::{warnings, NamePart, NameType, NomCode, ParsedName, Rank};
+use crate::pipeline::in_citation;
 use crate::pipeline::ParseContext;
 use crate::token;
 use crate::unicode::java_trim;
@@ -5393,6 +5394,7 @@ fn strip_in_author_in_parens(ctx: &mut ParseContext, s: String) -> String {
         let reference = java_trim(&caps[2]).to_string();
         if !bas_part.is_empty() && reference.chars().count() >= 2 {
             ctx.name.add_published_in(&reference);
+            ctx.set_pending_in_authors(true, in_citation::team(&reference));
             let new_parens = match IN_AUTHOR_YEAR.captures(&reference) {
                 Some(ym) if !YEAR_4DIGIT.is_match(&bas_part) => {
                     format!("({bas_part}, {})", &ym[1])
@@ -5456,6 +5458,7 @@ fn strip_in_author_citation(ctx: &mut ParseContext, s: String) -> String {
         }
         if reference.chars().count() >= 2 {
             ctx.name.add_published_in(&reference);
+            ctx.set_pending_in_authors(false, in_citation::team(&reference));
             if let Some(pyear) = IN_AUTHOR_PAREN_YEAR.captures(&reference) {
                 ctx.set_pending_publication_year(&pyear[1]);
             }

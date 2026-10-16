@@ -86,7 +86,7 @@ fn read_opt_string_ref(buf: &[u8], cursor: &mut usize) -> Option<String> {
 }
 
 /// Reads one nested authorship group at `*cursor` (advancing past it), reconstructing the whole
-/// `CombinedAuthorship` from its present-flag + 4 run tables + 6 string refs so it can be
+/// `CombinedAuthorship` from its present-flag + 6 run tables + 6 string refs so it can be
 /// compared with `==` against the real `ParsedName`'s own `Option<CombinedAuthorship>`.
 fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorship> {
     let present = read_u32(buf, *cursor);
@@ -105,6 +105,8 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
     let exauthors_comb = read_string_run(buf, cursor);
     let authors_bas = read_string_run(buf, cursor);
     let exauthors_bas = read_string_run(buf, cursor);
+    let inauthors_comb = read_string_run(buf, cursor);
+    let inauthors_bas = read_string_run(buf, cursor);
     let year_comb = read_opt_string_ref(buf, cursor);
     let imprint_year_comb = read_opt_string_ref(buf, cursor);
     let year_bas = read_opt_string_ref(buf, cursor);
@@ -115,6 +117,7 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
         combination_authorship: Authorship {
             authors: authors_comb,
             ex_authors: exauthors_comb,
+            in_authors: inauthors_comb,
             year: year_comb,
             imprint_year: imprint_year_comb,
             bracketed_year: flags & layout::BRACKETED_YEAR_COMBINATION_BIT != 0,
@@ -124,6 +127,7 @@ fn read_nested_group(buf: &[u8], cursor: &mut usize) -> Option<CombinedAuthorshi
         basionym_authorship: Authorship {
             authors: authors_bas,
             ex_authors: exauthors_bas,
+            in_authors: inauthors_bas,
             year: year_bas,
             imprint_year: imprint_year_bas,
             bracketed_year: flags & layout::BRACKETED_YEAR_BASIONYM_BIT != 0,
@@ -180,13 +184,15 @@ struct Decoded {
     exauthors_bas: Vec<String>,
     warnings: Vec<String>,
     epithet_qualifier: Vec<(u32, String)>,
+    inauthors_comb: Vec<String>,
+    inauthors_bas: Vec<String>,
     generic_authorship: Option<CombinedAuthorship>,
     specific_authorship: Option<CombinedAuthorship>,
 }
 
 /// Decodes a full success-path buffer (header + string table + run-slots + nested groups +
 /// blob) — mirrors `layout`'s documented traversal exactly: fixed-offset header, fixed-offset
-/// 17-slot string table, the 6 run-slots walked sequentially from `RUN_SLOTS_OFFSET`, then the
+/// 18-slot string table, the 8 run-slots walked sequentially from `RUN_SLOTS_OFFSET`, then the
 /// 2 nested authorship groups (generic, specific).
 fn decode(buf: &[u8]) -> Decoded {
     let header = decode_header(buf);
@@ -225,6 +231,8 @@ fn decode(buf: &[u8]) -> Decoded {
             read_string_ref(buf, offset, len).expect("epithet qualifier entries are never absent");
         epithet_qualifier.push((part_ordinal, s));
     }
+    let inauthors_comb = read_string_run(buf, &mut cursor);
+    let inauthors_bas = read_string_run(buf, &mut cursor);
 
     let generic_authorship = read_nested_group(buf, &mut cursor);
     let specific_authorship = read_nested_group(buf, &mut cursor);
@@ -238,6 +246,8 @@ fn decode(buf: &[u8]) -> Decoded {
         exauthors_bas,
         warnings,
         epithet_qualifier,
+        inauthors_comb,
+        inauthors_bas,
         generic_authorship,
         specific_authorship,
     }
@@ -459,6 +469,14 @@ fn assert_decoded_matches(name: &str, decoded: &Decoded, pn: &ParsedName) {
     assert_eq!(
         decoded.exauthors_bas, pn.basionym_authorship.ex_authors,
         "{name}: basionym ex-authors"
+    );
+    assert_eq!(
+        decoded.inauthors_comb, pn.combination_authorship.in_authors,
+        "{name}: combination in-authors"
+    );
+    assert_eq!(
+        decoded.inauthors_bas, pn.basionym_authorship.in_authors,
+        "{name}: basionym in-authors"
     );
 
     // `warnings` is a Java HashSet on the wire (unordered) — sort both sides before comparing,
@@ -948,8 +966,28 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
 }
 
 #[test]
-fn np_abi_version_is_7() {
-    assert_eq!(nameparser_ffi::np_abi_version(), 7);
+fn np_abi_version_is_8() {
+    assert_eq!(nameparser_ffi::np_abi_version(), 8);
+}
+
+// ---- in-authors (ABI 8) ----
+
+#[test]
+fn in_authors_populate_their_run_slots() {
+    let name = "Aus bus (Smith in Jones, 1900) Brown in Miller & Lee, 1920";
+    let buf = parse_struct_success(name);
+    assert_abi_version_header(&buf);
+    let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
+    let decoded = decode(&buf);
+    assert_decoded_matches(name, &decoded, &pn);
+    assert_eq!(decoded.inauthors_comb, vec!["Miller", "Lee"]);
+    assert_eq!(decoded.inauthors_bas, vec!["Jones"]);
+    // a reference has none: both runs are a lone zero count
+    let decoded = decode(&parse_struct_success(
+        "Abies alba Mill. in Gard. Dict. ed. 8",
+    ));
+    assert!(decoded.inauthors_comb.is_empty());
+    assert!(decoded.inauthors_bas.is_empty());
 }
 
 // ---- bracketed years (ABI 7) ----

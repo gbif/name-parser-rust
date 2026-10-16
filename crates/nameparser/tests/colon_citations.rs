@@ -18,12 +18,14 @@ fn in_with_a_colon_is_an_in_citation() {
     .comb_authors(Some("2000"), &["Henderson", "Hodgson"])
     .published_in("Hodgson & Henderson, 2000")
     .published_in_year(Some(2000))
+    .comb_in_authors(&["Hodgson", "Henderson"])
     .nothing_else();
     assert_name_auth("Aus bus", "Pogue, in: Brown, 2019")
         .species("Aus", "bus")
         .comb_authors(Some("2019"), &["Pogue"])
         .published_in("Brown, 2019")
         .published_in_year(Some(2019))
+        .comb_in_authors(&["Brown"])
         .nothing_else();
     assert_name_auth(
         "Mastigodiaptomus reidae",
@@ -34,12 +36,14 @@ fn in_with_a_colon_is_an_in_citation() {
     .published_in("Gutiérrez-Aguirre, Mercado-Salas & Cervantes-Martínez, 2013")
     .published_in_year(Some(2013))
     .code(NomCode::Zoological)
+    .comb_in_authors(&["Gutiérrez-Aguirre", "Mercado-Salas", "Cervantes-Martínez"])
     .nothing_else();
     assert_name_auth("Aus bus", "Young {in}: Young & Lu, 1988")
         .species("Aus", "bus")
         .comb_authors(Some("1988"), &["Young"])
         .published_in("Young & Lu, 1988")
         .published_in_year(Some(1988))
+        .comb_in_authors(&["Young", "Lu"])
         .nothing_else();
 }
 

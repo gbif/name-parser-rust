@@ -24,8 +24,7 @@ use serde::Serialize;
 use crate::model::enums::{NamePart, NameType, NomCode, Rank, State};
 
 /// Java `org.gbif.nameparser.api.Authorship`. Authorship of a name (recombination) or
-/// basionym: authors, ex-authors and the year, but no "in" authors (those are part of
-/// the `publishedIn` citation).
+/// basionym: authors, ex-authors, in-authors and the year.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
 pub struct Authorship {
     /// Eagerly-initialized `List<String>` in Java (`= new ArrayList<>()`) — never
@@ -35,6 +34,13 @@ pub struct Authorship {
     /// when empty.
     #[serde(rename = "exAuthors")]
     pub ex_authors: Vec<String>,
+    /// Java `Authorship.inAuthors` (name-parser-api 5.6): the authors of the work the name was
+    /// published in, "Natterer in Kuhl, 1817" → `["Kuhl"]` (ICN Art. 46.2, ICZN Recommendation
+    /// 51E). Set only when the `in` citation is an author team, not a reference ("Mill. in Gard.
+    /// Dict. ed. 8" has none); the whole citation stays in [`ParsedName::published_in`] as well.
+    /// Omitted when empty, as Java leaves the list null until set.
+    #[serde(rename = "inAuthors", skip_serializing_if = "Vec::is_empty")]
+    pub in_authors: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub year: Option<String>,
     /// Java `Authorship.imprintYear`: the year printed on the work when it differs from the actual
@@ -632,6 +638,7 @@ mod tests {
         let a = Authorship {
             authors: vec![],
             ex_authors: vec!["hort.".into()],
+            in_authors: vec!["Kuhl".into()],
             year: None,
             imprint_year: None,
             bracketed_year: false,

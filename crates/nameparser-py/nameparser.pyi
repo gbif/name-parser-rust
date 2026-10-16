@@ -33,6 +33,13 @@ class Authorship:
     @property
     def ex_authors(self) -> list[str]: ...
     @property
+    def in_authors(self) -> list[str]:
+        """The authors of the work the name was published in: `Natterer in Kuhl, 1817` →
+        `["Kuhl"]` (ICN Art. 46.2, ICZN Recommendation 51E). Empty when the `in` citation is a
+        reference rather than an author team; the whole citation is `ParsedName.published_in` as
+        well."""
+        ...
+    @property
     def year(self) -> str | None: ...
     @property
     def imprint_year(self) -> str | None: ...
@@ -53,8 +60,9 @@ class Authorship:
         ...
     def to_dict(self) -> dict[str, Any]:
         """The complete structure straight from the core's own `serde::Serialize` impl —
-        `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ...,
-        "bracketedYear": ..., "anonymous": ..., "sanctioningAuthor": ...}`."""
+        `{"authors": [...], "exAuthors": [...], "inAuthors": [...], "year": ..., "imprintYear": ...,
+        "bracketedYear": ..., "anonymous": ..., "sanctioningAuthor": ...}` (`inAuthors`,
+        `imprintYear` and `sanctioningAuthor` only when set)."""
         ...
     def __repr__(self) -> str: ...
 

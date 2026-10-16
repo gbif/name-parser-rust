@@ -54,8 +54,7 @@ create_exception!(nameparser, UnparsableNameError, PyException);
 
 /// Wraps the core [`::nameparser::model::Authorship`] for Python — the type of
 /// [`PyParsedName::combination_authorship`] / [`PyParsedName::basionym_authorship`]:
-/// authors, ex-authors and the year of a name (recombination) or basionym, but no "in"
-/// authors (those are part of the `published_in` citation).
+/// authors, ex-authors, in-authors and the year of a name (recombination) or basionym.
 ///
 /// NOT used for `generic_authorship`/`specific_authorship` (`Option<CombinedAuthorship>`
 /// — a *different*, bundling type in the core, holding its own combination + basionym
@@ -77,6 +76,14 @@ impl PyAuthorship {
     #[getter]
     fn ex_authors(&self) -> Vec<String> {
         self.inner.ex_authors.clone()
+    }
+
+    /// The authors of the work the name was published in: `Natterer in Kuhl, 1817` → `["Kuhl"]`
+    /// (ICN Art. 46.2, ICZN Recommendation 51E). Empty when the `in` citation is a reference
+    /// rather than an author team; the whole citation is `ParsedName.published_in` as well.
+    #[getter]
+    fn in_authors(&self) -> Vec<String> {
+        self.inner.in_authors.clone()
     }
 
     #[getter]
@@ -111,8 +118,9 @@ impl PyAuthorship {
     }
 
     /// The complete structure straight from the core's own `serde::Serialize` impl —
-    /// `{"authors": [...], "exAuthors": [...], "year": ..., "imprintYear": ..., "bracketedYear": ...,
-    /// "anonymous": ..., "sanctioningAuthor": ...}`
+    /// `{"authors": [...], "exAuthors": [...], "inAuthors": [...], "year": ..., "imprintYear": ...,
+    /// "bracketedYear": ..., "anonymous": ..., "sanctioningAuthor": ...}` (`inAuthors`,
+    /// `imprintYear` and `sanctioningAuthor` only when set)
     /// — the same escape hatch [`PyParsedName::to_dict`] provides at the top level.
     fn to_dict(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
         Ok(pythonize::pythonize(py, &self.inner)?.unbind())
@@ -120,10 +128,11 @@ impl PyAuthorship {
 
     fn __repr__(&self) -> String {
         format!(
-            "Authorship(authors={:?}, ex_authors={:?}, year={:?}, imprint_year={:?}, \
-             bracketed_year={}, anonymous={}, sanctioning_author={:?})",
+            "Authorship(authors={:?}, ex_authors={:?}, in_authors={:?}, year={:?}, \
+             imprint_year={:?}, bracketed_year={}, anonymous={}, sanctioning_author={:?})",
             self.inner.authors,
             self.inner.ex_authors,
+            self.inner.in_authors,
             self.inner.year,
             self.inner.imprint_year,
             if self.inner.bracketed_year {

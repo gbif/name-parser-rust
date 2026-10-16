@@ -55,16 +55,22 @@ out[, c("scientificName", "parsed", "rank", "genus", "specificEpithet",
 `authorship`, `rank`, `code` (the parser's `SCREAMING_SNAKE_CASE` enum names, e.g.
 `"SPECIES"`, `"ZOOLOGICAL"`).
 
-All 47 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
+All 50 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
 `taxonRank`, `rank`, `code`, `uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`,
 `infraspecificEpithet`, `cultivarEpithet`, `phrase`, `candidatus`, `notho`, `originalSpelling`,
 `epithetQualifier`, `extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`,
 `publishedInYear`, `publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`,
-`combinationAuthors`, `combinationExAuthors`, `combinationYear`, `combinationBracketedYear`,
-`combinationAnonymous`, `combinationSanctioningAuthor`, `basionymAuthors`, `basionymExAuthors`,
-`basionymYear`, `basionymBracketedYear`, `basionymAnonymous`, `basionymSanctioningAuthor`,
+`combinationAuthors`, `combinationExAuthors`, `combinationInAuthors`, `combinationYear`,
+`combinationBracketedYear`, `combinationAnonymous`, `combinationSanctioningAuthor`, `basionymAuthors`,
+`basionymExAuthors`, `basionymInAuthors`, `basionymYear`, `basionymBracketedYear`,
+`basionymAnonymous`, `basionymSanctioningAuthor`,
 `warnings`, `canonical`, `canonicalWithoutAuthorship`, `canonicalMinimal`, `canonicalComplete`,
 `authorshipComplete`.
+
+`combinationInAuthors` / `basionymInAuthors` hold the authors of the work the name was published
+in, `Natterer in Kuhl, 1817` -> `Kuhl` (ICN Art. 46.2, ICZN Recommendation 51E), joined by `", "`.
+They are `NA` when the `in` citation is a reference rather than an author team (`Mill. in Gard.
+Dict.`); `publishedIn` holds the whole citation either way.
 
 `combinationBracketedYear` / `basionymBracketedYear` are `TRUE` when the year is not given in the
 work itself but established from external evidence, cited in square brackets (`Westwood, [1851]`,

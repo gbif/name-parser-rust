@@ -83,7 +83,7 @@ class NameParserRustSmokeTest {
 
     ParsedName bot = parser.parse("Physalospora rubiginosa (Fr.) anon.", null, null, null).orElseThrow();
     assertTrue(bot.getCombinationAuthorship().isAnonymous());
-    assertTrue(bot.getCombinationAuthorship().getAuthors().isEmpty());
+    assertFalse(bot.getCombinationAuthorship().hasAuthors());
     assertEquals(NomCode.BOTANICAL, bot.getCode());
     assertEquals("(Fr.) anon.", bot.authorshipComplete());
   }
@@ -103,6 +103,42 @@ class NameParserRustSmokeTest {
     ParsedName imprint = parser.parse("Ctenotus alacer Storr, 1970 [1969]", null, null, null).orElseThrow();
     assertFalse(imprint.getCombinationAuthorship().isBracketedYear());
     assertEquals("1969", imprint.getCombinationAuthorship().getImprintYear());
+  }
+
+  @Test
+  void inAuthorsCrossTheWire() throws UnparsableNameException {
+    // ABI 8: Authorship.inAuthors, the authors of the work a name was published in
+    ParsedName pn = parser.parse("Aus bus (Smith in Jones, 1900) Brown in Miller & Lee, 1920", null, null, null)
+        .orElseThrow();
+    assertEquals(List.of("Jones"), pn.getBasionymAuthorship().getInAuthors());
+    assertEquals(List.of("Miller", "Lee"), pn.getCombinationAuthorship().getInAuthors());
+    assertEquals("Miller & Lee, 1920", pn.getPublishedIn());
+    assertEquals("(Smith in Jones, 1900) Brown in Miller & Lee, 1920", pn.authorshipComplete());
+
+    ParsedName sep = parser.parse("Atriplex prostrata", "Boucher ex DC. in Lam. & DC.", null, null).orElseThrow();
+    assertEquals(List.of("Lam.", "DC."), sep.getCombinationAuthorship().getInAuthors());
+    assertEquals("Boucher ex DC. in Lam. & DC.", sep.authorshipComplete());
+
+    // a reference has no in-authors, and a name without any allocates no list
+    ParsedName ref = parser.parse("Abies alba Mill. in Gard. Dict. ed. 8", null, null, null).orElseThrow();
+    assertNull(ref.getCombinationAuthorship().getInAuthors());
+    assertNull(ref.getBasionymAuthorship().getInAuthors());
+    assertEquals("Gard. Dict. ed. 8", ref.getPublishedIn());
+  }
+
+  @Test
+  void emptyAuthorListsStayNull() {
+    // gbif/name-parser#109: an author list the name does not have is never allocated
+    ParsedName pn = parser.parse("Abies alba Mill.", null, null, null).orElseThrow();
+    assertEquals(List.of("Mill."), pn.getCombinationAuthorship().getAuthors());
+    assertNull(pn.getCombinationAuthorship().getExAuthors());
+    assertNull(pn.getCombinationAuthorship().getInAuthors());
+    assertNull(pn.getBasionymAuthorship().getAuthors());
+    assertNull(pn.getBasionymAuthorship().getExAuthors());
+    assertFalse(pn.getBasionymAuthorship().exists());
+
+    ParsedName ex = parser.parse("Acacia aneura F.Muell. ex Benth.", null, null, null).orElseThrow();
+    assertEquals(List.of("F.Muell."), ex.getCombinationAuthorship().getExAuthors());
   }
 
   @Test
@@ -294,7 +330,7 @@ class NameParserRustSmokeTest {
     assertEquals("muelleri", pn.getSpecificEpithet());
     assertEquals("DSM 19832", pn.getPhrase());
     assertEquals(NameType.INFORMAL, pn.getType());
-    assertTrue(pn.getCombinationAuthorship().getAuthors().isEmpty(),
+    assertFalse(pn.getCombinationAuthorship().hasAuthors(),
         "the accession must not be parsed as an author, got " + pn.getCombinationAuthorship().getAuthors());
   }
 }
