@@ -423,3 +423,94 @@ fn issue_139_names_found_by_robert_mesibov() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn issue_128_emended_and_manuscript_authorships() {
+    // the ex-author whose name the authors made available, in a bracket after the year
+    assert_ex_authorship(
+        "Loeblich & Tappan, 1957 (ex. Le Calvez, 1949)",
+        Some("Le Calvez"),
+        &["Loeblich", "Tappan"],
+    )
+    .comb_authors(Some("1957"), &["Loeblich", "Tappan"])
+    .comb_ex_authors(&["Le Calvez"])
+    .nothing_else();
+    assert_authorship("(Cushman) em. Loeblich & Tappan, 1957", &[])
+        .bas_authors(None, &["Cushman"])
+        .sensu("em. Loeblich & Tappan, 1957")
+        .nothing_else();
+    assert_authorship("(Myatlyuk, 1949 emend. Myatlyuk, 1953)", &[])
+        .bas_authors(Some("1949"), &["Myatlyuk"])
+        .sensu("emend. Myatlyuk, 1953")
+        .nothing_else();
+    // a manuscript mark in a bracket of its own
+    assert_authorship("Plummer (ms.) , 1926", &["Plummer"])
+        .comb_authors(Some("1926"), &["Plummer"])
+        .manuscript()
+        .nom_note("ms.")
+        .nothing_else();
+    assert_authorship("(Ten Dam, 1947) em. Hofker, 1952", &[])
+        .bas_authors(Some("1947"), &["Ten Dam"])
+        .sensu("em. Hofker, 1952")
+        .nothing_else();
+    assert_authorship(
+        "Schlagintweit in Schlagintweit & Mitchell, 202",
+        &["Schlagintweit"],
+    )
+    .comb_authors(Some("202"), &["Schlagintweit"])
+    .published_in("Schlagintweit & Mitchell, 202")
+    .nothing_else();
+    assert_authorship("(Haeusler) em. Oesterle, 1968", &[])
+        .bas_authors(None, &["Haeusler"])
+        .sensu("em. Oesterle, 1968")
+        .nothing_else();
+    assert_authorship("(Gutschick Weiner & Young) em. Conkin & Conkin, 1964", &[])
+        .bas_authors(None, &["Gutschick Weiner", "Young"])
+        .sensu("em. Conkin & Conkin, 1964")
+        .nothing_else();
+    // more of the kind: "(MS)" between the author and the work publishing the name, an
+    // author's manuscript name a later author published
+    assert_name("Asteriscus wega Valenciennes (MS) in Perrier, 1869")
+        .species("Asteriscus", "wega")
+        .comb_authors(Some("1869"), &["Perrier"])
+        .comb_ex_authors(&["Valenciennes"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Hirundo leucopyga Meyen (Licht. MS) 1834")
+        .species("Hirundo", "leucopyga")
+        .comb_authors(Some("1834"), &["Meyen"])
+        .comb_ex_authors(&["Licht."])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Chromis Oken, 1817 (ex Cuvier)")
+        .monomial("Chromis")
+        .comb_authors(Some("1817"), &["Oken"])
+        .comb_ex_authors(&["Cuvier"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn issue_150_in_litteris() {
+    assert_name("Anterhynchium alecto lalepi (Cheesm.i.l.)")
+        .infra_species("Anterhynchium", "alecto", Rank::Subspecies, "lalepi")
+        .bas_authors(None, &["Cheesm."])
+        .manuscript()
+        .nom_note("i.l.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Litorina vilis (Menke in litt.)")
+        .species("Litorina", "vilis")
+        .bas_authors(None, &["Menke"])
+        .manuscript()
+        .nom_note("in litt.")
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // published by the author before the bracket
+    assert_name("Acanthocinus rusticus Klug (Dej. in litt.) 1829")
+        .species("Acanthocinus", "rusticus")
+        .comb_authors(Some("1829"), &["Klug"])
+        .comb_ex_authors(&["Dej."])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}

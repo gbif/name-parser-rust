@@ -108,6 +108,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_hort_ex_placeholder(ctx, s);
     s = normalise_manuscript_word(ctx, s);
     s = move_manuscript_marker_behind_author(s);
+    s = unbracket_manuscript_marker(ctx, s);
     s = normalise_cultivar_spelling(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
     s = lower_shouted_qualifier(s);
@@ -2644,6 +2645,26 @@ fn move_leading_manuscript_marker(_ctx: &mut ParseContext, s: String) -> String 
     LEADING_MANUSCRIPT_MARKER
         .replace(&s, "${2} ${1}")
         .into_owned()
+}
+
+/// A manuscript mark in a bracket of its own after the author, "Valenciennes (MS) in Perrier,
+/// 1869", "Plummer (ms.) , 1926" (#128): the bracket only sets the mark apart, which then reads as
+/// one written without it ("Valenciennes MS in Perrier" is Valenciennes ex Perrier). Java read "MS"
+/// as the initials of "M.S.Valenciennes". A bracketed "(ined.)" is filed as a note already. Group 1
+/// the mark.
+static BRACKETED_MANUSCRIPT_MARK_ONLY: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s*)\((?-u:\s*)((?:MS|Ms|ms|MSC|msc|in(?-u:\s+)litt(?:eris)?|i\.(?-u:\s?)l)\.?)(?-u:\s*)\)")
+        .unwrap()
+});
+
+/// "i.l." (in litteris) glued to the abbreviated author before it, "(Cheesm.i.l.)" (#150).
+static GLUED_IN_LITTERIS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\p{Ll}\.)(i\.(?-u:\s?)l\.)").unwrap());
+
+/// See [`BRACKETED_MANUSCRIPT_MARK_ONLY`] and [`GLUED_IN_LITTERIS`].
+fn unbracket_manuscript_marker(_ctx: &mut ParseContext, s: String) -> String {
+    let s = BRACKETED_MANUSCRIPT_MARK_ONLY.replace_all(&s, " ${1}");
+    GLUED_IN_LITTERIS.replace_all(&s, "${1} ${2}").into_owned()
 }
 
 fn move_manuscript_marker_behind_author(s: String) -> String {
@@ -5684,6 +5705,10 @@ static BRACKET_AFTER_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(.*\p{L}.*?[,\s](?:1[5-9][0-9]{2}|20[0-9]{2})[a-z]?\)?)[,\s]*(\[([^\[\]]*)\]|\(([^()]*)\))(?-u:\s*)\.?(?-u:\s*)$").unwrap()
 });
 
+/// The content of an "(ex Cuvier)" or "(ex. Le Calvez, 1949)" bracket, which names an ex-author.
+static EX_AUTHOR_BRACKET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?-u:\s*)ex\.?(?-u:\s+)\p{Lu}").unwrap());
+
 /// A capitalised word after the year that closes an authorship, at the end: a family-group name
 /// (`Grosmann, 1935 Phylloxeroidea`, `(Signoret, 1869) Coccoidea`) or a remark (`Levi, 1988 New`).
 /// Group 1 what comes before it, group 2 a comma before the year, group 3 a bracket closed after
@@ -5767,8 +5792,12 @@ fn file_note_after_authorship(ctx: &mut ParseContext, content: &str, verbatim: &
 fn stash_text_after_year(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = BRACKET_AFTER_YEAR.captures(&s) {
         let content = caps.get(3).or(caps.get(4)).map_or("", |m| m.as_str());
-        // a number, an imprint year left over: "Lea, 1908 (09)", "Cook, 1985(1983?)"
-        if !content.chars().any(char::is_alphabetic) || INDET_MARKER_WORD.is_match(&caps[1]) {
+        // a number, an imprint year left over: "Lea, 1908 (09)", "Cook, 1985(1983?)"; or the
+        // ex-author whose name the author made available, "Oken, 1817 (ex Cuvier)" (#128)
+        if !content.chars().any(char::is_alphabetic)
+            || INDET_MARKER_WORD.is_match(&caps[1])
+            || EX_AUTHOR_BRACKET.is_match(content)
+        {
             return s;
         }
         file_note_after_authorship(ctx, content, &caps[2]);
@@ -5873,12 +5902,13 @@ pub(crate) fn manuscript_in_as_ex(s: &str) -> String {
 }
 
 /// A manuscript marker of an author inside a bracket, closing it or before the bracket's "in"
-/// citation: "(Parreyss, MS.)", "(Kuroda MS in Kira, 1959)". Java read "MS" as the initials of
+/// citation: "(Parreyss, MS.)", "(Kuroda MS in Kira, 1959)", and "in litt." or "i.l." of a name
+/// found in a letter, "(Menke in litt.)", "(Karny i.l. )" (#150). Java read "MS" as the initials of
 /// "M.S.Parreyss". Group 1 = the author or year before it, group 2 = the marker with its
 /// separator, group 3 = the marker, group 4 = what follows it.
 static BRACKETED_MANUSCRIPT_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"([\p{Lu}\d][\p{L}\d.'\-]*)((?-u:\s*,?\s+)((?i:ms|msc|ined)\.?))((?-u:\s*)\)|(?-u:\s+)in(?-u:\s))",
+        r"([\p{Lu}\d][\p{L}\d.'\-]*)((?-u:\s*,?\s+)((?i:ms|msc|ined)\.?|(?i:in(?-u:\s+)litt?(?:eris|\.)?)|i\.(?-u:\s?)l\.))((?-u:\s*)\)|(?-u:\s+)in(?-u:\s))",
     )
     .unwrap()
 });
@@ -5905,7 +5935,19 @@ pub(crate) fn strip_bracketed_manuscript_marker(s: &str, name: &mut ParsedName) 
             .split_whitespace()
             .next_back()
             .is_some_and(|w| w.starts_with(|c: char| c.is_uppercase()));
-        if !inside || after_author || EX_WORD.is_match(&s[open_at..marker.start()]) {
+        let ex_said = EX_WORD.is_match(&s[open_at..marker.start()]);
+        // between an author and the year, the bracket names whose manuscript or letter the author
+        // published the name from, as "Stephens (ex Kirby MS) 1828" says it: "Doubleday (Boisd.
+        // MS) 1844", "Klug (Dej. in litt.) 1829" are Boisd. ex Doubleday and Dej. ex Klug
+        if inside && after_author && !ex_said && open_at >= last && caps[4].trim_start() == ")" {
+            out.push_str(&s[last..=open_at]);
+            out.push_str("ex ");
+            out.push_str(&s[open_at + 1..marker.start()]);
+            out.push_str(&caps[4]);
+            last = caps.get(4).unwrap().end();
+            continue;
+        }
+        if !inside || after_author || ex_said {
             continue;
         }
         out.push_str(&s[last..marker.start()]);
@@ -6389,7 +6431,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 18] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 19] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -6401,6 +6443,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         normalise_hort_ex_placeholder,
         normalise_manuscript_word,
         move_leading_manuscript_marker,
+        unbracket_manuscript_marker,
         strip_extinct_dagger,
         stash_synonym_bracket,
         split_note_from_basionym_bracket,
