@@ -62,6 +62,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_quoted_monomial(ctx, s);
     s = apply_missing_genus_placeholder(ctx, s);
     s = strip_leading_genus_qualifier(ctx, s);
+    s = strip_bracketed_genus_doubt(ctx, s);
     s = stash_genus_designation(ctx, s);
     s = shorten_species_near(s);
     s = strip_rank_lineage(ctx, s);
@@ -522,6 +523,53 @@ fn strip_leading_genus_qualifier(ctx: &mut ParseContext, s: String) -> String {
     }
     ctx.qualified_genus = true;
     caps[3].to_string()
+}
+
+/// A question mark in brackets after the genus, `Agrion (?) satelles`, `Taeromys(?) marmosurus`,
+/// `Agrion [?] satelles`: the doubt of the genus, as `?Agrion satelles`. Group 1 is the genus,
+/// group 2 the epithet and what follows.
+static BRACKETED_GENUS_DOUBT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)[(\[](?-u:\s*)\?(?-u:\s*)[)\]](?-u:\s*)(\p{Ll}[\p{Ll}\-]+\.?(?:(?-u:\s).*)?)$")
+        .unwrap()
+});
+
+/// A question mark inside a subgenus's brackets, before or after it: `Glenea (? Macroglenea)
+/// anulicornis`, `Glenea (Macroglenea?) anulicornis`. Group 1 is the genus, 2 or 3 the subgenus,
+/// 4 the epithet and what follows.
+static BRACKETED_SUBGENUS_DOUBT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)\((?:(?-u:\s*)\?(?-u:\s*)(\p{Lu}\p{Ll}+)|(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\?)(?-u:\s*)\)(?-u:\s*)(\p{Ll}[\p{Ll}\-]+(?:(?-u:\s).*)?)$")
+        .unwrap()
+});
+
+/// See [`BRACKETED_GENUS_DOUBT`] and [`BRACKETED_SUBGENUS_DOUBT`]. The bracket made a uninomial and
+/// the epithet its author, or unparsed with a separate authorship; the `?` is now the qualifier of
+/// the genus or the subgenus, as a leading `?Genus` is ([`strip_leading_genus_qualifier`]), and
+/// flags the name doubtful (#174). A particle after it opens an author (`Agrion (?) de Selys`).
+fn strip_bracketed_genus_doubt(ctx: &mut ParseContext, s: String) -> String {
+    let (out, part, epithet) = if let Some(caps) = BRACKETED_GENUS_DOUBT.captures(&s) {
+        (
+            format!("{} {}", &caps[1], &caps[2]),
+            NamePart::Generic,
+            caps[2].split_whitespace().next().unwrap_or("").to_string(),
+        )
+    } else if let Some(caps) = BRACKETED_SUBGENUS_DOUBT.captures(&s) {
+        let subgenus = caps.get(2).or(caps.get(3)).unwrap().as_str();
+        (
+            format!("{} ({subgenus}) {}", &caps[1], &caps[4]),
+            NamePart::Infrageneric,
+            caps[4].split_whitespace().next().unwrap_or("").to_string(),
+        )
+    } else {
+        return s;
+    };
+    if token::is_particle(&epithet) {
+        return s;
+    }
+    ctx.name.set_epithet_qualifier(part, "?");
+    ctx.name.doubtful = true;
+    ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+    ctx.qualified_genus = true;
+    out
 }
 
 /// A taxon followed by `gen.` and what it says about an unnamed genus in it: `Carabidae gen. sp.`,

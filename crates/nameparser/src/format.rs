@@ -435,6 +435,15 @@ fn append_infraspecific(
     }
 }
 
+/// A qualifier of `part` and a space, if shown and there is one: the `?` of a doubted subgenus,
+/// `Glenea (? Macroglenea) anulicornis`.
+fn append_qualifier(sb: &mut String, n: &ParsedName, part: NamePart, show_qualifier: bool) {
+    if show_qualifier && n.has_epithet_qualifier(part) {
+        sb.push_str(qualifier(n, part));
+        sb.push(' ');
+    }
+}
+
 /// Fetch an epithet qualifier known to exist (caller guards with `has_epithet_qualifier`).
 fn qualifier(n: &ParsedName, part: NamePart) -> &str {
     n.epithet_qualifier
@@ -726,6 +735,7 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                     // botanical names (unless its no defined rank)
                     if n.code == Some(NomCode::Zoological) {
                         sb.push('(');
+                        append_qualifier(&mut sb, n, NamePart::Infrageneric, f.show_qualifier);
                         if f.hybrid_marker && has_notho(n, NamePart::Infrageneric) {
                             sb.push(HYBRID_MARKER);
                             sb.push(' ');
@@ -749,6 +759,7 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                             sb.push(' ');
                         }
                     }
+                    append_qualifier(&mut sb, n, NamePart::Infrageneric, f.show_qualifier);
                     append_in_italics(&mut sb, infrageneric_epithet, html);
                 }
             } else {
@@ -758,6 +769,7 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                 if f.infrageneric {
                     // additional subgenus shown for binomial. Always shown in brackets
                     sb.push_str(" (");
+                    append_qualifier(&mut sb, n, NamePart::Infrageneric, f.show_qualifier);
                     append_in_italics(&mut sb, infrageneric_epithet, html);
                     sb.push(')');
                 }

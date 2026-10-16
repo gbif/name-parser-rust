@@ -610,3 +610,71 @@ fn an_underscore_for_the_space_after_the_genus() {
         )
         .nothing_else();
 }
+
+#[test]
+fn a_question_mark_in_brackets_after_the_genus_doubts_it() {
+    // the bracket made a uninomial and the epithet its author (#174)
+    for name in [
+        "Agrion (?) satelles",
+        "Agrion(?) satelles",
+        "Agrion ( ? ) satelles",
+        "Agrion [?] satelles",
+    ] {
+        assert_name(name)
+            .species("Agrion", "satelles")
+            .qualifiers(&[(NamePart::Generic, "?")])
+            .type_(NameType::Informal)
+            .doubtful()
+            .warning(&["question marks removed"])
+            .nothing_else();
+    }
+    assert_name_auth("Abax (?) sulcipennis", "Macleay 1873")
+        .species("Abax", "sulcipennis")
+        .qualifiers(&[(NamePart::Generic, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&["question marks removed"])
+        .comb_authors(Some("1873"), &["Macleay"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    let agrion = nameparser::parse_name("Agrion (?) satelles", None, None, None).unwrap();
+    assert_eq!(
+        agrion.canonical_name().as_deref(),
+        Some("? Agrion satelles")
+    );
+
+    // in the subgenus's brackets it doubts the subgenus
+    for name in [
+        "Glenea (? Macroglenea) anulicornis Gressitt, 1951",
+        "Glenea (Macroglenea?) anulicornis Gressitt, 1951",
+    ] {
+        assert_name(name)
+            .species_ig("Glenea", "Macroglenea", "anulicornis")
+            .qualifiers(&[(NamePart::Infrageneric, "?")])
+            .type_(NameType::Informal)
+            .doubtful()
+            .warning(&["question marks removed"])
+            .comb_authors(Some("1951"), &["Gressitt"])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    let glenea =
+        nameparser::parse_name("Glenea (? Macroglenea) anulicornis", None, None, None).unwrap();
+    assert_eq!(
+        glenea.canonical_name_complete().as_deref(),
+        Some("Glenea (? Macroglenea) anulicornis")
+    );
+    assert_eq!(
+        glenea
+            .anchor()
+            .map(|a| a.canonical_name().unwrap_or_default()),
+        Some("Glenea".to_string())
+    );
+
+    // a particle after it opens an author
+    assert_name("Agrion (?) de Selys")
+        .monomial("Agrion")
+        .comb_authors(None, &["de Selys"])
+        .partial("(?)")
+        .nothing_else();
+}
