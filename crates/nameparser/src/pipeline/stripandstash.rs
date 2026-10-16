@@ -1079,10 +1079,19 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 /// capitals joined by an underscore (`PW_SP`), which no author has (#84).
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:\-]*\d[\p{L}\d_\-:]*|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$",
+        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:\-]*\d[\p{L}\d_\-:]*|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$"
+            .replace("<INFRA>", INFRASPECIFIC_HEAD),
     )
     .unwrap()
 });
+
+/// An infraspecific name a trailing code may follow too, in the head of [`TRAILING_STRAIN_CODE`],
+/// [`TRAILING_CULTURE_ACCESSION`], [`TRAILING_ACCESSION`] and [`TRAILING_VOUCHER`]:
+/// `Pseudomonas syringae pv. actinidiae ICMP 18807`, `Escherichia coli subsp. coli ATCC 1234`
+/// (#174), where the code became an author. Not a serovar, whose own step keeps what follows it
+/// (`strip_serovar_serotype`), nor a strain, which is the designation itself.
+const INFRASPECIFIC_HEAD: &str =
+    r"(?:\s+(?:subsp|ssp|var|pv|bv|biovar|f|forma)\.?\s+\p{Ll}[\p{Ll}\-]+)?";
 
 /// Replaces Java DIGITS_ONLY (StripAndStash.java:357) as the guard on
 /// [`stash_trailing_strain_code`]. Java's `\d+` was provably unreachable there (both of its code
@@ -1485,7 +1494,8 @@ fn rank_of_marker(w: &str) -> Option<Rank> {
 /// the standalone `NameType::Identifier` path in `preflight` (shared `culture_collections` list).
 static TRAILING_CULTURE_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"^([\p{{Lu}}][\p{{Ll}}]+[ ]+[\p{{Ll}}]+)[ ]+({}[ :=_\-]*(?:[A-Z]{{1,4}}\-)?[0-9][0-9A-Za-z.:\-]*)$",
+        r"^([\p{{Lu}}][\p{{Ll}}]+[ ]+[\p{{Ll}}]+{})[ ]+({}[ :=_\-]*(?:[A-Z]{{1,4}}\-)?[0-9][0-9A-Za-z.:\-]*)$",
+        INFRASPECIFIC_HEAD,
         super::culture_collections::acronym_alternation()
     ))
     .unwrap()
@@ -1507,7 +1517,8 @@ fn stash_trailing_culture_accession(ctx: &mut ParseContext, s: String) -> String
 /// name, group 3 the code.
 static TRAILING_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+(\p{Lu}{2,}[\p{Lu}\d]*\s+([\p{L}\d][\p{L}\d_\-.:/]*))$",
+        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+(\p{Lu}{2,}[\p{Lu}\d]*\s+([\p{L}\d][\p{L}\d_\-.:/]*))$"
+            .replace("<INFRA>", INFRASPECIFIC_HEAD),
     )
     .unwrap()
 });
@@ -1522,6 +1533,7 @@ fn stash_trailing_accession(ctx: &mut ParseContext, s: String) -> String {
         if code.contains(|c: char| c.is_ascii_digit())
             && super::assemble::is_unlikely_year(Some(code))
             && !is_indet_species_marker(caps[1].rsplit(char::is_whitespace).next().unwrap_or(""))
+            && !is_indet_species_marker(second_word(&caps[1]))
         {
             ctx.name.phrase = Some(caps[2].to_string());
             ctx.name.type_ = NameType::Informal;
@@ -1535,7 +1547,8 @@ fn stash_trailing_accession(ctx: &mut ParseContext, s: String) -> String {
 /// 596)`. Group 1 the name, group 2 the voucher, group 3 the number.
 static TRAILING_VOUCHER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+)\s+(\(?(?:\p{Lu}\.\s?)*\p{Lu}[\p{L}'\-]+(?:\s+et\s+al\.)?\s+((?-u:\d{1,5})[a-z]?)\)?)$",
+        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+(\(?(?:\p{Lu}\.\s?)*\p{Lu}[\p{L}'\-]+(?:\s+et\s+al\.)?\s+((?-u:\d{1,5})[a-z]?)\)?)$"
+            .replace("<INFRA>", INFRASPECIFIC_HEAD),
     )
     .unwrap()
 });

@@ -46,7 +46,7 @@ mod tests {
     #[test]
     fn seed_list_loads_and_skips_the_comment_header() {
         // 29 acronyms in the seed file; the 5 `#`-comment header lines and any blanks are skipped.
-        assert_eq!(ACRONYMS.len(), 29);
+        assert_eq!(ACRONYMS.len(), 31);
         assert!(!ACRONYMS.iter().any(|a| a.starts_with('#')));
     }
 

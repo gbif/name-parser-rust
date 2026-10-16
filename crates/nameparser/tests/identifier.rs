@@ -174,6 +174,72 @@ fn trailing_culture_accession_on_a_binomial_becomes_the_phrase() {
 }
 
 #[test]
+fn a_code_after_an_infraspecific_name_is_its_phrase() {
+    // as after a binomial; the code became an author, its number dropped (#174)
+    for (input, rank, code, phrase) in [
+        (
+            "Pseudomonas syringae pv. actinidiae ICMP 18807",
+            Rank::Pathovar,
+            Some(NomCode::Bacterial),
+            "ICMP 18807",
+        ),
+        (
+            "Pseudomonas syringae pv. atrofaciens LMG 5095T",
+            Rank::Pathovar,
+            Some(NomCode::Bacterial),
+            "LMG 5095T",
+        ),
+        (
+            "Xanthomonas campestris pv. campestris NCPPB 528",
+            Rank::Pathovar,
+            Some(NomCode::Bacterial),
+            "NCPPB 528",
+        ),
+        (
+            "Pseudomonas syringae pv. tomato DC3000",
+            Rank::Pathovar,
+            Some(NomCode::Bacterial),
+            "DC3000",
+        ),
+        (
+            "Escherichia coli subsp. coli ATCC 1234",
+            Rank::Subspecies,
+            None,
+            "ATCC 1234",
+        ),
+        (
+            "Campylobacter jejuni subsp. jejuni 2008-872",
+            Rank::Subspecies,
+            None,
+            "2008-872",
+        ),
+        (
+            "Cryptococcus neoformans var. grubii Bt30",
+            Rank::Variety,
+            None,
+            "Bt30",
+        ),
+    ] {
+        let words: Vec<&str> = input.split(' ').collect();
+        let a = assert_name(input)
+            .infra_species(words[0], words[1], rank, words[3])
+            .type_(NameType::Informal)
+            .phrase(phrase);
+        match code {
+            Some(c) => a.code(c),
+            None => a,
+        }
+        .nothing_else();
+    }
+    // a capitalised author with a year stays the author
+    assert_name("Abies alba subsp. alba SMITH 1900")
+        .infra_species("Abies", "alba", Rank::Subspecies, "alba")
+        .comb_authors(Some("1900"), &["Smith"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
 fn a_real_trailing_author_is_not_mistaken_for_an_accession() {
     // "Mill." is an author, not a curated collection acronym -> stays SCIENTIFIC with authorship.
     assert_name("Abies alba Mill.")
