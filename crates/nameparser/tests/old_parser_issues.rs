@@ -1026,3 +1026,71 @@ fn issue_123_a_shouted_common_name_is_no_author() {
         .infrageneric_at("Tetramorium", Rank::InfragenericName, "XIPHOMYRMEX")
         .nothing_else();
 }
+
+#[test]
+fn issue_125_author_teams_with_initials() {
+    // a team of authors with their initials first that lost its commas
+    assert_name("Eucalyptus roycei S.G.M. Carr D.J. Carr & A.S. George")
+        .species("Eucalyptus", "roycei")
+        .comb_authors(None, &["S.G.M.Carr", "D.J.Carr", "A.S.George"])
+        .nothing_else();
+    assert_name("Lactarius lanceolatus O.K. Mill G. Laursen")
+        .species("Lactarius", "lanceolatus")
+        .comb_authors(None, &["O.K.Mill", "G.Laursen"])
+        .nothing_else();
+    assert_name("Puccinia jaceae G.H. Otth G.H. Otth")
+        .species("Puccinia", "jaceae")
+        .comb_authors(None, &["G.H.Otth", "G.H.Otth"])
+        .nothing_else();
+    // a particle between the initials, or a forename written out, keeps one author
+    assert_name("Purpura lapillus (J. De C. Sowerby, 1823)")
+        .species("Purpura", "lapillus")
+        .bas_authors(Some("1823"), &["J.De C.Sowerby"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Carex nigra Roy L. Taylor")
+        .species("Carex", "nigra")
+        .comb_authors(None, &["Roy L.Taylor"])
+        .nothing_else();
+    // the other names of the issue
+    assert_name("Uvella rosacea J.B.G.G.M. Bory")
+        .species("Uvella", "rosacea")
+        .comb_authors(None, &["J.B.G.G.M.Bory"])
+        .nothing_else();
+    assert_name("Bryocyclops campaneri Rocha C.E.F. & Bjornberg M.H.G.C., 1987")
+        .species("Bryocyclops", "campaneri")
+        .comb_authors(Some("1987"), &["C.E.F.Rocha", "M.H.G.C.Bjornberg"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Fercurtia Gougerot & le Renard, 1978")
+        .monomial("Fercurtia")
+        .comb_authors(Some("1978"), &["Gougerot", "le Renard"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Melaleucus sellata Chevrolat L.A.A, 1882")
+        .species("Melaleucus", "sellata")
+        .comb_authors(Some("1882"), &["L.A.A.Chevrolat"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Rotylenchus ascalpi Scotto la Massese & Germani, 2001")
+        .species("Rotylenchus", "ascalpi")
+        .comb_authors(Some("2001"), &["Scotto la Massese", "Germani"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Bacillus kaustophilus (ex Prickett, 1928) Priest et al., 1989")
+        .species("Bacillus", "kaustophilus")
+        .comb_authors(Some("1989"), &["Priest", "al."])
+        .comb_ex_authors(&["Prickett"])
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    assert_name("Argulus multicolor Schuurmans Stekhoven J.H. Jr, 1937")
+        .species("Argulus", "multicolor")
+        .comb_authors(Some("1937"), &["J.H.Schuurmans Stekhoven Jr"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Cerithium papillosum Sowerby G.B. II, 1855")
+        .species("Cerithium", "papillosum")
+        .comb_authors(Some("1855"), &["G.B.Sowerby II"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
