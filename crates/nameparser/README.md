@@ -14,11 +14,18 @@ gbif-name-parser = "0.1"
 ```rust
 use nameparser::parse;
 
-let pn = parse("Vulpes vulpes silaceus Miller, 1907", None, None, None).unwrap();
+let result = parse("Vulpes vulpes silaceus Miller, 1907", None, None, None);
+let pn = result.parsed().expect("a scientific name");
 assert_eq!(pn.genus.as_deref(), Some("Vulpes"));
 assert_eq!(pn.specific_epithet.as_deref(), Some("vulpes"));
 assert_eq!(pn.infraspecific_epithet.as_deref(), Some("silaceus"));
 assert_eq!(pn.combination_authorship.authors, vec!["Miller"]);
+
+// an informal name is parsed too; its anchor is the taxon it hangs off
+let result = parse("Rhizobium sp. RMCC TR1811", None, None, None);
+let pn = result.parsed().expect("an informal name");
+assert_eq!(pn.phrase.as_deref(), Some("sp. RMCC TR1811"));
+assert_eq!(pn.anchor().unwrap().uninomial.as_deref(), Some("Rhizobium"));
 ```
 
 The output is byte-for-byte cross-validated against the Java oracle (`NameParserImpl`) over

@@ -24,16 +24,15 @@ from the list in `tools/parsing-examples.txt`.
 
 ## The parse result
 
-A name is parsed into one of three results:
+A name is parsed into one of two results:
 
 - **Parsed** — a `ParsedName`: the name parts (`uninomial`, or `genus`, `infragenericEpithet`,
   `specificEpithet`, `infraspecificEpithet`, `cultivarEpithet`), the `rank`, the nomenclatural
-  `code` when there is evidence for it, the `type` (`SCIENTIFIC`, or `INFORMAL` for a name in open
-  nomenclature), the authorship, notes and flags. Its `state` is `COMPLETE`, or `PARTIAL` when a
-  rest could not be read (`unparsed`).
-- **Informal** — a provisional name with no epithet of its own (`Bacillus sp. 1`): the anchor
-  `taxon` and its `taxonRank`, the `rank` the designation stands for and the designation itself,
-  verbatim, as the `phrase`, and whether it is a `candidatus` name.
+  `code` when there is evidence for it, the `type`, the authorship, notes and flags. Its `state` is
+  `COMPLETE`, or `PARTIAL` when a rest could not be read (`unparsed`). The `type` is `SCIENTIFIC`,
+  or `INFORMAL` for a name in open nomenclature: a provisional designation (`Bacillus sp. 1`), kept
+  verbatim as the `phrase`, a qualified epithet (`Abies cf. alba`) or a missing one. The `anchor`
+  of an informal name is the taxon it hangs off, the determined part of the name.
 - **Unparsable** — no scientific name at all (a virus, a placeholder, an identifier, a hybrid
   formula): only its `type` and, where known, its `code`.
 
@@ -103,6 +102,10 @@ def render_parsed(pn) -> list[str]:
             parts.append(f"{field} {code(value)}")
     if parts:
         lines.append(" · ".join(parts))
+    if pn.type == "INFORMAL":
+        anchor = pn.anchor()
+        if anchor is not None:
+            lines.append(f"anchor {code(anchor.canonical_name())} · {code(anchor.rank)}")
 
     flags = []
     if pn.candidatus:
@@ -159,24 +162,6 @@ def render_parsed(pn) -> list[str]:
     return lines
 
 
-def render_informal(inf) -> list[str]:
-    head = [
-        "**Informal**",
-        "taxon " + code(inf.taxon),
-        "taxonRank " + code(inf.taxon_rank),
-        "rank " + code(inf.rank),
-    ]
-    if inf.code:
-        head.append("code " + code(inf.code))
-    lines = [" · ".join(head)]
-    if inf.phrase:
-        lines.append("phrase " + code(inf.phrase))
-    if inf.candidatus:
-        lines.append("candidatus")
-    lines.append("→ " + code(inf.canonical_name()))
-    return lines
-
-
 def render(name: str, authorship: str | None) -> list[str]:
     try:
         result = nameparser.parse(name, authorship=authorship)
@@ -185,8 +170,6 @@ def render(name: str, authorship: str | None) -> list[str]:
         if err.code:
             head.append("code " + code(err.code))
         return [" · ".join(head)]
-    if isinstance(result, nameparser.Informal):
-        return render_informal(result)
     return render_parsed(result)
 
 

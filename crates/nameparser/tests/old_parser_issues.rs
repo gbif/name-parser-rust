@@ -921,13 +921,6 @@ fn issue_134_australian_phrase_names_are_informal() {
             Rank::Species,
             "sp. Manmanning (BR Maslin 7711) [aff. multispicata]",
         ),
-        // the subgenus is no part of the anchor
-        (
-            "Atrichornis (Rahcinta) sp Glory (BR Maslin 7711)",
-            "Atrichornis",
-            Rank::Species,
-            "Glory (BR Maslin 7711)",
-        ),
         (
             "Acacia sp. \"Morning Glory\"",
             "Acacia",
@@ -942,17 +935,38 @@ fn issue_134_australian_phrase_names_are_informal() {
             .phrase(phrase)
             .nothing_else();
     }
-    // a species and its phrase: an informal name, parsed, as the anchor holds only a genus
-    assert_name("Grevillea brachystylis subsp. Busselton (G.J.Keighery s.n. 28/8/1985)")
-        .binomial("Grevillea", None, "brachystylis", Rank::Subspecies)
+    // a subgenus and its phrase
+    assert_informal("Atrichornis (Rahcinta) sp Glory (BR Maslin 7711)")
+        .taxon("Atrichornis subgen. Rahcinta")
+        .taxon_rank(Rank::Subgenus)
+        .rank(Rank::Species)
+        .phrase("Glory (BR Maslin 7711)")
+        .nothing_else();
+    // a species and its phrase
+    assert_informal("Grevillea brachystylis subsp. Busselton (G.J.Keighery s.n. 28/8/1985)")
+        .taxon("Grevillea brachystylis")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Subspecies)
         .phrase("Busselton (G.J.Keighery s.n. 28/8/1985)")
-        .type_(NameType::Informal)
         .nothing_else();
-    assert_name("Acacia mutabilis subsp. Young River (G.F.Craig 2052)")
-        .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
+    assert_informal("Acacia mutabilis subsp. Young River (G.F.Craig 2052)")
+        .taxon("Acacia mutabilis")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Subspecies)
         .phrase("Young River (G.F.Craig 2052)")
-        .type_(NameType::Informal)
         .nothing_else();
+    // the species author is the anchor's
+    let pn = nameparser::parse_name(
+        "Acacia mutabilis Maslin subsp. Young River (G.F.Craig 2052)",
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+    assert_eq!(
+        pn.anchor().unwrap().canonical_name().as_deref(),
+        Some("Acacia mutabilis Maslin")
+    );
     assert_name("Acacia mutabilis Maslin subsp. Young River (G.F.Craig 2052)")
         .binomial("Acacia", None, "mutabilis", Rank::Subspecies)
         .specific_authors(None, &["Maslin"])

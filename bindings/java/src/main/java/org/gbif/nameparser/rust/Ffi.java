@@ -230,8 +230,7 @@ final class Ffi {
    * Calls {@code np_parse_struct} over the FFM boundary and turns its flat binary result into the
    * 5.0.0 {@link ParseResult} (never throwing for an unparsable name): a {@code -1} header becomes
    * {@link StructCodec#unparsableResult}, and a success buffer is decoded via
-   * {@link StructCodec#decode} then split into {@code Parsed}/{@code Informal} by
-   * {@link StructCodec#toParseResult}. {@code authorship}/{@code rank}/{@code code} are each
+   * {@link StructCodec#decode} then wrapped by {@link StructCodec#toParseResult}. {@code authorship}/{@code rank}/{@code code} are each
    * marshalled as {@link MemorySegment#NULL} when null.
    *
    * <p>Implements the overflow-retry protocol {@code np_parse_struct} documents (see {@code

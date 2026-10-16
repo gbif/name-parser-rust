@@ -146,60 +146,66 @@ test_that("warnings column carries a real (non-empty) warning, not just NA", {
   expect_equal(out$warnings, "question marks removed")
 })
 
-test_that("informal names produce a 5.0.0 informal row (result/taxon/taxonRank)", {
+test_that("informal names are parsed rows with their anchor", {
   out <- parse_names(c("Serratia sp. RE1-2a",        # informal, tag already captured
                        "Rhizobium sp. RMCC TR1811",   # multi-token tag-capture rescue
                        "Rhizobium sp.",               # bare "Genus sp." -> phrase is the bare marker
-                       "Abies alba Mill.",            # parsed
+                       "Abies alba Mill.",            # scientific
                        "Tobacco mosaic virus"))       # unparsable
-  # the new 5.0.0 three-way discriminator + informal-anchor columns
-  expect_true(all(c("result", "taxon", "taxonRank") %in% names(out)))
-  expect_equal(out$result, c("informal", "informal", "informal", "parsed", "unparsable"))
-  expect_equal(out$parsed, c(FALSE, FALSE, FALSE, TRUE, FALSE))  # TRUE only for "parsed"
+  expect_true(all(c("result", "anchor", "anchorRank") %in% names(out)))
+  expect_equal(out$result, c("parsed", "parsed", "parsed", "parsed", "unparsable"))
+  expect_equal(out$parsed, c(TRUE, TRUE, TRUE, TRUE, FALSE))
 
-  # informal row 1: Serratia sp. RE1-2a (values are Rust/Java-authoritative)
-  expect_equal(out$taxon[1], "Serratia")
-  expect_equal(out$taxonRank[1], "GENUS")
+  # row 1: Serratia sp. RE1-2a
+  expect_equal(out$type[1], "INFORMAL")
+  expect_equal(out$genus[1], "Serratia")
   expect_equal(out$rank[1], "SPECIES")
   expect_equal(out$phrase[1], "sp. RE1-2a")
-  expect_equal(out$type[1], "INFORMAL")
-  expect_equal(out$canonical[1], "Serratia sp. RE1-2a")  # informal rows round-trip to a canonical name
-  expect_true(is.na(out$genus[1]))    # the anchor lives in `taxon`, never a mislabelled genus
+  expect_equal(out$anchor[1], "Serratia")
+  expect_equal(out$anchorRank[1], "GENUS")
+  expect_equal(out$canonical[1], "Serratia sp. RE1-2a")
+  expect_equal(out$warnings[1], "indetermined name missing its terminal epithet")
   expect_true(is.na(out$error[1]))
 
-  # informal row 2: the ~382k tag-capture rescue — whole verbatim tail becomes the phrase
-  expect_equal(out$taxon[2], "Rhizobium")
+  # row 2: the ~382k tag-capture rescue — whole verbatim tail becomes the phrase
+  expect_equal(out$anchor[2], "Rhizobium")
   expect_equal(out$phrase[2], "sp. RMCC TR1811")
 
-  # informal row 3: bare "Genus sp." -> phrase is the bare verbatim marker
-  expect_equal(out$taxon[3], "Rhizobium")
+  # row 3: bare "Genus sp." -> phrase is the bare verbatim marker
+  expect_equal(out$anchor[3], "Rhizobium")
   expect_equal(out$phrase[3], "sp.")
-  expect_equal(out$canonical[3], "Rhizobium sp.")  # round-trips to the same canonical
+  expect_equal(out$canonical[3], "Rhizobium sp.")
   expect_equal(out$candidatus[1:3], c(FALSE, FALSE, FALSE))
 
-  # parsed + unparsable rows carry NA in the informal-only columns
-  expect_true(is.na(out$taxon[4]))
-  expect_true(is.na(out$taxonRank[4]))
-  expect_true(is.na(out$taxon[5]))
-  expect_equal(out$canonical[4], "Abies alba Mill.")  # a parsed row still renders its own canonical
-  expect_true(is.na(out$canonical[5]))                # an unparsable row has no canonical
+  # a scientific and an unparsable row have no anchor
+  expect_true(is.na(out$anchor[4]))
+  expect_true(is.na(out$anchorRank[4]))
+  expect_true(is.na(out$anchor[5]))
+  expect_equal(out$canonical[4], "Abies alba Mill.")
+  expect_true(is.na(out$canonical[5]))
 })
 
 test_that("an informal row keeps Candidatus (#76)", {
   out <- parse_names("Candidatus Pelagibacter sp. HTCC7211")
-  expect_equal(out$result, "informal")
-  expect_equal(out$taxon, "Pelagibacter")
+  expect_equal(out$type, "INFORMAL")
+  expect_equal(out$anchor, "\"Candidatus Pelagibacter\"")  # the anchor keeps the status
   expect_equal(out$phrase, "sp. HTCC7211")
   expect_true(out$candidatus)
 })
 
-test_that("a cf. binomial stays a parsed row, not informal", {
-  # a species epithet is present (binomial core) -> stays Parsed so specificAuthorship survives
+test_that("a phrase name below a species is anchored on the species (#134)", {
+  out <- parse_names("Grevillea brachystylis subsp. Busselton (G.J.Keighery s.n. 28/8/1985)")
+  expect_equal(out$rank, "SUBSPECIES")
+  expect_equal(out$phrase, "Busselton (G.J.Keighery s.n. 28/8/1985)")
+  expect_equal(out$anchor, "Grevillea brachystylis")
+  expect_equal(out$anchorRank, "SPECIES")
+})
+
+test_that("a cf. binomial keeps its qualified epithet, anchored above it", {
   out <- parse_names("Salicornia cf. patula")
   expect_equal(out$result, "parsed")
-  expect_true(out$parsed)
   expect_equal(out$specificEpithet, "patula")
-  expect_true(is.na(out$taxon))
+  expect_equal(out$anchor, "Salicornia")
 })
 
 test_that("parse_name_json's error envelope matches the FFI/CLI shape exactly", {

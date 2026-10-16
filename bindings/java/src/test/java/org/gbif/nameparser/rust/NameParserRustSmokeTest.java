@@ -8,6 +8,7 @@ import org.gbif.nameparser.api.ParseResult;
 import org.gbif.nameparser.api.ParsedName;
 import org.gbif.nameparser.api.Rank;
 import org.gbif.nameparser.api.UnparsableNameException;
+import org.gbif.nameparser.api.Warnings;
 import org.gbif.nameparser.util.NameFormatter;
 import org.junit.jupiter.api.Test;
 
@@ -35,11 +36,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * ({@code notho}, {@code epithetQualifier}, {@code warnings}, author lists) survive that decode
  * and its setter-based rebuild intact.
  *
- * <p>Against the 5.0.0 exceptionless API {@link NameParserRust#parse} returns a {@link ParseResult}
- * — {@link ParseResult.Parsed}, {@link ParseResult.Informal} or {@link ParseResult.Unparsable} —
- * and never throws for an unparsable name. The informal cases below also lock the Java-side 3-way
- * split ({@link StructCodec#toParseResult}) against the Rust-authoritative values from the corpus
- * study.
+ * <p>Against the exceptionless API {@link NameParserRust#parse} returns a {@link ParseResult} —
+ * {@link ParseResult.Parsed}, informal names included, or {@link ParseResult.Unparsable} — and never
+ * throws for an unparsable name. The informal cases below also check {@link ParsedName#anchor()}
+ * on the decoded names.
  */
 class NameParserRustSmokeTest {
 
@@ -220,74 +220,85 @@ class NameParserRustSmokeTest {
         "got warnings " + pn.getWarnings());
   }
 
-  // ---- 5.0.0 informal / semistructured band (StructCodec.toParseResult, mirror of Rust) ----
+  // ---- informal names: parsed, their anchor derived from the decoded ParsedName ----
 
   @Test
-  void molecularProvisionalSpeciesIsAnInformalResult() {
+  void molecularProvisionalSpeciesIsAParsedInformalName() {
     // Genus sp. <specimen tag> — the dominant informal shape (~99.8% genus-anchored, SPECIES rank).
     ParseResult result = parser.parse("Serratia sp. RE1-2a", null, null, null);
 
-    ParseResult.Informal inf = assertInstanceOf(ParseResult.Informal.class, result);
-    assertEquals("Serratia", inf.taxon());
-    assertEquals(Rank.GENUS, inf.taxonRank());
-    assertEquals(Rank.SPECIES, inf.rank());
-    assertEquals("sp. RE1-2a", inf.phrase());
-    assertEquals(NameType.INFORMAL, inf.type());
-    // Informal carries no ParsedName.
-    assertFalse(result.isParsable());
-    assertTrue(result.parsed().isEmpty());
-    assertThrows(UnparsableNameException.class, result::orElseThrow);
+    ParsedName pn = assertInstanceOf(ParseResult.Parsed.class, result).name();
+    assertEquals(NameType.INFORMAL, result.type());
+    assertEquals("Serratia", pn.getGenus());
+    assertEquals(Rank.SPECIES, pn.getRank());
+    assertEquals("sp. RE1-2a", pn.getPhrase());
+    assertTrue(pn.isIndetermined());
+    ParsedName anchor = pn.anchor().orElseThrow();
+    assertEquals("Serratia", anchor.getUninomial());
+    assertEquals(Rank.GENUS, anchor.getRank());
+    assertEquals(NameType.SCIENTIFIC, anchor.getType());
   }
 
   @Test
   void multiTokenSpecimenTagIsCapturedAsThePhrase() {
     // The 5.0.0 tag-capture enhancement (rescues the ~382k "tag not captured" corpus rows): the
     // whole verbatim tail becomes the phrase rather than being misread as an author.
-    ParseResult.Informal inf =
-        assertInstanceOf(ParseResult.Informal.class, parser.parse("Rhizobium sp. RMCC TR1811", null, null, null));
-    assertEquals("Rhizobium", inf.taxon());
-    assertEquals(Rank.GENUS, inf.taxonRank());
-    assertEquals("sp. RMCC TR1811", inf.phrase());
+    ParsedName pn = parser.parse("Rhizobium sp. RMCC TR1811", null, null, null).orElseThrow();
+    assertEquals("Rhizobium", pn.getGenus());
+    assertEquals("sp. RMCC TR1811", pn.getPhrase());
+    assertFalse(pn.hasAuthorship());
   }
 
   @Test
   void bareGenusSpCarriesTheBareMarkerAsPhrase() {
-    // A bare "Genus sp." carries the verbatim marker as its phrase ("sp.") — uniform taxon+phrase,
-    // matching the core/CLI/Python/R (it is still flagged INDETERMINED internally).
-    ParseResult.Informal inf =
-        assertInstanceOf(ParseResult.Informal.class, parser.parse("Rhizobium sp.", null, null, null));
-    assertEquals("Rhizobium", inf.taxon());
-    assertEquals(Rank.SPECIES, inf.rank());
-    assertEquals("sp.", inf.phrase());
-    assertFalse(inf.candidatus());
+    // A bare "Genus sp." carries the verbatim marker as its phrase ("sp."), flagged INDETERMINED.
+    ParsedName pn = parser.parse("Rhizobium sp.", null, null, null).orElseThrow();
+    assertEquals("Rhizobium", pn.getGenus());
+    assertEquals(Rank.SPECIES, pn.getRank());
+    assertEquals("sp.", pn.getPhrase());
+    assertTrue(pn.getWarnings().contains(Warnings.INDETERMINED));
+    assertFalse(pn.isCandidatus());
   }
 
   @Test
   void informalKeepsCandidatus() {
     // #76: Candidatus is a status of the name the provisional designation belongs to
-    ParseResult.Informal inf = assertInstanceOf(ParseResult.Informal.class,
-        parser.parse("Candidatus Pelagibacter sp. HTCC7211", null, null, null));
-    assertEquals("Pelagibacter", inf.taxon());
-    assertEquals("sp. HTCC7211", inf.phrase());
-    assertTrue(inf.candidatus());
-    assertEquals("\"Candidatus Pelagibacter\" sp. HTCC7211", NameFormatter.canonical(inf));
+    ParsedName pn = parser.parse("Candidatus Pelagibacter sp. HTCC7211", null, null, null).orElseThrow();
+    assertEquals("Pelagibacter", pn.getGenus());
+    assertEquals("sp. HTCC7211", pn.getPhrase());
+    assertTrue(pn.isCandidatus());
+    assertTrue(pn.anchor().orElseThrow().isCandidatus());
+    assertEquals("\"Candidatus Pelagibacter\" sp. HTCC7211", NameFormatter.canonical(pn));
   }
 
   @Test
-  void cfBinomialStaysParsedNotInformal() throws UnparsableNameException {
-    // A species epithet is present (a binomial core), so it stays Parsed — the qualifier is an
-    // annotation in epithetQualifier, and specificAuthorship (unrepresentable by a flat anchor) is kept.
+  void phraseNameOfASpeciesIsAnchoredOnTheSpecies() {
+    // #134: an Australian phrase name below a species
+    ParsedName pn = parser.parse("Acacia mutabilis Maslin subsp. Young River (G.F.Craig 2052)", null, null, null)
+        .orElseThrow();
+    assertEquals(NameType.INFORMAL, pn.getType());
+    assertEquals(Rank.SUBSPECIES, pn.getRank());
+    assertEquals("Young River (G.F.Craig 2052)", pn.getPhrase());
+    ParsedName anchor = pn.anchor().orElseThrow();
+    assertEquals("Acacia mutabilis Maslin", anchor.canonicalName());
+    assertEquals(Rank.SPECIES, anchor.getRank());
+  }
+
+  @Test
+  void cfBinomialKeepsItsQualifiedEpithet() throws UnparsableNameException {
+    // The qualifier is an annotation in epithetQualifier; the anchor stops above the qualified epithet.
     ParseResult result = parser.parse("Salicornia cf. patula", null, null, null);
 
     ParseResult.Parsed parsed = assertInstanceOf(ParseResult.Parsed.class, result);
     assertEquals("patula", parsed.name().getSpecificEpithet());
     assertEquals("cf.", parsed.name().getEpithetQualifier(NamePart.SPECIFIC));
+    assertEquals("Salicornia", parsed.name().anchor().orElseThrow().getUninomial());
     assertTrue(result.isParsable());
   }
 
   @Test
-  void infraspecificEpithetUnderBareGenusStaysParsed() throws UnparsableNameException {
-    // The species is missing (INFORMAL), but the epithet and its author need the ParsedName.
+  void infraspecificEpithetUnderBareGenusKeepsItsAuthor() throws UnparsableNameException {
+    // The species is missing (INFORMAL); the epithet keeps its author.
     ParseResult result = parser.parse("Navicula var. fasciata Grunow", null, null, null);
 
     ParseResult.Parsed parsed = assertInstanceOf(ParseResult.Parsed.class, result);

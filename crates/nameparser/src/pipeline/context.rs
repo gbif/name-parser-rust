@@ -109,7 +109,7 @@ pub(crate) struct ParseContext {
     /// Pipeline as the infraspecific epithet of rank SEROVAR (#81).
     pub pending_serovar: Option<String>,
     /// Set by Preflight (5.0.0) when it rescues an anchored informal grouping (`"Bartonella group"`,
-    /// `"Vermistella-lineage"`) by building a complete `Informal`-shaped `ParsedName` directly rather
+    /// `"Vermistella-lineage"`) by building a complete INFORMAL `ParsedName` directly rather
     /// than erroring. `Pipeline::run` then returns `ctx.name` as-is and skips the whole
     /// tokenizer/classifier/assembler back end.
     pub preflight_complete: bool,

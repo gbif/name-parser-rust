@@ -3,18 +3,16 @@
 #' @param scientificname character vector of scientific names.
 #' @param authorship,rank,code optional scalar (length-1) hints applied to every name;
 #'   `rank`/`code` use the parser's SCREAMING_SNAKE_CASE names (e.g. "SPECIES", "ZOOLOGICAL").
-#' @return a tibble, one row per input name. The `result` column carries the 5.0.0 three-way
-#'   outcome — `"parsed"`, `"informal"` or `"unparsable"` — and `parsed` is the convenience boolean
-#'   (`TRUE` only for `"parsed"`). An **informal** name (a supraspecific taxon carrying a provisional
-#'   designation, e.g. `"Rhizobium sp. RMCC TR1811"`) is flat: its `taxon` + `taxonRank` + `rank` +
-#'   `phrase` + `code` are populated and every ParsedName-specific atom is `NA` (the anchor lives
-#'   in `taxon`, never a mislabelled `genus`). A name with a species epithet (incl. cf./aff.) stays
-#'   `"parsed"`. Besides the parsed atoms, five `NameFormatter` rendering columns are included:
+#' @return a tibble, one row per input name. The `result` column is `"parsed"` or
+#'   `"unparsable"`, and `parsed` is the same as a boolean. An **informal** name (`type` is
+#'   `"INFORMAL"`: a provisional designation like `"Rhizobium sp. RMCC TR1811"`, a qualified or an
+#'   indetermined name) is parsed like any other; `anchor` and `anchorRank` give the taxon it
+#'   hangs off (the genus `"Rhizobium"`, the species `"Grevillea brachystylis"` of
+#'   `"Grevillea brachystylis subsp. Busselton (G.J.Keighery s.n. 28/8/1985)"`), `NA` for other
+#'   names. Besides the parsed atoms, five `NameFormatter` rendering columns are included:
 #'   `canonical` (full name with authorship), `canonicalWithoutAuthorship`,
 #'   `canonicalMinimal` (bare parts, folded to ascii), `canonicalComplete` and
-#'   `authorshipComplete`. `canonical` is populated for **informal** rows too — an informal name's
-#'   single canonical form (e.g. `"Rhizobium sp. RMCC TR1811"`); the other four are `NA` on informal
-#'   rows, and all five are `NA` on unparsable rows.
+#'   `authorshipComplete`, all `NA` on unparsable rows.
 #' @examples
 #' out <- parse_names(c(
 #'   "Abies alba Mill.",                     # a parsed species

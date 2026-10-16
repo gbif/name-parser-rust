@@ -19,9 +19,8 @@ import nameparser
 
 
 def sci(name: str, *args, **kwargs) -> nameparser.ParsedName:
-    """`parse()` a name known to be scientific, narrowed to `ParsedName` for the type checker —
-    `parse()` returns `ParsedName | Informal` in 5.0.0, so a `ParsedName`-field access needs the
-    variant pinned. Doubles as an assertion that these inputs really do parse to a `ParsedName`."""
+    """`parse()` a name known to parse. Doubles as an assertion that these inputs really do parse
+    to a `ParsedName`."""
     r = nameparser.parse(name, *args, **kwargs)
     assert isinstance(r, nameparser.ParsedName)
     return r
@@ -244,75 +243,79 @@ def test_name_formatter_renderings():
     )
 
 
-# ---- 5.0.0 informal / semistructured band (parse() returns ParsedName | Informal) ----
+# ---- informal names: parsed names of type INFORMAL, anchored on a real taxon ----
 
 
 def test_informal_molecular_provisional_species():
-    # Genus sp. <specimen tag> — parse() returns an Informal, not a ParsedName. Values are
-    # Rust-authoritative (the same core is_informal/to_informal the Java + R bindings mirror).
-    r = nameparser.parse("Serratia sp. RE1-2a")
-    assert isinstance(r, nameparser.Informal)
-    assert not isinstance(r, nameparser.ParsedName)
-    assert r.taxon == "Serratia"
-    assert r.taxon_rank == "GENUS"
+    # Genus sp. <specimen tag> — a ParsedName of type INFORMAL, anchored on its genus
+    r = sci("Serratia sp. RE1-2a")
+    assert r.type == "INFORMAL"
+    assert r.genus == "Serratia"
     assert r.rank == "SPECIES"
     assert r.phrase == "sp. RE1-2a"
     assert r.code is None
-    assert r.to_dict() == {
-        "taxon": "Serratia",
-        "taxonRank": "GENUS",
-        "rank": "SPECIES",
-        "phrase": "sp. RE1-2a",
-        "candidatus": False,
-    }
     assert r.candidatus is False
-    assert "Serratia" in repr(r)
-    assert r.canonical_name() == "Serratia sp. RE1-2a"  # round-trips to the canonical string
-    assert str(r) == "Serratia sp. RE1-2a"  # __str__ is the canonical name, as for ParsedName
+    assert r.is_indetermined()
+    assert r.canonical_name() == "Serratia sp. RE1-2a"
+    a = r.anchor()
+    assert a is not None
+    assert a.uninomial == "Serratia"
+    assert a.rank == "GENUS"
+    assert a.type == "SCIENTIFIC"
+    assert a.phrase is None
+    assert not a.is_indetermined()
 
 
 def test_informal_multi_token_specimen_tag_is_captured_as_phrase():
     # The 5.0.0 tag-capture enhancement (rescues the ~382k "tag not captured" corpus rows).
-    r = nameparser.parse("Rhizobium sp. RMCC TR1811")
-    assert isinstance(r, nameparser.Informal)
-    assert r.taxon == "Rhizobium"
-    assert r.taxon_rank == "GENUS"
+    r = sci("Rhizobium sp. RMCC TR1811")
+    assert r.genus == "Rhizobium"
     assert r.phrase == "sp. RMCC TR1811"
+    assert r.combination_authorship.authors == []
 
 
 def test_informal_bare_genus_sp_carries_the_bare_marker_phrase():
-    r = nameparser.parse("Rhizobium sp.")
-    assert isinstance(r, nameparser.Informal)
-    assert r.taxon == "Rhizobium"
+    r = sci("Rhizobium sp.")
     assert r.rank == "SPECIES"
     assert r.phrase == "sp."  # bare "Genus sp." carries the verbatim marker as its phrase
-    assert r.canonical_name() == "Rhizobium sp."  # round-trips to the same canonical string
+    assert r.canonical_name() == "Rhizobium sp."
+    assert "indetermined name missing its terminal epithet" in r.warnings
 
 
 def test_informal_keeps_candidatus():
     # #76: Candidatus is a status of the name the provisional designation belongs to
-    r = nameparser.parse("Candidatus Pelagibacter sp. HTCC7211")
-    assert isinstance(r, nameparser.Informal)
-    assert r.taxon == "Pelagibacter"
+    r = sci("Candidatus Pelagibacter sp. HTCC7211")
+    assert r.genus == "Pelagibacter"
     assert r.phrase == "sp. HTCC7211"
     assert r.candidatus is True
+    assert r.anchor().candidatus is True
     assert r.canonical_name() == '"Candidatus Pelagibacter" sp. HTCC7211'
 
 
-def test_cf_binomial_stays_parsed_not_informal():
-    # A species epithet is present (a binomial core), so it stays a ParsedName — the qualifier is
-    # an annotation, and specificAuthorship (unrepresentable by a flat anchor) is preserved.
-    r = nameparser.parse("Salicornia cf. patula")
-    assert isinstance(r, nameparser.ParsedName)
-    assert not isinstance(r, nameparser.Informal)
+def test_phrase_name_of_a_species_is_anchored_on_the_species():
+    # #134: an Australian phrase name below a species
+    r = sci("Acacia mutabilis Maslin subsp. Young River (G.F.Craig 2052)")
+    assert r.type == "INFORMAL"
+    assert r.rank == "SUBSPECIES"
+    assert r.phrase == "Young River (G.F.Craig 2052)"
+    assert r.anchor().canonical_name() == "Acacia mutabilis Maslin"
+    assert r.anchor().rank == "SPECIES"
+
+
+def test_cf_binomial_keeps_its_qualified_epithet():
+    # The qualifier is an annotation; the anchor stops above the qualified epithet.
+    r = sci("Salicornia cf. patula")
     assert r.specific_epithet == "patula"
-    assert r.type == "INFORMAL"  # the ParsedName's own type nuance is kept inside a Parsed result
+    assert r.type == "INFORMAL"
+    assert not r.is_indetermined()
+    assert r.anchor().canonical_name() == "Salicornia"
 
 
-def test_parse_all_mixes_parsed_and_informal_and_none():
+def test_parse_all_mixes_parsed_and_none():
     results = nameparser.parse_all(["Abies alba", "Serratia sp. RE1-2a", "Tobacco mosaic virus"])
     assert isinstance(results[0], nameparser.ParsedName)
-    assert isinstance(results[1], nameparser.Informal)
+    assert isinstance(results[1], nameparser.ParsedName)
+    assert results[1].type == "INFORMAL"
     assert results[2] is None  # unparsable → None (never raises mid-batch)
 
 

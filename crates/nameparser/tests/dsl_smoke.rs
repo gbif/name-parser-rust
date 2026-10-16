@@ -31,16 +31,16 @@ fn unparsable_virus_carries_type_and_code() {
 }
 
 #[test]
-fn informal_and_parsed_variant_helpers_work_end_to_end() {
-    // assert_informal asserts the 5.0.0 `Informal` variant + its flat fields; `nothing_else()`
-    // closes on the optional phrase/code.
+fn informal_and_parsed_name_helpers_work_end_to_end() {
+    // assert_informal asserts an informal name of no more than its anchor, rank, phrase and code;
+    // `nothing_else()` closes on the optional phrase/code.
     assert_informal("Serratia sp. RE1-2a")
         .taxon("Serratia")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
         .phrase("sp. RE1-2a")
         .nothing_else();
-    // assert_name asserts the `Parsed` variant — a species epithet is present, so it is NOT informal.
+    // assert_name pins any parsed name in full — here a qualified species epithet.
     assert_name("Salicornia cf. patula")
         .species("Salicornia", "patula")
         .qualifiers(&[(NamePart::Specific, "cf.")])

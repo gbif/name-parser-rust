@@ -543,17 +543,17 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
                         i += 1;
                     }
-                    // 5.0.0 Informal-phrase contract: a supraspecific indet (no species epithet yet)
+                    // Verbatim-phrase rule: a supraspecific indet (no species epithet yet)
                     // keeps the WHOLE verbatim tail FROM the marker as its phrase — marker included,
                     // original spelling preserved — so it round-trips exactly and the formatter's
                     // `phrase_leads_with_species_marker` guard emits it as-is instead of re-synthesising
                     // "sp." from the rank. With a trailing designation that is "sp. RMCC TR1811" /
                     // "species 1" / "spec. 3"; a bare "Genus sp." captures just the marker itself
-                    // ("sp."), so every Informal name's phrase is uniformly the printable text after
-                    // the anchor taxon (no None special-case, no synth-from-rank). `ts[ts.len() - 1]`
+                    // ("sp."), so such an informal name's phrase is uniformly the printable text after
+                    // its anchor (no None special-case, no synth-from-rank). `ts[ts.len() - 1]`
                     // is the last consumed token — the trailing tag when present, else the marker/dot.
                     // The marker-stripping sub-branches below now serve only the binomial indet case (a
-                    // species epithet is already present, so it stays Parsed, not Informal).
+                    // species epithet is already present).
                     // Only the species-level markers (sp/spec/species) are round-tripped by the
                     // formatter's `phrase_leads_with_species_marker` guard; a fully-generic "indet"
                     // is NOT, so keeping it in the phrase would double under the synthesised "sp."
@@ -1630,10 +1630,9 @@ mod tests {
 
     #[test]
     fn bare_indet_species_marker_captures_the_marker_and_keeps_the_indetermined_warning() {
-        // 5.0.0 Informal-phrase contract: a bare "Genus sp." captures the verbatim marker as its
-        // phrase ("sp.") for a uniform taxon+phrase round-trip, but — unlike a name with a
-        // distinguishing tail — it is still genuinely indeterminate, so the INDETERMINED warning
-        // stays.
+        // Verbatim-phrase rule: a bare "Genus sp." captures the verbatim marker as its phrase
+        // ("sp.") for a uniform anchor+phrase round-trip; it is indeterminate, as a name with a
+        // distinguishing tail is too, so the INDETERMINED warning stays.
         let ctx = run("Bryozoan sp.", None);
         assert_eq!(ctx.name.genus, Some("Bryozoan".to_string()));
         assert_eq!(ctx.name.phrase, Some("sp.".to_string()));
