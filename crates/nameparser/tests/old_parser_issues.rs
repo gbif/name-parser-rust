@@ -726,17 +726,18 @@ fn issue_160_a_french_name_is_no_scientific_name() {
 
 #[test]
 fn issue_141_non_note_of_the_species() {
+    // the note is the species', not the variety's: dropped and named in a warning
     assert_name("Thlaspi alpestre L. non Jacq. var. calaminare Lej.")
         .infra_species("Thlaspi", "alpestre", Rank::Variety, "calaminare")
         .specific_authors(None, &["L."])
         .comb_authors(None, &["Lej."])
-        .sensu("non Jacq.")
+        .warning(&["Removed: non Jacq."])
         .nothing_else();
     assert_name("Dirina repanda auct., non Fr. f. stenhammari (Stenh.) Clauzade & Cl. Roux")
         .infra_species("Dirina", "repanda", Rank::Form, "stenhammari")
         .comb_authors(None, &["Clauzade", "Cl.Roux"])
         .bas_authors(None, &["Stenh."])
-        .sensu("auct., non Fr.")
+        .warning(&["Removed: auct., non Fr."])
         .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Setaria ambigua (Guss.) Guss. non (Ten.) Mérat")

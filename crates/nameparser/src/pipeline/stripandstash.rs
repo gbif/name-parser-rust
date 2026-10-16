@@ -5005,7 +5005,9 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
         return s;
     }
     // the species' note before an infraspecific name: "Thlaspi alpestre L. non Jacq. var.
-    // calaminare Lej." (#141) — the note ends at the rank marker, the name goes on after it
+    // calaminare Lej." (#141) — the note ends at the rank marker, the name goes on after it. The
+    // note is the species', no note of the infraspecific name, which has no slot for it: it is
+    // named in a warning, as a dropped epithet is.
     if let Some(tail) = NOTE_INFRASPECIFIC_TAIL.captures(&raw) {
         let infra = tail.get(1).unwrap();
         let note = java_trim(raw[..infra.start()].trim_end().trim_end_matches(','));
@@ -5021,8 +5023,11 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
         if complete && after_species {
             let rest = format!("{} {}", java_trim(&s[..match_start]), infra.as_str());
             let with_dots = INITIAL_DOT_SPACE.replace_all(note, "$1.$2");
-            ctx.name
-                .add_taxonomic_note(&normalise_leading_auct(&with_dots));
+            ctx.name.add_warning(&format!(
+                "{}{}",
+                warnings::REMOVED_PREFIX,
+                normalise_leading_auct(&with_dots)
+            ));
             return strip_tax_note(ctx, rest);
         }
     }
