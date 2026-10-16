@@ -229,10 +229,13 @@ fn todo_names() {
         .warning(&[warnings::YEAR_INTERPRETED])
         .nothing_else();
 
+    // Kuntze took up Cogniaux's name (#125)
     assert_name("Cyclanthera explodens var. intermedia Cogn. in Kuntze ex Kuntze")
         .infra_species("Cyclanthera", "explodens", Rank::Variety, "intermedia")
-        .comb_authors(None, &["Cogn."])
-        .published_in("Kuntze ex Kuntze")
+        .comb_authors(None, &["Kuntze"])
+        .comb_ex_authors(&["Cogn."])
+        .warning(&["Removed: in Kuntze"])
+        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(

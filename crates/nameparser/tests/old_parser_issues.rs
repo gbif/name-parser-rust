@@ -1094,3 +1094,48 @@ fn issue_125_author_teams_with_initials() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn issue_125_in_before_ex() {
+    // "A in B ex C": C took up the name of A; the work cited between is removed with a warning
+    assert_name("Calamagrostis heterophylla Wedd. in Urb. ex Pilg.")
+        .species("Calamagrostis", "heterophylla")
+        .comb_authors(None, &["Pilg."])
+        .comb_ex_authors(&["Wedd."])
+        .warning(&["Removed: in Urb."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Aristolochia abbreviata Mart. in DC. ex Duch.")
+        .species("Aristolochia", "abbreviata")
+        .comb_authors(None, &["Duch."])
+        .comb_ex_authors(&["Mart."])
+        .warning(&["Removed: in DC."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Pohlia ampullacea Hampe in C. Müller ex Gangulee, 1974")
+        .species("Pohlia", "ampullacea")
+        .comb_authors(Some("1974"), &["Gangulee"])
+        .comb_ex_authors(&["Hampe"])
+        .warning(&["Removed: in C. Müller"])
+        .nothing_else();
+    assert_name("Asplenium tenuifrons var. tenellum Wall. apud T. Moore ex R. Sim")
+        .infra_species("Asplenium", "tenuifrons", Rank::Variety, "tenellum")
+        .comb_authors(None, &["R.Sim"])
+        .comb_ex_authors(&["Wall."])
+        .warning(&["Removed: apud T. Moore"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Steccherinum ochraceum (Pers. in Gmelin ex Fr.) S.F. Gray")
+        .species("Steccherinum", "ochraceum")
+        .comb_authors(None, &["S.F.Gray"])
+        .bas_authors(None, &["Fr."])
+        .bas_ex_authors(None, &["Pers."])
+        .warning(&["Removed: in Gmelin"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a citation with its year names the work of the name
+    assert_name("Cheilinus radiatus Valenciennes in Cuvier & Valenciennes, 1840 ex Ehrenberg")
+        .species("Cheilinus", "radiatus")
+        .comb_authors(None, &["Valenciennes"])
+        .published_in("Cuvier & Valenciennes, 1840 ex Ehrenberg");
+}
