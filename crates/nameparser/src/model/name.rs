@@ -157,6 +157,13 @@ pub struct ParsedName {
     pub infraspecific_epithet: Option<String>,
     #[serde(rename = "cultivarEpithet", skip_serializing_if = "Option::is_none")]
     pub cultivar_epithet: Option<String>,
+    /// The provisional designation of an INFORMAL name, verbatim from its rank marker on
+    /// (`"sp. RMCC TR1811"`, `"sp. 1"`, `"group"`). Nothing in it is interpreted, so it may hold
+    /// what looks like an author citation (`"sp. Forster, 1968"`): the parser cannot reliably tell
+    /// a citation from a specimen or culture code there (43% of the tails the pre-5.0.0 rule read
+    /// as authorship were spurious — impossible years, collection acronyms like `ZRC`/`MNHN`), and
+    /// on the genuinely authored minority the citation belongs to the anchor
+    /// ([`Self::anchor`]) rather than to the undetermined taxon.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub phrase: Option<String>,
     /// Primitive `boolean` in Java — always serializes, including `false`.
@@ -361,6 +368,201 @@ impl ParsedName {
     /// `specific_authorship` slots.
     pub fn has_authorship(&self) -> bool {
         self.combination_authorship.exists() || self.basionym_authorship.exists()
+    }
+
+    /// Java `ParsedName.isIndetermined()`: the name lacks an epithet its rank requires — a species
+    /// without its specific epithet, an infraspecific name without its infraspecific one. A phrase
+    /// does not stand in for the missing epithet: `Rhizobium sp.` and `Serratia sp. RE1-2a` are both
+    /// indetermined species, as their [`Self::anchor`] is only a genus.
+    pub fn is_indetermined(&self) -> bool {
+        let r = self.rank;
+        // a convariety's epithet is an infraspecific one, not a cultivar epithet
+        let cultivar_rank =
+            r.is_restricted_to_code() == Some(NomCode::Cultivars) && r != Rank::Convariety;
+        r.is_infrageneric_strictly()
+            && self.uninomial.is_none()
+            && self.infrageneric_epithet.is_none()
+            && self.specific_epithet.is_none()
+            || r.is_species_or_below() && !cultivar_rank && self.specific_epithet.is_none()
+            || r.is_infraspecific() && !cultivar_rank && self.infraspecific_epithet.is_none()
+            || cultivar_rank && self.cultivar_epithet.is_none()
+    }
+
+    /// Java `ParsedName.anchor()`: the determined part of this name as a name of its own — the real
+    /// taxon an informal name hangs off. `Rhizobium sp. RMCC TR1811` is anchored on the genus
+    /// *Rhizobium*, `Lasioglossum (Dialictus) sp. 1` on the subgenus *Lasioglossum (Dialictus)*,
+    /// `Grevillea brachystylis subsp. Busselton (G.J.Keighery s.n. 28/8/1985)` on the species
+    /// *Grevillea brachystylis* and `Abies cf. alba` on the genus *Abies*.
+    ///
+    /// The anchor keeps the name parts down to the deepest one that is present and not qualified
+    /// (cf., aff., ?, ...), at the rank of that part and with the authorship that belongs to it: the
+    /// specific authorship for a species anchor of an infraspecific name, the generic one for a
+    /// genus, the name's own when nothing below the anchor is given. The phrase, qualifiers, notes,
+    /// publication, warnings and flags other than `candidatus` and `extinct` are left out. A complete
+    /// scientific name is its own anchor, without those details. `None` when no part of the name
+    /// is determined or its type is not parsable.
+    pub fn anchor(&self) -> Option<ParsedName> {
+        if !self.type_.is_parsable() {
+            return None;
+        }
+        let qualified = |p: NamePart| {
+            self.epithet_qualifier
+                .as_ref()
+                .is_some_and(|q| q.contains_key(&p))
+        };
+        let mut a = ParsedName {
+            type_: NameType::Scientific,
+            code: self.code,
+            candidatus: self.candidatus,
+            extinct: self.extinct,
+            ..ParsedName::default()
+        };
+        // the deepest name part given, phrase and cultivar epithet aside
+        let deepest = if self.infraspecific_epithet.is_some() {
+            NamePart::Infraspecific
+        } else if self.specific_epithet.is_some() {
+            NamePart::Specific
+        } else if self.infrageneric_epithet.is_some() {
+            NamePart::Infrageneric
+        } else {
+            NamePart::Generic
+        };
+        let own_authorship = |a: &mut ParsedName| {
+            a.combination_authorship = self.combination_authorship.clone();
+            a.basionym_authorship = self.basionym_authorship.clone();
+        };
+
+        let Some(genus) = self.genus.clone() else {
+            if let Some(uninomial) = self.uninomial.clone() {
+                if qualified(NamePart::Generic) {
+                    return None;
+                }
+                a.uninomial = Some(uninomial);
+                a.rank = if self.rank.not_other_or_unranked()
+                    && !self.rank.is_species_or_below()
+                    && !self.rank.is_infrageneric_strictly()
+                {
+                    self.rank
+                } else {
+                    Rank::Unranked
+                };
+                self.keep_notho(&mut a, NamePart::Generic);
+                if deepest == NamePart::Generic {
+                    own_authorship(&mut a);
+                }
+                return Some(a);
+            }
+            // an infrageneric name without its genus, "subgen. Trematostoma"
+            let infrageneric = self.infrageneric_epithet.clone()?;
+            if qualified(NamePart::Infrageneric) {
+                return None;
+            }
+            a.infrageneric_epithet = Some(infrageneric);
+            a.rank = if self.rank.is_infrageneric_strictly() {
+                self.rank
+            } else {
+                Rank::InfragenericName
+            };
+            self.keep_notho(&mut a, NamePart::Infrageneric);
+            if deepest == NamePart::Infrageneric {
+                own_authorship(&mut a);
+            }
+            return Some(a);
+        };
+
+        if qualified(NamePart::Generic) {
+            return None;
+        }
+        let mut kept = NamePart::Generic;
+        if self.infrageneric_epithet.is_some() && !qualified(NamePart::Infrageneric) {
+            kept = NamePart::Infrageneric;
+        }
+        let cut = self.infrageneric_epithet.is_some() && kept == NamePart::Generic;
+        if !cut && self.specific_epithet.is_some() && !qualified(NamePart::Specific) {
+            kept = NamePart::Specific;
+            if self.infraspecific_epithet.is_some() && !qualified(NamePart::Infraspecific) {
+                kept = NamePart::Infraspecific;
+            }
+        }
+        // nothing cut and nothing missing: the name is its own anchor, at its own rank
+        let complete = kept == deepest && !self.is_indetermined();
+
+        match kept {
+            NamePart::Generic => {
+                a.uninomial = Some(genus);
+                a.rank = Rank::Genus;
+            }
+            NamePart::Infrageneric => {
+                a.genus = Some(genus);
+                a.infrageneric_epithet = self.infrageneric_epithet.clone();
+                // a bracketed name between genus and species is a subgenus
+                a.rank = if self.rank.is_infrageneric_strictly() {
+                    self.rank
+                } else {
+                    Rank::Subgenus
+                };
+            }
+            NamePart::Specific | NamePart::Infraspecific => {
+                a.genus = Some(genus);
+                a.infrageneric_epithet = self.infrageneric_epithet.clone();
+                a.specific_epithet = self.specific_epithet.clone();
+                if kept == NamePart::Infraspecific {
+                    a.infraspecific_epithet = self.infraspecific_epithet.clone();
+                    a.rank = if self.rank.is_infraspecific() {
+                        self.rank
+                    } else {
+                        Rank::InfraspecificName
+                    };
+                } else {
+                    a.rank = if complete && self.rank.is_species_or_below() {
+                        self.rank
+                    } else {
+                        Rank::Species
+                    };
+                }
+            }
+        }
+        if complete {
+            a.cultivar_epithet = self.cultivar_epithet.clone();
+        }
+        for p in [
+            NamePart::Generic,
+            NamePart::Infrageneric,
+            NamePart::Specific,
+            NamePart::Infraspecific,
+        ] {
+            if p <= kept {
+                self.keep_notho(&mut a, p);
+            }
+        }
+        if kept != NamePart::Generic {
+            a.generic_authorship = self.generic_authorship.clone();
+        }
+        if kept == NamePart::Infraspecific {
+            a.specific_authorship = self.specific_authorship.clone();
+        }
+        // the authorship of the anchor's own deepest part
+        let authored =
+            |ca: &Option<CombinedAuthorship>| ca.clone().filter(CombinedAuthorship::has_authorship);
+        if let Some(sa) = authored(&self.specific_authorship).filter(|_| kept == NamePart::Specific)
+        {
+            a.combination_authorship = sa.combination_authorship;
+            a.basionym_authorship = sa.basionym_authorship;
+        } else if let Some(ga) =
+            authored(&self.generic_authorship).filter(|_| kept == NamePart::Generic)
+        {
+            a.combination_authorship = ga.combination_authorship;
+            a.basionym_authorship = ga.basionym_authorship;
+        } else if kept == deepest {
+            own_authorship(&mut a);
+        }
+        Some(a)
+    }
+
+    fn keep_notho(&self, anchor: &mut ParsedName, part: NamePart) {
+        if self.notho.as_ref().is_some_and(|n| n.contains(&part)) {
+            anchor.add_notho(part);
+        }
     }
 }
 

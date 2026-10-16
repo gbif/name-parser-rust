@@ -6,7 +6,7 @@ use nameparser::model::warnings;
 use nameparser::model::{NamePart, NameType, NomCode, Rank};
 
 /// 5.0.0 (diverges from the Java 4.2.0 original, which flagged these `Unparsable(INFORMAL)`): a
-/// monomial-aggregate is a real anchored informal grouping, so it is RESCUED to an `Informal` — the
+/// monomial-aggregate is a real anchored informal grouping, so it is RESCUED to an informal name — the
 /// monomial is the anchor, the aggregate word the phrase (see `pipeline::preflight`).
 #[test]
 fn monomial_aggregate_groups_are_informal() {
@@ -24,7 +24,7 @@ fn monomial_aggregate_groups_are_informal() {
         .nothing_else();
 }
 
-/// "-lineage" labels. 5.0.0: a clean-genus stem is RESCUED to an `Informal` (`Vermistella-lineage`);
+/// "-lineage" labels. 5.0.0: a clean-genus stem is RESCUED to an informal name (`Vermistella-lineage`);
 /// an OTU-/strain-like code stem (`NC12A-lineage`, `he2-lineage`) has no real anchor and stays
 /// `Unparsable(OTHER)`. (The Java 4.2.0 original flagged all of them `INFORMAL`.)
 #[test]

@@ -1134,7 +1134,7 @@ fn is_indet_species_marker(w: &str) -> bool {
 /// INFRASPECIFIC name, numbered — `Allium sect 1`, `Allium sect. 1`, `Trachelomonas strain T101`.
 /// A rank marker sitting in the epithet slot of "Genus <word> CODE" is not an epithet, so the whole
 /// `<marker> CODE` tail is the designation: it becomes the verbatim `phrase` (type INFORMAL) and
-/// the working string reduces to the bare genus, so `taxon + " " + phrase` round-trips the input.
+/// the working string reduces to the bare genus, so anchor + " " + phrase round-trips the input.
 ///
 /// Every one of these was losing something. `Allium sect 1` dropped the marker and rendered
 /// "Allium 1"; the commoner DOTTED spellings `Allium sect. 1` and `Allium subg. 3` dropped the
@@ -4548,8 +4548,8 @@ fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
     }
     if let Some(caps) = PAREN_TAX_NOTE.captures(&s) {
         let whole = caps.get(0).unwrap();
-        // A provisional `Genus sp. a (sensu Eagle)` keeps its concept citation in the phrase: the
-        // flat Informal result has no note slot, so stripping it here would silently drop it.
+        // A provisional `Genus sp. a (sensu Eagle)` keeps its concept citation in the phrase: it
+        // tells whose "sp. a" this is, so it is part of the designation.
         if PAREN_CONCEPT_NOTE.is_match(caps.get(1).unwrap().as_str())
             && INDET_MARKER_WORD.is_match(&s[..whole.start()])
         {
@@ -6485,8 +6485,8 @@ static PHRASE_NAME: LazyLock<Regex> = LazyLock::new(|| {
 /// plus a rank marker plus a free-text "phrase" distinguishing the specimen/population,
 /// e.g. "Prostanthera sp. Somersbey (B.J.Conn 4024)" — the phrase is stashed on
 /// `ctx.name.phrase` once a recognised rank marker is found. For a bare-genus SPECIES-level
-/// shape (the `Informal`-bound case) the verbatim rank marker is kept ON the phrase ("sp.
-/// Somersbey (B.J.Conn 4024)", per the 5.0.0 Informal-phrase contract, so the formatter
+/// shape the verbatim rank marker is kept ON the phrase ("sp.
+/// Somersbey (B.J.Conn 4024)", per the verbatim-phrase rule, so the formatter
 /// round-trips it without re-synthesising "sp."); every other shape (a "Genus species"
 /// binomial, a non-species marker, a subgenus/author prefix) keeps the bare marker-stripped
 /// phrase as the Java oracle did. The working string is rewritten into one of four shapes
@@ -6527,8 +6527,8 @@ fn stash_phrase_name(ctx: &mut ParseContext, s: String) -> String {
     let author_start = find_author_start(&prefix);
     let prefix_is_genus_only = !prefix.contains(' ');
 
-    // 5.0.0 Informal-phrase contract: a bare-genus species-level provisional
-    // ("Prostanthera sp. Somersbey (B.J.Conn 4024)") is an `Informal` result, and its phrase
+    // Verbatim-phrase rule: a bare-genus species-level provisional
+    // ("Prostanthera sp. Somersbey (B.J.Conn 4024)") is an informal name, and its phrase
     // must carry the verbatim rank marker just like NameTokens' indet capture — so the
     // formatter renders it back ("Genus sp. <phrase>") without re-synthesising a marker.
     // Gated to the genus-only SPECIES shape: a "Genus species" prefix is a Parsed binomial
@@ -9931,7 +9931,7 @@ mod tests {
     #[test]
     fn phrase_name_bare_genus_with_species_marker_sets_phrase_but_leaves_rank_untouched() {
         // "Prostanthera sp. Somersbey (B.J.Conn 4024)" -> phrase="sp. Somersbey (B.J.Conn
-        // 4024)". 5.0.0 Informal-phrase contract: a bare-genus SPECIES-level provisional keeps
+        // 4024)". Verbatim-phrase rule: a bare-genus SPECIES-level provisional keeps
         // the verbatim rank marker in the phrase (the Java oracle stashed the bare
         // "Somersbey (B.J.Conn 4024)"; here it is prefixed so the formatter round-trips it
         // without re-synthesising "sp."). The working rewrite is unchanged — the eventual
@@ -10017,7 +10017,7 @@ mod tests {
     #[test]
     fn phrase_name_double_quoted_phrase_without_parens_is_also_recognised() {
         // "Prostanthera sp. \"Big Leaf\"" -> phrase="sp. \"Big Leaf\"" (quotes kept verbatim,
-        // matching group 3's second, no-parens alternative; the 5.0.0 Informal-phrase contract
+        // matching group 3's second, no-parens alternative; the verbatim-phrase rule
         // prefixes the "sp." marker onto this bare-genus SPECIES phrase — Java stashed just
         // "\"Big Leaf\"").
         let mut c = ctx("x");
@@ -10065,7 +10065,7 @@ mod tests {
     #[test]
     fn full_run_stashes_a_phrase_name() {
         // End-to-end (StripAndStash's own contribution): "Prostanthera sp. Somersbey
-        // (B.J.Conn 4024)" -> phrase="sp. Somersbey (B.J.Conn 4024)" (5.0.0 Informal-phrase
+        // (B.J.Conn 4024)" -> phrase="sp. Somersbey (B.J.Conn 4024)" (verbatim-phrase
         // contract: verbatim marker kept in the phrase), working rewritten to "Prostanthera
         // sp." — none of steps 1-52 interfere on this clean, capital-letter-led input before
         // step 55 gets to it.

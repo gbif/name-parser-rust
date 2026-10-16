@@ -218,43 +218,12 @@ def _render(v: object) -> str:
     return json.dumps(v, ensure_ascii=False)
 
 
-# --- 5.0.0 three-way mapping of the oracle ------------------------------------------------------
-# The oracle CLI still emits the raw core `parse()` output (a ParsedName, or an error), while the
-# Python binding now returns the 5.0.0 three-way `parse()` — an `Informal` for a
-# supraspecific-provisional name, and a type-clamped `Unparsable` for an informal-but-unrepresentable
-# error. To compare like-for-like, map each oracle row through the SAME split/clamp the binding
-# applies (deliberate mirrors of Rust `is_informal`/`to_informal`/`ParseError::clamped_to_unparsable`
-# — see crates/nameparser/src/lib.rs + model/mod.rs). The engine output underneath is identical, so
-# post-mapping this stays a 0-diff gate.
-
-def _oracle_is_informal(p: dict) -> bool:
-    """Mirror of Rust `is_informal`: an oracle ParsedName the 5.0.0 binding surfaces as `Informal`."""
-    return bool(
-        p.get("type") == "INFORMAL"
-        and not p.get("specificEpithet")
-        and not p.get("infraspecificEpithet")
-        and (p.get("genus") or p.get("uninomial") or p.get("infragenericEpithet"))
-    )
-
-
-def _oracle_to_informal(p: dict) -> dict:
-    """Mirror of Rust `to_informal`: the flat Informal in the same wire shape `Informal.to_dict()`
-    emits (taxon, taxonRank, rank, and — omitted when absent — phrase, code; then candidatus)."""
-    genus = p.get("genus")
-    if genus:
-        taxon, taxon_rank = genus, "GENUS"
-    elif p.get("uninomial"):
-        taxon, taxon_rank = p["uninomial"], p.get("rank")
-    else:
-        taxon, taxon_rank = p.get("infragenericEpithet"), p.get("rank")
-    out = {"taxon": taxon, "taxonRank": taxon_rank, "rank": p.get("rank")}
-    if p.get("phrase") is not None:
-        out["phrase"] = p["phrase"]
-    if p.get("code") is not None:
-        out["code"] = p["code"]
-    out["candidatus"] = bool(p.get("candidatus"))
-    return out
-
+# --- mapping of the oracle --------------------------------------------------------------------
+# The oracle CLI emits the raw core `parse_name()` output (a ParsedName, or an error), while the
+# Python binding returns `parse()` — a type-clamped `Unparsable` for an informal-but-unrepresentable
+# error. To compare like-for-like, map each oracle error through the SAME clamp the binding applies
+# (a deliberate mirror of `ParseError::clamped_to_unparsable` — see crates/nameparser/src/model/mod.rs).
+# The engine output underneath is identical, so post-mapping this stays a 0-diff gate.
 
 def _clamp_oracle_error(err: dict) -> tuple[str | None, str | None, str | None]:
     """Mirror of `ParseError::clamped_to_unparsable`: a parsable oracle error type
@@ -316,24 +285,18 @@ def test_python_binding_matches_oracle_across_all_corpora():
                 # `exc` itself would not survive down to the comparison code below.
                 python_outcome = ("error", str(exc), exc.name_type, exc.code)
             else:
-                # 5.0.0 three-way: parse() returns a ParsedName OR an Informal (unparsable raised
-                # above). Map the oracle's raw ParsedName through the same split so both sides are
-                # compared on the same surface.
-                kind = "informal" if isinstance(parsed, nameparser.Informal) else "ok"
-                python_outcome = (kind, parsed.to_dict())
+                python_outcome = ("ok", parsed.to_dict())
 
             if "error" in row:
                 oracle_outcome = ("error", row["error"])
             elif (row.get("parsed") or {}).get("type") not in (None, "SCIENTIFIC", "INFORMAL"):
                 # a parsed oracle row of a non-parsable type (a placeholder with its genus
-                # missing) is unparsable after the three-way split too, as in Rust `parse`
+                # missing) is unparsable through `parse` too
                 t = row["parsed"]["type"]
                 err = {"type": t, "message": f"Unparsable {t} name: {name}"}
                 if row["parsed"].get("code") is not None:
                     err["code"] = row["parsed"]["code"]
                 oracle_outcome = ("error", err)
-            elif _oracle_is_informal(row.get("parsed") or {}):
-                oracle_outcome = ("informal", _oracle_to_informal(row["parsed"]))
             else:
                 oracle_outcome = ("ok", row.get("parsed"))
 
@@ -343,7 +306,7 @@ def test_python_binding_matches_oracle_across_all_corpora():
                     f"parsability disagreement: python={python_outcome[0]!r} "
                     f"oracle={oracle_outcome[0]!r}"
                 )
-            elif python_outcome[0] in ("ok", "informal"):
+            elif python_outcome[0] == "ok":
                 leaf_diffs: list[tuple[str, object, object]] = []
                 _diff("", python_outcome[1], oracle_outcome[1], leaf_diffs)
                 if leaf_diffs:

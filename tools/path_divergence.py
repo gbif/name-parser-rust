@@ -72,7 +72,7 @@ def sample_rows(path, size, seed):
 def parse(nameparser, name, authorship, rank, code):
     try:
         r = nameparser.parse(name, authorship=authorship, rank=rank, code=code)
-        return {"informal" if isinstance(r, nameparser.Informal) else "parsed": r.to_dict()}
+        return {"parsed": r.to_dict()}
     except nameparser.UnparsableNameError as e:
         return {"unparsable": {"type": e.name_type, "code": e.code}}
 

@@ -256,7 +256,7 @@ fn hybrid_formulas() {
 fn o_tu() {
     // https://github.com/gbif/name-parser/issues/74
     // 5.0.0: Java's `.phraseName(monomial, phrase)` is a supraspecific-provisional name → an
-    // `Informal` result. The anchor is a suprageneric uninomial (a GTDB-style phylum), so its
+    // informal name. The anchor is a suprageneric uninomial (a GTDB-style phylum), so its
     // `taxon_rank` is UNRANKED (the parser cannot rank it), not GENUS.
     assert_informal("Desulfobacterota_B")
         .taxon("Desulfobacterota")

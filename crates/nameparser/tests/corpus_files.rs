@@ -93,26 +93,24 @@ fn names_with_authors_keep_their_authors() {
     });
 }
 
-/// Benchmark names `parse` returns in breach of its three-way contract, each still expected to.
+/// Benchmark names `parse` returns in breach of its contract, each still expected to.
 const CONTRACT_EXCEPTIONS: &[&str] = &[];
 
-/// Over the benchmark corpus, `parse` keeps its three-way contract: a `Parsed` name has a parsable
-/// type, an `Informal` one a taxon, an `Unparsable` one a non-parsable type.
+/// Over the benchmark corpus, `parse` keeps its contract: a `Parsed` name has a parsable type, an
+/// informal one an anchor, an `Unparsable` one a non-parsable type.
 #[test]
-fn parse_keeps_its_three_way_contract_over_the_benchmark_corpus() {
+fn parse_keeps_its_contract_over_the_benchmark_corpus() {
     let Some(names) = lines("benchmark-data.txt") else {
         return;
     };
     let mut problems = Vec::new();
     for name in &names {
         let breach = match nameparser::parse(name, None, None, None) {
-            ParseResult::Parsed(pn) => {
-                (!pn.type_.is_parsable()).then(|| format!("Parsed with type {:?}", pn.type_))
+            ParseResult::Parsed(pn) if !pn.type_.is_parsable() => {
+                Some(format!("Parsed with type {:?}", pn.type_))
             }
-            ParseResult::Informal(inf) => inf
-                .taxon
-                .is_empty()
-                .then(|| "Informal without a taxon".into()),
+            ParseResult::Parsed(pn) => (pn.type_ == NameType::Informal && pn.anchor().is_none())
+                .then(|| "informal without an anchor".into()),
             ParseResult::Unparsable(e) => e
                 .type_
                 .is_parsable()

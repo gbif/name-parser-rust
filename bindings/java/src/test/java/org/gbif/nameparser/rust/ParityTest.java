@@ -36,10 +36,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * {@code NameParserRustSmokeTest} only spot-checks a handful).
  *
  * <p>The snapshot is the raw core {@code parse()} output (a {@code ParsedName}, or an error), while
- * {@link NameParserRust} returns the 5.0.0 three-way {@link ParseResult}. So each row is mapped
- * through the SAME split + clamp the binding applies — deliberate mirrors of the Rust core's
- * {@code is_informal} / {@code to_informal} / {@code ParseError::clamped_to_unparsable} — before
- * comparing. The engine output underneath is identical, so this is a 0-diff gate.
+ * {@link NameParserRust} returns a {@link ParseResult}. So each row is mapped through the SAME
+ * clamp the binding applies — a deliberate mirror of the Rust core's
+ * {@code ParseError::clamped_to_unparsable} — before comparing. The engine output underneath is identical, so this is a 0-diff gate.
  *
  * <p>Parsed rows compare as full {@code ParsedName} JSON trees (via one {@link #GSON}), with
  * {@code warnings}/{@code notho}/{@code epithetQualifier} compared order-insensitively — the same
@@ -132,74 +131,9 @@ class ParityTest {
       return "binding parsed but oracle errored";
     }
 
-    if (got instanceof ParseResult.Informal inf) {
-      if (!oracleIsInformal(oracleParsed)) {
-        return "binding Informal but oracle is a plain ParsedName";
-      }
-      return compareInformal(inf, oracleParsed);
-    }
-
     ParseResult.Parsed p = (ParseResult.Parsed) got;
-    if (oracleIsInformal(oracleParsed)) {
-      return "binding Parsed but oracle is informal-band";
-    }
     JsonObject gJson = GSON.toJsonTree(p.name()).getAsJsonObject();
     return jsonEquals(gJson, oracleParsed) ? null : "ParsedName field diff (see the two JSON trees)";
-  }
-
-  /** Mirror of Rust {@code is_informal} / {@link StructCodec}'s {@code isInformal}, on the oracle
-   *  JSON: an INFORMAL-typed ParsedName with a real anchor and no species or infraspecific
-   *  epithet. */
-  private static boolean oracleIsInformal(JsonObject p) {
-    if (p == null) {
-      return false;
-    }
-    String type = p.has("type") ? p.get("type").getAsString() : null;
-    boolean hasSpecific = p.has("specificEpithet") || p.has("infraspecificEpithet");
-    boolean hasAnchor = p.has("genus") || p.has("uninomial") || p.has("infragenericEpithet");
-    return "INFORMAL".equals(type) && !hasSpecific && hasAnchor;
-  }
-
-  /** Mirror of Rust {@code to_informal}: compare the binding's flat Informal to the anchor derived
-   *  from the oracle ParsedName. */
-  private static String compareInformal(ParseResult.Informal inf, JsonObject p) {
-    String taxon;
-    String taxonRank;
-    if (p.has("genus")) {
-      taxon = p.get("genus").getAsString();
-      taxonRank = "GENUS";
-    } else if (p.has("uninomial")) {
-      taxon = p.get("uninomial").getAsString();
-      taxonRank = p.get("rank").getAsString();
-    } else {
-      taxon = p.get("infragenericEpithet").getAsString();
-      taxonRank = p.get("rank").getAsString();
-    }
-    String rank = p.has("rank") ? p.get("rank").getAsString() : null;
-    String phrase = p.has("phrase") ? p.get("phrase").getAsString() : null;
-    String code = p.has("code") ? p.get("code").getAsString() : null;
-
-    if (!Objects.equals(inf.taxon(), taxon)) {
-      return "taxon: binding=" + inf.taxon() + " oracle=" + taxon;
-    }
-    if (!Objects.equals(inf.taxonRank().name(), taxonRank)) {
-      return "taxonRank: binding=" + inf.taxonRank() + " oracle=" + taxonRank;
-    }
-    if (!Objects.equals(inf.rank().name(), rank)) {
-      return "rank: binding=" + inf.rank() + " oracle=" + rank;
-    }
-    if (!Objects.equals(inf.phrase(), phrase)) {
-      return "phrase: binding=" + inf.phrase() + " oracle=" + phrase;
-    }
-    String gCode = inf.code() == null ? null : inf.code().name();
-    if (!Objects.equals(gCode, code)) {
-      return "code: binding=" + gCode + " oracle=" + code;
-    }
-    boolean candidatus = p.has("candidatus") && p.get("candidatus").getAsBoolean();
-    if (inf.candidatus() != candidatus) {
-      return "candidatus: binding=" + inf.candidatus() + " oracle=" + candidatus;
-    }
-    return null;
   }
 
   private static boolean isEmptyArray(JsonElement e) {

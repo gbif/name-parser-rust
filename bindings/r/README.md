@@ -55,8 +55,8 @@ out[, c("scientificName", "parsed", "rank", "genus", "specificEpithet",
 `authorship`, `rank`, `code` (the parser's `SCREAMING_SNAKE_CASE` enum names, e.g.
 `"SPECIES"`, `"ZOOLOGICAL"`).
 
-All 50 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `taxon`,
-`taxonRank`, `rank`, `code`, `uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`,
+All 50 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `anchor`,
+`anchorRank`, `rank`, `code`, `uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`,
 `infraspecificEpithet`, `cultivarEpithet`, `phrase`, `candidatus`, `notho`, `originalSpelling`,
 `epithetQualifier`, `extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`,
 `publishedInYear`, `publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`,
@@ -84,9 +84,9 @@ rendered in square brackets (`[Denis & Schiffermüller], 1775`, ICZN Recommendat
 sanctioned fungal name (Fries or Persoon, ICN Art. 15): `L. : Fr.`, and inside a basionym's
 brackets `(Wulfen : Fr.) Schum.` (a single `sanctioningAuthor` column before engine 0.3).
 
-`result` is the 5.0.0 three-way outcome (`"parsed"` / `"informal"` / `"unparsable"`); `taxon`
-and `taxonRank` carry an informal name's supraspecific anchor; the last five are `NameFormatter`
-renderings (`canonical` is populated for informal rows too, the other four are `NA` there).
+`result` is `"parsed"` or `"unparsable"`; `anchor` and `anchorRank` carry the taxon an
+informal name hangs off (`type` `"INFORMAL"`, e.g. the genus `Rhizobium` of
+`Rhizobium sp. RMCC TR1811`); the last five are `NameFormatter` renderings.
 
 ### `parse_name_json()` — lossless escape hatch
 

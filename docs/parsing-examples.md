@@ -6,16 +6,15 @@ from the list in `tools/parsing-examples.txt`.
 
 ## The parse result
 
-A name is parsed into one of three results:
+A name is parsed into one of two results:
 
 - **Parsed** — a `ParsedName`: the name parts (`uninomial`, or `genus`, `infragenericEpithet`,
   `specificEpithet`, `infraspecificEpithet`, `cultivarEpithet`), the `rank`, the nomenclatural
-  `code` when there is evidence for it, the `type` (`SCIENTIFIC`, or `INFORMAL` for a name in open
-  nomenclature), the authorship, notes and flags. Its `state` is `COMPLETE`, or `PARTIAL` when a
-  rest could not be read (`unparsed`).
-- **Informal** — a provisional name with no epithet of its own (`Bacillus sp. 1`): the anchor
-  `taxon` and its `taxonRank`, the `rank` the designation stands for and the designation itself,
-  verbatim, as the `phrase`, and whether it is a `candidatus` name.
+  `code` when there is evidence for it, the `type`, the authorship, notes and flags. Its `state` is
+  `COMPLETE`, or `PARTIAL` when a rest could not be read (`unparsed`). The `type` is `SCIENTIFIC`,
+  or `INFORMAL` for a name in open nomenclature: a provisional designation (`Bacillus sp. 1`), kept
+  verbatim as the `phrase`, a qualified epithet (`Abies cf. alba`) or a missing one. The `anchor`
+  of an informal name is the taxon it hangs off, the determined part of the name.
 - **Unparsable** — no scientific name at all (a virus, a placeholder, an identifier, a hybrid
   formula): only its `type` and, where known, its `code`.
 
@@ -91,7 +90,7 @@ A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. 
 | `Acidalia remutaria ab. n. undularia`<br>*aberratio nova* | **Parsed** · `SCIENTIFIC` · rank `ABERRATION` · code `ZOOLOGICAL`<br>genus `Acidalia` · specificEpithet `remutaria` · infraspecificEpithet `undularia`<br>nomenclaturalNote `ab. n.`<br>→ `Acidalia remutaria ab. undularia, ab. n.` |
 | `Pseudomonas syringae pv. tomato` | **Parsed** · `SCIENTIFIC` · rank `PATHOVAR` · code `BACTERIAL`<br>genus `Pseudomonas` · specificEpithet `syringae` · infraspecificEpithet `tomato`<br>→ `Pseudomonas syringae pv. tomato` |
 | `Salmonella enterica subsp. enterica serovar Typhimurium`<br>*a serovar has its own rank; the subspecies has to go* | **Parsed** · `SCIENTIFIC` · rank `SEROVAR` · code `BACTERIAL`<br>genus `Salmonella` · specificEpithet `enterica` · infraspecificEpithet `Typhimurium`<br>warnings `Removed: subsp. enterica`, `name was quadrinomial`<br>→ `Salmonella enterica serovar Typhimurium` |
-| `Actinobacillus pleuropneumoniae serotype 1`<br>*a numbered serovar is the phrase* | **Parsed** · `INFORMAL` · rank `SEROVAR` · code `BACTERIAL`<br>genus `Actinobacillus` · specificEpithet `pleuropneumoniae` · phrase `1`<br>→ `Actinobacillus pleuropneumoniae serovar 1` |
+| `Actinobacillus pleuropneumoniae serotype 1`<br>*a numbered serovar is the phrase* | **Parsed** · `INFORMAL` · rank `SEROVAR` · code `BACTERIAL`<br>genus `Actinobacillus` · specificEpithet `pleuropneumoniae` · phrase `1`<br>anchor `Actinobacillus pleuropneumoniae` · `SPECIES`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Actinobacillus pleuropneumoniae serovar 1` |
 | `Fusarium oxysporum f. sp. lycopersici` | **Parsed** · `SCIENTIFIC` · rank `FORMA_SPECIALIS` · code `BOTANICAL`<br>genus `Fusarium` · specificEpithet `oxysporum` · infraspecificEpithet `lycopersici`<br>→ `Fusarium oxysporum f.sp. lycopersici` |
 | `Rubus hirtus Rchb. microg pectinatus Sudre & Gavet` | **Parsed** · `SCIENTIFIC` · rank `INFRASPECIFIC_NAME`<br>genus `Rubus` · specificEpithet `hirtus` · infraspecificEpithet `pectinatus`<br>combination: authors `Sudre`, `Gavet`<br>specificAuthorship combination: authors `Rchb.`<br>→ `Rubus hirtus Rchb. pectinatus Sudre & Gavet` |
 
@@ -240,34 +239,34 @@ Open nomenclature (`cf.`, `aff.`, `?`) qualifies an epithet; such a name is `INF
 
 | Name | Parsed as |
 |---|---|
-| `Abies cf. alba` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Abies cf. alba` |
-| `Pomatoschistus aff. pictus (Malm, 1865)` | **Parsed** · `INFORMAL` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Pomatoschistus` · specificEpithet `pictus`<br>epithetQualifier `SPECIFIC` `aff.`<br>basionym: authors `Malm` · year `1865`<br>→ `Pomatoschistus aff. pictus (Malm, 1865)` |
-| `Ferganoconcha? oblonga` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ferganoconcha` · specificEpithet `oblonga`<br>epithetQualifier `SPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Ferganoconcha ? oblonga` |
-| `Buteo borealis ? ventralis` | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Buteo` · specificEpithet `borealis` · infraspecificEpithet `ventralis`<br>epithetQualifier `INFRASPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Buteo borealis ? ventralis` |
-| `Sorex cf. S. shinto` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Sorex` · specificEpithet `shinto`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Sorex cf. shinto` |
-| `Ammonia ex gr. beccarii` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ammonia` · specificEpithet `beccarii`<br>epithetQualifier `SPECIFIC` `ex gr.`<br>→ `Ammonia ex gr. beccarii` |
+| `Abies cf. alba` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>anchor `Abies` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Abies cf. alba` |
+| `Pomatoschistus aff. pictus (Malm, 1865)` | **Parsed** · `INFORMAL` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Pomatoschistus` · specificEpithet `pictus`<br>anchor `Pomatoschistus` · `GENUS`<br>epithetQualifier `SPECIFIC` `aff.`<br>basionym: authors `Malm` · year `1865`<br>→ `Pomatoschistus aff. pictus (Malm, 1865)` |
+| `Ferganoconcha? oblonga` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ferganoconcha` · specificEpithet `oblonga`<br>anchor `Ferganoconcha` · `GENUS`<br>epithetQualifier `SPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Ferganoconcha ? oblonga` |
+| `Buteo borealis ? ventralis` | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Buteo` · specificEpithet `borealis` · infraspecificEpithet `ventralis`<br>anchor `Buteo borealis` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Buteo borealis ? ventralis` |
+| `Sorex cf. S. shinto` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Sorex` · specificEpithet `shinto`<br>anchor `Sorex` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Sorex cf. shinto` |
+| `Ammonia ex gr. beccarii` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ammonia` · specificEpithet `beccarii`<br>anchor `Ammonia` · `GENUS`<br>epithetQualifier `SPECIFIC` `ex gr.`<br>→ `Ammonia ex gr. beccarii` |
 
 ## Provisional and informal names
 
-A taxon carrying a provisional designation but no epithet of its own is an `Informal` result: the anchor taxon, the rank the designation stands for and the designation itself, verbatim, as the `phrase`.
+A taxon carrying a provisional designation is an informal name: its anchor is the taxon it hangs off, the rank says what the designation stands for, and the designation itself is kept verbatim as the `phrase`.
 
 | Name | Parsed as |
 |---|---|
-| `Abies sp.` | **Informal** · taxon `Abies` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `sp.`<br>→ `Abies sp.` |
-| `Bacillus sp. 1` | **Informal** · taxon `Bacillus` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `sp. 1`<br>→ `Bacillus sp. 1` |
-| `Rhizobium sp. RMCC TR1811` | **Informal** · taxon `Rhizobium` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `sp. RMCC TR1811`<br>→ `Rhizobium sp. RMCC TR1811` |
-| `Serratia sp. RE1-2a` | **Informal** · taxon `Serratia` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `sp. RE1-2a`<br>→ `Serratia sp. RE1-2a` |
-| `Prostanthera sp. Wollemi (W.Jacobs 6421)` | **Informal** · taxon `Prostanthera` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `sp. Wollemi (W.Jacobs 6421)`<br>→ `Prostanthera sp. Wollemi (W.Jacobs 6421)` |
-| `Acacia sp. Kalgoorlie (A.Smith 123)` | **Informal** · taxon `Acacia` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `sp. Kalgoorlie (A.Smith 123)`<br>→ `Acacia sp. Kalgoorlie (A.Smith 123)` |
-| `Cantuaria sp. Forster, 1968` | **Informal** · taxon `Cantuaria` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `sp. Forster, 1968`<br>→ `Cantuaria sp. Forster, 1968` |
-| `Formicidae cf.` | **Informal** · taxon `Formicidae` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `cf.`<br>→ `Formicidae cf.` |
-| `Wolbachia endosymbiont of Leptogenys gracilis` | **Informal** · taxon `Wolbachia` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `endosymbiont of Leptogenys gracilis`<br>→ `Wolbachia endosymbiont of Leptogenys gracilis` |
-| `Acidimicrobiales bacterium JGI 01_E13` | **Informal** · taxon `Acidimicrobiales` · taxonRank `GENUS` · rank `SPECIES`<br>phrase `bacterium JGI 01_E13`<br>→ `Acidimicrobiales bacterium JGI 01_E13` |
-| `Escherichia coli 18-41`<br>*a strain designation on a species* | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Escherichia` · specificEpithet `coli` · phrase `18-41`<br>→ `Escherichia coli 18-41` |
-| `Aquimarina muelleri DSM 19832` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Aquimarina` · specificEpithet `muelleri` · phrase `DSM 19832`<br>→ `Aquimarina muelleri DSM 19832` |
-| `Spirochaeta 2`<br>*a numbered group of the genus* | **Informal** · taxon `Spirochaeta` · taxonRank `UNRANKED` · rank `UNRANKED`<br>phrase `2`<br>→ `Spirochaeta 2` |
-| `Barea Subgroup 4` | **Informal** · taxon `Barea` · taxonRank `UNRANKED` · rank `UNRANKED`<br>phrase `Subgroup 4`<br>→ `Barea Subgroup 4` |
-| `Candidatus Pelagibacter sp. HTCC7211`<br>*Candidatus is kept as a flag* | **Informal** · taxon `Pelagibacter` · taxonRank `GENUS` · rank `SPECIES` · code `BACTERIAL`<br>phrase `sp. HTCC7211`<br>candidatus<br>→ `"Candidatus Pelagibacter" sp. HTCC7211` |
+| `Abies sp.` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Abies` · phrase `sp.`<br>anchor `Abies` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Abies sp.` |
+| `Bacillus sp. 1` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Bacillus` · phrase `sp. 1`<br>anchor `Bacillus` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Bacillus sp. 1` |
+| `Rhizobium sp. RMCC TR1811` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Rhizobium` · phrase `sp. RMCC TR1811`<br>anchor `Rhizobium` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Rhizobium sp. RMCC TR1811` |
+| `Serratia sp. RE1-2a` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Serratia` · phrase `sp. RE1-2a`<br>anchor `Serratia` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Serratia sp. RE1-2a` |
+| `Prostanthera sp. Wollemi (W.Jacobs 6421)` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Prostanthera` · phrase `sp. Wollemi (W.Jacobs 6421)`<br>anchor `Prostanthera` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Prostanthera sp. Wollemi (W.Jacobs 6421)` |
+| `Acacia sp. Kalgoorlie (A.Smith 123)` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Acacia` · phrase `sp. Kalgoorlie (A.Smith 123)`<br>anchor `Acacia` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Acacia sp. Kalgoorlie (A.Smith 123)` |
+| `Cantuaria sp. Forster, 1968` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Cantuaria` · phrase `sp. Forster, 1968`<br>anchor `Cantuaria` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Cantuaria sp. Forster, 1968` |
+| `Formicidae cf.` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Formicidae` · phrase `cf.`<br>anchor `Formicidae` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Formicidae cf.` |
+| `Wolbachia endosymbiont of Leptogenys gracilis` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Wolbachia` · phrase `endosymbiont of Leptogenys gracilis`<br>anchor `Wolbachia` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Wolbachia endosymbiont of Leptogenys gracilis` |
+| `Acidimicrobiales bacterium JGI 01_E13` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Acidimicrobiales` · phrase `bacterium JGI 01_E13`<br>anchor `Acidimicrobiales` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Acidimicrobiales bacterium JGI 01_E13` |
+| `Escherichia coli 18-41`<br>*a strain designation on a species* | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Escherichia` · specificEpithet `coli` · phrase `18-41`<br>anchor `Escherichia coli` · `SPECIES`<br>→ `Escherichia coli 18-41` |
+| `Aquimarina muelleri DSM 19832` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Aquimarina` · specificEpithet `muelleri` · phrase `DSM 19832`<br>anchor `Aquimarina muelleri` · `SPECIES`<br>→ `Aquimarina muelleri DSM 19832` |
+| `Spirochaeta 2`<br>*a numbered group of the genus* | **Parsed** · `INFORMAL` · rank `UNRANKED`<br>uninomial `Spirochaeta` · phrase `2`<br>anchor `Spirochaeta` · `UNRANKED`<br>→ `Spirochaeta 2` |
+| `Barea Subgroup 4` | **Parsed** · `INFORMAL` · rank `UNRANKED`<br>uninomial `Barea` · phrase `Subgroup 4`<br>anchor `Barea` · `UNRANKED`<br>→ `Barea Subgroup 4` |
+| `Candidatus Pelagibacter sp. HTCC7211`<br>*Candidatus is kept as a flag* | **Parsed** · `INFORMAL` · rank `SPECIES` · code `BACTERIAL`<br>genus `Pelagibacter` · phrase `sp. HTCC7211`<br>anchor `"Candidatus Pelagibacter"` · `GENUS`<br>candidatus<br>warnings `indetermined name missing its terminal epithet`<br>→ `"Candidatus Pelagibacter" sp. HTCC7211` |
 
 ## Bacteria
 

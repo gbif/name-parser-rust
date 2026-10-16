@@ -16,19 +16,20 @@
 //! `nothing_else()` asserts every field you did NOT mention is at its default — so a test pins
 //! the WHOLE parse, not just the parts you named.
 //!
-//! ## 5.0.0 three-way DSL (the authoritative spec — the golden is only a Rust regression snapshot)
-//! The three classifying entry points go through the exceptionless [`nameparser::parse`] and
-//! assert the actual 5.0.0 [`nameparser::ParseResult`] VARIANT, so a misclassification fails loudly:
+//! ## Classifying DSL (the authoritative spec — the golden is only a Rust regression snapshot)
+//! The classifying entry points go through the exceptionless [`nameparser::parse`] and assert the
+//! actual [`nameparser::ParseResult`] VARIANT, so a misclassification fails loudly:
 //! * [`assert_name`] (+ `_hinted`/`_rank`/`_code`/`_auth`) — asserts a [`ParseResult::Parsed`] name.
-//! * [`assert_informal`] (+ `_hinted`) — asserts a [`ParseResult::Informal`] (a supraspecific anchor
-//!   + a provisional designation, no species epithet) via the fluent [`InformalAssertion`].
+//! * [`assert_informal`] (+ `_hinted`) — asserts a parsed INFORMAL name that is no more than its
+//!   anchor, rank, phrase and code (a taxon + a provisional designation) via the fluent
+//!   [`InformalAssertion`].
 //! * [`assert_unparsable`] (+ `_code`/`_rank`/`_name`) — asserts a [`ParseResult::Unparsable`] with
 //!   the CLAMPED type (an `Unparsable` may only carry a non-parsable `NameType`).
 //!
 //! The remaining helpers ([`assert_phrase_name`], [`assert_authorship`], [`assert_sensu`],
 //! [`assert_nom_note`], [`is_viral_name`], …) deliberately stay on the lower-level raw
 //! [`nameparser::parse_name`] path — they test the `ParsedName` atoms / `NameFormatter` renderings /
-//! authorship directly, which is a distinct (still public) API from the three-way classification.
+//! authorship directly, which is a distinct (still public) API from the classification.
 //!
 //! ## Java → Rust mapping (for porting the suites)
 //! * `assertName(name, canonical)` → `assert_name(name)` — the `expectedCanonicalWithoutAuthors`
@@ -59,7 +60,7 @@ pub use paths::*;
 use std::collections::BTreeMap;
 
 use nameparser::model::{
-    Authorship, CombinedAuthorship, Informal, NamePart, NameType, NomCode, ParsedName, Rank, State,
+    warnings, Authorship, CombinedAuthorship, NamePart, NameType, NomCode, ParsedName, Rank, State,
 };
 use nameparser::ParseResult;
 
@@ -110,21 +111,19 @@ pub fn assert_name_hinted(
     check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
         ParseResult::Parsed(pn) => NameAssertion::new(pn, &call.label()),
-        ParseResult::Informal(inf) => {
-            panic!("expected `{input}` to be a Parsed name, but it was Informal: {inf:?}")
-        }
         ParseResult::Unparsable(e) => {
             panic!("expected `{input}` to parse, but it was unparsable: {e:?}")
         }
     }
 }
 
-// ---- 5.0.0 three-way entry points (parse, not the raw parse_name()) ---------------------------
+// ---- informal names (parse, not the raw parse_name()) ------------------------------------------
 
-/// Parse `input` through the 5.0.0 [`nameparser::parse`] and assert the outcome is an
-/// [`ParseResult::Informal`], starting a fluent [`InformalAssertion`] chain. Panics (loudly) if the
-/// name comes back `Parsed` or `Unparsable` instead. Use for the informal / semistructured band —
-/// a supraspecific taxon carrying a provisional designation with no species epithet.
+/// Parse `input` through [`nameparser::parse`] and assert the outcome is a parsed INFORMAL name
+/// that is no more than its [`ParsedName::anchor`], its rank, phrase and code — a taxon carrying a
+/// provisional designation (`Rhizobium sp. RMCC TR1811`, `Bartonella group`). Starts a fluent
+/// [`InformalAssertion`] chain. An informal name with more to it — a qualified epithet, notes, an
+/// authorship of its own — is pinned with [`assert_name`] instead.
 #[track_caller]
 pub fn assert_informal(input: &str) -> InformalAssertion {
     assert_informal_hinted(input, None, None, None)
@@ -146,12 +145,17 @@ pub fn assert_informal_hinted(
     };
     check_paths(call, Shape::Name);
     match nameparser::parse(input, authorship, rank, code) {
-        ParseResult::Informal(inf) => InformalAssertion::new(inf, &call.label()),
+        ParseResult::Parsed(pn) if pn.type_ == NameType::Informal => {
+            InformalAssertion::new(pn, &call.label())
+        }
         ParseResult::Parsed(pn) => {
-            panic!("expected `{input}` to be an Informal result, but it Parsed: {pn:?}")
+            panic!(
+                "expected `{input}` to be an informal name, but it is {:?}: {pn:?}",
+                pn.type_
+            )
         }
         ParseResult::Unparsable(e) => {
-            panic!("expected `{input}` to be an Informal result, but it was Unparsable: {e:?}")
+            panic!("expected `{input}` to be an informal name, but it was Unparsable: {e:?}")
         }
     }
 }
@@ -779,11 +783,12 @@ impl NameAssertion {
         self.mark(&[Np::Sic])
     }
 
+    /// Assert the warnings. INDETERMINED need not be named: it is derived from the name's
+    /// structure, and every chain checks it is there exactly when the name is indetermined.
     pub fn warning(self, warnings: &[&str]) -> Self {
         let mut got: Vec<String> = self.n.warnings.clone();
         got.sort();
-        let mut want: Vec<String> = str_vec(warnings);
-        want.sort();
+        let want = with_derived_warnings(&self.n, warnings);
         assert_eq!(got, want, "warnings mismatch");
         self.mark(&[Np::Warning])
     }
@@ -1128,7 +1133,13 @@ impl NameAssertion {
             assert!(unparsed.is_none(), "unexpected unparsed: {unparsed:?}");
         }
         if untested(Np::Warning) {
-            assert!(warnings.is_empty(), "unexpected warnings: {warnings:?}");
+            let mut got = warnings.clone();
+            got.sort();
+            assert_eq!(
+                got,
+                with_derived_warnings(&self.n, &[]),
+                "unexpected warnings"
+            );
         }
         if untested(Np::Manuscript) {
             assert!(!manuscript, "unexpected manuscript");
@@ -1247,11 +1258,12 @@ fn check_combined_authorship_default(
     }
 }
 
-// ---- the Informal assertion builder -----------------------------------------------------------
+// ---- the informal-name assertion builder --------------------------------------------------------
 
-/// The [`Informal`] fields, tracked so [`InformalAssertion::nothing_else`] can check the result is
-/// pinned in full: `taxon`/`taxon_rank`/`rank` are always populated, so they must have been
-/// asserted; the optional `phrase`/`code` must be asserted or absent.
+/// The parts of an informal name [`InformalAssertion`] tracks, so [`InformalAssertion::nothing_else`]
+/// can check the name is pinned in full: the anchor's `taxon`/`taxon_rank` and the name's `rank`
+/// must have been asserted; the optional `phrase`/`code`/`candidatus`/extra warnings must be
+/// asserted or absent.
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
 enum InfProp {
     Taxon,
@@ -1259,17 +1271,23 @@ enum InfProp {
     Rank,
     Phrase,
     Code,
+    Candidatus,
+    Warnings,
 }
 
-/// Fluent assertion over a [`ParseResult::Informal`], mirroring [`NameAssertion`]'s chaining style.
-/// Every method returns `self`; [`Self::nothing_else`] closes the chain by asserting the optional
-/// fields you did NOT mention (`phrase`, `code`) are absent — so a test pins the whole informal
-/// result, not just the parts it named.
+/// Fluent assertion over a parsed INFORMAL name that is no more than its [`ParsedName::anchor`]
+/// (`taxon` + `taxon_rank`), its own `rank`, `phrase` and `code`, mirroring [`NameAssertion`]'s
+/// chaining style. Every method returns `self`; [`Self::nothing_else`] closes the chain by
+/// asserting the parts you did NOT mention are absent and that the name holds nothing beyond them
+/// — an INDETERMINED warning aside, which it must carry exactly when it is indetermined.
 pub struct InformalAssertion {
-    inf: Informal,
+    pn: ParsedName,
+    anchor: Option<ParsedName>,
     /// The parsed call, named in the failure message of [`Self::nothing_else`].
     input: String,
     tested: std::collections::HashSet<InfProp>,
+    /// Warnings asserted beyond INDETERMINED.
+    warnings: Vec<String>,
     /// Where the chain starts in the test, and whether it ended in `nothing_else()` — an open
     /// chain reports what it leaves unpinned under `NAMEPARSER_DUMP_OPEN_CHAINS`.
     location: &'static std::panic::Location<'static>,
@@ -1278,58 +1296,68 @@ pub struct InformalAssertion {
 
 impl InformalAssertion {
     #[track_caller]
-    fn new(inf: Informal, input: &str) -> Self {
+    fn new(pn: ParsedName, input: &str) -> Self {
         InformalAssertion {
-            inf,
+            anchor: pn.anchor(),
+            pn,
             input: input.to_string(),
             tested: std::collections::HashSet::new(),
+            warnings: Vec::new(),
             location: std::panic::Location::caller(),
             closed: false,
         }
     }
 
-    /// Assert the supraspecific taxon anchor (`"Rhizobium"`, `"Ichneumonidae"`).
+    fn anchor_name(&self) -> Option<String> {
+        self.anchor
+            .as_ref()
+            .and_then(ParsedName::canonical_name_without_authorship)
+    }
+
+    /// Assert the taxon the name hangs off, its anchor (`"Rhizobium"`, `"Lasioglossum (Dialictus)"`).
     pub fn taxon(mut self, taxon: &str) -> Self {
-        assert_eq!(self.inf.taxon, taxon, "taxon mismatch");
+        assert_eq!(self.anchor_name().as_deref(), Some(taxon), "taxon mismatch");
         self.tested.insert(InfProp::Taxon);
         self
     }
 
-    /// Assert the anchor's rank (usually `Genus`, since the anchor sits in the genus slot).
+    /// Assert the anchor's rank (`Genus` for the `Genus sp.` majority).
     pub fn taxon_rank(mut self, rank: Rank) -> Self {
         assert_eq!(
-            self.inf.taxon_rank, rank,
+            self.anchor.as_ref().map(|a| a.rank),
+            Some(rank),
             "taxonRank mismatch for {:?}",
-            self.inf.taxon
+            self.anchor_name()
         );
         self.tested.insert(InfProp::TaxonRank);
         self
     }
 
-    /// Assert the informal name's own purported rank (`Species` for `"sp."`, `Unranked` for a group).
+    /// Assert the informal name's own rank (`Species` for `"sp."`, `Unranked` for a group).
     pub fn rank(mut self, rank: Rank) -> Self {
         assert_eq!(
-            self.inf.rank, rank,
+            self.pn.rank,
+            rank,
             "rank mismatch for {:?}",
-            self.inf.taxon
+            self.anchor_name()
         );
         self.tested.insert(InfProp::Rank);
         self
     }
 
-    /// Assert the distinguishing phrase (`"RMCC TR1811"`, `"1"`).
+    /// Assert the provisional designation (`"sp. RMCC TR1811"`, `"sp. 1"`).
     pub fn phrase(mut self, phrase: &str) -> Self {
-        assert_eq!(self.inf.phrase.as_deref(), Some(phrase), "phrase mismatch");
+        assert_eq!(self.pn.phrase.as_deref(), Some(phrase), "phrase mismatch");
         self.tested.insert(InfProp::Phrase);
         self
     }
 
-    /// Assert there is NO phrase — a bare `"Genus sp."`.
+    /// Assert there is NO phrase.
     pub fn no_phrase(mut self) -> Self {
         assert_eq!(
-            self.inf.phrase, None,
+            self.pn.phrase, None,
             "expected no phrase, got {:?}",
-            self.inf.phrase
+            self.pn.phrase
         );
         self.tested.insert(InfProp::Phrase);
         self
@@ -1337,13 +1365,34 @@ impl InformalAssertion {
 
     /// Assert the nomenclatural code.
     pub fn code(mut self, code: NomCode) -> Self {
-        assert_eq!(self.inf.code, Some(code), "code mismatch");
+        assert_eq!(self.pn.code, Some(code), "code mismatch");
         self.tested.insert(InfProp::Code);
         self
     }
 
-    /// Close the chain: `taxon`, `taxon_rank` and `rank` must have been asserted, and every optional
-    /// field not mentioned above (`phrase`, `code`) must be absent.
+    /// Assert Candidatus status.
+    pub fn candidatus(mut self) -> Self {
+        assert!(self.pn.candidatus, "expected candidatus");
+        self.tested.insert(InfProp::Candidatus);
+        self
+    }
+
+    /// Assert warnings beyond INDETERMINED, which [`Self::nothing_else`] checks on its own.
+    pub fn warning(mut self, expected: &[&str]) -> Self {
+        for w in expected {
+            assert!(
+                self.pn.warnings.iter().any(|x| x == w),
+                "missing warning {w:?} in {:?}",
+                self.pn.warnings
+            );
+        }
+        self.warnings = expected.iter().map(|w| w.to_string()).collect();
+        self.tested.insert(InfProp::Warnings);
+        self
+    }
+
+    /// Close the chain: `taxon`, `taxon_rank` and `rank` must have been asserted, every optional
+    /// part not mentioned above must be absent, and the name must hold nothing beyond them.
     pub fn nothing_else(mut self) {
         self.closed = true;
         let input = format!("{} {}", self.location, self.input);
@@ -1358,24 +1407,66 @@ impl InformalAssertion {
         ] {
             assert!(
                 self.tested.contains(&prop),
-                "{name} not asserted for {:?} — an informal result is only pinned with all three",
-                self.inf
+                "{name} not asserted for {:?} — an informal name is only pinned with all three",
+                self.pn
             );
         }
+        let pn = &self.pn;
         if !self.tested.contains(&InfProp::Phrase) {
-            assert!(
-                self.inf.phrase.is_none(),
-                "unexpected phrase: {:?}",
-                self.inf.phrase
-            );
+            assert!(pn.phrase.is_none(), "unexpected phrase: {:?}", pn.phrase);
         }
         if !self.tested.contains(&InfProp::Code) {
-            assert!(
-                self.inf.code.is_none(),
-                "unexpected code: {:?}",
-                self.inf.code
-            );
+            assert!(pn.code.is_none(), "unexpected code: {:?}", pn.code);
         }
+        if !self.tested.contains(&InfProp::Candidatus) {
+            assert!(!pn.candidatus, "unexpected candidatus");
+        }
+        let mut expected = self.warnings.clone();
+        if pn.is_indetermined() {
+            expected.push(warnings::INDETERMINED.to_string());
+        }
+        let mut actual = pn.warnings.clone();
+        expected.sort();
+        actual.sort();
+        assert_eq!(actual, expected, "warnings mismatch");
+        // nothing beyond the anchor, rank, phrase, code and warnings
+        let a = self.anchor.clone().unwrap_or_default();
+        let mut rest = pn.clone();
+        rest.type_ = NameType::Scientific;
+        rest.rank = Rank::Unranked;
+        rest.phrase = None;
+        rest.code = None;
+        rest.candidatus = false;
+        rest.warnings.clear();
+        let anchor_genus = a.genus.as_ref().or(a.uninomial.as_ref());
+        if rest.genus.is_some() && rest.genus.as_ref() == anchor_genus {
+            rest.genus = None;
+        }
+        if rest.uninomial.is_some() && rest.uninomial == a.uninomial {
+            rest.uninomial = None;
+        }
+        if rest.infrageneric_epithet.is_some()
+            && rest.infrageneric_epithet == a.infrageneric_epithet
+        {
+            rest.infrageneric_epithet = None;
+        }
+        if rest.specific_epithet.is_some() && rest.specific_epithet == a.specific_epithet {
+            rest.specific_epithet = None;
+        }
+        if rest.infraspecific_epithet.is_some()
+            && rest.infraspecific_epithet == a.infraspecific_epithet
+        {
+            rest.infraspecific_epithet = None;
+        }
+        if rest.notho.is_some() && rest.notho == a.notho {
+            rest.notho = None;
+        }
+        assert_eq!(
+            rest,
+            ParsedName::default(),
+            "the informal name holds more than its anchor, rank, phrase and code — pin it with \
+             assert_name instead"
+        );
     }
 }
 
@@ -1813,27 +1904,33 @@ impl InformalAssertion {
     /// The DSL calls pinning every field no assertion of this chain covered — see
     /// [`dump_open_chain`].
     fn missing_assertions(&self) -> Vec<String> {
-        let i = &self.inf;
         let untested = |p: InfProp| !self.tested.contains(&p);
         let mut out = Vec::new();
         if untested(InfProp::Taxon) {
-            out.push(format!(".taxon({})", lit(&i.taxon)));
+            if let Some(t) = self.anchor_name() {
+                out.push(format!(".taxon({})", lit(&t)));
+            }
         }
         if untested(InfProp::TaxonRank) {
-            out.push(format!(".taxon_rank(Rank::{:?})", i.taxon_rank));
+            if let Some(a) = &self.anchor {
+                out.push(format!(".taxon_rank(Rank::{:?})", a.rank));
+            }
         }
         if untested(InfProp::Rank) {
-            out.push(format!(".rank(Rank::{:?})", i.rank));
+            out.push(format!(".rank(Rank::{:?})", self.pn.rank));
         }
         if untested(InfProp::Phrase) {
-            if let Some(p) = &i.phrase {
+            if let Some(p) = &self.pn.phrase {
                 out.push(format!(".phrase({})", lit(p)));
             }
         }
         if untested(InfProp::Code) {
-            if let Some(c) = i.code {
+            if let Some(c) = self.pn.code {
                 out.push(format!(".code(NomCode::{c:?})"));
             }
+        }
+        if untested(InfProp::Candidatus) && self.pn.candidatus {
+            out.push(".candidatus()".to_string());
         }
         out
     }
@@ -1850,6 +1947,17 @@ fn with_input(input: &str, check: impl FnOnce()) {
             .unwrap_or_default();
         panic!("{input}: {msg}");
     }
+}
+
+/// The `expected` warnings plus INDETERMINED when `n` is indetermined, sorted: the parser sets that
+/// warning exactly when [`ParsedName::is_indetermined`] holds.
+fn with_derived_warnings(n: &ParsedName, expected: &[&str]) -> Vec<String> {
+    let mut want = str_vec(expected);
+    if n.is_indetermined() && !want.iter().any(|w| w == warnings::INDETERMINED) {
+        want.push(warnings::INDETERMINED.to_string());
+    }
+    want.sort();
+    want
 }
 
 fn str_vec(s: &[&str]) -> Vec<String> {

@@ -348,9 +348,9 @@ fn redundant_authorship() {
 /// https://github.com/gbif/name-parser/issues/45
 #[test]
 fn bold_placeholder() {
-    // 5.0.0: BOLD/placeholder suprageneric-provisional names ("<Taxon><CODE>") are Informal
+    // 5.0.0: BOLD/placeholder suprageneric-provisional names ("<Taxon><CODE>") are informal
     // results — the supraspecific anchor + a placeholder phrase, no species epithet. (Java surfaced
-    // them as Informal-typed ParsedNames; the three-way surfaces them as `Informal`.)
+    // them as INFORMAL ParsedNames.)
     assert_informal_hinted("OdontellidaeGEN", None, Some(Rank::Genus), None)
         .taxon("Odontellidae")
         .taxon_rank(Rank::Genus)

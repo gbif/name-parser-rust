@@ -110,15 +110,13 @@ fn abbreviated() {
         .warning(&[warnings::ABBREVIATED_GENUS])
         .nothing_else();
 
-    // 5.0.0: a bare abbreviated genus with no epithet is a supraspecific anchor with no designation
-    // → an Informal result. The ABBREVIATED_GENUS warning the raw ParsedName carried is not part of
-    // the lean Informal type (taxon/taxonRank/rank/phrase/code); the "N. giraldo" case above still
-    // pins that warning on a Parsed name.
+    // a bare abbreviated genus with no epithet is an informal name anchored on itself
     assert_informal("B.")
         .taxon("B.")
         .taxon_rank(Rank::Unranked)
         .rank(Rank::Unranked)
         .no_phrase()
+        .warning(&[warnings::ABBREVIATED_GENUS])
         .nothing_else();
 }
 

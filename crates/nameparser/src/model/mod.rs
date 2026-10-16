@@ -54,52 +54,6 @@ impl ParseError {
     }
 }
 
-/// An informal / semistructured name — the payload of [`crate::ParseResult::Informal`], mirroring
-/// Java `org.gbif.nameparser.api.ParseResult.Informal`.
-///
-/// A real supraspecific taxon ([`Self::taxon`], a genus or higher uninomial) carrying a provisional,
-/// non-code designation instead of a determined species epithet: a molecular provisional species
-/// (`Rhizobium sp. RMCC TR1811`), a numbered placeholder (`Allium sp. 1`), or an informal group.
-/// The 67.5M verbatim-corpus study found these are 5.5% of all real
-/// names — 1 in 18 — hence a first-class representation.
-///
-/// Deliberately a FLAT type, not a reused [`ParsedName`]: the anchor lives in one place
-/// ([`Self::taxon`] + [`Self::taxon_rank`]) and is never mislabelled as a backbone-validated
-/// "genus". Derived from an informal `ParsedName` at the [`crate::parse`] boundary. Only
-/// names with NO species epithet land here; a binomial core (incl. cf./aff. and infraspecific-indet)
-/// stays [`crate::ParseResult::Parsed`] so its `specific_authorship` is preserved.
-#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Informal {
-    /// The supraspecific taxon it hangs off (`"Rhizobium"`, `"Ichneumonidae"`) — the parser's best
-    /// guess, NOT validated against a taxonomic backbone.
-    pub taxon: String,
-    /// That taxon's rank — `GENUS` for the overwhelming `Genus sp.` majority (the anchor sits in the
-    /// genus slot); a bare supraspecific monomial carries its own rank. The parser's best guess.
-    pub taxon_rank: Rank,
-    /// The rank the informal name purports to be — `SPECIES` for `"sp."`, `UNRANKED` for a group.
-    pub rank: Rank,
-    /// The VERBATIM tail, from the rank marker to the end of the input (`"sp. RMCC TR1811"`,
-    /// `"sp. 1"`); `None` only when there is no tail at all. An informal name is not fully
-    /// parsable by definition, so the tail is captured whole and nothing in it is interpreted —
-    /// it may therefore contain what looks like an **author citation**
-    /// (`"sp. Forster, 1968"`), which is NOT separately parsed. That is deliberate: the parser
-    /// cannot reliably tell a citation from a specimen or culture code (43% of the tails the
-    /// pre-5.0.0 rule read as authorship were spurious — impossible years, collection acronyms
-    /// like `ZRC`/`MNHN`), and on the genuinely authored minority the citation belongs to the
-    /// [`Self::taxon`] anchor rather than to the undetermined species. `taxon` + `" "` + `phrase`
-    /// reproduces the input exactly.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub phrase: Option<String>,
-    /// The nomenclatural code when known, else `None`.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub code: Option<NomCode>,
-    /// A provisional prokaryote name with Candidatus status (`Candidatus Pelagibacter sp.
-    /// HTCC7211`), as [`ParsedName::candidatus`]; the word itself is in neither [`Self::taxon`] nor
-    /// [`Self::phrase`]. Primitive `boolean` in Java — always serializes, including `false`.
-    pub candidatus: bool,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

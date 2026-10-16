@@ -1,22 +1,22 @@
 // SPDX-License-Identifier: Apache-2.0
-//! The 5.0.0 informal / semistructured band, tested through the three-way `parse` via the
-//! fluent `assert_informal` / `assert_name` DSL helpers. Cases are lifted from the reservoir
-//! samples of the 67.5M verbatim-corpus study: overwhelmingly
-//! molecular / DNA-barcoding provisional species `Genus sp. <specimen/culture/BOLD code>`.
+//! Informal / semistructured names, tested through `parse` via the fluent `assert_informal` /
+//! `assert_name` DSL helpers. Cases are lifted from the reservoir samples of the 67.5M
+//! verbatim-corpus study: overwhelmingly molecular / DNA-barcoding provisional species
+//! `Genus sp. <specimen/culture/BOLD code>`.
 //!
 //! The design contract this file pins:
-//!  * a supraspecific taxon carrying a provisional designation with NO species epithet → `Informal`,
-//!    a flat `taxon` + `taxon_rank` + `rank` + `phrase` + `code`;
-//!  * a name WITH a species epithet (a binomial core — incl. cf./aff. and infraspecific-indet) stays
-//!    `Parsed`, so its `specific_authorship` (unrepresentable by a flat anchor) survives;
-//!  * a determined monomial (`Rhizobium`) stays `Parsed`/SCIENTIFIC — not informal.
+//!  * a taxon carrying a provisional designation is a parsed INFORMAL name: its anchor (the taxon
+//!    it hangs off), its rank and its verbatim `phrase`;
+//!  * a name with a qualified species epithet (cf./aff.) or an indetermined infraspecific rank keeps
+//!    its species epithet and `specific_authorship`;
+//!  * a determined monomial (`Rhizobium`) stays SCIENTIFIC — not informal.
 
 mod common;
 use common::*;
 use nameparser::model::{NamePart, NameType, NomCode, Rank};
 use nameparser::ParseResult;
 
-// ---- Informal: supraspecific anchor + provisional designation, no species epithet -------------
+// ---- Informal: an anchor + a provisional designation, no species epithet ---------------------
 
 #[test]
 fn molecular_provisional_species_with_a_captured_tag() {
@@ -148,8 +148,8 @@ fn digit_bearing_specimen_codes_are_no_longer_split_into_a_bogus_author() {
 /// `unparsed` and the name marked PARTIAL. The underscore was the whole difference —
 /// `Streptomyces sp. NBC00448` already captured `"sp. NBC00448"` and parsed COMPLETE.
 ///
-/// That mattered because a flat `Informal` has no `unparsed` field, so for the informal band the
-/// code was dropped outright at the three-way boundary. A determined name keeps its epithet and
+/// That mattered because the 5.x flat `Informal` result had no `unparsed` field, so for the
+/// informal band the code was dropped outright. A determined name keeps its epithet and
 /// stays `Parsed`, where `unparsed` survives on the `ParsedName` — so the stash is left alone
 /// there and only the indet case is diverted to the phrase.
 #[test]
@@ -192,8 +192,8 @@ fn a_determined_name_keeps_its_otu_code_as_phrase() {
 /// trailing page citation — `Anolis marmoratus girafus LAZELL 1964: 377`. Museum and culture
 /// catalogue numbers wear the same shape, so `Trachipterus sp. HUMZ:220860` had `220860` filed as
 /// a publication page and the phrase truncated to `"sp. HUMZ"`. The number was not lost on the
-/// `ParsedName`, but a flat `Informal` has no `publishedInPage` field either, so the informal band
-/// lost it at the three-way boundary — the third field to hit that projection after the authorship
+/// `ParsedName`, but the 5.x flat `Informal` result had no `publishedInPage` field either, so the
+/// informal band lost it — the third field to hit that projection after the authorship
 /// and the OTU code.
 ///
 /// The verbatim separator is restored, so `MIB:SASS:0006` comes back whole.
@@ -545,9 +545,10 @@ fn a_determined_name_keeps_its_published_page() {
     }
 }
 
-/// The point of the change: `taxon` + `" "` + `phrase` reproduces the input exactly.
+/// The phrase of a provisional species is its verbatim tail: anchor + `" "` + `phrase` reproduces
+/// the input exactly.
 #[test]
-fn taxon_plus_phrase_round_trips_the_input() {
+fn anchor_plus_phrase_round_trips_the_input() {
     for input in [
         "Cantuaria sp. Forster, 1968",
         "Rhodococcus sp. 14-2483-1-2",
@@ -561,15 +562,16 @@ fn taxon_plus_phrase_round_trips_the_input() {
         "Ageratum sp. MIB:SASS:0006",
     ] {
         match nameparser::parse(input, None, None, None) {
-            ParseResult::Informal(inf) => {
-                let round_tripped = format!(
-                    "{} {}",
-                    inf.taxon,
-                    inf.phrase.as_deref().unwrap_or_default()
-                );
+            ParseResult::Parsed(pn) => {
+                let anchor = pn
+                    .anchor()
+                    .and_then(|a| a.canonical_name_without_authorship())
+                    .unwrap_or_default();
+                let round_tripped =
+                    format!("{anchor} {}", pn.phrase.as_deref().unwrap_or_default());
                 assert_eq!(round_tripped, input, "round-trip mismatch for {input:?}");
             }
-            other => panic!("expected `{input}` to be Informal, got {other:?}"),
+            other => panic!("expected `{input}` to parse, got {other:?}"),
         }
     }
 }
@@ -658,7 +660,7 @@ fn molecular_provisional_species_keep_the_whole_biological_annotation_tail() {
         .nothing_else();
 }
 
-// ---- Boundary: a species epithet is present → must STAY Parsed, NOT Informal ------------------
+// ---- A species epithet is present: kept, with its authorship --------------------------------
 
 #[test]
 fn cf_binomial_stays_parsed_with_its_qualifier() {
@@ -739,8 +741,8 @@ fn a_different_genus_after_cf_is_not_skipped() {
 
 #[test]
 fn aff_binomial_with_authorship_stays_parsed() {
-    // aff. on a complete binomial WITH authorship — the clearest reason it must stay Parsed: a flat
-    // Informal anchor could not represent the species-level authorship.
+    // aff. on a complete binomial WITH authorship — the clearest reason it stayed Parsed in 5.x: the
+    // flat Informal result could not represent the species-level authorship.
     assert_name("Turritella aff. adulterata Deshayes 1820-1851")
         .species("Turritella", "adulterata")
         .comb_authors(Some("1820"), &["Deshayes"])
@@ -781,7 +783,7 @@ fn near_binomial_stays_parsed_with_its_qualifier() {
 
 #[test]
 fn infraspecific_indeterminate_stays_parsed() {
-    // "Salix alba subsp. B" has a species epithet ("alba"), so it stays Parsed — a flat Informal
+    // "Salix alba subsp. B" has a species epithet ("alba"), so it keeps it — the 5.x flat Informal result
     // could not hold an infraspecific-level designation hanging off a determined species.
     assert_name("Salix alba subsp. B")
         .infra_species("Salix", "alba", Rank::Subspecies, "B")
@@ -823,12 +825,12 @@ fn bare_determined_genus_stays_parsed_scientific() {
         .nothing_else();
 }
 
-// ---- Monomial-aggregate / lineage groupings: anchored → Informal, anchorless → OTHER -----------
+// ---- Monomial-aggregate / lineage groupings: anchored → informal, anchorless → OTHER -----------
 
 #[test]
 fn monomial_aggregate_groups_are_rescued_to_informal() {
     // 5.0.0 rescue (see pipeline::preflight): an anchored monomial-aggregate (group/complex) or a
-    // clean-genus "-lineage" becomes an Informal — the monomial is the anchor, the marker the phrase.
+    // clean-genus "-lineage" becomes an informal name — the monomial is the anchor, the marker the phrase.
     assert_informal("Bartonella group")
         .taxon("Bartonella")
         .taxon_rank(Rank::Genus)

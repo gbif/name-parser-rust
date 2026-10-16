@@ -440,7 +440,7 @@ static CLADE_KEYWORD: LazyLock<Regex> =
 // Monomial aggregate forms: "Iteaphila-group" / "Bartonella group" / "Foo-complex" — a single
 // Title-case uninomial + an aggregate marker. Since the stem is regex-constrained to a Title-case
 // all-letter word it is ALWAYS a clean genus-shaped anchor, so 5.0.0 RESCUES these into an
-// `Informal` (anchor = the monomial, phrase = the marker) rather than erroring. Captures: group 1 =
+// informal name (anchor = the monomial, phrase = the marker) rather than erroring. Captures: group 1 =
 // the stem, group 2 = the marker word. (Match set is unchanged from the Java port; capture groups
 // added for stem/marker extraction.) Java origin: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 static MONOMIAL_AGGREGATE: LazyLock<Regex> =
@@ -449,7 +449,7 @@ static MONOMIAL_AGGREGATE: LazyLock<Regex> =
 // "-lineage" / " lineage" labels ("Vermistella-lineage", "NC12A-lineage", "he2-lineage"): informal
 // phylogenetic lineage names. The stem accepts any letter case and embedded digits, so it may be a
 // clean genus ("Vermistella") OR an OTU-/strain-like code ("NC12A", "he2"). 5.0.0 rescues only the
-// clean-genus stems into an `Informal` (see `is_clean_genus_stem`); code-shaped stems have no real
+// clean-genus stems into an informal name (see `is_clean_genus_stem`); code-shaped stems have no real
 // anchor and stay Unparsable(OTHER). Captures: group 1 = the stem, group 2 = "lineage". Java origin:
 // `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 static LINEAGE_LABEL: LazyLock<Regex> =
@@ -642,14 +642,14 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
 
     // Monomial-aggregate forms ("Iteaphila-group", "Bartonella group", "Foo-complex"): a single
     // Title-case uninomial + an aggregate marker. The stem is always a clean genus-shaped anchor, so
-    // 5.0.0 RESCUES this into an `Informal` (anchor = the monomial, phrase = the marker) rather than
+    // 5.0.0 RESCUES this into an informal name (anchor = the monomial, phrase = the marker) rather than
     // erroring. (Was `Err(INFORMAL)` in 4.2.0.)
     if let Some(caps) = MONOMIAL_AGGREGATE.captures(&s) {
         rescue_informal_group(ctx, &caps[1], &caps[2]);
         return Ok(());
     }
 
-    // "-lineage" / " lineage" labels. RESCUE to `Informal` only when the stem is a clean genus
+    // "-lineage" / " lineage" labels. RESCUE to an informal name only when the stem is a clean genus
     // ("Vermistella-lineage"); an OTU-/strain-like code stem ("NC12A-lineage", "he2-lineage") has no
     // real anchor and stays Unparsable(OTHER). (Was `Err(INFORMAL)` for both in 4.2.0.)
     if let Some(caps) = LINEAGE_LABEL.captures(&s) {
@@ -660,7 +660,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         return Err(ParseError::new(NameType::Other, None, original));
     }
 
-    // Trace-fossil / ichnotaxon labels. RESCUE to `Informal` when a clean anchor precedes the marker
+    // Trace-fossil / ichnotaxon labels. RESCUE to an informal name when a clean anchor precedes the marker
     // ("Trilobita-trace fossils"); an anchorless label ("Trace fossils") or one the anchored form
     // can't take apart ("Trace-fossils attributed to") is Unparsable(OTHER).
     if let Some(caps) = TRACE_FOSSIL_LABEL.captures(&s) {
@@ -758,11 +758,11 @@ fn is_clean_genus_stem(stem: &str) -> bool {
     stem.chars().next().is_some_and(char::is_uppercase) && stem.chars().all(char::is_alphabetic)
 }
 
-/// Build a complete supraspecific `Informal`-shaped `ParsedName` for a rescued monomial-aggregate /
+/// Build a complete supraspecific INFORMAL `ParsedName` for a rescued monomial-aggregate /
 /// lineage grouping (5.0.0) and flag the pipeline to short-circuit ([`ParseContext::preflight_complete`]).
-/// The anchor goes in the `genus` slot (so `parse`'s `to_informal` derives `taxon_rank = GENUS`),
-/// `rank` is `UNRANKED` (the grouping carries no Linnean rank of its own), and the aggregate word
-/// becomes the `phrase`; `type = INFORMAL` routes it to `ParseResult::Informal`.
+/// The anchor goes in the `genus` slot (so [`ParsedName::anchor`] is that genus), `rank` is
+/// `UNRANKED` (the grouping carries no Linnean rank of its own), and the aggregate word becomes
+/// the `phrase`.
 fn rescue_informal_group(ctx: &mut ParseContext, taxon: &str, marker: &str) {
     ctx.name.genus = Some(taxon.to_string());
     ctx.name.rank = Rank::Unranked;

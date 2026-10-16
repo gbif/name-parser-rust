@@ -204,9 +204,8 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // before tokenising, so an underscored code was amputated before the informal tail-capture
     // could see it: `Streptomyces sp. NBC_00448` came back with a bare "sp." phrase, the code in
     // `unparsed` and state PARTIAL, while the underscore-free `Streptomyces sp. NBC00448` captured
-    // "sp. NBC00448" and parsed COMPLETE. A flat `Informal` carries no `unparsed`, so for that band
-    // the code was dropped outright at the three-way boundary. Fold it back so the phrase is whole
-    // and `taxon + " " + phrase` round-trips.
+    // "sp. NBC00448" and parsed COMPLETE. The code is part of the designation: fold it back so the
+    // phrase is whole and anchor + " " + phrase round-trips.
     //
     // Keyed on the FINAL parse, not on the input's shape: a determined name keeps its epithet, so
     // it stays `Parsed` and `unparsed` survives on the ParsedName — leave those alone. Testing the
@@ -235,9 +234,8 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // numbers wear the identical shape, so "Trachipterus sp. HUMZ:220860" filed 220860 as a
     // publication page and left the phrase truncated to "sp. HUMZ". Spacing does not separate the
     // two — the genuine "Raphitydeus Thor 1933:54" is as tight as "Prevotella sp. CAG:1031" — so
-    // again decide on the outcome: on an indet informal a page reference is meaningless, and a flat
-    // `Informal` carries no `publishedInPage` anyway, so the tail is restored verbatim to the
-    // phrase. A determined name keeps the page, which stays reachable on its `ParsedName`.
+    // again decide on the outcome: on an indet informal a page reference is meaningless, so the
+    // tail is restored verbatim to the phrase. A determined name keeps the page, which stays reachable on its `ParsedName`.
     let restore_page_to_phrase = ctx.page_strip_verbatim.is_some()
         && ctx.name.published_in_page.is_some()
         && ctx.name.type_ == NameType::Informal
@@ -268,14 +266,12 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
 
     // Step 8c: a BOLD BIN or SH code set aside by `stash_trailing_identifier` designates the
-    // name: it ends the phrase (`sp. BOLD:AAF5952`), or is the phrase of a determined name. A
-    // designated `Genus sp.` is no longer missing anything, as `Genus sp. RMCC TR1811` is not.
+    // name: it ends the phrase (`sp. BOLD:AAF5952`), or is the phrase of a determined name.
     if let Some(id) = ctx.trailing_identifier.take() {
         ctx.name.phrase = Some(match ctx.name.phrase.take() {
             Some(p) => format!("{p} {id}"),
             None => id,
         });
-        ctx.name.warnings.retain(|w| w != warnings::INDETERMINED);
         if ctx.name.type_ == NameType::Scientific {
             ctx.name.type_ = NameType::Informal;
         }
@@ -404,6 +400,18 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         } else if let Some(genus) = ctx.name.genus.take() {
             ctx.name.genus = Some(format!("{q}{genus}{q}"));
         }
+    }
+}
+
+/// The INDETERMINED warning flags exactly the names [`ParsedName::is_indetermined`] holds for: the
+/// rank asks for an epithet the name lacks, a phrase standing in for it or not (`Rhizobium sp.`,
+/// `Serratia sp. RE1-2a`, `Grevillea brachystylis subsp. Busselton (…)`). The steps before add
+/// and drop it on the way; this settles it on the finished name.
+pub(crate) fn flag_indetermined(name: &mut ParsedName) {
+    if name.type_.is_parsable() && name.is_indetermined() {
+        name.add_warning(warnings::INDETERMINED);
+    } else {
+        name.warnings.retain(|w| w != warnings::INDETERMINED);
     }
 }
 

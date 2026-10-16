@@ -76,6 +76,7 @@ fn a_placeholder_does_not_join_a_provisional_phrase() {
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
         .phrase("sp.")
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
         .nothing_else();
 }
 

@@ -7,7 +7,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NamePart, NameType, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank};
 
 // ---- still-correct cases pinned so the fixes below can't regress them -------------------------
 
@@ -155,8 +155,11 @@ fn underscore_designation_canonical_has_no_synthetic_sp_marker() {
         ),
     ] {
         match nameparser::parse(input, None, None, None) {
-            nameparser::ParseResult::Informal(i) => assert_eq!(i.canonical_name(), canonical),
-            other => panic!("expected `{input}` to be Informal, got {other:?}"),
+            nameparser::ParseResult::Parsed(pn) => assert_eq!(
+                pn.canonical_name_without_authorship().as_deref(),
+                Some(canonical)
+            ),
+            other => panic!("expected `{input}` to parse, got {other:?}"),
         }
     }
 }
@@ -400,7 +403,7 @@ fn parenthesised_sensu_is_a_taxonomic_note() {
 
 #[test]
 fn parenthesised_sensu_of_a_provisional_name_stays_in_the_phrase() {
-    // the flat Informal result has no note slot — the citation must not be dropped
+    // the citation tells whose designation this is — it must not be dropped
     assert_informal("Coprosma species a (sensu Eagle)")
         .taxon("Coprosma")
         .rank(Rank::Species)
@@ -499,16 +502,18 @@ fn leading_question_mark_doubts_the_genus() {
 
 #[test]
 fn leading_question_mark_before_an_indet_marker_keeps_the_genus() {
-    assert_informal_hinted(
+    assert_name_hinted(
         "?Archaeopharetra sp.",
         Some("of Zhuravlev & Gravestock 1994"),
         Some(Rank::Species),
         None,
     )
-    .taxon("Archaeopharetra")
-    .rank(Rank::Species)
+    .genus_rank("Archaeopharetra", Rank::Species)
+    .qualifiers(&[(NamePart::Generic, "?")])
     .phrase("sp. of Zhuravlev & Gravestock 1994")
-    .taxon_rank(Rank::Genus)
+    .type_(NameType::Informal)
+    .doubtful()
+    .warning(&[warnings::QUESTION_MARKS_REMOVED])
     .nothing_else();
 }
 
@@ -566,11 +571,12 @@ fn leading_cf_aff_qualifies_the_genus() {
 
 #[test]
 fn leading_cf_before_an_indet_marker_keeps_the_genus() {
-    assert_informal("cf. Stichococcus sp. FontaineG1")
-        .taxon("Stichococcus")
-        .rank(Rank::Species)
+    // the qualified genus leaves no anchor
+    assert_name("cf. Stichococcus sp. FontaineG1")
+        .genus_rank("Stichococcus", Rank::Species)
+        .qualifiers(&[(NamePart::Generic, "cf.")])
         .phrase("sp. FontaineG1")
-        .taxon_rank(Rank::Genus)
+        .type_(NameType::Informal)
         .nothing_else();
 }
 

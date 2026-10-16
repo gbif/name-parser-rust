@@ -160,7 +160,7 @@ Sorex cf. S. shinto
 Ammonia ex gr. beccarii
 
 ## Provisional and informal names
-> A taxon carrying a provisional designation but no epithet of its own is an `Informal` result: the anchor taxon, the rank the designation stands for and the designation itself, verbatim, as the `phrase`.
+> A taxon carrying a provisional designation is an informal name: its anchor is the taxon it hangs off, the rank says what the designation stands for, and the designation itself is kept verbatim as the `phrase`.
 Abies sp.
 Bacillus sp. 1
 Rhizobium sp. RMCC TR1811

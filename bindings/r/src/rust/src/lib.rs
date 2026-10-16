@@ -11,7 +11,7 @@
 // `nameparser` — `error[E0464]: multiple candidates for `rlib` dependency `nameparser` found`,
 // which (verified) a leading `::` does not fix, unlike lib.rs's own same-name ambiguity.
 use extendr_api::prelude::*;
-use ::nameparser_core::model::{NomCode, ParsedName, Rank};
+use ::nameparser_core::model::{NameType, NomCode, ParsedName, Rank};
 
 /// Render any serde-serializable core value (enums are serde-only, no Display/.name())
 /// to its SCREAMING_SNAKE_CASE string; `None`/non-string -> `None` (=> R `NA`).
@@ -22,15 +22,15 @@ fn enum_name<T: serde::Serialize>(v: &T) -> Option<String> {
 /// One column-builder closure per output column keeps the parallel Vec<Option<_>>s in lockstep.
 struct Cols {
     scientific_name: Vec<Option<String>>,
-    /// The 5.0.0 three-way outcome: `"parsed"` | `"informal"` | `"unparsable"`. The authoritative
-    /// discriminator (`parsed` below is kept as a convenience boolean, TRUE only for `"parsed"`).
+    /// The outcome: `"parsed"` | `"unparsable"` (`parsed` below is the same as a boolean).
     result: Vec<Option<String>>,
     parsed: Vec<Option<bool>>,
     error: Vec<Option<String>>,
     r#type: Vec<Option<String>>,
-    /// Informal-only: the supraspecific taxon anchor + its rank (NA for parsed/unparsable rows).
-    taxon: Vec<Option<String>>,
-    taxon_rank: Vec<Option<String>>,
+    /// INFORMAL names only: the taxon the name hangs off (`ParsedName::anchor`, without
+    /// authorship) and its rank; NA otherwise.
+    anchor: Vec<Option<String>>,
+    anchor_rank: Vec<Option<String>>,
     rank: Vec<Option<String>>,
     code: Vec<Option<String>>,
     uninomial: Vec<Option<String>>,
@@ -92,7 +92,7 @@ impl Cols {
         macro_rules! v { () => { Vec::with_capacity(n) }; }
         Cols {
             scientific_name: v!(), result: v!(), parsed: v!(), error: v!(), r#type: v!(),
-            taxon: v!(), taxon_rank: v!(), rank: v!(),
+            anchor: v!(), anchor_rank: v!(), rank: v!(),
             code: v!(), uninomial: v!(), genus: v!(), infrageneric_epithet: v!(),
             specific_epithet: v!(), infraspecific_epithet: v!(), cultivar_epithet: v!(),
             phrase: v!(), candidatus: v!(), notho: v!(), original_spelling: v!(),
@@ -116,8 +116,15 @@ impl Cols {
         self.parsed.push(Some(true));
         self.error.push(None);
         self.r#type.push(enum_name(&pn.type_));
-        self.taxon.push(None);
-        self.taxon_rank.push(None);
+        let anchor = (pn.type_ == NameType::Informal)
+            .then(|| pn.anchor())
+            .flatten();
+        self.anchor.push(
+            anchor
+                .as_ref()
+                .and_then(ParsedName::canonical_name_without_authorship),
+        );
+        self.anchor_rank.push(anchor.as_ref().and_then(|a| enum_name(&a.rank)));
         self.rank.push(enum_name(&pn.rank));
         self.code.push(enum_name(&pn.code));
         self.uninomial.push(pn.uninomial.clone());
@@ -182,7 +189,7 @@ impl Cols {
         self.r#type.push(enum_name(&e.type_));
         // no ParsedName exists on error -> every parsed atom/flag is NA
         for col in [
-            &mut self.taxon, &mut self.taxon_rank,
+            &mut self.anchor, &mut self.anchor_rank,
             &mut self.rank, &mut self.code, &mut self.uninomial, &mut self.genus,
             &mut self.infrageneric_epithet, &mut self.specific_epithet,
             &mut self.infraspecific_epithet, &mut self.cultivar_epithet, &mut self.phrase,
@@ -202,57 +209,6 @@ impl Cols {
             col.push(None);
         }
         self.candidatus.push(None);
-        self.original_spelling.push(None);
-        self.extinct.push(None);
-        self.published_in_year.push(None);
-        self.doubtful.push(None);
-        self.manuscript.push(None);
-        self.combination_bracketed_year.push(None);
-        self.basionym_bracketed_year.push(None);
-        self.combination_anonymous.push(None);
-        self.basionym_anonymous.push(None);
-    }
-
-    /// 5.0.0 informal / semistructured row: the flat anchor (`taxon`/`taxonRank`) + `rank`/`phrase`/
-    /// `code`/`candidatus` are populated; every ParsedName-specific atom (genus/epithets/authorship/state/
-    /// canonical renderings) is NA — the whole point of `Informal` is that the anchor lives in ONE
-    /// place, never a mislabelled `genus`. `parsed` is FALSE (no ParsedName); `result` is
-    /// `"informal"`. Deliberate mirror of the core's `to_informal` (crates/nameparser/src/lib.rs).
-    fn push_informal(&mut self, input: &str, inf: &::nameparser_core::model::Informal) {
-        self.scientific_name.push(Some(input.to_owned()));
-        self.result.push(Some("informal".to_owned()));
-        self.parsed.push(Some(false));
-        self.error.push(None);
-        self.r#type.push(Some("INFORMAL".to_owned()));
-        self.taxon.push(Some(inf.taxon.clone()));
-        self.taxon_rank.push(enum_name(&inf.taxon_rank));
-        self.rank.push(enum_name(&inf.rank));
-        self.code.push(enum_name(&inf.code));
-        self.phrase.push(inf.phrase.clone());
-        // the round-trip canonical name — the single canonical form an informal name has, so the
-        // `canonical` column is populated for informal rows too (not just parsed ones)
-        self.canonical.push(Some(inf.canonical_name()));
-        // every remaining ParsedName-specific column is NA for an informal result (the
-        // authorship-/rank-variant canonical_* renderings have no informal equivalent)
-        for col in [
-            &mut self.uninomial, &mut self.genus, &mut self.infrageneric_epithet,
-            &mut self.specific_epithet, &mut self.infraspecific_epithet,
-            &mut self.cultivar_epithet, &mut self.notho, &mut self.epithet_qualifier,
-            &mut self.taxonomic_note, &mut self.nomenclatural_note, &mut self.published_in,
-            &mut self.published_in_page, &mut self.unparsed, &mut self.state,
-            &mut self.combination_authors, &mut self.combination_ex_authors,
-            &mut self.combination_in_authors,
-            &mut self.combination_year, &mut self.basionym_authors,
-            &mut self.basionym_ex_authors, &mut self.basionym_in_authors, &mut self.basionym_year,
-            &mut self.combination_sanctioning_author,
-            &mut self.basionym_sanctioning_author, &mut self.warnings,
-            &mut self.canonical_without_authorship,
-            &mut self.canonical_minimal, &mut self.canonical_complete,
-            &mut self.authorship_complete,
-        ] {
-            col.push(None);
-        }
-        self.candidatus.push(Some(inf.candidatus));
         self.original_spelling.push(None);
         self.extinct.push(None);
         self.published_in_year.push(None);
@@ -288,17 +244,16 @@ fn parse_names_impl(
     let auth = hint(&authorship);
     let mut c = Cols::with_capacity(scientificname.len());
     for name in &scientificname {
-        // 5.0.0 three-way (parse), NOT raw parse(): a supraspecific-provisional name becomes
-        // an `informal` row, and an informal-but-unrepresentable error is type-clamped to OTHER.
+        // parse, NOT raw parse_name(): a placeholder without its genus is unparsable, and an
+        // informal-but-unrepresentable error is type-clamped to OTHER.
         match ::nameparser_core::parse(name, auth, rank, code) {
             ::nameparser_core::ParseResult::Parsed(pn) => c.push_ok(name, &pn),
-            ::nameparser_core::ParseResult::Informal(inf) => c.push_informal(name, &inf),
             ::nameparser_core::ParseResult::Unparsable(e) => c.push_err(name, &e),
         }
     }
     List::from_names_and_values(
         [
-            "scientificName", "result", "parsed", "error", "type", "taxon", "taxonRank",
+            "scientificName", "result", "parsed", "error", "type", "anchor", "anchorRank",
             "rank", "code", "uninomial",
             "genus", "infragenericEpithet", "specificEpithet", "infraspecificEpithet",
             "cultivarEpithet", "phrase", "candidatus", "notho", "originalSpelling",
@@ -313,7 +268,7 @@ fn parse_names_impl(
         ],
         [
             r!(c.scientific_name), r!(c.result), r!(c.parsed), r!(c.error), r!(c.r#type),
-            r!(c.taxon), r!(c.taxon_rank), r!(c.rank),
+            r!(c.anchor), r!(c.anchor_rank), r!(c.rank),
             r!(c.code), r!(c.uninomial), r!(c.genus), r!(c.infrageneric_epithet),
             r!(c.specific_epithet), r!(c.infraspecific_epithet), r!(c.cultivar_epithet),
             r!(c.phrase), r!(c.candidatus), r!(c.notho), r!(c.original_spelling),

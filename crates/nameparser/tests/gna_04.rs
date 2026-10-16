@@ -457,7 +457,7 @@ fn open_nomenclature_approximate_names() {
         .phrase("sp. GM-, 2003")
         .nothing_else();
     assert_informal("X Aegilotrichum sp.")
-        .taxon("Aegilotrichum")
+        .taxon("× Aegilotrichum")
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
         .phrase("sp.")
@@ -468,6 +468,7 @@ fn open_nomenclature_approximate_names() {
         .taxon_rank(Rank::Genus)
         .rank(Rank::Species)
         .phrase("sp.2")
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
         .nothing_else();
     assert_informal("Lacanobia sp. nr. subjuncta Bold:Aab, 0925")
         .taxon("Lacanobia")

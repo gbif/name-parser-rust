@@ -179,6 +179,19 @@ class ParsedName:
     def authorship_complete(self) -> str | None:
         """The full concatenated authorship incl. the sanctioning author, or None."""
         ...
+
+    # ---- informal names ----
+    def anchor(self) -> ParsedName | None:
+        """The determined part of this name as a `ParsedName` of its own — the real taxon an
+        informal name hangs off: the genus `Rhizobium` of `Rhizobium sp. RMCC TR1811`, the species
+        `Grevillea brachystylis` of `Grevillea brachystylis subsp. Busselton (…)`, the genus `Abies`
+        of `Abies cf. alba`. A complete scientific name is its own anchor. `None` when no part of
+        the name is determined."""
+        ...
+    def is_indetermined(self) -> bool:
+        """Whether the name lacks an epithet its rank requires; a phrase does not stand in for it
+        (`Rhizobium sp.` and `Serratia sp. RE1-2a` are both indetermined species)."""
+        ...
     def __str__(self) -> str: ...
 
     # ---- escape hatch + repr ----
@@ -188,58 +201,6 @@ class ParsedName:
         `combinationAuthorship`, `specificEpithet`) — every field this class's properties
         expose, plus the canonical escape hatch if a future core field lags behind this
         stub/the compiled getters."""
-        ...
-    def __repr__(self) -> str: ...
-
-class Informal:
-    """An informal / semistructured name — the 5.0.0 three-way `parse()` result for a real
-    supraspecific taxon carrying a provisional, non-code designation instead of a determined
-    species epithet: a molecular provisional species (`Rhizobium sp. RMCC TR1811`), a numbered
-    placeholder (`Allium sp. 1`), or an informal group (`Bartonella group`). Distinct from
-    `ParsedName` — it carries no structured name; the anchor lives in `taxon`, never a mislabelled
-    `genus` — so `isinstance(result, Informal)` tells the two apart. Mirrors the core `Informal` /
-    Java `ParseResult.Informal`.
-    """
-
-    @property
-    def taxon(self) -> str:
-        """The supraspecific taxon it hangs off (`"Rhizobium"`, `"Ichneumonidae"`) — the parser's
-        best guess, NOT validated against a taxonomic backbone."""
-        ...
-    @property
-    def taxon_rank(self) -> str:
-        """That taxon's rank as a wire name, usually `"GENUS"` (the anchor sits in the genus slot)."""
-        ...
-    @property
-    def rank(self) -> str:
-        """The rank the informal name purports to be — `"SPECIES"` for `"sp."`, `"UNRANKED"` for a group."""
-        ...
-    @property
-    def phrase(self) -> str | None:
-        """The verbatim tail, from the rank marker to the end of the input (`"sp. RMCC TR1811"`,
-        `"sp. 1"`). Captured whole and never interpreted, so it may contain what looks like an
-        author citation (`"sp. Forster, 1968"`). `taxon + " " + phrase` reproduces the input."""
-        ...
-    @property
-    def code(self) -> str | None:
-        """The `NomCode` wire name when known, else `None`."""
-        ...
-    @property
-    def candidatus(self) -> bool:
-        """Whether the name has Candidatus status (`Candidatus Pelagibacter sp. HTCC7211`); the
-        word itself is in neither `taxon` nor `phrase`."""
-        ...
-
-    def canonical_name(self) -> str:
-        """The canonical string form, e.g. `"Rhizobium sp. RMCC TR1811"`, `"Bartonella group"` —
-        parallels `ParsedName.canonical_name` so either result variant renders with the same
-        method. Always a string (never `None`)."""
-        ...
-    def __str__(self) -> str: ...
-
-    def to_dict(self) -> dict[str, Any]:
-        """The complete `Informal` structure straight from the core's `serde::Serialize` impl, keyed
-        by its wire name (`taxon`, `taxonRank`, `rank`, `phrase`, `code`, `candidatus`)."""
         ...
     def __repr__(self) -> str: ...
 
@@ -267,15 +228,15 @@ def parse(
     authorship: str | None = ...,
     rank: str | None = ...,
     code: str | None = ...,
-) -> ParsedName | Informal:
+) -> ParsedName:
     """Parses one scientific name (optionally with a separately-supplied authorship string,
     and/or a rank/nomenclatural-code hint). `rank`/`code`, when given, are the same
     SCREAMING_SNAKE_CASE wire names `ParsedName.rank`/`.code` return (e.g. `"SPECIES"`,
     `"ZOOLOGICAL"`); an unrecognized hint string is treated as absent, not an error.
 
-    Returns a `ParsedName` for a structurally parsed name, or an `Informal` for a semistructured
-    one (`isinstance(result, Informal)` distinguishes them). Raises `UnparsableNameError` if
-    `name` is not a name at all (a virus, hybrid formula, placeholder, …).
+    Returns a `ParsedName`, informal names included (their `type` is `"INFORMAL"`, the taxon they
+    hang off their `anchor()`). Raises `UnparsableNameError` if `name` is not a name at all (a
+    virus, hybrid formula, placeholder, …).
     """
     ...
 
@@ -284,11 +245,11 @@ def parse_all(
     authorship: str | None = ...,
     rank: str | None = ...,
     code: str | None = ...,
-) -> list[ParsedName | Informal | None]:
+) -> list[ParsedName | None]:
     """Parses a batch of names in one call; `authorship`/`rank`/`code` are the same optional
     hints `parse()` takes, applied uniformly to every name in `names`.
 
-    Never raises mid-batch: each result element is a `ParsedName` or an `Informal` on success, or
+    Never raises mid-batch: each result element is a `ParsedName` on success, or
     `None` (NOT a raised `UnparsableNameError`) for any name the core cannot parse. Call `parse()`
     on a specific name individually to get its `UnparsableNameError` (with `.name_type`/`.code`).
     """

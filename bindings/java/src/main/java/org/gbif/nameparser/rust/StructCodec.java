@@ -241,62 +241,17 @@ final class StructCodec {
     return new String(bytes, StandardCharsets.UTF_8);
   }
 
-  // ================================================================================================
-  // 5.0.0 three-way split — applied to a decoded ParsedName. A DELIBERATE, minimal mirror of the
-  // Rust core's `is_informal` + `to_informal` (crates/nameparser/src/lib.rs): both are pure
-  // functions of the ParsedName fields the wire already carries (type, specificEpithet, genus,
-  // uninomial, infragenericEpithet, rank, phrase, code), so no dedicated wire payload is needed for
-  // `Informal`. KEEP IN SYNC with lib.rs; NameParserRustSmokeTest locks the outputs against the
-  // Rust-authoritative values, from the corpus study that drove them.
-  // ================================================================================================
-
   /**
-   * Splits a successfully decoded {@link ParsedName} into the 5.0.0 {@link ParseResult}: an
-   * {@link ParseResult.Informal} for a supraspecific taxon carrying a provisional designation with
-   * no species epithet, else a {@link ParseResult.Parsed}. A name with a species epithet (incl.
-   * cf./aff. and infraspecific-indeterminate binomials) stays {@code Parsed} so its
-   * {@code specificAuthorship} — unrepresentable by a flat anchor — is preserved. A name whose type
-   * is not parsable (a placeholder with its genus missing, "? alba Smith") is an
-   * {@link ParseResult.Unparsable} echoing {@code name}, as in Rust's {@code parse}.
+   * Turns a successfully decoded {@link ParsedName} into a {@link ParseResult}: a
+   * {@link ParseResult.Parsed}, informal names included, or — for a name whose type is not parsable
+   * (a placeholder with its genus missing, "? alba Smith") — an {@link ParseResult.Unparsable}
+   * echoing {@code name}, as in Rust's {@code parse}.
    */
   static ParseResult toParseResult(ParsedName pn, String name) {
     if (!pn.getType().isParsable()) {
       return new ParseResult.Unparsable(pn.getType(), pn.getCode(), name);
     }
-    if (isInformal(pn)) {
-      String taxon;
-      Rank taxonRank;
-      if (pn.getGenus() != null) {
-        // the overwhelming "Genus sp. <tag>" majority — anchor sits in the genus slot
-        taxon = pn.getGenus();
-        taxonRank = Rank.GENUS;
-      } else if (pn.getUninomial() != null) {
-        taxon = pn.getUninomial();
-        taxonRank = pn.getRank();
-      } else {
-        taxon = pn.getInfragenericEpithet();
-        taxonRank = pn.getRank();
-      }
-      return new ParseResult.Informal(taxon, taxonRank, pn.getRank(), pn.getPhrase(), pn.getCode(),
-          pn.isCandidatus());
-    }
     return new ParseResult.Parsed(pn);
-  }
-
-  /**
-   * The informal discriminator — mirror of Rust {@code lib.rs::is_informal}: an INFORMAL-typed name
-   * with a real supraspecific anchor but no species epithet. Keying on the specific epithet routes
-   * cf./aff. and infraspecific-indeterminate binomials to {@code Parsed} automatically; an
-   * infraspecific epithet under a bare genus ("Navicula var. fasciata Grunow") stays {@code Parsed}
-   * too, as the anchor has no slot for it.
-   */
-  private static boolean isInformal(ParsedName pn) {
-    return pn.getType() == NameType.INFORMAL
-        && pn.getSpecificEpithet() == null
-        && pn.getInfraspecificEpithet() == null
-        && (pn.getGenus() != null
-            || pn.getUninomial() != null
-            || pn.getInfragenericEpithet() != null);
   }
 
   // ================================================================================================

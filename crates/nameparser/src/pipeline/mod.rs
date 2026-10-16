@@ -172,9 +172,10 @@ pub fn run(
     preflight::run(name, &mut ctx)?;
 
     // 5.0.0: Preflight may RESCUE an anchored informal grouping ("Bartonella group",
-    // "Vermistella-lineage") into a complete Informal-shaped ParsedName instead of erroring — return
-    // it as-is, skipping the tokenizer/classifier/assembler (there is nothing left to parse).
+    // "Vermistella-lineage") into a complete INFORMAL ParsedName instead of erroring — return it
+    // as-is, skipping the tokenizer/classifier/assembler (there is nothing left to parse).
     if ctx.preflight_complete {
+        assemble::flag_indetermined(&mut ctx.name);
         return Ok(ctx.name);
     }
 
@@ -214,8 +215,8 @@ pub fn run(
     }
     // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a binomial open
     // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`.
-    // A bare qualified uninomial (`?Monotremata`) keeps its type: as INFORMAL it would become a flat
-    // Informal result, which has no slot for the qualifier or the doubtful flag.
+    // A bare qualified uninomial (`?Monotremata`) keeps its type, as in 5.x, where an INFORMAL one
+    // would have lost the qualifier and the doubtful flag to the flat Informal result.
     if ctx.qualified_genus && ctx.name.specific_epithet.is_some() {
         ctx.name.type_ = NameType::Informal;
     }
@@ -514,6 +515,7 @@ pub fn run(
         }
     }
     restore_lost_letters(&mut ctx);
+    assemble::flag_indetermined(&mut ctx.name);
 
     Ok(ctx.name)
 }

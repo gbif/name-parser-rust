@@ -8,8 +8,8 @@ open.
 Related, already shipped:
 - **`NameType.IDENTIFIER`** — [design spec](nametype-identifier-design.md).
 - The curated culture-collection acronym list — `crates/nameparser/resources/culture-collections.txt`.
-- The 5.0.0 `Informal` result + its verbatim-phrase contract (the tail after `sp.`/`spec.`/… is kept
-  as the `phrase`).
+- Informal names and their verbatim phrase (the tail after `sp.`/`spec.`/… is kept as the
+  `phrase`); `ParsedName.anchor()` is the taxon such a name hangs off.
 
 **Status legend:** ✅ shipped · 🔶 partial · ⬜ open (backlog).
 
@@ -27,7 +27,7 @@ Bacillus sp. strain DSM 12345
 Bacillus sp. voucher Smith-42
 ```
 
-`Genus sp. <tail>` parses as **`Informal`** with the whole tail as the `phrase` ✅. On a *complete
+`Genus sp. <tail>` parses as an **INFORMAL** name with the whole tail as the `phrase` ✅. On a *complete
 binomial* only a trailing culture-collection accession is captured so far (category 10 note); the
 general keyword-driven capture (`clone`/`isolate`/`voucher` after a determined binomial) is ⬜.
 Provenance keywords: `clone`, `isolate`, `strain`, `culture`, `voucher`, `specimen`, `sample`.
@@ -42,7 +42,7 @@ Persea americana phytoplasma
 Potato phytoplasma
 ```
 
-`Genus sp. phytoplasma` → `Informal`, phrase `sp. phytoplasma` ✅. A bare `Genus phytoplasma` or a
+`Genus sp. phytoplasma` → INFORMAL, phrase `sp. phytoplasma` ✅. A bare `Genus phytoplasma` or a
 complete binomial + annotation (`Persea americana phytoplasma`) still parses as a plain scientific
 tri/binomial ⬜ — capturing the annotation needs the keyword thread (pinned as a boundary test).
 
@@ -128,27 +128,28 @@ Bacterium sp.   Bacterium sp. A   Bacterium sp. 17   Bacterium sp. B12   Bacteri
 Fungus sp.      Alga sp.          Diatom sp.
 ```
 
-`Genus sp. <tail>` → `Informal`, tail kept as the `phrase`; a bare `Genus sp.` keeps the verbatim
-marker (`sp.`) as its phrase and stays flagged indeterminate.
+`Genus sp. <tail>` → INFORMAL, tail kept as the `phrase`; a bare `Genus sp.` keeps the verbatim
+marker (`sp.`) as its phrase. Both are flagged indetermined: the phrase does not stand in for the
+missing epithet.
 
 The tail runs to the **end of the input, authorship included** — `Cantuaria sp. Forster, 1968` →
 phrase `sp. Forster, 1968`, with no `combinationAuthorship` and no inferred `code`. An informal
-name is not fully parsable by definition, so nothing in the tail is interpreted and `taxon` + `" "`
-+ `phrase` round-trips the input exactly. Until 5.0.0 a year-bearing tail was exempted and routed
+name is not fully parsable by definition, so nothing in the tail is interpreted and the anchor +
+`" "` + `phrase` round-trips the input exactly. Until 5.0.0 a year-bearing tail was exempted and routed
 to the authorship instead; over this corpus that produced a spurious authorship 43% of the time
 (impossible years like `1002`/`2483`/`2951`, "authors" carrying digits or slashes, and collection
 acronyms such as `ZRC`/`MNHN` that parse as clean surnames) and truncated the tag it declined to
 capture — `Rhodococcus sp. 14-2483-1-2` kept only `sp. 14` and invented the year 2483. On the
 genuinely authored minority the citation belongs to the anchor taxon, not to the undetermined
-species, so a caller who wants it resolves `taxon`. The `cf.`/`aff.` and dot-less-`spec` carve-outs
+species, so a caller who wants it resolves the anchor. The `cf.`/`aff.` and dot-less-`spec` carve-outs
 are unaffected: `Hemicloeina spec Platnick, 2002` still parses as a determined binomial.
 
 Two StripAndStash steps run *before* tokenising and used to amputate part of that tail, so Assemble
 puts it back when — and only when — the finished parse is an indet informal. `stashTrailingOtuCode`
 took an underscored code into `unparsed` (`Streptomyces sp. NBC_00448` → phrase `sp.`, PARTIAL),
 and `stripPublishedPage` read a catalogue number's `:<digits>` as a page (`Trachipterus sp.
-HUMZ:220860` → phrase `sp. HUMZ`, `publishedInPage=220860`). Neither field exists on a flat
-`Informal`, so both were lost outright at the three-way boundary. Both decisions key on the parse
+HUMZ:220860` → phrase `sp. HUMZ`, `publishedInPage=220860`). Both are part of the designation,
+and the 5.x flat `Informal` result, which had neither field, lost them outright. Both decisions key on the parse
 OUTCOME rather than the input's shape, because the shapes are genuinely ambiguous — the real page
 citation `Raphitydeus Thor 1933:54` is written exactly as tightly as `Prevotella sp. CAG:1031`, and
 `Braconidae gen. n. sp. JS10_00530` ends in `sp.` yet never parses as an indet at all. A DETERMINED
@@ -213,7 +214,7 @@ enum OtherType { IDENTIFIER, ACCESSION, NUMERIC, ABBREVIATION, TEXT, UNKNOWN }
 ## Keyword lists (for the open keyword-capture thread — ⬜)
 
 Words that signal "everything after here is no longer nomenclature." The provenance group already
-drives `Informal` phrases; the others are backlog.
+drives informal phrases; the others are backlog.
 
 - **Specimen provenance:** strain · isolate · clone · culture · culture collection · sample ·
   voucher · specimen · material · accession
@@ -318,7 +319,7 @@ else already reads them correctly:
 
 A rank marker in the epithet slot is not an epithet, so the whole `<marker> <code>` tail is the
 designation: it becomes the verbatim `phrase` (type `INFORMAL`), the rank comes from the marker,
-and the taxon reduces to the bare genus, so `taxon + " " + phrase` round-trips.
+and the name reduces to the bare genus, so anchor + `" "` + phrase round-trips.
 
 | input | Java / ≤ 0.2.0 | now |
 |---|---|---|

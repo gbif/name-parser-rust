@@ -59,12 +59,8 @@ printf 'Abies    alba   Mill.\nBetula pendula ROTH\nxAgropogon littoralis\nsh195
 
 Add `--no-authorship` to drop the author from the field (`Abies alba` instead of `Abies alba Mill.`).
 
-### `--three-way` — the 5.0.0 informal result
-
-Splits semistructured names out into their own `informal` object (a flat `taxon` + `rank` +
-`phrase`, plus a `canonical` rendering) instead of folding them into a `parsed` row with
-`type=INFORMAL`. The default, flag-less `parse` output is the language bindings' parity oracle and
-is deliberately left untouched by both `--three-way` and `--canonical`.
+The default, flag-less `parse` output is the language bindings' parity oracle and is deliberately
+left untouched by `--canonical`. Informal names come out as `parsed` rows with `type=INFORMAL`.
 
 ## `benchmark` — throughput
 
@@ -82,7 +78,7 @@ nameparser-cli parse --input=b.txt --output=b.jsonl   # same source + line order
 nameparser-cli compare a.jsonl b.jsonl
 ```
 Lockstep, row-by-row diff of two `parse` JSONL files — reports the rows that differ, the status
-transitions (parsed ↔ informal ↔ unparsable), and the top differing fields. `--ignore-whitespace`
+transitions (parsed ↔ unparsable), and the top differing fields. `--ignore-whitespace`
 ignores formatting-only spacing; `--max-diffs <N>` caps the per-row dump (the aggregate counts are
 never capped). Used to cross-validate the Rust parser against the Java oracle at corpus scale.
 
