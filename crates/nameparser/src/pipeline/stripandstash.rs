@@ -3680,7 +3680,7 @@ static AUTHORSHIP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?-u:[\s,]*\s)(?:",
         r"(?i:not(?-u:\s+)(?:applicable|given|known|recorded|found|specified|available|provided|stated))",
-        r"|(?i:author(?-u:\s+)unknown|unknown(?-u:\s+)author)",
+        r"|(?i:author(?:\(s\)|s)?(?-u:\s+)unknown|unknown(?-u:\s+)author)",
         r"|Unknown|UNKNOWN|Missing|MISSING|None|NONE|NA|N/A|Author\??(?:,(?-u:\s*)\[0000\])?",
         r")(?-u:\s*)\.?(?-u:\s*)$",
     ))
@@ -3695,6 +3695,7 @@ static AUTHORSHIP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
 /// warnings=["authorship placeholder removed"]; "Aus bus Not applicable" -> no author,
 /// same warning.
 fn strip_authorship_placeholders(ctx: &mut ParseContext, s: String) -> String {
+    let s = strip_bracketed_placeholder(&s, &mut ctx.name, false);
     match find_placeholder(&s) {
         Some(start) => {
             ctx.name.add_warning(warnings::AUTHORSHIP_REMOVED);
@@ -3711,6 +3712,44 @@ pub(crate) fn without_authorship_placeholder(s: &str) -> &str {
     find_placeholder(s).map_or(s, |start| &s[..start])
 }
 
+/// "unknown" in lower case after the basionym's bracket, "(Z. Wang et al.) unknown" (#153): no
+/// epithet can stand there, unlike after the name ("Spectrobasis unknown").
+static UNKNOWN_AFTER_BRACKET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\)(?-u:[\s,]*)(unknown)(?-u:\s*)\.?(?-u:\s*)$").unwrap());
+
+/// A basionym bracket holding only a placeholder, "(unknown) C. Agardh", "(Unknown)", "(author
+/// unknown)" (#153), before the combination's author or, in a separate authorship, alone.
+static BRACKETED_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?:^|(?-u:\s+))\((?-u:\s*)(?:(?i:unknown|author(?-u:\s+)unknown|unknown(?-u:\s+)author|not(?-u:\s+)known)|Missing|MISSING)(?-u:\s*)\)(?-u:\s*)(\p{Lu}|$)").unwrap()
+});
+
+/// The name string without a [`BRACKETED_PLACEHOLDER`], for Preflight's placeholder-name check:
+/// "Stilophora clathrata (unknown) C. Agardh" is no "unknown" placeholder taxon.
+pub(crate) fn without_bracketed_placeholder(s: &str) -> Cow<'_, str> {
+    match BRACKETED_PLACEHOLDER.captures(s) {
+        Some(caps) if !caps[1].is_empty() => {
+            let whole = caps.get(0).unwrap();
+            let rest = caps.get(1).unwrap();
+            Cow::Owned(format!("{} {}", &s[..whole.start()], &s[rest.start()..]))
+        }
+        _ => Cow::Borrowed(s),
+    }
+}
+
+/// Drops a [`BRACKETED_PLACEHOLDER`], flagging [`warnings::AUTHORSHIP_REMOVED`].
+fn strip_bracketed_placeholder(s: &str, name: &mut ParsedName, alone: bool) -> String {
+    let Some(caps) = BRACKETED_PLACEHOLDER
+        .captures(s)
+        .filter(|caps| alone || !caps[1].is_empty())
+    else {
+        return s.to_string();
+    };
+    name.add_warning(warnings::AUTHORSHIP_REMOVED);
+    let whole = caps.get(0).unwrap();
+    let rest = caps.get(1).unwrap();
+    java_trim(&format!("{} {}", &s[..whole.start()], &s[rest.start()..])).to_string()
+}
+
 /// A lone lower-case particle after the name, an author's name cut short ("de", 28 ChecklistBank
 /// authorships; "Del." and "Ten." are Delile and Tenore).
 static LONE_PARTICLE: LazyLock<Regex> =
@@ -3724,6 +3763,11 @@ fn find_placeholder(s: &str) -> Option<usize> {
         .find(s)
         .map(|m| m.start())
         .filter(|&start| !s[..start].ends_with(':'))
+        .or_else(|| {
+            UNKNOWN_AFTER_BRACKET
+                .captures(s)
+                .map(|c| c.get(1).unwrap().start())
+        })
         .or_else(|| {
             let start = LONE_PARTICLE.find(s)?.start();
             let words: Vec<&str> = s[..start].split_whitespace().collect();
@@ -3742,12 +3786,13 @@ fn find_placeholder(s: &str) -> Option<usize> {
 /// space-padded copy. (On the name string a placeholder must follow the name: "None" alone is a
 /// name.)
 pub(crate) fn strip_authorship_placeholder(authorship: &str, name: &mut ParsedName) -> String {
+    let authorship = strip_bracketed_placeholder(authorship, name, true);
     let padded = format!(" {authorship}");
     if let Some(start) = find_placeholder(&padded) {
         name.add_warning(warnings::AUTHORSHIP_REMOVED);
         return java_trim(&padded[..start]).to_string();
     }
-    authorship.to_string()
+    authorship
 }
 
 /// "not validly publ." / "not validly published" / "not effectively published" after the

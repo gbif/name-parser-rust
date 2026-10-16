@@ -514,3 +514,40 @@ fn issue_150_in_litteris() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn issue_153_unknown_authors() {
+    assert_authorship("(Mayer) Unknown", &[])
+        .bas_authors(None, &["Mayer"])
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
+    assert_authorship("(Mayer) Unknown Author", &[])
+        .bas_authors(None, &["Mayer"])
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
+    assert_authorship("(unknown) C. Agardh", &["C.Agardh"])
+        .comb_authors(None, &["C.Agardh"])
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
+    assert_authorship("(Cienkowski) Unknown", &[])
+        .bas_authors(None, &["Cienkowski"])
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
+    assert_authorship("(Z. Wang et al.) unknown", &[])
+        .bas_authors(None, &["Z.Wang", "al."])
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
+    // a placeholder of the name string's own: no placeholder taxon
+    assert_name("Lepraria hueana (B. de Lesd.) unknown")
+        .species("Lepraria", "hueana")
+        .bas_authors(None, &["B.de Lesd."])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
+    assert_name("Turricaspia moquiana author(s) unknown")
+        .species("Turricaspia", "moquiana")
+        .warning(&[warnings::AUTHORSHIP_REMOVED])
+        .nothing_else();
+    // an unknown cultivar stays a placeholder
+    assert_unparsable("Saccharum hybrid cultivar (unknown)", NameType::Placeholder);
+}

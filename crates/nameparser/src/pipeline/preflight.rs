@@ -578,8 +578,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // "uncultured virus") and the explicit keyword wins over the virus marker. A trailing
     // authorship placeholder ("Ascidia zara author unknown") is no placeholder taxon — StripAndStash
     // removes it later, with a warning.
-    if (PLACEHOLDER_KEYWORDS.is_match(super::stripandstash::without_authorship_placeholder(&s))
-        || NN_PLACEHOLDER.is_match(&s)
+    let unbracketed = super::stripandstash::without_bracketed_placeholder(&s);
+    if (PLACEHOLDER_KEYWORDS.is_match(super::stripandstash::without_authorship_placeholder(
+        &unbracketed,
+    )) || NN_PLACEHOLDER.is_match(&s)
         || NO_NAME_RECORDED.is_match(&s)
         || PLACEHOLDER_PREFIX.is_match(&s)
         || s.starts_with("[unassigned]")
