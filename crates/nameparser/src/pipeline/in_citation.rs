@@ -28,6 +28,11 @@ static TITLE_WORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
         .collect()
 });
 
+/// A word of a title ([`TITLE_WORDS`]), in lower case and without its dot.
+pub(crate) fn is_title_word(word: &str) -> bool {
+    TITLE_WORDS.contains(word)
+}
+
 /// The year closing a cited work: `, 1817`, ` 1883.`, ` (1830)`, `, [1851]`, `, 1900a`, `1838-1840`.
 static TRAILING_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"[\s,]*[(\[]?(?-u:\d{4})[a-z]?(?:\s*[-–]\s*(?-u:\d{2,4}))?[)\]]?\.?\s*$").unwrap()

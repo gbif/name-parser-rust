@@ -5739,8 +5739,12 @@ fn strip_ipni_citation(ctx: &mut ParseContext, s: String) -> String {
         Ok(Some(c)) => c,
         _ => {
             let s = strip_page_year_citation(ctx, s);
+            if ctx.name.published_in.is_some() {
+                return s;
+            }
+            let s = strip_reference_after_year(ctx, s);
             return if ctx.name.published_in.is_none() {
-                strip_reference_after_year(ctx, s)
+                strip_abbreviated_title(ctx, s)
             } else {
                 s
             };
@@ -5856,6 +5860,77 @@ fn strip_reference_after_year(ctx: &mut ParseContext, s: String) -> String {
     };
     ctx.name.set_published_in(java_trim(&caps[2]));
     java_trim(&caps[1]).to_string()
+}
+
+/// An abbreviated title after the authors' comma, with no volume and page, or a page with no
+/// volume: "Syn. Hepat.", "Bull. Misc. Inf. Kew 1929", "Fl. Peruv. Prodr.: 4. 1794", "Fl. Hongk.
+/// 243. 1861." (#147). Two words at least. Group 1 is the numbering, group 2 the year after it.
+static ABBREVIATED_TITLE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(concat!(
+        r"^\s*\p{Lu}\p{Ll}+\.(?:\s*(?:\p{Lu}[\p{L}'\-]*\.?|&|de|du|des|der|of|et|la|van|von))+",
+        r"(?:([\s:,]*\d+(?:\s*\(\d+(?:\s*[-\x{2013}]\s*\d+)?\))?(?:\s*:\s*\d+(?:\s*[-\x{2013}]\s*\d+)?)?)",
+        r"\.?(?:\s+(\d{4}))?)?\.?\s*$",
+    ))
+    .unwrap()
+});
+
+/// A given name abbreviated like a title word, then a surname and the team's connector: "Arch.
+/// Singh & Kamal" (Archana Singh), "Ed. Navarro & Chanco" — an author, where a title goes on with
+/// its abbreviated words ("Trans. & Proc.", "Bot. Mus. Leafl.").
+static GIVEN_NAME_IN_TEAM: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\s*\p{Lu}\p{Ll}+\.\s*\p{Lu}\p{Ll}+\s+(?:&|et|and)\s").unwrap());
+
+/// See [`ABBREVIATED_TITLE`]: the title after the last comma outside brackets is `publishedIn`
+/// when its first word is a word of a title (`Syn.`, `Fl.`, `Hort.` …), as botanists cite a work
+/// after the authors — `Nees, Syn. Hepat.`, which Java read as the author `Syn.Hepat.`. A given
+/// name abbreviated like a title word is no title ([`GIVEN_NAME_IN_TEAM`]). The year
+/// closing the numbering is the publication year. Rust-only.
+fn strip_abbreviated_title(ctx: &mut ParseContext, s: String) -> String {
+    let mut depth = 0i32;
+    let mut comma = None;
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
+            ',' if depth == 0 => comma = Some(i),
+            _ => {}
+        }
+    }
+    let Some(comma) = comma else {
+        return s;
+    };
+    let tail = &s[comma + 1..];
+    let Some(caps) = ABBREVIATED_TITLE.captures(tail) else {
+        return s;
+    };
+    let first = tail.trim_start().split('.').next().unwrap_or_default();
+    let head = &s[..comma];
+    // a list of several citations is beyond telling authors from titles, as in
+    // [`strip_page_year_citation`]
+    if !in_citation::is_title_word(&first.to_lowercase())
+        || GIVEN_NAME_IN_TEAM.is_match(tail)
+        || java_trim(head).is_empty()
+        || s.contains(';')
+        || PAGE_YEAR_TAIL.is_match(head)
+        || VOLUME_PAGE.is_match(head)
+    {
+        return s;
+    }
+    let year = caps.get(2).or_else(|| {
+        caps.get(1)
+            .filter(|n| n.as_str().trim_start_matches([' ', ',', ':']).len() == 4)
+    });
+    // the full stop after the numbering ends the citation, the one after the title abbreviates it
+    let reference = java_trim(tail);
+    let reference = match reference.strip_suffix('.') {
+        Some(r) if r.ends_with(|c: char| c.is_ascii_digit()) => r,
+        _ => reference,
+    };
+    ctx.name.set_published_in(reference);
+    if let Some(year) = year {
+        ctx.set_pending_publication_year(java_trim(year.as_str()));
+    }
+    java_trim(&s[..comma]).to_string()
 }
 
 // ---- Step 50: stripPeriodSeparatedReference ----
