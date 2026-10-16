@@ -636,3 +636,42 @@ fn issue_151_a_lower_case_last_author() {
         .code(NomCode::Zoological)
         .nothing_else();
 }
+
+#[test]
+fn issue_157_failed_names() {
+    assert_informal("Ancistrus sp. \"INPA 43862\"")
+        .taxon("Ancistrus")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. \"INPA 43862\"")
+        .nothing_else();
+    assert_informal("Microrhagus sp. 7")
+        .taxon("Microrhagus")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. 7")
+        .nothing_else();
+    assert_name("Peckoltia cf. vittata (Steindachner, 1881)")
+        .species("Peckoltia", "vittata")
+        .qualifiers(&[(nameparser::model::NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .bas_authors(Some("1881"), &["Steindachner"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Proechimys chrysaeolus (Thomas, 1898)*")
+        .species("Proechimys", "chrysaeolus")
+        .bas_authors(Some("1898"), &["Thomas"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a capitalised compound epithet
+    assert_name("Ceraphron Sancti-Vincenti")
+        .species("Ceraphron", "sancti-vincenti")
+        .warning(&[warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+    assert_name_auth("Plotus Novae-Hollandiae", "Gould, 1847")
+        .species("Plotus", "novae-hollandiae")
+        .comb_authors(Some("1847"), &["Gould"])
+        .code(NomCode::Zoological)
+        .warning(&[warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+}

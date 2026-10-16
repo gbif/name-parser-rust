@@ -2043,9 +2043,13 @@ fn normalise_stirps_marker(s: String) -> String {
     }
 }
 
-/// A genus and a capitalised word (group 2) after it, and what follows (group 3).
+/// A genus and a capitalised word (group 2) after it, perhaps with a capitalised part after a
+/// hyphen (`Sancti-Vincenti`), and what follows (group 3).
 static GENUS_CAPITALISED_WORD: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+))(\p{Lu}[\p{Ll}\-]+)(?:(?-u:\s+)(.+))?$").unwrap()
+    Regex::new(
+        r"^(\p{Lu}\p{Ll}+(?-u:\s+))(\p{Lu}[\p{Ll}\-]+(?:\p{Lu}[\p{Ll}\-]*)?)(?:(?-u:\s+)(.+))?$",
+    )
+    .unwrap()
 });
 
 /// An ending only a Latin epithet has, not a surname: `Johnsonii`, `Caricæ`, `Bahiensis`. Not the
@@ -2054,6 +2058,11 @@ static LATIN_EPITHET_ENDING: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?:ii|ae|æ|orum|arum|ensis|oides|formis)$").unwrap());
 static FAMILY_GROUP_ENDING: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?:idae|inae|aceae|oideae|ineae|oidea)$").unwrap());
+
+/// A Latin compound epithet of a saint or a new land, capitalised in both parts: `Sancti-Vincenti`,
+/// `Novae-Hollandiae` (#157). Not `Santa-Rita`, a surname.
+static LATIN_COMPOUND_EPITHET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:Sancti|Sanctae|Novae|Novi)-\p{L}+$").unwrap());
 
 /// An author with a year, perhaps in brackets: `Linnæus, 1758`, `(Agassiz, 1843)`.
 static AUTHOR_WITH_YEAR: LazyLock<Regex> = LazyLock::new(|| {
@@ -2096,20 +2105,26 @@ fn lower_capitalised_epithet(ctx: &mut ParseContext, s: String) -> String {
         (Some(column), Some(tail)) => letters(column) == letters(tail),
         (None, _) => false,
     };
-    let by_ending = LATIN_EPITHET_ENDING.is_match(word)
-        && !FAMILY_GROUP_ENDING.is_match(word)
+    let compound = LATIN_COMPOUND_EPITHET.is_match(word);
+    let by_ending = (compound
+        || (LATIN_EPITHET_ENDING.is_match(word) && !FAMILY_GROUP_ENDING.is_match(word)))
         && tail.is_none_or(|t| AUTHOR_WITH_YEAR.is_match(t));
     if !(hinted || by_column || by_ending) {
         return s;
     }
     ctx.name.add_warning(warnings::CAPITALISED_EPITHET);
     let mut chars = word.chars();
-    let lowered: String = chars
-        .next()
-        .into_iter()
-        .flat_map(char::to_lowercase)
-        .chain(chars)
-        .collect();
+    // every part of a compound: "Sancti-Vincenti" -> "sancti-vincenti", "Wood-Masoni" -> "wood-masoni"
+    let lowered: String = if word.contains('-') {
+        word.to_lowercase()
+    } else {
+        chars
+            .next()
+            .into_iter()
+            .flat_map(char::to_lowercase)
+            .chain(chars)
+            .collect()
+    };
     match tail {
         Some(tail) => format!("{}{lowered} {tail}", &caps[1]),
         None => format!("{}{lowered}", &caps[1]),
