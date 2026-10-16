@@ -535,6 +535,11 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 if w.eq_ignore_ascii_case("hort") {
                     return i;
                 }
+                // An author in lower case before an ex, "Tamarix indica koen. ex Roxb.",
+                // "Hieracium multicaule schaffner ex Sch.Bip." (#125), is no infraspecific epithet.
+                if have_epithet && is_lower_ex_author(tokens, i) {
+                    return i;
+                }
                 name_words += 1;
                 have_epithet = true;
                 after_subgenus = false;
@@ -1308,6 +1313,30 @@ fn filius_before_marker_or_ex(tokens: &[Token], f_idx: usize) -> bool {
 /// (`AuthorshipSplit.java:365-384`). After a rank marker we expect an epithet — lowercase
 /// for infraspecific markers, uppercase for infrageneric ones. Without it, the apparent
 /// "marker" was just a lowercase token (e.g. "f.") that happened to spell a known marker.
+/// The lower-case word at `i` is the ex-author of the authorship that follows: an `ex` and a
+/// capitalised author come next, no rank marker comes before it, and it is abbreviated
+/// (`koen.`) or has none of the endings of an epithet (`schaffner`, not `munchiquensis`).
+fn is_lower_ex_author(tokens: &[Token], i: usize) -> bool {
+    const EPITHET_ENDINGS: [&str; 9] = ["a", "ae", "e", "i", "is", "es", "um", "us", "ensis"];
+    let n = tokens.len();
+    let dotted = i + 1 < n && tokens[i + 1].kind == TokenKind::Dot;
+    let k = i + 1 + usize::from(dotted);
+    let ex_follows = k + 1 < n
+        && tokens[k].kind == TokenKind::Word
+        && tokens[k].text == "ex"
+        && tokens[k + 1].kind == TokenKind::Word
+        && starts_upper(&tokens[k + 1]);
+    let after_marker = tokens[..i]
+        .iter()
+        .rfind(|t| t.kind != TokenKind::Dot)
+        .is_some_and(|t| {
+            t.kind == TokenKind::Word
+                && rank_markers::match_infraspecific_allow_notho(&t.text).is_some()
+        });
+    let word = tokens[i].text.to_lowercase();
+    ex_follows && !after_marker && (dotted || !EPITHET_ENDINGS.iter().any(|e| word.ends_with(e)))
+}
+
 fn has_epithet_after_marker(tokens: &[Token], marker_idx: usize, infrageneric: bool) -> bool {
     let n = tokens.len();
     let mut k = marker_idx + 1;

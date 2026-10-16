@@ -1139,3 +1139,26 @@ fn issue_125_in_before_ex() {
         .comb_authors(None, &["Valenciennes"])
         .published_in("Cuvier & Valenciennes, 1840 ex Ehrenberg");
 }
+
+#[test]
+fn issue_125_an_ex_author_in_lower_case() {
+    // the issue's "Hieracium multicaule sp. schaffner ex Sch.Bip." is written without the "sp."
+    assert_name("Hieracium multicaule schaffner ex Sch.Bip.")
+        .species("Hieracium", "multicaule")
+        .comb_authors(None, &["Sch.Bip."])
+        .comb_ex_authors(&["schaffner"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Tamarix indica koen. ex Roxb.")
+        .species("Tamarix", "indica")
+        .comb_authors(None, &["Roxb."])
+        .comb_ex_authors(&["koen."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Viguiera pinnatilobata var. megaphylla butterwick ex B.L.Turner")
+        .infra_species("Viguiera", "pinnatilobata", Rank::Variety, "megaphylla")
+        .comb_authors(None, &["B.L.Turner"])
+        .comb_ex_authors(&["butterwick"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
