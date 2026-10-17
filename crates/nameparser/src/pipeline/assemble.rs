@@ -288,6 +288,37 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // rank marker — it belongs to the (unnamed) infraspecific taxon and is not a parsing
     // artefact. All code-setting heuristics live in `code_inference` (called only when the
     // name has no code yet).
+    // A section or series within a genus is a botanical rank, but zoologists name them too, below
+    // the ICZN's ranks: `Achatinella (sect. Auriculella) Pfeiffer, 1854`, `Aphodius (section
+    // Cytoderhinus) Seabra 1909` (#171). Under the zoological code, given or told by a year after a
+    // comma or beside a marker written out, it is an unranked infrageneric name, not a botanical
+    // section. Botanists abbreviate the marker, with or without a comma: `Tradescantia (sect.
+    // Zebrina) Pellegrini 2017`. Written out without a year it is no botanical section either, but
+    // of no code: `Hypanis (section Adacna)` is a mollusc, `Synura (section Petersenia)` an alga.
+    // Zoologists name no supersection: `Pinus suprasect. Taeda` stays botanical.
+    let zoological = ctx.requested_code == Some(NomCode::Zoological)
+        || (ctx.requested_code.is_none()
+            && (auth_state.is_some_and(|s| s.combination_year_after_comma)
+                || (ctx.written_out_infrageneric_marker
+                    && ctx.name.combination_authorship.year.is_some())));
+    let unranked_section = ctx.name.genus.is_some()
+        && ctx.name.infrageneric_epithet.is_some()
+        && matches!(
+            ctx.name.rank,
+            Rank::SectionBotany
+                | Rank::SubsectionBotany
+                | Rank::SeriesBotany
+                | Rank::SubseriesBotany
+        )
+        && (zoological
+            || (ctx.written_out_infrageneric_marker
+                && ctx.requested_code != Some(NomCode::Botanical)));
+    if unranked_section {
+        ctx.name.rank = Rank::InfragenericName;
+        if zoological {
+            ctx.name.code = Some(NomCode::Zoological);
+        }
+    }
     if ctx.name.code.is_none() {
         code_inference::infer(ctx, auth_state.filter(|_| !authorship_dropped));
     }
@@ -313,8 +344,10 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         ctx.name.rank = Rank::Subspecies;
     }
     // Likewise a zoological "Genus (Subgenus)": the only rank the ICZN puts in parentheses
-    // after a genus is the subgenus (Art. 6.1). Rust-only: Java kept INFRAGENERIC_NAME.
-    if ctx.name.rank == Rank::InfragenericName
+    // after a genus is the subgenus (Art. 6.1). Rust-only: Java kept INFRAGENERIC_NAME. Not a
+    // section its marker names (#171).
+    if !unranked_section
+        && ctx.name.rank == Rank::InfragenericName
         && ctx.name.code == Some(NomCode::Zoological)
         && ctx.name.infrageneric_epithet.is_some()
         && ctx.name.specific_epithet.is_none()

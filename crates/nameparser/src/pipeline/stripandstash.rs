@@ -77,7 +77,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_unranked_marker(s);
     s = normalise_stirps_marker(s);
     s = lower_capitalised_marker(s);
-    s = unbracket_infrageneric_marker(s);
+    s = unbracket_infrageneric_marker(ctx, s);
     s = capitalise_infrageneric_epithet(s);
     s = normalise_greek_letter_marker(s);
     s = strip_superspecies_marker(ctx, s);
@@ -2223,19 +2223,32 @@ fn strip_superspecies_marker(ctx: &mut ParseContext, s: String) -> String {
 }
 
 /// An infrageneric rank marker and its epithet in brackets after the genus: `Achatinella (sect.
-/// Auriculella)`. Group 1 the genus, group 2 the marker, group 3 the epithet.
+/// Auriculella)`, `Balanus (section Ortho-Balanus)`. Group 1 the genus, group 2 the marker, group
+/// 3 the epithet.
 static BRACKETED_INFRAGENERIC_MARKER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)\((?-u:\s*)((?i:sect|subsect|supersect|subgen|subg|ser|subser|div))\.?(?-u:\s+)(\p{Lu}[\p{Ll}\-]+)(?-u:\s*)\)").unwrap()
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)\((?-u:\s*)((?i:section|subsection|series|subseries|subgenus|sect|subsect|supersect|subgen|subg|ser|subser|div))\.?(?-u:\s+)(\p{Lu}\p{Ll}+(?:-\p{L}[\p{Ll}\-]*)*)(?-u:\s*)\)").unwrap()
 });
 
 /// ZooBank and others put the marker of an infrageneric name inside its brackets, `Achatinella
 /// (sect. Auriculella) Pfeiffer 1854`; the epithet was lost and the bracket read as a basionym
-/// author `sect.Auriculella` (#88). Without the brackets the marker is read as it always is.
-fn unbracket_infrageneric_marker(s: String) -> String {
+/// author `sect.Auriculella` (#88). Without the brackets the marker is read as it always is; a
+/// word written out is abbreviated, `(section Ortho-Balanus)`, and noted as zoologists' usage
+/// (#171).
+fn unbracket_infrageneric_marker(ctx: &mut ParseContext, s: String) -> String {
     match BRACKETED_INFRAGENERIC_MARKER.captures(&s) {
         Some(caps) => {
             let rest = &s[caps.get(0).unwrap().end()..];
-            format!("{} {}. {}{rest}", &caps[1], &caps[2], &caps[3])
+            let marker = match caps[2].to_lowercase().as_str() {
+                "section" => "sect",
+                "subsection" => "subsect",
+                "series" => "ser",
+                "subseries" => "subser",
+                "subgenus" => "subgen",
+                _ => &caps[2],
+            }
+            .to_string();
+            ctx.written_out_infrageneric_marker = marker.len() < caps[2].len();
+            format!("{} {marker}. {}{rest}", &caps[1], &caps[3])
         }
         None => s,
     }

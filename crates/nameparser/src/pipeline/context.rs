@@ -123,6 +123,9 @@ pub(crate) struct ParseContext {
     /// The authorship coded its diacritics with a colon and a digit ("C. Mu:2ller"), as only
     /// bryophyte sources do — botanical evidence for code inference.
     pub coded_diacritics: bool,
+    /// The marker of a bracketed infrageneric name was written out, `Aphodius (section
+    /// Cytoderhinus)`, as zoologists do — zoological evidence beside a year (#171).
+    pub written_out_infrageneric_marker: bool,
     /// The species author of an infraspecific name, standing before its rank marker ("Acacia
     /// aneura F.Muell. ex Benth. var. latifolia J.M.Black"), when code inference reads another
     /// authorship: its evidence votes too.
@@ -182,6 +185,7 @@ impl ParseContext {
             approved_lists: false,
             species_code_state: None,
             coded_diacritics: false,
+            written_out_infrageneric_marker: false,
             morpha_marker: false,
         }
     }
