@@ -107,6 +107,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_double_underscores(ctx, s);
     s = stash_trailing_otu_code(ctx, s);
     s = strip_serovar_serotype(ctx, s);
+    s = stash_antigenic_formula(ctx, s);
     s = strip_angle_bracket_authorship(ctx, s);
     s = strip_html(ctx, s);
     s = unquote_note(ctx, s);
@@ -2729,6 +2730,40 @@ fn strip_serovar_serotype(ctx: &mut ParseContext, mut s: String) -> String {
         s = strip(&SEROVAR_BARE, s);
     }
     s
+}
+
+/// A binomial or a genus (group 1) and the antigenic formula of a serotype, perhaps after its
+/// pathotype, an O antigen (or two) and after a colon its K and H antigens or their absence, with
+/// what follows (group 2): "Escherichia coli O157:H7 str. K7140", "Escherichia coli O145:NM str.
+/// 12E70", "Escherichia coli O10:K5(L):H4", "Escherichia coli STEC O174:H2 str. 02-04446".
+static ANTIGENIC_FORMULA: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(\p{Lu}\p{Ll}+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+)?)(?-u:\s+)((?:[A-Z][A-Za-z]{1,3}EC(?-u:\s+))?(?:[A-Z]\d+/)?O\d+[a-z]*(?:/O\d+[a-z]*)*:[^\s]+(?:(?-u:\s+).+)?)$",
+    )
+    .unwrap()
+});
+
+/// A strain marker in what follows an antigenic formula.
+static STRAIN_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?:^|(?-u:\s))(?:str|strain)(?:\.|(?-u:\s))").unwrap());
+
+/// The antigenic formula of a serotype after a binomial and the strain after it are the phrase,
+/// as a numbered serotype is ([`stash_serovar_of_binomial`]): their colons are no sanctioning
+/// author's, `O157` no author. With a strain marker the rank is the strain's. Rust-only.
+fn stash_antigenic_formula(ctx: &mut ParseContext, s: String) -> String {
+    if !s.contains(':') {
+        return s;
+    }
+    let Some(caps) = ANTIGENIC_FORMULA.captures(&s) else {
+        return s;
+    };
+    let phrase = java_trim(&caps[2]).to_string();
+    if STRAIN_MARKER.is_match(&phrase) {
+        ctx.name.rank = Rank::Strain;
+    }
+    ctx.name.phrase = Some(phrase);
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
 }
 
 // ---- Step 18: stripAngleBracketAuthorship ----

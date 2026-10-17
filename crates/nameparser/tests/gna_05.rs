@@ -348,6 +348,34 @@ fn open_taxonomy_with_ranks_unfinished() {
 }
 
 #[test]
+fn an_antigenic_formula_is_the_phrase() {
+    // its colons used to make "O157" an author and "H7 str. K7140" his sanctioning author
+    assert_name("Escherichia coli O157:H7")
+        .species("Escherichia", "coli")
+        .phrase("O157:H7")
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Escherichia coli O157:H7 str. K7140")
+        .binomial("Escherichia", None, "coli", Rank::Strain)
+        .phrase("O157:H7 str. K7140")
+        .type_(NameType::Informal)
+        .warning(&[warnings::INDETERMINED])
+        .nothing_else();
+    assert_name("Escherichia coli O10:K5(L):H4 str. ATCC 23506")
+        .binomial("Escherichia", None, "coli", Rank::Strain)
+        .phrase("O10:K5(L):H4 str. ATCC 23506")
+        .type_(NameType::Informal)
+        .warning(&[warnings::INDETERMINED])
+        .nothing_else();
+    assert_name("Escherichia coli STEC O174:H2 str. 02-04446")
+        .binomial("Escherichia", None, "coli", Rank::Strain)
+        .phrase("STEC O174:H2 str. 02-04446")
+        .type_(NameType::Informal)
+        .warning(&[warnings::INDETERMINED])
+        .nothing_else();
+}
+
+#[test]
 fn a_serovar_is_an_infraspecific_name() {
     // Ported from GNA's "Ignoring serovar/serotype" group. Java stripped serovars and serotypes
     // silently; the model has the rank SEROVAR, so they are kept (#81). A named serovar is the
