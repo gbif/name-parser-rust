@@ -1045,6 +1045,11 @@ fn parse_authors(tokens: &[Token], from: usize, to: usize, into: &mut Authorship
                     && tokens[k].kind == TokenKind::Word
                     && ((starts_upper(&tokens[k].text) && contains_lower(&tokens[k].text))
                         || particle_surname_at(tokens, k, to));
+                // After an author whose initials come first, initials and a surname are the
+                // next author of a team that lost its comma: "S.G.M. Carr D.J. Carr" (#125).
+                if middle_initial_surname_follows && starts_with_initial(&cur) {
+                    flush(&mut cur, &mut authors);
+                }
                 if !middle_initial_surname_follows {
                     let surname = cur.trim().to_string();
                     cur.clear();

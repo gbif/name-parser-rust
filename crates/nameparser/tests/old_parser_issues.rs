@@ -1026,3 +1026,139 @@ fn issue_123_a_shouted_common_name_is_no_author() {
         .infrageneric_at("Tetramorium", Rank::InfragenericName, "XIPHOMYRMEX")
         .nothing_else();
 }
+
+#[test]
+fn issue_125_author_teams_with_initials() {
+    // a team of authors with their initials first that lost its commas
+    assert_name("Eucalyptus roycei S.G.M. Carr D.J. Carr & A.S. George")
+        .species("Eucalyptus", "roycei")
+        .comb_authors(None, &["S.G.M.Carr", "D.J.Carr", "A.S.George"])
+        .nothing_else();
+    assert_name("Lactarius lanceolatus O.K. Mill G. Laursen")
+        .species("Lactarius", "lanceolatus")
+        .comb_authors(None, &["O.K.Mill", "G.Laursen"])
+        .nothing_else();
+    assert_name("Puccinia jaceae G.H. Otth G.H. Otth")
+        .species("Puccinia", "jaceae")
+        .comb_authors(None, &["G.H.Otth", "G.H.Otth"])
+        .nothing_else();
+    // a particle between the initials, or a forename written out, keeps one author
+    assert_name("Purpura lapillus (J. De C. Sowerby, 1823)")
+        .species("Purpura", "lapillus")
+        .bas_authors(Some("1823"), &["J.De C.Sowerby"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Carex nigra Roy L. Taylor")
+        .species("Carex", "nigra")
+        .comb_authors(None, &["Roy L.Taylor"])
+        .nothing_else();
+    // the other names of the issue
+    assert_name("Uvella rosacea J.B.G.G.M. Bory")
+        .species("Uvella", "rosacea")
+        .comb_authors(None, &["J.B.G.G.M.Bory"])
+        .nothing_else();
+    assert_name("Bryocyclops campaneri Rocha C.E.F. & Bjornberg M.H.G.C., 1987")
+        .species("Bryocyclops", "campaneri")
+        .comb_authors(Some("1987"), &["C.E.F.Rocha", "M.H.G.C.Bjornberg"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Fercurtia Gougerot & le Renard, 1978")
+        .monomial("Fercurtia")
+        .comb_authors(Some("1978"), &["Gougerot", "le Renard"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Melaleucus sellata Chevrolat L.A.A, 1882")
+        .species("Melaleucus", "sellata")
+        .comb_authors(Some("1882"), &["L.A.A.Chevrolat"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Rotylenchus ascalpi Scotto la Massese & Germani, 2001")
+        .species("Rotylenchus", "ascalpi")
+        .comb_authors(Some("2001"), &["Scotto la Massese", "Germani"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Bacillus kaustophilus (ex Prickett, 1928) Priest et al., 1989")
+        .species("Bacillus", "kaustophilus")
+        .comb_authors(Some("1989"), &["Priest", "al."])
+        .comb_ex_authors(&["Prickett"])
+        .code(NomCode::Bacterial)
+        .nothing_else();
+    assert_name("Argulus multicolor Schuurmans Stekhoven J.H. Jr, 1937")
+        .species("Argulus", "multicolor")
+        .comb_authors(Some("1937"), &["J.H.Schuurmans Stekhoven Jr"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Cerithium papillosum Sowerby G.B. II, 1855")
+        .species("Cerithium", "papillosum")
+        .comb_authors(Some("1855"), &["G.B.Sowerby II"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+}
+
+#[test]
+fn issue_125_in_before_ex() {
+    // "A in B ex C": C took up the name of A; the work cited between is removed with a warning
+    assert_name("Calamagrostis heterophylla Wedd. in Urb. ex Pilg.")
+        .species("Calamagrostis", "heterophylla")
+        .comb_authors(None, &["Pilg."])
+        .comb_ex_authors(&["Wedd."])
+        .warning(&["Removed: in Urb."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Aristolochia abbreviata Mart. in DC. ex Duch.")
+        .species("Aristolochia", "abbreviata")
+        .comb_authors(None, &["Duch."])
+        .comb_ex_authors(&["Mart."])
+        .warning(&["Removed: in DC."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Pohlia ampullacea Hampe in C. Müller ex Gangulee, 1974")
+        .species("Pohlia", "ampullacea")
+        .comb_authors(Some("1974"), &["Gangulee"])
+        .comb_ex_authors(&["Hampe"])
+        .warning(&["Removed: in C. Müller"])
+        .nothing_else();
+    assert_name("Asplenium tenuifrons var. tenellum Wall. apud T. Moore ex R. Sim")
+        .infra_species("Asplenium", "tenuifrons", Rank::Variety, "tenellum")
+        .comb_authors(None, &["R.Sim"])
+        .comb_ex_authors(&["Wall."])
+        .warning(&["Removed: apud T. Moore"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Steccherinum ochraceum (Pers. in Gmelin ex Fr.) S.F. Gray")
+        .species("Steccherinum", "ochraceum")
+        .comb_authors(None, &["S.F.Gray"])
+        .bas_authors(None, &["Fr."])
+        .bas_ex_authors(None, &["Pers."])
+        .warning(&["Removed: in Gmelin"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // a citation with its year names the work of the name
+    assert_name("Cheilinus radiatus Valenciennes in Cuvier & Valenciennes, 1840 ex Ehrenberg")
+        .species("Cheilinus", "radiatus")
+        .comb_authors(None, &["Valenciennes"])
+        .published_in("Cuvier & Valenciennes, 1840 ex Ehrenberg");
+}
+
+#[test]
+fn issue_125_an_ex_author_in_lower_case() {
+    // the issue's "Hieracium multicaule sp. schaffner ex Sch.Bip." is written without the "sp."
+    assert_name("Hieracium multicaule schaffner ex Sch.Bip.")
+        .species("Hieracium", "multicaule")
+        .comb_authors(None, &["Sch.Bip."])
+        .comb_ex_authors(&["schaffner"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Tamarix indica koen. ex Roxb.")
+        .species("Tamarix", "indica")
+        .comb_authors(None, &["Roxb."])
+        .comb_ex_authors(&["koen."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Viguiera pinnatilobata var. megaphylla butterwick ex B.L.Turner")
+        .infra_species("Viguiera", "pinnatilobata", Rank::Variety, "megaphylla")
+        .comb_authors(None, &["B.L.Turner"])
+        .comb_ex_authors(&["butterwick"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}

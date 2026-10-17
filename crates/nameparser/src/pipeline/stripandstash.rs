@@ -5598,6 +5598,16 @@ fn strip_in_author_in_parens(ctx: &mut ParseContext, s: String) -> String {
         let bas_part = java_trim(&caps[1]).to_string();
         let reference = java_trim(&caps[2]).to_string();
         if !bas_part.is_empty() && reference.chars().count() >= 2 {
+            if let Some((cited, validating)) = ex_after_in(&reference) {
+                let keyword = s[caps.get(1).unwrap().end()..caps.get(2).unwrap().start()].trim();
+                ctx.name
+                    .add_warning(&format!("{}{keyword} {cited}", warnings::REMOVED_PREFIX));
+                return format!(
+                    "{}({bas_part} ex {validating}){}",
+                    &s[..whole.start()],
+                    &s[whole.end()..]
+                );
+            }
             ctx.name.add_published_in(&reference);
             ctx.set_pending_in_authors(true, in_citation::team(&reference));
             let new_parens = match IN_AUTHOR_YEAR.captures(&reference) {
@@ -5662,6 +5672,18 @@ fn strip_in_author_citation(ctx: &mut ParseContext, s: String) -> String {
             reference = java_trim(&reference).to_string();
         }
         if reference.chars().count() >= 2 {
+            let head = java_trim(&s[..whole.start()]);
+            // "Anonymous in Lacepède ex Commerson": no author to take a name up from
+            let anonymous = head
+                .rsplit(' ')
+                .next()
+                .is_some_and(|w| w.to_lowercase().starts_with("anon"));
+            if let Some((cited, validating)) = ex_after_in(&reference).filter(|_| !anonymous) {
+                let keyword = s[whole.start()..caps.get(1).unwrap().start()].trim();
+                ctx.name
+                    .add_warning(&format!("{}{keyword} {cited}", warnings::REMOVED_PREFIX));
+                return format!("{head} ex {validating}");
+            }
             ctx.name.add_published_in(&reference);
             ctx.set_pending_in_authors(false, in_citation::team(&reference));
             if let Some(pyear) = IN_AUTHOR_PAREN_YEAR.captures(&reference) {
@@ -5674,6 +5696,25 @@ fn strip_in_author_citation(ctx: &mut ParseContext, s: String) -> String {
         }
     }
     s
+}
+
+/// The `ex` in an `in` citation, "Mart. in DC. ex Duch.", "Hampe in C. Müller ex Gangulee, 1974":
+/// the name of the author before the `in` was taken up by the author after the `ex`, so the
+/// citation is "Mart. ex Duch." (#125). Where the work cited by the `in` belongs is unclear: in
+/// "Mart. in DC. ex Duch." Duchartre published in de Candolle's Prodromus, in "Hampe in C. Müller
+/// ex Gangulee" Hampe's name appeared in Müller's work and Gangulee published it later. It is
+/// removed, with a warning, rather than read as the reference. The cited work, a plain author or
+/// title without a page, year or list ("in Cuvier & Valenciennes, 1840 ex Ehrenberg" cites the
+/// work of the name, and Ehrenberg's manuscript), and what follows the `ex`, which starts with a
+/// capital; `None` otherwise.
+fn ex_after_in(reference: &str) -> Option<(&str, &str)> {
+    let at = reference.find(" ex ")?;
+    let (cited, validating) = (reference[..at].trim(), reference[at + 4..].trim());
+    (!cited.is_empty()
+        && !cited.contains(|c: char| c.is_ascii_digit() || ",;()[]".contains(c))
+        && !validating.contains(['(', ')', '[', ']'])
+        && validating.starts_with(|c: char| c.is_uppercase()))
+    .then_some((cited, validating))
 }
 
 // ---- Step 49: stripIpniCitation ----
