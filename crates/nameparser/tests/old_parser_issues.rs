@@ -1290,3 +1290,84 @@ fn issue_167_an_epithet_of_words_apart_is_hyphenated() {
         .infra_species("Anthurium", "scherzerianum", Rank::Variety, "ville-de-gand")
         .nothing_else();
 }
+
+#[test]
+fn issue_171_zoological_sections() {
+    // ZooBank's sections within a genus are unranked infrageneric names, not botanical sections
+    for (name, epithet) in [
+        ("Balanus (sect. Ortho-balanus) Hoek, 1913", "Ortho-balanus"),
+        (
+            "Balanus (sect. Membrano-balanus) Hoek, 1913",
+            "Membrano-balanus",
+        ),
+        (
+            "Balanus (sect. Patello-balanus) Hoek, 1913",
+            "Patello-balanus",
+        ),
+    ] {
+        assert_name(name)
+            .infrageneric_at("Balanus", Rank::InfragenericName, epithet)
+            .comb_authors(Some("1913"), &["Hoek"])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    assert_name_code(
+        "Achatinella (sect. Auriculella) Pfeiffer 1854",
+        NomCode::Zoological,
+    )
+    .infrageneric_at("Achatinella", Rank::InfragenericName, "Auriculella")
+    .comb_authors(Some("1854"), &["Pfeiffer"])
+    .code(NomCode::Zoological)
+    .nothing_else();
+    // a marker written out is the zoologists' too
+    assert_name("Aphodius (section Cytoderhinus) Seabra 1909")
+        .infrageneric_at("Aphodius", Rank::InfragenericName, "Cytoderhinus")
+        .comb_authors(Some("1909"), &["Seabra"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Balanus (section Ortho-Balanus) minutus")
+        .species_ig("Balanus", "Ortho-Balanus", "minutus")
+        .nothing_else();
+    assert_name("Hypanis (section Adacna)")
+        .infrageneric_at("Hypanis", Rank::InfragenericName, "Adacna")
+        .nothing_else();
+    assert_name("Balanus (sect. Membrano-balanus) longirostrum Hoek, 1913")
+        .species_ig("Balanus", "Membrano-balanus", "longirostrum")
+        .comb_authors(Some("1913"), &["Hoek"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // the subgenera of the issue
+    assert_name("Balanus (Bathybalanus) pentacrini Hoek, 1913")
+        .species_ig("Balanus", "Bathybalanus", "pentacrini")
+        .comb_authors(Some("1913"), &["Hoek"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Balanus (megabalanus) tintinnabulum costatus Hoek, 1913")
+        .infra_species("Balanus", "tintinnabulum", Rank::Subspecies, "costatus")
+        .infrageneric("Megabalanus")
+        .comb_authors(Some("1913"), &["Hoek"])
+        .code(NomCode::Zoological)
+        .doubtful()
+        .nothing_else();
+    for (name, epithet) in [
+        ("Balanus (Armatobalanus) Hoek, 1913", "Armatobalanus"),
+        ("Balanus (Megabalanus) Hoek, 1913", "Megabalanus"),
+    ] {
+        assert_name(name)
+            .infrageneric_at("Balanus", Rank::Subgenus, epithet)
+            .comb_authors(Some("1913"), &["Hoek"])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    // a botanist's section keeps its rank, with or without a year
+    assert_name("Tradescantia (sect. Zebrina) Pellegrini 2017")
+        .infrageneric_at("Tradescantia", Rank::SectionBotany, "Zebrina")
+        .comb_authors(Some("2017"), &["Pellegrini"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Guatteria (sect. Trichostemon) R.E.Fr.")
+        .infrageneric_at("Guatteria", Rank::SectionBotany, "Trichostemon")
+        .comb_authors(None, &["R.E.Fr."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
