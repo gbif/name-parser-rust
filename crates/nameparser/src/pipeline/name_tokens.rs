@@ -1117,7 +1117,17 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     if indet {
         ctx.name.type_ = NameType::Informal;
         if infraspecific.is_none() {
-            if lower_epithets.is_empty() && ctx.name.rank == Rank::Unranked {
+            // a provisional species placed in a subgenus or section is a species, not the
+            // infrageneric taxon: `Lasioglossum (Dialictus) sp. 1`, `Abies sect. Grandes sp.` (#176)
+            if lower_epithets.is_empty()
+                && (ctx.name.rank == Rank::Unranked
+                    || (ctx.name.infrageneric_epithet.is_some()
+                        && ctx.name.rank.is_infrageneric_strictly()))
+            {
+                // the code a botanical marker tells stays: `sect.`
+                if ctx.name.code.is_none() {
+                    ctx.name.code = ctx.name.rank.is_restricted_to_code();
+                }
                 ctx.name.rank = Rank::Species;
             }
             if ctx.name.phrase.is_none() || indet_bare {
