@@ -219,7 +219,7 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 if bas_colon > bas_from {
                     let mut sb = String::new();
                     append_author_words(tokens, bas_colon + 1, close, &mut sb);
-                    bas_sanctioning = is_sanctioning_author(&sb).then_some(sb);
+                    bas_sanctioning = sanctioning_author(&sb).map(str::to_string);
                     bas_end = bas_colon;
                 }
             }
@@ -252,13 +252,19 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         let comb_from = i;
         let mut comb_end = n;
         let mut comb_sanctioning = None;
-        // pull out a colon + sanctioning author at the end of the combination span
+        let mut colon_tail = None;
+        // pull out a colon + sanctioning author at the end of the combination span. Fries or
+        // Persoon only (ICN Art. 15): anything else after the colon, a page and its note ("Günther,
+        // 1875: 231 (fide Smith, 1943)") or a strain ("HIV-1 M:CRF02_AG"), is left unparsed.
         if let Some(colon) = find_last_colon(tokens, comb_from, comb_end) {
             if colon > comb_from {
                 let mut sb = String::new();
                 append_author_words(tokens, colon + 1, comb_end, &mut sb);
-                if !sb.is_empty() {
-                    comb_sanctioning = Some(sb);
+                if let Some(sanctioning) = sanctioning_author(&sb) {
+                    comb_sanctioning = Some(sanctioning.to_string());
+                    comb_end = colon;
+                } else if !sb.is_empty() {
+                    colon_tail = Some(colon + 1);
                     comb_end = colon;
                 }
             }
@@ -275,6 +281,9 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
                 comb_end = k;
                 comb_sanctioning = None;
                 sanctioning_from = n;
+            } else if let Some(tail) = colon_tail {
+                s.unparsed_from = tail as i32;
+                s.unparsed_text = Some(spaced_text(&tokens[tail..n]));
             }
         }
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
@@ -1777,14 +1786,21 @@ fn take_sanctioning_year(tokens: &[Token], auth: &mut Authorship) {
     }
 }
 
-/// Fries or Persoon, the two sanctioning authors (ICN Art. 15), with or without the abbreviation's
-/// dot — anything else after a colon is a misread colon ("C. Mu:2ller").
+/// Fries or Persoon, the two sanctioning authors (ICN Art. 15), in the form the sanctioning author
+/// is cited: `Fr.` for Fries (`Fr`, `Fries`, `FR.`), `Pers.` for Persoon (`Pers`, `Persoon`).
+/// Nothing else after a colon is a sanctioning author, nor a Fries with initials: `R.E.Fr.` is
+/// Robert Elias Fries, no sanctioning author.
+pub(crate) fn sanctioning_author(author: &str) -> Option<&'static str> {
+    match author.trim().trim_end_matches('.').to_lowercase().as_str() {
+        "fr" | "fries" => Some("Fr."),
+        "pers" | "persoon" => Some("Pers."),
+        _ => None,
+    }
+}
+
+/// [`sanctioning_author`] is Fries or Persoon.
 pub(crate) fn is_sanctioning_author(author: &str) -> bool {
-    ["Fr", "Fries", "Pers", "Persoon"].iter().any(|f| {
-        author
-            .strip_prefix(f)
-            .is_some_and(|rest| !rest.starts_with(char::is_alphabetic))
-    })
+    sanctioning_author(author).is_some()
 }
 
 /// Java `AuthorshipParser.appendSpace(StringBuilder)`.
@@ -2678,7 +2694,7 @@ mod tests {
     fn a_basionym_keeps_only_fries_or_persoon_after_its_colon() {
         // without the abbreviation's dot too
         let s = parse_str("(Pers. : Fr)");
-        assert_eq!(s.basionym.sanctioning_author.as_deref(), Some("Fr"));
+        assert_eq!(s.basionym.sanctioning_author.as_deref(), Some("Fr."));
         // a colon before anyone else is no sanctioning
         let s = parse_str("(Baba 1949: Burn 1962)");
         assert_eq!(s.basionym.authors, vec!["Baba".to_string()]);
@@ -2687,10 +2703,27 @@ mod tests {
 
     #[test]
     fn sanctioning_authors_are_fries_and_persoon() {
-        for a in ["Fr.", "Fr", "Fries", "Pers.", "Pers", "Persoon"] {
-            assert!(is_sanctioning_author(a), "{a}");
+        for (a, cited) in [
+            ("Fr.", "Fr."),
+            ("Fr", "Fr."),
+            ("Fr..", "Fr."),
+            ("Fries", "Fr."),
+            ("FR.", "Fr."),
+            ("Pers.", "Pers."),
+            ("Pers", "Pers."),
+            ("Persoon", "Pers."),
+        ] {
+            assert_eq!(sanctioning_author(a), Some(cited), "{a}");
         }
-        for a in ["Fritsch", "Persson", "2ller", "Burn"] {
+        for a in [
+            "Fritsch",
+            "Persson",
+            "2ller",
+            "Burn",
+            "R.E.Fr.",
+            "H7 str.",
+            "Fr.var.alba",
+        ] {
             assert!(!is_sanctioning_author(a), "{a}");
         }
     }
@@ -2700,6 +2733,17 @@ mod tests {
         let s = parse_str("Pers. : Fr.");
         assert_eq!(s.combination.authors, vec!["Pers.".to_string()]);
         assert_eq!(s.combination.sanctioning_author, Some("Fr.".to_string()));
+        let s = parse_str("Pers. : Fries");
+        assert_eq!(s.combination.sanctioning_author, Some("Fr.".to_string()));
+    }
+
+    #[test]
+    fn a_colon_before_anyone_else_is_left_unparsed() {
+        let s = parse_str("Günther, 1875: 231 (fide Smith, 1943)");
+        assert_eq!(s.combination.authors, vec!["Günther".to_string()]);
+        assert_eq!(s.combination.year, Some("1875".to_string()));
+        assert_eq!(s.combination.sanctioning_author, None);
+        assert_eq!(s.unparsed_text.as_deref(), Some("231 (fide Smith, 1943)"));
     }
 
     // ---- years --------------------------------------------------------------------------

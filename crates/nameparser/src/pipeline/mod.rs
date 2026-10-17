@@ -1104,12 +1104,17 @@ mod tests {
     fn sanctioning_author_goes_with_the_authorship_that_wins() {
         // The sanctioning author is part of its authorship: the separately supplied one, applied
         // last, wins with it.
-        let pn =
-            run("Boletus versicolor L. : Fr.", Some("X. : Y."), None, None).expect("should parse");
+        let pn = run(
+            "Boletus versicolor L. : Fr.",
+            Some("X. : Persoon"),
+            None,
+            None,
+        )
+        .expect("should parse");
         assert_eq!(pn.combination_authorship.authors, vec!["X.".to_string()]);
         assert_eq!(
             pn.combination_authorship.sanctioning_author,
-            Some("Y.".to_string())
+            Some("Pers.".to_string())
         );
     }
 
