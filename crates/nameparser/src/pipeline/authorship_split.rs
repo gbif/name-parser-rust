@@ -475,7 +475,7 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     && !have_epithet
                     && !after_subgenus
                     && rank_markers::match_infrageneric_allow_notho(w).is_some()
-                    && !is_epithet_before_dated_author(tokens, i)
+                    && !is_epithet_before_dated_author(ctx, tokens, i)
                 {
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
@@ -1145,8 +1145,33 @@ pub(crate) fn unmarked_infraspecific_after_author(tokens: &[Token], from: usize)
 /// The marker word "ser" or "subser" at `i` — real epithets too — is undotted and followed by an
 /// author with a year, or by nothing at all: a species epithet, not the botanical rank ("Serina
 /// ser Gredler, 1898", "Serina subser Gredler, 1898" — snails; "Serina ser" with its authorship
-/// given apart).
-pub(crate) fn is_epithet_before_dated_author(tokens: &[Token], i: usize) -> bool {
+/// given apart). A made-up rank ("grex", "genitor") is an epithet unless a whole capitalised word
+/// follows it in a name without a year, and no team or citation goes on from that word: "Pheidole
+/// grex Wilson, 2003", "Diospyros grex F. White", "Mesoleptus genitor (Forster, 1876)", "Stigmidium
+/// grex Alstrup & Olech", "Vargula grex Kornicker in Kornicker & Thomassin, 1998" (#167).
+pub(crate) fn is_epithet_before_dated_author(
+    ctx: &ParseContext,
+    tokens: &[Token],
+    i: usize,
+) -> bool {
+    if rank_markers::is_made_up_rank(&tokens[i].text) {
+        let mut k = i + 1;
+        if tokens.get(k).is_some_and(|t| t.kind == TokenKind::Dot) {
+            k += 1;
+        }
+        let epithet = tokens.get(k).is_some_and(|t| {
+            t.kind == TokenKind::Word && starts_upper(t) && t.text.chars().count() >= 3
+        }) && tokens.get(k + 1).is_none_or(|t| {
+            !matches!(
+                t.kind,
+                TokenKind::Dot | TokenKind::Comma | TokenKind::Ampersand
+            ) && !matches!(t.text.as_str(), "in" | "ex" | "et")
+        });
+        // the year of an in-citation already stashed counts too
+        return !epithet
+            || has_year_token(tokens, k, tokens.len())
+            || ctx.name.published_in_year.is_some();
+    }
     if !matches!(tokens[i].text.as_str(), "ser" | "subser") {
         return false;
     }

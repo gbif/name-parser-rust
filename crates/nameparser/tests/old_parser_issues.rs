@@ -3,7 +3,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NameType, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank};
 
 #[test]
 fn issue_126_temp_is_an_author() {
@@ -1160,5 +1160,133 @@ fn issue_125_an_ex_author_in_lower_case() {
         .comb_authors(None, &["B.L.Turner"])
         .comb_ex_authors(&["butterwick"])
         .code(NomCode::Botanical)
+        .nothing_else();
+}
+
+#[test]
+fn issue_167_made_up_ranks_are_unranked_infrageneric_names() {
+    // Ranks made up under ICN Art. 4.3, cited in IPNI, have no rank of their own yet; cyclus waits
+    // for gbif/name-parser#108
+    assert_name("Malus nothogrex Prunifoliae (Juz.) Langenf.")
+        .infrageneric_at("Malus", Rank::InfragenericName, "Prunifoliae")
+        .notho(&[NamePart::Infrageneric])
+        .comb_authors(None, &["Langenf."])
+        .bas_authors(None, &["Juz."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Veronica Gruppe Pellidosperma E.B.J.Lehm.")
+        .infrageneric_at("Veronica", Rank::InfragenericName, "Pellidosperma")
+        .comb_authors(None, &["E.B.J.Lehm."])
+        .nothing_else();
+    assert_name("Lonicera gruppe Americanae")
+        .infrageneric_at("Lonicera", Rank::InfragenericName, "Americanae")
+        .nothing_else();
+    assert_name("Abies genitor Setistrobilus A.E.Murray")
+        .infrageneric_at("Abies", Rank::InfragenericName, "Setistrobilus")
+        .comb_authors(None, &["A.E.Murray"])
+        .nothing_else();
+    assert_name("Abies subgenitor Setistrobilus A.E.Murray")
+        .infrageneric_at("Abies", Rank::InfragenericName, "Setistrobilus")
+        .comb_authors(None, &["A.E.Murray"])
+        .nothing_else();
+    assert_name("Abies agglom. Sibiria A.E.Murray")
+        .infrageneric_at("Abies", Rank::InfragenericName, "Sibiria")
+        .comb_authors(None, &["A.E.Murray"])
+        .nothing_else();
+    assert_name("Artemisia cycl. Junceum (Poljakov) Filatova")
+        .infrageneric_at("Artemisia", Rank::InfragenericName, "Junceum")
+        .comb_authors(None, &["Filatova"])
+        .bas_authors(None, &["Poljakov"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Philodendron grex Baursia Rchb. ex Schott")
+        .infrageneric_at("Philodendron", Rank::InfragenericName, "Baursia")
+        .comb_authors(None, &["Schott"])
+        .comb_ex_authors(&["Rchb."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("Cerasus Grex Typocerasus Koehne")
+        .infrageneric_at("Cerasus", Rank::InfragenericName, "Typocerasus")
+        .comb_authors(None, &["Koehne"])
+        .nothing_else();
+    // the bare names of the issue
+    for (name, genus, epithet) in [
+        ("Abies genitor Setistrobilus", "Abies", "Setistrobilus"),
+        ("Abies subgenitor Setistrobilus", "Abies", "Setistrobilus"),
+        ("Abies agglom. Sibiria", "Abies", "Sibiria"),
+        ("Artemisia cycl. Junceum", "Artemisia", "Junceum"),
+        ("Veronica Gruppe Pellidosperma", "Veronica", "Pellidosperma"),
+    ] {
+        assert_name(name)
+            .infrageneric_at(genus, Rank::InfragenericName, epithet)
+            .nothing_else();
+    }
+    assert_name("Malus nothogrex Prunifoliae")
+        .infrageneric_at("Malus", Rank::InfragenericName, "Prunifoliae")
+        .notho(&[NamePart::Infrageneric])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // Mottram's linea, an unranked infrageneric name until gbif/name-parser#107 (#143)
+    assert_name("linea Rebutiae")
+        .infrageneric("Rebutiae")
+        .rank(Rank::InfragenericName)
+        .nothing_else();
+
+    // the same words are species epithets before an author with a year, a team, initials or none
+    assert_name("Pheidole grex Wilson, 2003")
+        .species("Pheidole", "grex")
+        .comb_authors(Some("2003"), &["Wilson"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Stigmidium grex Alstrup & Olech")
+        .species("Stigmidium", "grex")
+        .comb_authors(None, &["Alstrup", "Olech"])
+        .nothing_else();
+    assert_name("Diospyros grex F. White")
+        .species("Diospyros", "grex")
+        .comb_authors(None, &["F.White"])
+        .nothing_else();
+    assert_name("Mesoleptus genitor (Forster, 1876)")
+        .species("Mesoleptus", "genitor")
+        .bas_authors(Some("1876"), &["Forster"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Vargula grex Kornicker in Kornicker & Thomassin, 1998")
+        .species("Vargula", "grex")
+        .comb_authors(Some("1998"), &["Kornicker"])
+        .comb_in_authors(&["Kornicker", "Thomassin"])
+        .published_in("Kornicker & Thomassin, 1998")
+        .published_in_year(Some(1998))
+        .nothing_else();
+    // …and Gruppe an author
+    assert_name("Monedula punctata decorata Gruppe Taschenberg, 1870")
+        .infra_species("Monedula", "punctata", Rank::Subspecies, "decorata")
+        .code(NomCode::Zoological);
+}
+
+#[test]
+fn issue_167_a_notho_subtribe() {
+    assert_name("nothosubtrib. Pachynyctocereinae P.V.Heath")
+        .monomial_rank("Pachynyctocereinae", Rank::Subtribe)
+        .notho(&[NamePart::Generic])
+        .comb_authors(None, &["P.V.Heath"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name("nothosubtrib. Pachynyctocereinae")
+        .monomial_rank("Pachynyctocereinae", Rank::Subtribe)
+        .notho(&[NamePart::Generic])
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
+
+#[test]
+fn issue_167_an_epithet_of_words_apart_is_hyphenated() {
+    // ICN Art. 23.1, 60.11; IPNI cites it as "var. ville de gand", author Hort
+    assert_name("Anthurium scherzerianum var. ville de gand Hort")
+        .infra_species("Anthurium", "scherzerianum", Rank::Variety, "ville-de-gand")
+        .comb_authors(None, &["Hort"])
+        .nothing_else();
+    assert_name("Anthurium scherzerianum var. ville de gand")
+        .infra_species("Anthurium", "scherzerianum", Rank::Variety, "ville-de-gand")
         .nothing_else();
 }

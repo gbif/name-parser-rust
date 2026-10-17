@@ -76,11 +76,13 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_letter_subdivision_marker(ctx, s);
     s = normalise_unranked_marker(s);
     s = normalise_stirps_marker(s);
+    s = lower_capitalised_marker(s);
     s = unbracket_infrageneric_marker(s);
     s = capitalise_infrageneric_epithet(s);
     s = normalise_greek_letter_marker(s);
     s = strip_superspecies_marker(ctx, s);
     s = join_particle_epithet(s);
+    s = hyphenate_particle_phrase_epithet(ctx, s);
     s = normalise_minor_shapes(s);
     s = repair_question_mark_in_word(ctx, s);
     s = strip_strain_designation(ctx, s);
@@ -2053,6 +2055,32 @@ fn join_particle_epithet(s: String) -> String {
     format!("{} {}{word}{rest}", &caps[1], &caps[2])
 }
 
+/// An infraspecific marker (group 1 ends with it), a lowercase word, a particle and a lowercase word
+/// (groups 2-4), and an author or nothing after them (group 5).
+static PARTICLE_PHRASE_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*\b(?:var|subvar|subsp|ssp|f|fo|forma)\.?(?-u:\s+))(\p{Ll}{3,})(?-u:\s+)(de|du|des|la|le|di|del|da|della)(?-u:\s+)(\p{Ll}{3,})((?-u:\s+)\p{Lu}.*)?$").unwrap()
+});
+
+/// An epithet of words that stand apart is hyphenated (ICN Art. 23.1, 60.11): IPNI's `Anthurium
+/// scherzerianum var. ville de gand Hort`, after the town Gand, is `ville-de-gand`; its last two
+/// words became the author (#167). Not when the authorship given apart is those two words, an
+/// author in lower case: `Knema kunstleri subsp. macrophylla de wilde` + `de wilde`.
+fn hyphenate_particle_phrase_epithet(ctx: &ParseContext, s: String) -> String {
+    let Some(caps) = PARTICLE_PHRASE_EPITHET.captures(&s) else {
+        return s;
+    };
+    let author = format!("{} {}", &caps[3], &caps[4]);
+    let author_apart = ctx
+        .authorship_input
+        .as_deref()
+        .is_some_and(|a| java_trim(a) == author);
+    if token::is_particle(&caps[4]) || author_apart {
+        return s;
+    }
+    let rest = caps.get(5).map_or("", |m| m.as_str());
+    format!("{}{}-{}-{}{rest}", &caps[1], &caps[2], &caps[3], &caps[4])
+}
+
 /// An infrageneric rank marker after the genus and a lowercase epithet after it: `Hygrocybe sect.
 /// obtusae`. Group 1 everything before the epithet, group 2 its first letter.
 static LOWERCASE_INFRAGENERIC_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
@@ -2267,6 +2295,34 @@ fn normalise_stirps_marker(s: String) -> String {
         Some(caps) if !AUTHOR_CONTINUES.is_match(&caps[3]) => {
             let rest = &s[caps.get(2).unwrap().start()..];
             format!("{} unr. {rest}", &caps[1])
+        }
+        _ => s,
+    }
+}
+
+/// A genus (group 1), a capitalised word (group 2) with its dot, and a capitalised epithet after it
+/// (group 3), and what follows (group 4).
+static CAPITALISED_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+))(\p{Lu}\p{Ll}+)(\.?(?-u:\s+)\p{Lu}\p{Ll}+)(.*)$").unwrap()
+});
+
+/// A made-up rank written with a capital, `Veronica Gruppe Pellidosperma`, `Cerasus Grex
+/// Typocerasus Koehne`, is put in lower case, so it is read as the marker and not as an author
+/// (#167). Not before an author with a comma, a second author or a year: `Monedula Gruppe
+/// Taschenberg, 1870` is a species author.
+fn lower_capitalised_marker(s: String) -> String {
+    match CAPITALISED_MARKER.captures(&s) {
+        Some(caps)
+            if super::rank_markers::is_made_up_rank(&caps[2])
+                && !AUTHOR_CONTINUES.is_match(&caps[4]) =>
+        {
+            format!(
+                "{}{}{}{}",
+                &caps[1],
+                caps[2].to_lowercase(),
+                &caps[3],
+                &caps[4]
+            )
         }
         _ => s,
     }
@@ -6667,6 +6723,7 @@ fn supra_rank_marker(word: &str) -> Option<Rank> {
 
 /// Java SUPRA_RANK_PREFIX (StripAndStash.java:1725-1729):
 /// `^(?:[\p{Lu}][\p{L}]{2,}\s+)?(subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?)\.?\s+(?=[\p{Lu}])`,
+/// (plus an optional `notho` prefix on the marker, #167),
 /// `Pattern.UNICODE_CHARACTER_CLASS | Pattern.CASE_INSENSITIVE` -> keep default Unicode
 /// `\s`, add `(?i)`. Trailing LOOKAHEAD `(?=[\p{Lu}])` (the following capitalised name is
 /// checked but not consumed, so it stays in the returned remainder) -> needs `fancy_regex`
@@ -6675,7 +6732,7 @@ fn supra_rank_marker(word: &str) -> Option<Rank> {
 /// exposure to weigh, unlike some of the batch 2d fancy_regex patterns.
 static SUPRA_RANK_PREFIX: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"(?i)^(?:[\p{Lu}][\p{L}]{2,}\s+)?(subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?)\.?\s+(?=[\p{Lu}])",
+        r"(?i)^(?:[\p{Lu}][\p{L}]{2,}\s+)?((?:notho)?(?:subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?))\.?\s+(?=[\p{Lu}])",
     )
     .unwrap()
 });
@@ -6695,8 +6752,13 @@ static SUPRA_RANK_PREFIX: LazyLock<FancyRegex> = LazyLock::new(|| {
 fn strip_supra_rank_prefix(ctx: &mut ParseContext, s: String) -> String {
     if let Ok(Some(caps)) = SUPRA_RANK_PREFIX.captures(&s) {
         let marker = caps.get(1).unwrap().as_str().to_lowercase();
-        if let Some(r) = supra_rank_marker(&marker) {
+        // a nothotaxon's marker, IPNI's "nothosubtrib. Pachynyctocereinae" (#167)
+        let notho = marker.strip_prefix("notho");
+        if let Some(r) = supra_rank_marker(notho.unwrap_or(&marker)) {
             ctx.name.rank = r;
+            if notho.is_some() {
+                ctx.name.add_notho(NamePart::Generic);
+            }
             let whole = caps.get(0).unwrap();
             return java_trim(&s[whole.end()..]).to_string();
         }
