@@ -495,9 +495,12 @@ impl ParsedName {
             NamePart::Infrageneric => {
                 a.genus = Some(genus);
                 a.infrageneric_epithet = self.infrageneric_epithet.clone();
-                // a bracketed name between genus and species is a subgenus
+                // a bracketed name between genus and species is a subgenus; a botanical one, perhaps
+                // a section, has no rank to tell (`Abies sect. Grandes sp. 1`, #176)
                 a.rank = if self.rank.is_infrageneric_strictly() {
                     self.rank
+                } else if self.code == Some(NomCode::Botanical) {
+                    Rank::InfragenericName
                 } else {
                     Rank::Subgenus
                 };

@@ -144,7 +144,25 @@ static INFRAGENERIC: LazyLock<HashMap<&'static str, Rank>> = LazyLock::new(|| {
         ("subtr", Rank::InfragenericName),
         ("unr", Rank::InfragenericName),
     ])
+    .into_iter()
+    .chain(MADE_UP_RANKS.map(|m| (m, Rank::InfragenericName)))
+    .collect()
 });
+
+/// Ranks authors made up under ICN Art. 4.3, cited in IPNI, of no rank of their own yet: Rehder's
+/// grex ("Malus nothogrex Prunifoliae"), the German Gruppe ("Veronica Gruppe Pellidosperma"),
+/// Murray's genitor, subgenitor and agglomeratio in the conifers ("Abies agglom. Sibiria"), and the
+/// Soviet cyclus between section and series ("Artemisia cycl. Junceum", until
+/// gbif/name-parser#108 adds the rank). Unranked infrageneric names (#167).
+const MADE_UP_RANKS: [&str; 6] = ["grex", "gruppe", "genitor", "subgenitor", "agglom", "cycl"];
+
+/// One of the made-up ranks above, which are epithets too ("Pheidole grex Wilson, 2003"), with or
+/// without its "notho-" prefix.
+pub fn is_made_up_rank(word: &str) -> bool {
+    let w = word.to_lowercase();
+    let w = w.strip_prefix("notho").unwrap_or(&w);
+    MADE_UP_RANKS.contains(&w)
+}
 
 /// A marker only once the species epithet is there: right after the genus "m." and "r." are the
 /// species epithet abbreviated ("Albana m. subsp. griseum Iablokoff, 1950", "Acaeroplastes m.
