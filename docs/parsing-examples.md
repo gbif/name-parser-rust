@@ -106,8 +106,8 @@ A capitalised word in brackets after the genus is an infrageneric name, a subgen
 | `Astragalus sect. Phaca` | **Parsed** · `SCIENTIFIC` · rank `SECTION_BOTANY` · code `BOTANICAL`<br>genus `Astragalus` · infragenericEpithet `Phaca`<br>→ `Astragalus sect. Phaca` |
 | `Centaurea L. subg. Jacea` | **Parsed** · `SCIENTIFIC` · rank `SUBGENUS`<br>genus `Centaurea` · infragenericEpithet `Jacea`<br>genericAuthorship combination: authors `L.`<br>→ `Centaurea L. subgen. Jacea` |
 | `Cordia (Adans.) Kuntze sect. Salimori` | **Parsed** · `SCIENTIFIC` · rank `SECTION_BOTANY` · code `BOTANICAL`<br>genus `Cordia` · infragenericEpithet `Salimori`<br>genericAuthorship combination: authors `Kuntze`<br>genericAuthorship basionym: authors `Adans.`<br>→ `Cordia (Adans.) Kuntze sect. Salimori` |
-| `Hieracium unr. Verbasciformia`<br>*unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Hieracium` · infragenericEpithet `Verbasciformia`<br>→ `Hieracium infragen. Verbasciformia` |
-| `Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux`<br>*no stirps rank: unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Cortinarius` · infragenericEpithet `Balteatus`<br>combination: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>basionym: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>→ `Cortinarius infragen. Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux` |
+| `Hieracium unr. Verbasciformia`<br>*unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Hieracium` · infragenericEpithet `Verbasciformia`<br>→ `Hieracium (Verbasciformia)` |
+| `Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux`<br>*no stirps rank: unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Cortinarius` · infragenericEpithet `Balteatus`<br>combination: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>basionym: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>→ `Cortinarius (Balteatus) (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux` |
 
 ## Hybrids
 
