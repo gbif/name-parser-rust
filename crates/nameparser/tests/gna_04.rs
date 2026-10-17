@@ -551,16 +551,17 @@ fn viruses_plasmids_prions_etc() {
     // group: Viruses, plasmids, prions etc.
     assert_unparsable_code("Arv1virus", NameType::Other, NomCode::Virus);
     assert_unparsable_code("Turtle herpesviruses", NameType::Other, NomCode::Virus);
-    assert_unparsable_code("Cre expression vector", NameType::Other, NomCode::Virus);
+    // a vector is no virus (#124)
+    assert_unparsable_no_code("Cre expression vector", NameType::Other);
     assert_unparsable_code("Cyanophage", NameType::Other, NomCode::Virus);
     assert_unparsable_code(
         "Drosophila sturtevanti rhabdovirus",
         NameType::Other,
         NomCode::Virus,
     );
-    assert_unparsable_code("Hydra expression vector", NameType::Other, NomCode::Virus);
-    // FIXME(review): a plasmid parsed as a trinomial
-    // skipped: Gateway destination plasmid
+    // a vector is no virus (#124)
+    assert_unparsable_no_code("Hydra expression vector", NameType::Other);
+    assert_unparsable_no_code("Gateway destination plasmid", NameType::Other);
     assert_unparsable_code(
         "Abutilon mosaic virus [X15983] [X15984] Abutilon mosaic virus ICTV",
         NameType::Other,

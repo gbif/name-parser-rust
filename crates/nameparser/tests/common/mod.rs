@@ -196,6 +196,17 @@ pub fn assert_unparsable_code(input: &str, type_: NameType, code: NomCode) {
     }
 }
 
+/// [`ParseResult::Unparsable`] with the given `NameType` and no `NomCode`.
+pub fn assert_unparsable_no_code(input: &str, type_: NameType) {
+    match nameparser::parse(input, None, None, None) {
+        ParseResult::Unparsable(e) => {
+            assert_eq!(e.type_, type_, "`{input}`: type {:?} != {type_:?}", e.type_);
+            assert_eq!(e.code, None, "`{input}`: code {:?} != None", e.code);
+        }
+        other => panic!("expected `{input}` unparsable ({type_:?}), got {other:?}"),
+    }
+}
+
 /// `assertUnparsable(name, rank, type)` — unparsable with a rank hint; the echoed error name
 /// equals the input. Delegates to [`assert_unparsable_name`].
 pub fn assert_unparsable_rank(input: &str, rank: Rank, type_: NameType) {

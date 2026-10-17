@@ -3980,12 +3980,12 @@
 {"line":3981,"input":"Clecrusatellite","parsed":{"rank":"UNRANKED","code":"VIRUS","uninomial":"Clecrusatellite","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}
 {"line":3982,"input":"Milvetsatellite","parsed":{"rank":"UNRANKED","code":"VIRUS","uninomial":"Milvetsatellite","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}
 {"line":3983,"input":"Subclovsatellite","parsed":{"rank":"UNRANKED","code":"VIRUS","uninomial":"Subclovsatellite","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}
-{"line":3984,"input":"Activation tagging vector pGA2772","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Activation tagging vector pGA2772"}}
+{"line":3984,"input":"Activation tagging vector pGA2772","error":{"type":"OTHER","message":"Unparsable OTHER name: Activation tagging vector pGA2772"}}
 {"line":3985,"input":"Bse prion (Bovine spongiform encephalopathy)","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Bse prion (Bovine spongiform encephalopathy)"}}
-{"line":3986,"input":"Activation-tagging vector pSKI015","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Activation-tagging vector pSKI015"}}
-{"line":3987,"input":"siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot"}}
-{"line":3988,"input":"Binary RNAi Gateway destination vector pAGSM552","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Binary RNAi Gateway destination vector pAGSM552"}}
-{"line":3989,"input":"20S RNA replicon","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: 20S RNA replicon"}}
+{"line":3986,"input":"Activation-tagging vector pSKI015","error":{"type":"OTHER","message":"Unparsable OTHER name: Activation-tagging vector pSKI015"}}
+{"line":3987,"input":"siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot","error":{"type":"OTHER","message":"Unparsable OTHER name: siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot"}}
+{"line":3988,"input":"Binary RNAi Gateway destination vector pAGSM552","error":{"type":"OTHER","message":"Unparsable OTHER name: Binary RNAi Gateway destination vector pAGSM552"}}
+{"line":3989,"input":"20S RNA replicon","error":{"type":"OTHER","message":"Unparsable OTHER name: 20S RNA replicon"}}
 {"line":3990,"input":"Navicula ambigua f. craticularis Istv?nffi, 1898, 1897","parsed":{"rank":"FORM","code":"ZOOLOGICAL","genus":"Navicula","specificEpithet":"ambigua","infraspecificEpithet":"craticularis","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":["unusual characters"],"combinationAuthorship":{"authors":["Istv?nffi"],"exAuthors":[],"year":"1898","imprintYear":"1897","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}
 {"line":3991,"input":"@23546","error":{"type":"OTHER","message":"Unparsable OTHER name: @23546"}}
 {"line":3992,"input":"tobedeleted","error":{"type":"OTHER","message":"Unparsable OTHER name: tobedeleted"}}
@@ -4457,11 +4457,11 @@
 {"line":4458,"input":"Ceylonesmus vector Chamberlin, 1941","parsed":{"rank":"SPECIES","code":"ZOOLOGICAL","genus":"Ceylonesmus","specificEpithet":"vector","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Chamberlin"],"exAuthors":[],"year":"1941","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}
 {"line":4459,"input":"Arv1virus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Arv1virus"}}
 {"line":4460,"input":"Turtle herpesviruses","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Turtle herpesviruses"}}
-{"line":4461,"input":"Cre expression vector","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Cre expression vector"}}
+{"line":4461,"input":"Cre expression vector","error":{"type":"OTHER","message":"Unparsable OTHER name: Cre expression vector"}}
 {"line":4462,"input":"Cyanophage","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Cyanophage"}}
 {"line":4463,"input":"Drosophila sturtevanti rhabdovirus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Drosophila sturtevanti rhabdovirus"}}
-{"line":4464,"input":"Hydra expression vector","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Hydra expression vector"}}
-{"line":4465,"input":"Gateway destination plasmid","parsed":{"rank":"INFRASPECIFIC_NAME","genus":"Gateway","specificEpithet":"destination","infraspecificEpithet":"plasmid","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}
+{"line":4464,"input":"Hydra expression vector","error":{"type":"OTHER","message":"Unparsable OTHER name: Hydra expression vector"}}
+{"line":4465,"input":"Gateway destination plasmid","error":{"type":"OTHER","message":"Unparsable OTHER name: Gateway destination plasmid"}}
 {"line":4466,"input":"Abutilon mosaic virus [X15983] [X15984] Abutilon mosaic virus ICTV","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Abutilon mosaic virus [X15983] [X15984] Abutilon mosaic virus ICTV"}}
 {"line":4467,"input":"Omphalotus sp. Ictv Garcia, 18224","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Omphalotus sp. Ictv Garcia, 18224"}}
 {"line":4468,"input":"Acute bee paralysis virus [AF150629] Acute bee paralysis virus","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Acute bee paralysis virus [AF150629] Acute bee paralysis virus"}}
@@ -5193,9 +5193,9 @@
 {"line":5194,"input":"Carrot carlavirus WM-, 2008","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: Carrot carlavirus WM-, 2008"}}
 {"line":5195,"input":"C2-like viruses","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: C2-like viruses"}}
 {"line":5196,"input":"C1 bacteriophage","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: C1 bacteriophage"}}
-{"line":5197,"input":"C-terminal Gfp fusion vector pUG23","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: C-terminal Gfp fusion vector pUG23"}}
-{"line":5198,"input":"C-terminal Gfp fusion vector","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: C-terminal Gfp fusion vector"}}
-{"line":5199,"input":"CMVd3 Flexi Vector pFN24K (HaloTag 7)","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: CMVd3 Flexi Vector pFN24K (HaloTag 7)"}}
+{"line":5197,"input":"C-terminal Gfp fusion vector pUG23","error":{"type":"OTHER","message":"Unparsable OTHER name: C-terminal Gfp fusion vector pUG23"}}
+{"line":5198,"input":"C-terminal Gfp fusion vector","error":{"type":"OTHER","message":"Unparsable OTHER name: C-terminal Gfp fusion vector"}}
+{"line":5199,"input":"CMVd3 Flexi Vector pFN24K (HaloTag 7)","error":{"type":"OTHER","message":"Unparsable OTHER name: CMVd3 Flexi Vector pFN24K (HaloTag 7)"}}
 {"line":5200,"input":"bacteriophage, 315.6","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: bacteriophage, 315.6"}}
 {"line":5201,"input":"bacteriophages","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: bacteriophages"}}
 {"line":5202,"input":"\"T1-like viruses\"","error":{"type":"OTHER","code":"VIRUS","message":"Unparsable OTHER name: \"T1-like viruses\""}}

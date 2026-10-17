@@ -11,3 +11,9 @@ delete exaratus [DELETE] [none], 1999 sec. [none]
 [Genus?] delete [[none], 1999] sec. [none]
 delete exaratus , 1999 [none] 1999 sensu 1999.… 1999
 delete exaratus [DELETE] [none], 1999 sec. [none]
+# cloning vectors and replicons: no organisms, no viruses either (#124)
+Activation tagging vector pGA2772
+Activation-tagging vector pSKI015
+siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot
+Binary RNAi Gateway destination vector pAGSM552
+20S RNA replicon

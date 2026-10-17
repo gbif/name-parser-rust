@@ -58,6 +58,23 @@ static VIRUS: LazyLock<Regex> = LazyLock::new(|| {
     .unwrap()
 });
 
+/// The cloning vectors, plasmids and replicons NCBI lists beside its viruses (`Cre expression
+/// vector`, `Plasmid pACYC184`, `20S RNA replicon`) are no organisms, nor viruses: rejected
+/// without the virus code unless a viral word names them too (`Baculovirus expression vector
+/// pLM`, #124). Rust-only: Java gave them the virus code, and parsed a plasmid as a binomial.
+static GENETIC_ELEMENT: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?i)(?-u:\b(?:vectors?|replicons?|(?:mega|mini)?plasmids?)\b)").unwrap()
+});
+/// A plasmid outside brackets: `Plasmid pACYC184`, `Agrobacterium vitis plasmid pTiAB4`. In
+/// brackets it is a note on its host, `Agrobacterium rhizogenes (RI plasmid PRI1724)`, which
+/// parses. Not `Piroplasmida`.
+/// An author and a year, perhaps bracketed: `Chamberlin, 1941`, `(Chamberlin, 1941)`, `Marshall,
+/// 2008`.
+static DATED_AUTHOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\p{Lu}\p{Ll}+,?\s+\(?(?:1[6-9]|20)\d\d\b").unwrap());
+static PLASMID: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)^[^(\[]*\b(?:mega|mini)?plasmids?\b").unwrap());
+
 // "Genus species [(Subgenus)] [Author], YYYY" — zoological author-year pattern.
 // Allows VIRUS-matching epithets (vector, virus, phage) to be parsed as real species when
 // an explicit Title-cased author + 4-digit year follows. Java: `Pattern.UNICODE_CHARACTER_CLASS`,
@@ -789,6 +806,9 @@ fn apply_virus_gate(s: &str, ctx: &mut ParseContext, original: &str) -> Result<(
         }
         return Ok(()); // parse; a non-virus caller code is kept and wins over inference
     }
+    if PLASMID.is_match(s) && !HARD_VIRUS.is_match(s) {
+        return Err(ParseError::new(NameType::Other, None, original));
+    }
     if !VIRUS.is_match(s) {
         return Ok(()); // no viral trigger at all
     }
@@ -814,6 +834,18 @@ fn apply_virus_gate(s: &str, ctx: &mut ParseContext, original: &str) -> Result<(
     if SOFT_GENUS.is_match(s) && !HARD_VIRUS.is_match(s) {
         return Ok(());
     }
+    // A soft word with an author and a year, in the name or given apart, is an epithet the inline
+    // zoological override misses, in a trinomial or before a bracketed author: `Desmoxytes vector
+    // (Chamberlin, 1941)`, `Neoaemula vector vector Mackinnon, Hiller, Long & Marshall, 2008`
+    // (#124).
+    let dated = DATED_AUTHOR.is_match(s)
+        || ctx
+            .authorship_input
+            .as_deref()
+            .is_some_and(|a| DATED_AUTHOR.is_match(a));
+    if !HARD_VIRUS.is_match(s) && dated {
+        return Ok(());
+    }
     if clean && req.is_some() {
         return Ok(()); // caller asserts a non-virus code for a clean binomial
     }
@@ -827,9 +859,10 @@ fn apply_virus_gate(s: &str, ctx: &mut ParseContext, original: &str) -> Result<(
             }
         }
     }
+    let virus = HARD_VIRUS.is_match(s) || !GENETIC_ELEMENT.is_match(s);
     Err(ParseError::new(
         NameType::Other,
-        Some(NomCode::Virus),
+        virus.then_some(NomCode::Virus),
         original,
     ))
 }

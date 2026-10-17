@@ -1376,3 +1376,46 @@ fn issue_171_zoological_sections() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+#[test]
+fn issue_124_vectors_and_plasmids_are_no_viruses() {
+    // NCBI's cloning vectors and plasmids are no organisms, nor viruses
+    for name in [
+        "H-Pelican lacZ transformation vector",
+        "H-Stinger GFP transformation vector",
+        "Cre expression vector",
+        "20S RNA replicon",
+        "Plasmid pACYC184",
+        "Accepter plasmid pBac3xP3DsRed2attP",
+        "Agrobacterium vitis plasmid pTiAB4",
+        "Gateway destination plasmid",
+    ] {
+        assert_unparsable_no_code(name, NameType::Other);
+    }
+    // a viral word keeps the code
+    assert_unparsable_code(
+        "Baculovirus expression vector pLM",
+        NameType::Other,
+        NomCode::Virus,
+    );
+    assert_unparsable_code("Gyrovirus GyV3", NameType::Other, NomCode::Virus);
+    // a plasmid in brackets is a note on its host
+    assert_name("Agrobacterium rhizogenes (RI plasmid PRI1724)")
+        .species("Agrobacterium", "rhizogenes")
+        .bas_authors(None, &["RI plasmid Pri1724"]);
+    // the epithet vector with a dated author
+    assert_name("Desmoxytes vector (Chamberlin, 1941)")
+        .species("Desmoxytes", "vector")
+        .bas_authors(Some("1941"), &["Chamberlin"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // alone the trinomial is shaped as `Cre expression vector`
+    assert_name_auth(
+        "Neoaemula vector vector",
+        "Mackinnon, Hiller, Long & Marshall, 2008",
+    )
+    .infra_species("Neoaemula", "vector", Rank::Subspecies, "vector")
+    .comb_authors(Some("2008"), &["Mackinnon", "Hiller", "Long", "Marshall"])
+    .code(NomCode::Zoological)
+    .nothing_else();
+}
