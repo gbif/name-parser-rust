@@ -28,7 +28,8 @@ A name is parsed into one of two results:
 
 - **Parsed** — a `ParsedName`: the name parts (`uninomial`, or `genus`, `infragenericEpithet`,
   `specificEpithet`, `infraspecificEpithet`, `cultivarEpithet`), the `rank`, the nomenclatural
-  `code` when there is evidence for it, the `type`, the authorship, notes and flags. Its `state` is
+  `code` when the name carries evidence of one code only (never the style of its authorship), the
+  `type`, the authorship, notes and flags. Its `state` is
   `COMPLETE`, or `PARTIAL` when a rest could not be read (`unparsed`). The `type` is `SCIENTIFIC`,
   or `INFORMAL` for a name in open nomenclature: a provisional designation (`Bacillus sp. 1`), kept
   verbatim as the `phrase`, a qualified epithet (`Abies cf. alba`) or a missing one. The `anchor`

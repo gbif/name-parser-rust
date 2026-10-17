@@ -13,7 +13,7 @@ Lepidoptera Linnaeus, 1758
 Pinus	L.
 
 ## Species
-> A genus with a lower-case epithet is a species. The authorship is split into the combination authorship and, in brackets, the basionym authorship (the author of the original combination). A year with a comma and a bracketed original author are typical of zoology, a recombining author after the bracket of botany; both become evidence for the nomenclatural `code`.
+> A genus with a lower-case epithet is a species. The authorship is split into the combination authorship and, in brackets, the basionym authorship (the author of the original combination). Neither tells the nomenclatural `code`: botanists and bacteriologists cite years too, and bacteriologists recombine in brackets like botanists. The code is set only by evidence that exists under one code alone, such as a rank of that code (`sect.`, `pv.`, `ab.`), `Candidatus`, a cultivar, a named hybrid or a sanctioning author (`: Fr.`), or when the caller gives it.
 Abies alba Mill.
 Quercus robur L.
 Homo sapiens Linnaeus, 1758
@@ -26,7 +26,7 @@ Abies alba	Mill.
 Puma concolor	(Linnaeus, 1771)
 
 ## Infraspecific names
-> A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. Without a marker, zoological trinomials are subspecies; otherwise the rank stays the generic `INFRASPECIFIC_NAME`. The author of the species, standing before the marker, is kept apart as the `specificAuthorship`. An autonym repeats the species epithet and has no author of its own.
+> A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. Without a marker the rank stays the generic `INFRASPECIFIC_NAME`; a trinomial under the zoological code, given by the caller, is a subspecies. The author of the species, standing before the marker, is kept apart as the `specificAuthorship`. An autonym repeats the species epithet and has no author of its own.
 Vulpes vulpes silaceus Miller, 1907
 Poa pratensis subsp. angustifolia (L.) Lej.
 Abies alba var. nana Carrière
@@ -51,7 +51,7 @@ Fusarium oxysporum f. sp. lycopersici
 Rubus hirtus Rchb. microg pectinatus Sudre & Gavet
 
 ## Subgenera and other infrageneric names
-> A capitalised word in brackets after the genus is a subgenus. Infrageneric rank markers (`sect.`, `subg.`, `ser.`) work like the infraspecific ones; an author before the marker is the genus author.
+> A capitalised word in brackets after the genus is an infrageneric name, a subgenus under the zoological code. Infrageneric rank markers (`sect.`, `subg.`, `ser.`) work like the infraspecific ones; an author before the marker is the genus author.
 Carabus (Carabus) auronitens Fabricius, 1792
 Phalium (Semicassis) vector R. T. Abbott, 1993
 Astragalus sect. Phaca
@@ -129,7 +129,7 @@ Acosmeta	Moeschler, MS.
 Oxalis barrelieri ined.?
 
 ## Nomenclatural notes
-> Notes on nomenclatural status are moved out of the authorship into `nomenclaturalNote`. A status that exists in one code only also sets the code.
+> Notes on nomenclatural status are moved out of the authorship into `nomenclaturalNote`. A status that exists in the zoological code only (`nomen oblitum`, `nomen protectum`) also sets the code.
 Schedonorus arundinaceus (Schreb.) Dumort., nom. cons.
 Spermacoce hyssopifolia Sm., nom. rej.
 Lobelia parvifolia R.Br., nom. illeg.
