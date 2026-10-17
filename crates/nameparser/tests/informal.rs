@@ -1144,3 +1144,46 @@ fn an_unnamed_genus_after_its_taxon_is_the_phrase() {
         .monomial_rank("Ojrotella", Rank::Genus)
         .nothing_else();
 }
+
+#[test]
+fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
+    // #176: the rank is the species' its `sp.` stands for, not the subgenus's or section's
+    for (input, taxon, phrase) in [
+        (
+            "Lasioglossum (Dialictus) sp. 1",
+            "Lasioglossum subgen. Dialictus",
+            "sp. 1",
+        ),
+        (
+            "Enochrus (Methydrus) sp.1",
+            "Enochrus subgen. Methydrus",
+            "sp.1",
+        ),
+        (
+            "Lasioglossum (Dialictus) sp.",
+            "Lasioglossum subgen. Dialictus",
+            "sp.",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Subgenus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    assert_informal("Abies subgen. Pseudotsuga sp.")
+        .taxon("Abies subgen. Pseudotsuga")
+        .taxon_rank(Rank::Subgenus)
+        .rank(Rank::Species)
+        .phrase("sp.")
+        .nothing_else();
+    // the section is lost with the rank; a botanical anchor has no rank to tell
+    assert_informal("Abies sect. Grandes sp. 1")
+        .taxon("Abies infragen. Grandes")
+        .taxon_rank(Rank::InfragenericName)
+        .rank(Rank::Species)
+        .phrase("sp. 1")
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
