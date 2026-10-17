@@ -732,8 +732,12 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                     }
                     sb.push(' ');
                     // we show zoological infragenerics in brackets, but use rank markers for
-                    // botanical names (unless its no defined rank)
-                    if n.code == Some(NomCode::Zoological) {
+                    // botanical names (unless its no defined rank). Of no code, an unranked
+                    // infrageneric keeps its brackets too: "infragen." is no marker anyone writes
+                    // ("Calathus (Lindrothius) Kurnakov, 1961").
+                    if n.code == Some(NomCode::Zoological)
+                        || (n.code.is_none() && n.rank == Rank::InfragenericName)
+                    {
                         sb.push('(');
                         append_qualifier(&mut sb, n, NamePart::Infrageneric, f.show_qualifier);
                         if f.hybrid_marker && has_notho(n, NamePart::Infrageneric) {
