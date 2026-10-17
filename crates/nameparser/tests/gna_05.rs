@@ -13,38 +13,32 @@ fn year_in_square_brackets() {
     assert_name("Anthoscopus Cabanis [1851]")
         .monomial("Anthoscopus")
         .comb_authors(Some("1851"), &["Cabanis"])
-        .code(NomCode::Zoological)
         .bracketed_year()
         .nothing_else();
     assert_name("Anthoscopus Cabanis [185?]")
         .monomial("Anthoscopus")
         .comb_authors(Some("185?"), &["Cabanis"])
-        .code(NomCode::Zoological)
         .bracketed_year()
         .nothing_else();
     assert_name("Anthoscopus Cabanis [1851?]")
         .monomial("Anthoscopus")
         .comb_authors(Some("1851?"), &["Cabanis"])
-        .code(NomCode::Zoological)
         .bracketed_year()
         .nothing_else();
     assert_name("Trismegistia monodii Ando, 1973 [1974]")
         .species("Trismegistia", "monodii")
         .comb_authors(Some("1973"), &["Ando"])
         .imprint_year("1974")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Zygaena witti Wiegel [1973]")
         .species("Zygaena", "witti")
         .comb_authors(Some("1973"), &["Wiegel"])
-        .code(NomCode::Zoological)
         .bracketed_year()
         .nothing_else();
     assert_name("Deyeuxia coarctata Kunth, 1815 [1816]")
         .species("Deyeuxia", "coarctata")
         .comb_authors(Some("1815"), &["Kunth"])
         .imprint_year("1816")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -54,7 +48,6 @@ fn utf80x3000_character_ideographic_space() {
     assert_name("Kinosternidae　Agassiz, 1857")
         .monomial("Kinosternidae")
         .comb_authors(Some("1857"), &["Agassiz"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -73,7 +66,6 @@ fn names_with_spanish_y_instead_of() {
     assert_name("Caloptenopsis crassiusculus (Martínez y Fernández-Castillo, 1896)")
         .species("Caloptenopsis", "crassiusculus")
         .bas_authors(Some("1896"), &["Martínez y Fernández-Castillo"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802")
         .species("Dicranum", "saxatile")
@@ -81,12 +73,10 @@ fn names_with_spanish_y_instead_of() {
             Some("1802"),
             &["Lagasca y Segura", "García", "Clemente y Rubio"],
         )
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967")
         .species_ig("Carabus", "Tanaocarabus", "hendrichsi")
         .comb_authors(Some("1967"), &["Bolvar y Pieltain", "Rotger", "Coronado"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -97,7 +87,6 @@ fn normalize_atypical_dashes() {
         .species_ig("Passalus", "Pertinax", "gaboi")
         .comb_authors(Some("2022"), &["Jiménez-Ferbans", "Reyes-Castillo"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -122,7 +111,6 @@ fn possible_canonical() {
         .species("Moraea", "spathulata")
         .bas_authors(None, &["L.f."])
         .comb_authors(None, &["Klatt"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Agropyron pectiniforme var. karabaljikji ined.?")
         .infra_species("Agropyron", "pectiniforme", Rank::Variety, "karabaljikji")
@@ -132,16 +120,19 @@ fn possible_canonical() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
     assert_name("Staphylococcus hyicus chromogenes Devriese et al. 1978")
-        .infra_species("Staphylococcus", "hyicus", Rank::Subspecies, "chromogenes")
+        .infra_species(
+            "Staphylococcus",
+            "hyicus",
+            Rank::InfraspecificName,
+            "chromogenes",
+        )
         .comb_authors(Some("1978"), &["Devriese", "al."])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a semicolon after the year ends the citation: the second is left unparsed
     assert_name("Rana aurora Baird and Girard, 1852; H.B. Shaffer et al., 2004")
         .species("Rana", "aurora")
         .comb_authors(Some("1852"), &["Baird", "Girard"])
         .partial("H.B. Shaffer et al., 2004")
-        .code(NomCode::Zoological)
         .nothing_else();
     // skipped:
     //   "Verpericola megasoma \"Dall\" Pils." — pinned in impl_05.rs (Dall ex Pils.).
@@ -184,13 +175,11 @@ fn treating_al_as_et_al_binomials() {
     assert_name("Adetus fuscoapicalis Souza f. et al. 2001")
         .species("Adetus", "fuscoapicalis")
         .comb_authors(Some("2001"), &["Souza f.", "al."])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Sterigmostemon rhodanthum Rech. f. et al. in Rech. f.")
         .species("Sterigmostemon", "rhodanthum")
         .comb_authors(None, &["Rech.f.", "al."])
         .published_in("Rech. f.")
-        .code(NomCode::Botanical)
         .comb_in_authors(&["Rech.f."])
         .nothing_else();
 }
@@ -211,12 +200,10 @@ fn epithets_do_not_start_or_end_with_a_dash() {
     assert_name("Abryna -petri Paiva, 1860")
         .species("Abryna", "petri")
         .comb_authors(Some("1860"), &["Paiva"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Abryna petri- Paiva, 1860")
         .species("Abryna", "petri")
         .comb_authors(Some("1860"), &["Paiva"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -231,7 +218,6 @@ fn names_that_contain_of() {
             Some("1939"),
             &["Trustees of the British Museum Natural History"],
         )
-        .code(NomCode::Zoological)
         .nothing_else();
     // "of" before a lower-case word is English, no author
     // FIXME(review): an English phrase, not a binomial
@@ -336,19 +322,17 @@ fn open_taxonomy_with_ranks_unfinished() {
         .type_(NameType::Informal)
         .nothing_else();
     assert_name("Albinaria brevicollis cf. sica Fuchs & Kaufel 1936")
-        .infra_species("Albinaria", "brevicollis", Rank::Subspecies, "sica")
+        .infra_species("Albinaria", "brevicollis", Rank::InfraspecificName, "sica")
         .comb_authors(Some("1936"), &["Fuchs", "Kaufel"])
         .qualifiers(&[(NamePart::Infraspecific, "cf.")])
         .type_(NameType::Informal)
-        .code(NomCode::Zoological)
         .nothing_else();
     // the qualifier precedes the species epithet, so it qualifies that one
     assert_name("Albinaria cf brevicollis sica Fuchs & Kaufel 1936")
-        .infra_species("Albinaria", "brevicollis", Rank::Subspecies, "sica")
+        .infra_species("Albinaria", "brevicollis", Rank::InfraspecificName, "sica")
         .comb_authors(Some("1936"), &["Fuchs", "Kaufel"])
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Albinaria brevicollis cf")
         .species("Albinaria", "brevicollis")
@@ -432,7 +416,6 @@ fn a_serovar_is_an_infraspecific_name() {
     assert_name("Angulospora aquatica Sv. Nilsson, 1962")
         .species("Angulospora", "aquatica")
         .comb_authors(Some("1962"), &["Sv.Nilsson"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -479,7 +462,6 @@ fn ignoring_sensu_sec() {
         .species("Amitostigma", "formosana")
         .comb_authors(None, &["S.S.Ying"])
         .bas_authors(None, &["S.S.Ying"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Arenaria serpyllifolia L. s.str.")
         .species("Arenaria", "serpyllifolia")
@@ -495,34 +477,29 @@ fn ignoring_sensu_sec() {
         .monomial("Abramis")
         .comb_authors(Some("1816"), &["Cuvier"])
         .sensu("sec. Dybowski 1862")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Abramis brama subsp. bergi Grib & Vernidub 1935 sec Eschmeyer 2004")
         .infra_species("Abramis", "brama", Rank::Subspecies, "bergi")
         .comb_authors(Some("1935"), &["Grib", "Vernidub"])
         .sensu("sec Eschmeyer 2004")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Abarema clypearia (Jack) Kosterm., P. P.")
         .species("Abarema", "clypearia")
         .comb_authors(None, &["Kosterm."])
         .bas_authors(None, &["Jack"])
         .doubtful()
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Abarema clypearia (Jack) Kosterm., p.p.")
         .species("Abarema", "clypearia")
         .comb_authors(None, &["Kosterm."])
         .bas_authors(None, &["Jack"])
         .doubtful()
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Abarema clypearia (Jack) Kosterm., p. p.")
         .species("Abarema", "clypearia")
         .comb_authors(None, &["Kosterm."])
         .bas_authors(None, &["Jack"])
         .doubtful()
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Indigofera phyllogramme var. aphylla R.Vig., p.p.B")
         .infra_species("Indigofera", "phyllogramme", Rank::Variety, "aphylla")
@@ -536,7 +513,6 @@ fn ignoring_sensu_sec() {
         .comb_authors(None, &["Boiss."])
         .bas_authors(None, &["Schultes"])
         .sensu("s.l.")
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -596,7 +572,6 @@ fn removing_nomenclatural_annotations() {
     assert_name("Amphiprora pseudoduplex (Osada & Kobayasi, 1990) comb. nov.")
         .species("Amphiprora", "pseudoduplex")
         .bas_authors(Some("1990"), &["Osada", "Kobayasi"])
-        .code(NomCode::Zoological)
         .nom_note("comb. nov.")
         .nothing_else();
     assert_name("Methanosarcina barkeri str. fusaro")
@@ -607,7 +582,6 @@ fn removing_nomenclatural_annotations() {
         .comb_authors(None, &["R.C.Harris"])
         .bas_authors(None, &["Nyl."])
         .nom_note("comb. nov.")
-        .code(NomCode::Botanical)
         .nothing_else();
     // "(nomen nudum)" is the nomenclatural note (it used to land in sanctioningAuthor), ": 196"
     // the page
@@ -616,7 +590,6 @@ fn removing_nomenclatural_annotations() {
         .comb_authors(Some("1830"), &["Wagler"])
         .nom_note("nomen nudum")
         .published_in_page("196")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Aster exilis Ell., nomen dubium")
         .species("Aster", "exilis")
@@ -627,7 +600,6 @@ fn removing_nomenclatural_annotations() {
         .species("Abutilon", "avicennae")
         .comb_authors(None, &["Gaertn."])
         .nom_note("nom. illeg.")
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Achillea bonarota nom. in herb.")
         .species("Achillea", "bonarota")
@@ -637,14 +609,12 @@ fn removing_nomenclatural_annotations() {
         .infra_species("Aconitum", "napellus", Rank::Variety, "formosum")
         .comb_authors(None, &["W.D.J.Koch"])
         .bas_authors(None, &["Rchb."])
-        .code(NomCode::Botanical)
         .nom_note("nom. ambig.")
         .nothing_else();
     assert_name("Aesculus canadensis Hort. ex Lavallée")
         .species("Aesculus", "canadensis")
         .comb_authors(None, &["Lavallée"])
         .comb_ex_authors(&["hort."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("× Dialaeliopsis hort.")
         .monomial("Dialaeliopsis")

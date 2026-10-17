@@ -15,7 +15,6 @@
 
 mod common;
 use common::*;
-use nameparser::model::NomCode;
 
 // ---- #21: `&` / `et` always separate two authors -------------------------------------------------
 
@@ -54,7 +53,6 @@ fn the_basionym_team_is_kept_apart_too() {
         .species("Abies", "alba")
         .bas_authors(None, &["Lam.", "DC."])
         .comb_authors(None, &["Kunth"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -173,12 +171,10 @@ fn generation_i_in_a_name_and_in_a_basionym() {
     assert_name("Conus textile G. B. Sowerby I, 1825")
         .species("Conus", "textile")
         .comb_authors(Some("1825"), &["G.B.Sowerby I"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Haliotis asinina", "(Broderip & G. B. Sowerby I, 1829)")
         .species("Haliotis", "asinina")
         .bas_authors(Some("1829"), &["Broderip", "G.B.Sowerby I"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

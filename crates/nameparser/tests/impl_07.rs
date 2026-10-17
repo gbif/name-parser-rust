@@ -90,7 +90,6 @@ fn long_name() {
         )
         .sensu(&format!("sec. {authors}"))
         .warning(&[warnings::LONG_NAME])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // A long-but-valid authorship (~420 chars) supplied on its own via parseAuthorship
@@ -263,14 +262,12 @@ fn non_names() {
         .species("Hebeloma", "album")
         .comb_authors(Some("1900"), &["Peck"])
         .sensu("non ss. auct. europ.")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Nitocris (Nitocris) similis Breuning, 1956 (nec Gahan, 1893)")
         .binomial("Nitocris", Some("Nitocris"), "similis", Rank::Species)
         .comb_authors(Some("1956"), &["Breuning"])
         .sensu("nec Gahan, 1893")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Bartlingia Brongn. non Rchb. 1824 nec F.Muell. 1882")
@@ -358,7 +355,6 @@ fn quote_normalisation() {
         .monomial("'Prosthète'")
         .doubtful() // because the quotes indicate it is not a valid scientific name
         .comb_authors(Some("1861"), &["Hesse"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // the curly-quoted input parses identically to the ASCII-quoted one (‘Prosthète’ Hesse 1861)
@@ -381,7 +377,6 @@ fn stray_char_in_epithet() {
     assert_name("Lamprostiba pu!chra Pace, 2014")
         .species("Lamprostiba", "pu!chra")
         .comb_authors(Some("2014"), &["Pace"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -425,7 +420,6 @@ fn viral_names() {
     assert_name("Crassatellites janus Hedley, 1906")
         .species("Crassatellites", "janus")
         .comb_authors(Some("1906"), &["Hedley"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Ypsolophus satellitella")

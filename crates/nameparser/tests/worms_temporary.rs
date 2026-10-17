@@ -7,7 +7,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NameType, Rank};
 
 // ---- still-correct cases pinned so the fixes below can't regress them -------------------------
 
@@ -290,7 +290,6 @@ fn bracketed_anonymous_author_with_year_is_an_attributed_author() {
     assert_name("Aus bus [Hübner], 1806")
         .species("Aus", "bus")
         .comb_anon(Some("1806"), &["Hübner"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -299,7 +298,6 @@ fn parenthesised_single_word_is_still_a_basionym_author() {
     assert_name("Abies alba (Müller)")
         .species("Abies", "alba")
         .bas_authors(None, &["Müller"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -316,7 +314,6 @@ fn single_letter_species_epithet_is_informal() {
         .species("Collettea", letter)
         .type_(NameType::Informal)
         .comb_authors(Some("2005"), &["Blazewicz-Paszkowycz", "Larsen"])
-        .code(NomCode::Zoological)
         .nothing_else();
     }
     assert_name_hinted(
@@ -328,7 +325,6 @@ fn single_letter_species_epithet_is_informal() {
     .species("Collettea", "a")
     .type_(NameType::Informal)
     .comb_authors(Some("2005"), &["Blazewicz-Paszkowycz", "Larsen"])
-    .code(NomCode::Zoological)
     .nothing_else();
 }
 
@@ -337,7 +333,6 @@ fn abbreviated_particle_after_the_genus_is_still_an_author_particle() {
     assert_name("Micropleura v Linstow, 1906")
         .monomial("Micropleura")
         .comb_authors(Some("1906"), &["v Linstow"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -349,7 +344,6 @@ fn single_letter_after_an_infraspecific_marker_is_the_epithet() {
             .infra_species("Undella", "hyalina", Rank::Variety, letter)
             .type_(NameType::Informal)
             .comb_authors(Some("1907"), &["Brandt"])
-            .code(NomCode::Zoological)
             .nothing_else();
     }
 }
@@ -386,7 +380,6 @@ fn parenthesised_letter_after_an_infraspecific_marker_is_the_phrase() {
         .phrase(&format!("({letter})"))
         .type_(NameType::Informal)
         .comb_authors(Some("1906"), &["Müller"])
-        .code(NomCode::Zoological)
         .nothing_else();
     }
 }
@@ -425,7 +418,6 @@ fn fully_quoted_name_is_parsed_without_its_quotes() {
     assert_name("\"Accipiter bicolor (Vieillot, 1817)\"")
         .species("Accipiter", "bicolor")
         .bas_authors(Some("1817"), &["Vieillot"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -489,7 +481,6 @@ fn leading_question_mark_doubts_the_genus() {
         .doubtful()
         .warning(&["question marks removed"])
         .comb_authors(Some("1940"), &["Leene"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a bare uninomial stays a Parsed name, so the qualifier and the flag survive
     assert_name("?Monotremata")
@@ -635,7 +626,6 @@ fn a_question_mark_in_brackets_after_the_genus_doubts_it() {
         .doubtful()
         .warning(&["question marks removed"])
         .comb_authors(Some("1873"), &["Macleay"])
-        .code(NomCode::Zoological)
         .nothing_else();
     let agrion = nameparser::parse_name("Agrion (?) satelles", None, None, None).unwrap();
     assert_eq!(
@@ -655,7 +645,6 @@ fn a_question_mark_in_brackets_after_the_genus_doubts_it() {
             .doubtful()
             .warning(&["question marks removed"])
             .comb_authors(Some("1951"), &["Gressitt"])
-            .code(NomCode::Zoological)
             .nothing_else();
     }
     let glenea =

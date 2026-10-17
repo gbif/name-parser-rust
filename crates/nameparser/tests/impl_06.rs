@@ -23,7 +23,6 @@ fn extinct_names() {
         .monomial("Sicyoniidae")
         .comb_authors(Some("1898"), &["Ortmann"])
         .extinct()
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("†Titanoptera")
@@ -40,7 +39,6 @@ fn extinct_names() {
         .monomial("Tuarangiida")
         .comb_authors(Some("1982"), &["MacKinnon"])
         .extinct()
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -125,27 +123,23 @@ fn string_index_out_of_bounds_exception() {
     assert_name("Amblyomma americanum (Linnaeus, 1758)")
         .species("Amblyomma", "americanum")
         .bas_authors(Some("1758"), &["Linnaeus"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & Y.H.Tseng ")
         .infra_species("Salix", "taiwanalpina", Rank::Variety, "chingshuishanensis")
         .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "Y.H.Tseng"])
         .bas_authors(None, &["S.S.Ying"])
-        .code(NomCode::Botanical)
         .nothing_else();
     // an "&amp;" entity broken by a space, or missing its semicolon, is an ampersand too
     assert_name("Salix taiwanalpina var. chingshuishanensis (S.S.Ying) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp  Y.H.Tseng ")
         .infra_species("Salix", "taiwanalpina", Rank::Variety, "chingshuishanensis")
         .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "Y.H.Tseng"])
         .bas_authors(None, &["S.S.Ying"])
-        .code(NomCode::Botanical)
         .warning(&[warnings::HTML_ENTITIES])
         .nothing_else();
     assert_name("Salix morrisonicola var. takasagoalpina (Koidz.) F.Y.Lu, C.H.Ou, Y.C.Chen, Y.S.Chi, K.C.Lu & amp; Y.H.Tseng")
         .infra_species("Salix", "morrisonicola", Rank::Variety, "takasagoalpina")
         .comb_authors(None, &["F.Y.Lu", "C.H.Ou", "Y.C.Chen", "Y.S.Chi", "K.C.Lu", "Y.H.Tseng"])
         .bas_authors(None, &["Koidz."])
-        .code(NomCode::Botanical)
         .warning(&[warnings::HTML_ENTITIES])
         .nothing_else();
     assert_name(
@@ -170,7 +164,6 @@ fn string_index_out_of_bounds_exception() {
         .species("Billia", "rosea")
         .comb_authors(None, &["C.Ulloa", "P.Jørg."])
         .bas_authors(None, &["Planch.", "Linden"])
-        .code(NomCode::Botanical)
         .warning(&[warnings::HTML_ENTITIES])
         .nothing_else();
     assert_name("Salix breviserrata subsp. fontqueri T.E. D&iacute;az Gonz&aacute;lez, J.A. Fern&aacute;ndez Prieto &amp; H. Nava")
@@ -192,7 +185,6 @@ fn nom_notes() {
         .comb_authors(None, &["Engl."])
         .nom_note("nom. illeg.")
         .sensu("non. A.lancea.")
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Combretum Loefl. (1758), nom. cons. [= Grislea L. 1753].")
@@ -201,14 +193,12 @@ fn nom_notes() {
         .nom_note("nom. cons.")
         .doubtful()
         .partial("[= Grislea L. 1753].")
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Anthurium lanceum Engl. nom.illeg.")
         .species("Anthurium", "lanceum")
         .comb_authors(None, &["Engl."])
         .nom_note("nom. illeg.")
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -222,7 +212,6 @@ fn nom_note_code() {
         .species("Polygala", "vulgaris")
         .comb_authors(Some("1753"), &["L."])
         .nom_note("nom. cons.")
-        .code(NomCode::Botanical)
         .nothing_else();
     // ICZN-only status → ZOOLOGICAL, with no year present
     assert_name("Aus bus Smith, nomen oblitum")
@@ -269,7 +258,6 @@ fn uncertain_authorship() {
     assert_name("Uroleptopsis viridis (Perejaslawzewa, 1886) ?")
         .species("Uroleptopsis", "viridis")
         .bas_authors(Some("1886"), &["Perejaslawzewa"])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();

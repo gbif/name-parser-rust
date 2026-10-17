@@ -18,7 +18,6 @@ fn binomials_with_an_abbreviated_genus() {
         .species("Mo.", "alpium")
         .bas_authors(Some("1778"), &["Osbeck"])
         .type_(NameType::Informal)
-        .code(NomCode::Zoological)
         .warning(&[warnings::ABBREVIATED_GENUS])
         .nothing_else();
 }
@@ -36,13 +35,11 @@ fn binomials_with_abbreviated_subgenus() {
     assert_name("Gahrliepia (G.) tessellata Traub & Morrow 1955")
         .species_ig("Gahrliepia", "G.", "tessellata")
         .comb_authors(Some("1955"), &["Traub", "Morrow"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::ABBREVIATED_SUBGENUS])
         .nothing_else();
     assert_name("Simia (Cercop.) nasuus Kerr 1792")
         .species_ig("Simia", "Cercop.", "nasuus")
         .comb_authors(Some("1792"), &["Kerr"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::ABBREVIATED_SUBGENUS])
         .nothing_else();
 }
@@ -60,7 +57,6 @@ fn binomials_with_basionym_and_combination_authors() {
         .species("Pseudocercospora", "dendrobii")
         .comb_authors(Some("2003"), &["U.Braun", "Crous"])
         .bas_authors(None, &["H.C.Burnett"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Pseudocercospora dendrobii(H.C.     Burnett, 1873)U. Braun & Crous     2003")
         .species("Pseudocercospora", "dendrobii")
@@ -76,7 +72,6 @@ fn binomials_with_basionym_and_combination_authors() {
         .species("Sedella", "pumila")
         .comb_authors(None, &["Britton", "Rose"])
         .bas_authors(None, &["Benth."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Impatiens nomenyae Eb.Fisch. & Raheliv.")
         .species("Impatiens", "nomenyae")
@@ -97,7 +92,6 @@ fn exceptions_with_binomials() {
     assert_name("Agra not Erwin, 2002")
         .species("Agra", "not")
         .comb_authors(Some("2002"), &["Erwin"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Navicula bacterium Frenguelli")
         .species("Navicula", "bacterium")
@@ -107,22 +101,18 @@ fn exceptions_with_binomials() {
         .species("Bottaria", "nudum")
         .comb_authors(None, &["Vain."])
         .bas_authors(None, &["Nyl."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Turkozelotes attavirus Chatzaki, 2019")
         .species("Turkozelotes", "attavirus")
         .comb_authors(Some("2019"), &["Chatzaki"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Phalium (Semicassis) vector R. T. Abbott, 1993")
         .species_ig("Phalium", "Semicassis", "vector")
         .comb_authors(Some("1993"), &["R.T.Abbott"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Spirophora bacterium Lendenfeld, 1887")
         .species("Spirophora", "bacterium")
         .comb_authors(Some("1887"), &["Lendenfeld"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -132,22 +122,18 @@ fn binomials_with_mc_and_mac_authors() {
     assert_name("Zygocera norfolkensis McKeown 1938")
         .species("Zygocera", "norfolkensis")
         .comb_authors(Some("1938"), &["McKeown"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Zygocera norfolkensis MacKeown 1938")
         .species("Zygocera", "norfolkensis")
         .comb_authors(Some("1938"), &["MacKeown"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Zygocera norfolkensis Mac'Keown 1938")
         .species("Zygocera", "norfolkensis")
         .comb_authors(Some("1938"), &["Mac'Keown"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Zygocera norfolkensis Mc'Keown 1938")
         .species("Zygocera", "norfolkensis")
         .comb_authors(Some("1938"), &["Mc'Keown"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -157,14 +143,22 @@ fn infraspecies_without_rank_iczn() {
     // year are inferred as zoological → bumped to SUBSPECIES; pure trinomials with no
     // code signal stay INFRASPECIFIC_NAME.
     assert_name("Myotis fimbriatus taiwanensis Ärnbäck-Christie-Linde, 1908")
-        .infra_species("Myotis", "fimbriatus", Rank::Subspecies, "taiwanensis")
+        .infra_species(
+            "Myotis",
+            "fimbriatus",
+            Rank::InfraspecificName,
+            "taiwanensis",
+        )
         .comb_authors(Some("1908"), &["Ärnbäck-Christie-Linde"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Peristernia nassatula forskali Tapparone-Canefri 1875")
-        .infra_species("Peristernia", "nassatula", Rank::Subspecies, "forskali")
+        .infra_species(
+            "Peristernia",
+            "nassatula",
+            Rank::InfraspecificName,
+            "forskali",
+        )
         .comb_authors(Some("1875"), &["Tapparone-Canefri"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Cypraeovula (Luponia) amphithales perdentata")
         .infra_species(
@@ -187,7 +181,6 @@ fn infraspecies_without_rank_iczn() {
         )
         .comb_authors(Some("1961"), &["K.A.Harrison"])
         .bas_authors(None, &["Batsch"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Hydnellum scrobiculatum zonatum (Banker) D. Hall & D.E. Stuntz 1972")
         .infra_species(
@@ -198,7 +191,6 @@ fn infraspecies_without_rank_iczn() {
         )
         .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
         .bas_authors(None, &["Banker"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Hydnellum (Hydnellum) scrobiculatum zonatum (Banker) D. Hall & D.E. Stuntz 1972")
         .infra_species(
@@ -210,7 +202,6 @@ fn infraspecies_without_rank_iczn() {
         .infrageneric("Hydnellum")
         .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
         .bas_authors(None, &["Banker"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Hydnellum scrobiculatum zonatum")
         .infra_species(
@@ -240,7 +231,6 @@ fn infraspecies_without_rank_iczn() {
         )
         .comb_authors(None, &["Weber-van Bosse"])
         .comb_ex_authors(&["P.L.Crouan", "H.M.Crouan"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Rhinanthus glacialis simplex(Sterneck) J.Dostál")
         .infra_species(
@@ -251,7 +241,6 @@ fn infraspecies_without_rank_iczn() {
         )
         .comb_authors(None, &["J.Dostál"])
         .bas_authors(None, &["Sterneck"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -277,12 +266,15 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Cantharellus", "sinuosus", Rank::Variety, "multiplex")
         .comb_authors(Some("1995"), &["Romagn."])
         .bas_authors(None, &["A.H.Sm."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Crematogaster impressa st. brazzai Santschi 1937")
-        .infra_species("Crematogaster", "impressa", Rank::Subspecies, "brazzai")
+        .infra_species(
+            "Crematogaster",
+            "impressa",
+            Rank::InfraspecificName,
+            "brazzai",
+        )
         .comb_authors(Some("1937"), &["Santschi"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Plantago major prol. lutulenta (Lamotte) Rouy")
         .infra_species("Plantago", "major", Rank::Proles, "lutulenta")
@@ -302,7 +294,6 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Fagus", "sylvatica", Rank::Subspecies, "orientalis")
         .comb_authors(None, &["Greuter", "Burdet"])
         .bas_authors(None, &["Lipsky"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Tillandsia utriculata subspec. utriculata")
         .infra_species("Tillandsia", "utriculata", Rank::Subspecies, "utriculata")
@@ -311,7 +302,6 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Prunus", "mexicana", Rank::Variety, "reticulata")
         .comb_authors(None, &["Sarg."])
         .bas_authors(None, &["Sarg."])
-        .code(NomCode::Botanical)
         .specific_authors(None, &["S.Watson"])
         .nothing_else();
     assert_name("Potamogeton iilinoensis var. ventanicola")
@@ -321,7 +311,6 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Potamogeton", "iilinoensis", Rank::Variety, "ventanicola")
         .comb_authors(None, &["Horn af Rantzien"])
         .bas_authors(None, &["Hicken"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Triticum repens var. vulgäre")
         .infra_species("Triticum", "repens", Rank::Variety, "vulgäre")
@@ -349,17 +338,14 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Chlorocyperus", "glaber", Rank::Form, "fasciculariforme")
         .comb_authors(None, &["Soó"])
         .bas_authors(None, &["Lojac."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Pteris longifolia fm. stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Pteris longifolia fm stipularis Linnaeus 1753")
         .infra_species("Pteris", "longifolia", Rank::Form, "stipularis")
         .comb_authors(Some("1753"), &["Linnaeus"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Sphaerotheca    fuliginea    f.     dahliae    Movss.     1967")
         .infra_species("Sphaerotheca", "fuliginea", Rank::Form, "dahliae")
@@ -393,20 +379,17 @@ fn infraspecies_with_rank_icn() {
         .infra_species("Rubus", "fruticosus", Rank::Species, "chloocladus")
         .comb_authors(None, &["A.Löve", "D.Löve"])
         .bas_authors(None, &["W.C.R.Watson"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Rubus fruticosus L. agamossp. discolor (Weihe & Nees) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Subspecies, "discolor")
         .comb_authors(None, &["A.Löve", "D.Löve"])
         .bas_authors(None, &["Weihe", "Nees"])
-        .code(NomCode::Botanical)
         .specific_authors(None, &["L."])
         .nothing_else();
     assert_name("Rubus fruticosus agamovar. graecensis (W.Maurer) A. & D. Löve")
         .infra_species("Rubus", "fruticosus", Rank::Variety, "graecensis")
         .comb_authors(None, &["A.Löve", "D.Löve"])
         .bas_authors(None, &["W.Maurer"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Polypodium pectinatum L.f. typica Rosenst.")
         .infra_species("Polypodium", "pectinatum", Rank::Form, "typica")
@@ -428,7 +411,6 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(None, &["Bern."])
         .specific_authors(None, &["Willd."])
         .specific_bas_authors(None, &["Mill."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Cotoneaster (Pyracantha) rogersiana var.aurantiaca")
         .infra_species("Cotoneaster", "rogersiana", Rank::Variety, "aurantiaca")
@@ -446,7 +428,6 @@ fn infraspecies_with_rank_icn() {
         .comb_authors(None, &["Drake"])
         .comb_ex_authors(&["Benth.", "Hook.f."])
         .bas_authors(None, &["Mull.Arg."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Calicium furfuraceum * furfuraceum (L.) Pers. 1797")
         .infra_species(
@@ -457,7 +438,6 @@ fn infraspecies_with_rank_icn() {
         )
         .comb_authors(Some("1797"), &["Pers."])
         .bas_authors(None, &["L."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Polyrhachis orsyllus nat musculus Forel 1901")
         .infra_species("Polyrhachis", "orsyllus", Rank::Natio, "musculus")
@@ -497,13 +477,11 @@ fn infraspecies_multiple_icn() {
     .comb_authors(Some("1972"), &["D.Hall", "D.E.Stuntz"])
     .bas_authors(None, &["Banker"])
     .warning(&["Removed: var. zonatum", warnings::QUADRINOMIAL])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_name("Senecio fuchsii C.C.Gmel. subsp. fuchsii var. expansus (Boiss. & Heldr.) Hayek")
         .infra_species("Senecio", "fuchsii", Rank::Variety, "expansus")
         .comb_authors(None, &["Hayek"])
         .bas_authors(None, &["Boiss.", "Heldr."])
-        .code(NomCode::Botanical)
         .warning(&["Removed: subsp. fuchsii", warnings::QUADRINOMIAL])
         .specific_authors(None, &["C.C.Gmel."])
         .nothing_else();
@@ -527,17 +505,14 @@ fn infraspecies_with_greek_letters_icn() {
     assert_name("Aristotelia fruticosa var. δ. microphylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "microphylla")
         .comb_authors(None, &["Hook.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Aristotelia fruticosa var. δ microphylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "microphylla")
         .comb_authors(None, &["Hook.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Aristotelia fruticosa var.δ.microphylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "microphylla")
         .comb_authors(None, &["Hook.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // "var. δmicrophylla" — greek letter glued to the next epithet without a
     // separator is kept as-is (consistent with "var. βrigida" in
@@ -545,7 +520,6 @@ fn infraspecies_with_greek_letters_icn() {
     assert_name("Aristotelia fruticosa var. δmicrophylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "δmicrophylla")
         .comb_authors(None, &["Hook.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // "unr." marks an unranked infrageneric name
     assert_name("Hieracium unr. Verbasciformia Arv.-Touv.")

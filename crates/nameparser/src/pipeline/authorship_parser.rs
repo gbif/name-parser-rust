@@ -159,16 +159,8 @@ pub(crate) struct AuthState {
     pub basionym: Authorship,
     pub basionym_present: bool,
     pub year_range: bool,
-    /// True when an "f."/"fil."/"filius" suffix appeared on any author — botanical signal.
-    pub has_filius: bool,
     /// True when the combination's year follows a comma ("Smith, 1900"), the zoological style.
     pub combination_year_after_comma: bool,
-    /// True when a combination author is written with dotted initials before the surname
-    /// ("M.A. Curtis"), not behind it ("Lindberg H").
-    pub combination_initials_first: bool,
-    /// An ex-author is a manuscript name another published ("Carpenter MS, Dall", `"Dall" Pils.`
-    /// rewritten so), zoology's usage as much as botany's: no botanical evidence.
-    pub manuscript_ex: bool,
     /// The bacteriologists' revived name, "(ex Choukévitch 1911) Nakamura 1984" (ICNP Rule 28a): a
     /// leading bracket of dated ex-authors, which only the prokaryote code uses.
     pub revived_name: bool,
@@ -186,10 +178,7 @@ impl Default for AuthState {
             basionym: Authorship::default(),
             basionym_present: false,
             year_range: false,
-            has_filius: false,
             combination_year_after_comma: false,
-            combination_initials_first: false,
-            manuscript_ex: false,
             revived_name: false,
             unparsed_from: -1,
             unparsed_text: None,
@@ -241,8 +230,6 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
             {
                 let yr = parse_authors(tokens, bas_from, bas_end, &mut s.basionym);
                 s.year_range |= yr;
-                s.has_filius |= contains_filius_suffix(tokens, bas_from, bas_end);
-                s.manuscript_ex |= has_manuscript_ex(tokens, bas_from, bas_end);
                 s.basionym_present = true;
                 s.basionym.sanctioning_author = bas_sanctioning;
                 take_sanctioning_year(&tokens[bas_end..close], &mut s.basionym);
@@ -255,7 +242,6 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         } else if let Some((bas_from, bas_end)) = unclosed_basionym(tokens, i) {
             let yr = parse_authors(tokens, bas_from, bas_end, &mut s.basionym);
             s.year_range |= yr;
-            s.has_filius |= contains_filius_suffix(tokens, bas_from, bas_end);
             s.basionym_present = true;
             i = bas_end;
         }
@@ -293,29 +279,9 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
         }
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
         s.year_range |= yr;
-        s.manuscript_ex |= has_manuscript_ex(tokens, comb_from, comb_end);
         s.combination_year_after_comma = (comb_from..comb_end)
             .find(|&k| is_year(&tokens[k]))
             .is_some_and(|k| k > comb_from && tokens[k - 1].kind == TokenKind::Comma);
-        s.combination_initials_first = (comb_from..comb_end).any(|k| {
-            let initial = |j: usize| {
-                j + 1 < comb_end
-                    && tokens[j].kind == TokenKind::Word
-                    && tokens[j].text.chars().count() == 1
-                    && is_all_upper(&tokens[j].text)
-                    && tokens[j + 1].kind == TokenKind::Dot
-            };
-            let mut j = k;
-            while initial(j) {
-                j += 2;
-            }
-            j > k
-                && j < comb_end
-                && tokens[j].kind == TokenKind::Word
-                && starts_upper(&tokens[j].text)
-                && contains_lower(&tokens[j].text)
-        });
-        s.has_filius |= contains_filius_suffix(tokens, comb_from, comb_end);
         s.combination.sanctioning_author = comb_sanctioning;
         take_sanctioning_year(&tokens[sanctioning_from..n], &mut s.combination);
         // Whether or not a sanctioning author was extracted, the entire trailing span
@@ -2088,13 +2054,6 @@ fn manuscript_ex_at(tokens: &[Token], i: usize, to: usize) -> Option<usize> {
     (i > 0 && author_follows).then_some(k + 1 - i)
 }
 
-/// The span `tokens[from..to)` cites a manuscript name as an ex-author ("Carpenter MS, Dall",
-/// "Stephens (ex Kirby MS) 1828").
-pub(crate) fn has_manuscript_ex(tokens: &[Token], from: usize, to: usize) -> bool {
-    (from..to)
-        .any(|k| manuscript_ex_at(tokens, k, to).is_some() || bracketed_ex(tokens, k, to).is_some())
-}
-
 /// "Everything collected so far becomes ex authors": the authors before an `ex`, or before the
 /// closing bracket of a pre-starting-point author ("[Tourn.] L."). A second `ex` adds to them:
 /// "Degen ex Nyár. ex Csürös, Gergely & Pop" keeps both Degen and Nyár., where Java kept only the
@@ -2308,39 +2267,6 @@ pub(crate) fn looks_like_author_run(
         }
     }
     surname
-}
-
-/// Java `AuthorshipParser.containsFiliusSuffix(List<Token>, int, int)`. Scans the token
-/// range for an "f"/"fil"/"filius" word — botanical filius marker. Pre-"ex" tokens are
-/// skipped: a filius on an ex-author isn't a code signal because the author itself was
-/// never the validating author. The "f"/"fil" token must be preceded by whitespace in the
-/// input to count as a filius marker; an adjacent "L.f" (no space) is just another
-/// initial.
-fn contains_filius_suffix(tokens: &[Token], from: usize, to: usize) -> bool {
-    let mut start = from;
-    for (j, tok) in tokens.iter().enumerate().take(to).skip(from) {
-        if tok.kind == TokenKind::Word && tok.text == "ex" {
-            start = j + 1;
-        }
-    }
-    for j in start..to {
-        let t = &tokens[j];
-        if t.kind != TokenKind::Word {
-            continue;
-        }
-        let w = t.text.as_str();
-        if !(w == "f" || w == "fil" || w == "filius") {
-            continue;
-        }
-        // spaced ("Hook. f.") or glued to an abbreviated surname ("Hook.f.", "L.f.")
-        if j > 0 && (tokens[j - 1].end < t.start || tokens[j - 1].kind == TokenKind::Dot) {
-            return true;
-        }
-        if j == 0 {
-            return true;
-        }
-    }
-    false
 }
 
 #[cfg(test)]
@@ -2937,27 +2863,6 @@ mod tests {
         // gets a look) still matches AUTHOR_SUFFIXES via the case-insensitive
         // `.to_lowercase()` comparison, and is glued on using its ORIGINAL casing.
         assert_eq!(authors(&parse_str("Smith, jR")), &["Smith.jR".to_string()]);
-    }
-
-    // ---- filius flag (has_filius) -------------------------------------------------------
-
-    #[test]
-    fn spaced_f_sets_has_filius_flag() {
-        assert!(parse_str("Hooker f.").has_filius);
-    }
-
-    #[test]
-    fn glued_f_after_an_abbreviation_sets_has_filius_flag() {
-        // "Burm.f." is as much Burman filius as "Burm. f."; Java needed the space
-        assert!(parse_str("Burm.f.").has_filius);
-    }
-
-    #[test]
-    fn filius_before_ex_does_not_count() {
-        // "Baker f. ex Rose": the filius marker is on the EX author, which was never
-        // the validating author — containsFiliusSuffix skips everything before the
-        // LAST "ex" token.
-        assert!(!parse_str("Baker f. ex Rose").has_filius);
     }
 
     // ---- semicolon-separated citation list ----------------------------------------------

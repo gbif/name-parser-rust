@@ -45,7 +45,6 @@ fn a_placeholder_after_a_real_author_or_basionym_is_removed() {
         .species("Monas", "vulgaris")
         .bas_authors(None, &["Cienkowski"])
         .warning(&[warnings::AUTHORSHIP_REMOVED])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

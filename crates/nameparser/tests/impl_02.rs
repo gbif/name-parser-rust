@@ -3,7 +3,7 @@
 mod common;
 use common::*;
 use nameparser::model::warnings;
-use nameparser::model::{NameType, NomCode, Rank};
+use nameparser::model::{NameType, Rank};
 
 /// https://github.com/gbif/name-parser/issues/58
 #[test]
@@ -26,7 +26,6 @@ fn rechf() {
         .infra_species("Salix", "repens", Rank::Subspecies, "galeifolia")
         .comb_ex_authors(&["Neumann"])
         .comb_authors(None, &["Rech.f."])
-        .code(NomCode::Botanical)
         .specific_authors(None, &["L."])
         .nothing_else();
 }
@@ -40,19 +39,16 @@ fn filius_zoological() {
     assert_name("Lacerta agilis Linnaeus f., 1789")
         .species("Lacerta", "agilis")
         .comb_authors(Some("1789"), &["Linnaeus f."])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Testudo graeca Linnaeus f., 1789")
         .species("Testudo", "graeca")
         .comb_authors(Some("1789"), &["Linnaeus f."])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Raja batis Forster f., 1781")
         .species("Raja", "batis")
         .comb_authors(Some("1781"), &["Forster f."])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -64,7 +60,6 @@ fn filius_two_authors() {
     assert_name("Polypodium pectinatum L. f., Rosenst.")
         .species("Polypodium", "pectinatum")
         .comb_authors(None, &["L.f.", "Rosenst."])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -75,7 +70,6 @@ fn filius_as_epithet() {
     assert_name("Gyracanthus filius Snyder, 2011")
         .species("Gyracanthus", "filius")
         .comb_authors(Some("2011"), &["Snyder"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -86,7 +80,6 @@ fn wfo_authors() {
         .species("Taraxacum", "vulgaris")
         .comb_authors(None, &["K.Heyne"])
         .comb_ex_authors(&["Backer"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     // unpublished = manuscript name
@@ -192,12 +185,10 @@ fn a_whitelisted_name_with_a_blacklisted_epithet_is_no_doubt() {
     assert_name("Hypanus say (Lesueur, 1817)")
         .species("Hypanus", "say")
         .bas_authors(Some("1817"), &["Lesueur"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Amphotistius say", "(Lesueur, 1817)")
         .species("Amphotistius", "say")
         .bas_authors(Some("1817"), &["Lesueur"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // another genus by another author stays flagged
     assert_name("Abies no Smith")
@@ -250,7 +241,6 @@ fn author_with_publication() {
         .published_in("Prodr. 4: 484 (1830)")
         .nom_note("pro syn.")
         .published_in_year(Some(1830))
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(
@@ -262,7 +252,6 @@ fn author_with_publication() {
     .published_in("Phytologia 1: 204, (1937)")
     .nom_note("in obs., pro syn.")
     .published_in_year(Some(1937))
-    .code(NomCode::Botanical)
     .nothing_else();
 
     assert_name("Amplexoididae Wang, Guang-Xu in Wang, He, Tang & Percival, 2018")
@@ -297,13 +286,11 @@ fn zoobank() {
     assert_name("Euplexauridae McFadden, van Ofwegen & Quattrini, 2022")
         .monomial("Euplexauridae")
         .comb_authors(Some("2022"), &["McFadden", "van Ofwegen", "Quattrini"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Culexlineatascinciina Hoser, 2015")
         .monomial("Culexlineatascinciina")
         .comb_authors(Some("2015"), &["Hoser"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -317,13 +304,11 @@ fn species() {
     assert_name("Dysponetus bulbosus Hartmann-Schroder 1982")
         .species("Dysponetus", "bulbosus")
         .comb_authors(Some("1982"), &["Hartmann-Schroder"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Zophosis persis (Chatanay 1914)")
         .species("Zophosis", "persis")
         .bas_authors(Some("1914"), &["Chatanay"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Abies alba Mill.")
@@ -345,7 +330,6 @@ fn species() {
         .species("Agrostis", "hyemalis")
         .comb_authors(None, &["Britton", "Sterns", "Poggenb."])
         .bas_authors(None, &["Walter"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -354,7 +338,6 @@ fn species_with_subgenus() {
     assert_name("Passalus (Pertinax) gaboi Jiménez-Maxim & Reyes, 2022")
         .species_ig("Passalus", "Pertinax", "gaboi")
         .comb_authors(Some("2022"), &["Jiménez-Maxim", "Reyes"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -363,7 +346,6 @@ fn special_epithets() {
     assert_name("Gracillaria v-flava Haworth, 1828")
         .species("Gracillaria", "v-flava")
         .comb_authors(Some("1828"), &["Haworth"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -372,6 +354,5 @@ fn capital_authors() {
     assert_name("Anniella nigra FISCHER 1885")
         .species("Anniella", "nigra")
         .comb_authors(Some("1885"), &["Fischer"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }

@@ -145,7 +145,6 @@ fn a_genus_starting_with_an_identifier_prefix_stays_a_name() {
     assert_name("Uba fallai Fletcher, 1938")
         .species("Uba", "fallai")
         .comb_authors(Some("1938"), &["Fletcher"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -235,7 +234,6 @@ fn a_code_after_an_infraspecific_name_is_its_phrase() {
     assert_name("Abies alba subsp. alba SMITH 1900")
         .infra_species("Abies", "alba", Rank::Subspecies, "alba")
         .comb_authors(Some("1900"), &["Smith"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -289,7 +287,6 @@ fn a_strain_or_voucher_code_after_a_name_is_its_phrase() {
     assert_name("Aus bus SMITH 1900")
         .species("Aus", "bus")
         .comb_authors(Some("1900"), &["Smith"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

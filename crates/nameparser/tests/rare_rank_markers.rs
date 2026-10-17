@@ -30,7 +30,6 @@ fn rare_infraspecific_markers() {
     assert_name("Haliotis cracherodii var. lusus Finlay, 1927")
         .infra_species("Haliotis", "cracherodii", Rank::Variety, "lusus")
         .comb_authors(Some("1927"), &["Finlay"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -40,15 +39,13 @@ fn rare_infraspecific_markers() {
 #[test]
 fn race_marker() {
     assert_name("Lycaena rippertii r. fabressei Oberthür, 1910")
-        .infra_species("Lycaena", "rippertii", Rank::Subspecies, "fabressei")
+        .infra_species("Lycaena", "rippertii", Rank::InfraspecificName, "fabressei")
         .comb_authors(Some("1910"), &["Oberthür"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // written out, too: Pic's beetles, and the races of French floras (a proles in botany)
     assert_name("Leptura erratica race bottcheri Pic, 1911")
-        .infra_species("Leptura", "erratica", Rank::Subspecies, "bottcheri")
+        .infra_species("Leptura", "erratica", Rank::InfraspecificName, "bottcheri")
         .comb_authors(Some("1911"), &["Pic"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Zygorhynchus vuilleminii race agamus Namysl.")
         .infra_species(
@@ -73,9 +70,8 @@ fn race_marker() {
     // or, before an author, is the epithet itself, abbreviated like the repeated one of a
     // nominotypical subspecies
     assert_name("Diacamma rugosum r. Karavajev & Karawajew 1935")
-        .infra_species("Diacamma", "rugosum", Rank::Subspecies, "r")
+        .infra_species("Diacamma", "rugosum", Rank::InfraspecificName, "r")
         .comb_authors(Some("1935"), &["Karavajev", "Karawajew"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -97,9 +93,13 @@ fn infrasubspecific_markers_of_older_literature() {
         .nothing_else();
     // Breuning's morphae: under the zoological code "m." is the morpha
     assert_name("Eunidia simplex m. bifuscomaculata Breuning, 1957")
-        .infra_species("Eunidia", "simplex", Rank::Morph, "bifuscomaculata")
+        .infra_species(
+            "Eunidia",
+            "simplex",
+            Rank::InfrasubspecificName,
+            "bifuscomaculata",
+        )
         .comb_authors(Some("1957"), &["Breuning"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_code("Proetus midas m. elongatus", NomCode::Zoological)
         .infra_species("Proetus", "midas", Rank::Morph, "elongatus")
@@ -118,7 +118,6 @@ fn infrasubspecific_markers_of_older_literature() {
         )
         .comb_authors(None, &["Graebn.", "P.Graebn."])
         .bas_authors(None, &["Vill."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Cladonia gracilis mod. albinea Sandst.")
         .infra_species(
@@ -167,7 +166,6 @@ fn an_unranked_marker_marks_an_unranked_name() {
         .infra_species("Aetheorhiza", "bulbosa", Rank::InfraspecificName, "montana")
         .bas_authors(None, &["Willk."])
         .comb_authors(None, &["Gand."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Viola [unranked] Mirabiles Nyman")
         .infrageneric_at("Viola", Rank::InfragenericName, "Mirabiles")
@@ -185,7 +183,6 @@ fn an_unranked_marker_marks_an_unranked_name() {
         .infra_species("Bromus", "hordeaceus", Rank::InfraspecificName, "ferronii")
         .bas_authors(None, &["Mabille"])
         .comb_authors(None, &["P.M.Sm."])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -215,7 +212,6 @@ fn a_superspecies_is_a_species_aggregate() {
     assert_name_auth("Eosembia supersp. thoracica", "(Ross, 2007)")
         .binomial("Eosembia", None, "thoracica", Rank::SpeciesAggregate)
         .bas_authors(Some("2007"), &["Ross"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Acestrura heliodor superspecies")
         .binomial("Acestrura", None, "heliodor", Rank::SpeciesAggregate)
@@ -240,7 +236,6 @@ fn a_lowercase_infrageneric_epithet_after_its_marker_is_capitalised() {
         .monomial("Pocockia")
         .comb_authors(None, &["DC."])
         .comb_ex_authors(&["Ser."])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -263,7 +258,6 @@ fn a_greek_letter_in_brackets_numbers_an_infraspecific_name() {
     )
     .bas_authors(None, &["Bory"])
     .comb_authors(None, &["J.E.Duby"])
-    .code(NomCode::Botanical)
     .nothing_else();
     // after a rank marker it is a mere label
     assert_name_auth("Epithemia gibba var. .(gamma)parallela", "Grunow")
@@ -342,7 +336,6 @@ fn a_stirps_with_a_capitalised_epithet_is_an_unranked_infrageneric_name() {
         .infrageneric_at("Cortinarius", Rank::InfragenericName, "Balteatus")
         .bas_authors(None, &["Bidaud", "Moënne-Loccoz", "Reumaux"])
         .comb_authors(None, &["Bidaud", "Moënne-Loccoz", "Reumaux"])
-        .code(NomCode::Botanical)
         .nothing_else();
     // ChecklistBank passes the rank stirps as PROLES; the marker wins
     assert_name_hinted(
@@ -358,7 +351,6 @@ fn a_stirps_with_a_capitalised_epithet_is_an_unranked_infrageneric_name() {
     assert_name("Astraea stirps Laws, 1932")
         .species("Astraea", "stirps")
         .comb_authors(Some("1932"), &["Laws"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

@@ -495,7 +495,6 @@ fn test_nomenclatural_notes_pattern() {
     )
     .infra_species("Vaucheria", "longicaulis", Rank::Variety, "bengalensis")
     .comb_authors(None, &["Islam"])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note("nom. correct", "Dorataspidae nom. correct")
         .monomial_rank("Dorataspidae", Rank::Unranked)
@@ -506,7 +505,6 @@ fn test_nomenclatural_notes_pattern() {
     assert_nom_note("nom. ambig.", "Fucus ramosissimus Oeder, nom. ambig.")
         .species("Fucus", "ramosissimus")
         .comb_authors(None, &["Oeder"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_nom_note("nom. nov.", "Myrionema majus Foslie, nom. nov.")
         .species("Myrionema", "majus")
@@ -519,7 +517,6 @@ fn test_nomenclatural_notes_pattern() {
     .species("Corydalis", "bulbosa")
     .comb_authors(None, &["DC."])
     .bas_authors(None, &["L."])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. cons. prop.",
@@ -527,7 +524,6 @@ fn test_nomenclatural_notes_pattern() {
     )
     .infra_species("Anthoceros", "agrestis", Rank::Variety, "agrestis")
     .comb_authors(None, &["Paton"])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. superfl.",
@@ -536,7 +532,6 @@ fn test_nomenclatural_notes_pattern() {
     .infra_species("Lithothamnion", "glaciale", Rank::Form, "verrucosum")
     .comb_authors(None, &["Foslie"])
     .bas_authors(None, &["Foslie"])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. rejic.",
@@ -545,7 +540,6 @@ fn test_nomenclatural_notes_pattern() {
     .infra_species("Pithecellobium", "montanum", Rank::Variety, "subfalcatum")
     .comb_authors(None, &["Miq."])
     .bas_authors(None, &["Zoll.", "Moritzi"])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. inval.",
@@ -554,7 +548,6 @@ fn test_nomenclatural_notes_pattern() {
     .infra_species("Fucus", "vesiculosus", Rank::Form, "volubilis")
     .comb_authors(None, &["H.T.Powell"])
     .bas_authors(None, &["Goodenough", "Woodward"])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. nud.",
@@ -568,7 +561,6 @@ fn test_nomenclatural_notes_pattern() {
     .nothing_else();
     assert_nom_note("nom. illeg.", "Hallo (nom.illeg.)")
         .monomial_rank("Hallo", Rank::Unranked)
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_nom_note(
         "nom. super.",
@@ -576,7 +568,6 @@ fn test_nomenclatural_notes_pattern() {
     )
     .species("Calamagrostis", "cinnoides")
     .comb_authors(None, &["W.Bart."])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. nud.",
@@ -591,13 +582,11 @@ fn test_nomenclatural_notes_pattern() {
     )
     .infra_species("Sargassum", "angustifolium", Rank::Form, "filiforme")
     .comb_authors(None, &["V.Krishnamurthy", "H.Joshi"])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note("nomen nudum", "Solanum bifidum Vell. ex Dunal, nomen nudum")
         .species("Solanum", "bifidum")
         .comb_authors(None, &["Dunal"])
         .comb_ex_authors(&["Vell."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_nom_note(
         "nomen invalid",
@@ -623,19 +612,16 @@ fn test_nomenclatural_notes_pattern() {
     )
     .species("Calamagrostis", "cinnoides")
     .comb_authors(None, &["W.Bart."])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note("nom. dub.", "Pandanus odorifer (Forssk.) Kuntze, nom. dub.")
         .species("Pandanus", "odorifer")
         .comb_authors(None, &["Kuntze"])
         .bas_authors(None, &["Forssk."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // FIXME(review): garbage: uninomial "Non", author "Clarisia Abat" — the name is Clarisia, the note "non … Abat"
     assert_nom_note("nom. rejic.", "non Clarisia Abat, 1792, nom. rejic.")
         .monomial_rank("Non", Rank::Unranked)
         .comb_authors(Some("1792"), &["Clarisia Abat"])
-        .code(NomCode::Botanical)
         .warning(&[warnings::LC_MONOMIAL])
         .nothing_else();
     assert_nom_note(
@@ -658,12 +644,10 @@ fn test_nomenclatural_notes_pattern() {
     )
     .imprint_year("1923")
     .partial("\"Pseudomonas denitrificans\" (Christensen, 1903) Bergey et al., 1923, nom. rejic.")
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note("nom. nov.", "Tipula rubiginosa Loew, 1863, nom. nov.")
         .species("Tipula", "rubiginosa")
         .comb_authors(Some("1863"), &["Loew"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_nom_note(
         "nom. prov.",
@@ -672,12 +656,10 @@ fn test_nomenclatural_notes_pattern() {
     .species("Amanita", "pruittii")
     .comb_authors(None, &["Tulloss", "J.Lindgr."])
     .comb_ex_authors(&["A.H.Sm."])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note("nom. cons.", "Ramonda Rich., nom. cons.")
         .monomial_rank("Ramonda", Rank::Unranked)
         .comb_authors(None, &["Rich."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // FIXME(review): garbage: "Kluyver and van Niel" is the authorship, not genus + epithet
     assert_nom_note(
@@ -689,7 +671,6 @@ fn test_nomenclatural_notes_pattern() {
         .sensu("emend. Barker, 1956 (Approved Lists, 1980) , , emend. Mah and Kuhn, 1984")
         .doubtful()
         .warning(&[warnings::BLACKLISTED_EPITHET])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_nom_note(
         "nom. superfl.",
@@ -698,7 +679,6 @@ fn test_nomenclatural_notes_pattern() {
     .species("Coccocypselum", "tontanea")
     .comb_authors(None, &["Kunth"])
     .bas_authors(None, &["Aubl."])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. ambig.",
@@ -706,15 +686,13 @@ fn test_nomenclatural_notes_pattern() {
     )
     .infra_species("Lespedeza", "bicolor", Rank::Variety, "intermedia")
     .comb_authors(None, &["Maxim."])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "nom. praeoccup.",
         "Erebia aethiops uralensis Goltz, 1930 nom. praeoccup.",
     )
-    .infra_species("Erebia", "aethiops", Rank::Subspecies, "uralensis")
+    .infra_species("Erebia", "aethiops", Rank::InfraspecificName, "uralensis")
     .comb_authors(Some("1930"), &["Goltz"])
-    .code(NomCode::Zoological)
     .nothing_else();
     assert_nom_note(
         "comb. nov. ined.",
@@ -724,7 +702,6 @@ fn test_nomenclatural_notes_pattern() {
     .comb_authors(None, &["Wilken"])
     .bas_authors(None, &["Rydb."])
     .manuscript()
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_nom_note(
         "sp. nov. ined.",
@@ -741,7 +718,6 @@ fn test_nomenclatural_notes_pattern() {
     )
     .monomial_rank("Anchimolgidae", Rank::Genus)
     .comb_authors(Some("2004"), &["New Caledonia-Rjh"])
-    .code(NomCode::Zoological)
     .nothing_else();
     assert_nom_note("gen. nov. ined.", "Stebbinsoseris gen. nov. ined.")
         .monomial_rank("Stebbinsoseris", Rank::Genus)
@@ -788,7 +764,6 @@ fn fungus_names() {
         .comb_ex_authors(&["Johanson"])
         .bas_authors(None, &["Duby"])
         .bas_ex_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -797,9 +772,8 @@ fn year_variations() {
     // The bracketed [1912] alone is the year, zoological evidence like any
     // year after a spelled-out author: the trinomial is a subspecies.
     assert_name("Deudorix epijarbas turbo Fruhstorfer, [1912]")
-        .infra_species("Deudorix", "epijarbas", Rank::Subspecies, "turbo")
+        .infra_species("Deudorix", "epijarbas", Rank::InfraspecificName, "turbo")
         .comb_authors(Some("1912"), &["Fruhstorfer"])
-        .code(NomCode::Zoological)
         .bracketed_year()
         .nothing_else();
 }

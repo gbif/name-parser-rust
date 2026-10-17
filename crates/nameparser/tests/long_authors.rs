@@ -4,7 +4,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NomCode, Rank};
+use nameparser::model::{warnings, Rank};
 
 #[test]
 fn a_long_team_keeps_every_author() {
@@ -34,7 +34,6 @@ fn a_long_team_keeps_every_author() {
             "Tuffrau",
         ],
     )
-    .code(NomCode::Zoological)
     .nothing_else();
 }
 
@@ -149,7 +148,6 @@ fn a_team_of_forty_eight_authors() {
             "Terra",
         ],
     )
-    .code(NomCode::Zoological)
     .warning(&[warnings::LONG_NAME])
     .nothing_else();
 }
@@ -162,12 +160,10 @@ fn a_long_all_capital_team_is_title_cased() {
             Some("2021"),
             &["Olmi", "Guglielmino", "Müller", "Capradossi", "Perkovsky"],
         )
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Rhynchozoon brasiliensis ALMEIDA, SOUZA, MENEGOLA & VIEIRA 2017")
         .species("Rhynchozoon", "brasiliensis")
         .comb_authors(Some("2017"), &["Almeida", "Souza", "Menegola", "Vieira"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // initials before all-capital surnames, and an "et" before the last author
     assert_name(
@@ -185,7 +181,6 @@ fn a_long_all_capital_team_is_title_cased() {
             "J.Kvacek",
         ],
     )
-    .code(NomCode::Zoological)
     .nothing_else();
     assert_name(
         "Saccharomycopsis praedatoria A.R.O. SANTOS, BARROS, BATISTA, G.F.L. SOUZA, ALVARENGA, \
@@ -223,17 +218,14 @@ fn an_all_capital_particle_inside_a_name_is_no_initials() {
     assert_name("Prionodactylus kockii VAN LIDTH DE JEUDE 1904")
         .species("Prionodactylus", "kockii")
         .comb_authors(Some("1904"), &["van Lidth de Jeude"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Heloderma suspectum cinctum BOGERT & MARTIN DEL CAMPO 1956")
-        .infra_species("Heloderma", "suspectum", Rank::Subspecies, "cinctum")
+        .infra_species("Heloderma", "suspectum", Rank::InfraspecificName, "cinctum")
         .comb_authors(Some("1956"), &["Bogert", "Martin del Campo"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Geophis juarezi NIETO-MONTES DE OCA 2003")
         .species("Geophis", "juarezi")
         .comb_authors(Some("2003"), &["Nieto-Montes de Oca"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // "DEN" is no particle elsewhere, it is an epithet too
     assert_name("Paramormyrops gabonensis TAVERNE, THYS VAN DEN AUDENAERDE, & HEYMER 1977")
@@ -242,24 +234,21 @@ fn an_all_capital_particle_inside_a_name_is_no_initials() {
             Some("1977"),
             &["Taverne", "Thys van den Audenaerde", "Heymer"],
         )
-        .code(NomCode::Zoological)
         .nothing_else();
     // an abbreviated Saint after the particle
     assert_name("Novoeumeces schneideri pavimentatus (GEOFFROY DE ST. HILAIRE 1827)")
         .infra_species(
             "Novoeumeces",
             "schneideri",
-            Rank::Subspecies,
+            Rank::InfraspecificName,
             "pavimentatus",
         )
         .bas_authors(Some("1827"), &["Geoffroy de St.Hilaire"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // an Italian particle is lower case inside a name, unlike the one opening it ("Di Iorio")
     assert_name("Falagria elegans BAUDI DI SELVE 1857")
         .species("Falagria", "elegans")
         .comb_authors(Some("1857"), &["Baudi di Selve"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -276,17 +265,14 @@ fn a_short_all_capital_surname_is_no_initials() {
             "Jiang", "Zhang", "Eldredge", "Song", "Li", "Tihelka", "Huang", "Wang", "Engel", "Cai",
         ],
     )
-    .code(NomCode::Zoological)
     .nothing_else();
     assert_name("Gongylosoma mukutense GRISMER, DAS & LEONG 2003")
         .species("Gongylosoma", "mukutense")
         .comb_authors(Some("2003"), &["Grismer", "Das", "Leong"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Linyphia bilobata ROY, SEN, SAHA & RAYCHAUDHURI 2015")
         .species("Linyphia", "bilobata")
         .comb_authors(Some("2015"), &["Roy", "Sen", "Saha", "Raychaudhuri"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_authorship("(ALVAREZ, REY & CEI 1992)", &[])
         .bas_authors(Some("1992"), &["Alvarez", "Rey", "Cei"])

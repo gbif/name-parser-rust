@@ -11,7 +11,6 @@
 
 mod common;
 use common::*;
-use nameparser::model::NomCode;
 
 #[test]
 fn every_iczn_form_inside_the_basionym() {
@@ -26,7 +25,6 @@ fn every_iczn_form_inside_the_basionym() {
             .species("Anomalopus", "truncatus")
             .bas_authors(Some("1876"), &["Peters"])
             .bas_imprint_year("1877")
-            .code(NomCode::Zoological)
             .nothing_else();
     }
 }
@@ -38,32 +36,27 @@ fn single_and_typographic_quotation_marks() {
         .monomial("Carlskottsbergia")
         .comb_authors(Some("2018"), &["Athanasiadis"])
         .imprint_year("2019")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Ctenotus alacer Storr, 1970 ('1969')")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Anomalopus truncatus (Peters, 1876 ['1877'])")
         .species("Anomalopus", "truncatus")
         .bas_authors(Some("1876"), &["Peters"])
         .bas_imprint_year("1877")
-        .code(NomCode::Zoological)
         .nothing_else();
     // CLB: Leptanilla
     assert_name_auth("Leptanilla israelis", "Kugler, 1987 (\u{201C}1986\u{201D})")
         .species("Leptanilla", "israelis")
         .comb_authors(Some("1987"), &["Kugler"])
         .imprint_year("1986")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Ctenotus alacer Storr, 1970 [\u{2018}1969\u{2019}]")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -85,13 +78,11 @@ fn an_apostrophe_in_an_author_name_stays() {
         .species("Aus", "bus")
         .comb_authors(Some("1970"), &["'t Hart"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Aus bus (d'Orbigny, 1839 ('1838'))")
         .species("Aus", "bus")
         .bas_authors(Some("1839"), &["d'Orbigny"])
         .bas_imprint_year("1838")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -109,7 +100,6 @@ fn a_bracketed_second_year_after_a_comma_is_the_imprint_year() {
             .species("Acalles", "metrosiderae")
             .comb_authors(Some("1909"), &["Broun"])
             .imprint_year("1910")
-            .code(NomCode::Zoological)
             .nothing_else();
     }
     // a family-group name's date of priority (ICZN Art. 40.2.1) has no field of its own
@@ -117,6 +107,5 @@ fn a_bracketed_second_year_after_a_comma_is_the_imprint_year() {
         .monomial("Acanthocinini")
         .comb_authors(Some("1860"), &["J.Thomson"])
         .imprint_year("1839")
-        .code(NomCode::Zoological)
         .nothing_else();
 }

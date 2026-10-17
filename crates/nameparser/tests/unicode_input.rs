@@ -5,7 +5,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NomCode, Rank};
+use nameparser::model::{warnings, Rank};
 
 #[test]
 fn a_byte_order_mark_is_ignored() {
@@ -37,7 +37,6 @@ fn a_soft_hyphen_splits_no_word() {
         .species("Basilia", "speiseri")
         .comb_authors(None, &["Miranda-Ribeiro"])
         .bas_authors(None, &["Miranda-Ribeiro"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -54,7 +53,6 @@ fn fullwidth_forms_are_their_ascii_counterparts() {
         .species("Prosthodendrium", "luzonicum")
         .bas_authors(Some("1928"), &["Tubangui"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -64,7 +62,6 @@ fn decomposed_accents_are_composed() {
     assert_name("Crisia romanica Za\u{301}gors\u{30c}ek & Szabo\u{301} 2008")
         .species("Crisia", "romanica")
         .comb_authors(Some("2008"), &["Zágoršek", "Szabó"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -74,7 +71,6 @@ fn a_zero_opening_a_word_is_a_scanned_capital_o() {
         .species("Phyllodoce", "mucosa")
         .comb_authors(Some("1843"), &["Oersted"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Attelabus 0l.")
         .monomial("Attelabus")
@@ -102,7 +98,6 @@ fn a_replacement_character_inside_a_word_is_a_missing_letter() {
     assert_name("Macrotes cordovaria Guen\u{FFFD}e 1857")
         .species("Macrotes", "cordovaria")
         .comb_authors(Some("1857"), &["Guen\u{FFFD}e"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 }
@@ -113,7 +108,6 @@ fn a_cyrillic_o_is_a_letter_o_not_a_zero() {
     assert_name("Anabarhynchus longepil\u{03BF}sus Lyneborg, 1992")
         .species("Anabarhynchus", "longepilosus")
         .comb_authors(Some("1992"), &["Lyneborg"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::HOMOGLYHPS])
         .nothing_else();
 }
@@ -128,7 +122,6 @@ fn a_turkish_dotless_i_stays_in_a_surname() {
     assert_name("Pseudovidalinidae Altıner, 1988")
         .monomial("Pseudovidalinidae")
         .comb_authors(Some("1988"), &["Altıner"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Abies alba Yıldırım & Kılıç")
         .species("Abies", "alba")
@@ -147,26 +140,22 @@ fn a_letter_lost_to_a_broken_encoding_stays_in_the_author() {
     assert_name("Anelasmocephalus lycosinus (S?rensen, 1873)")
         .species("Anelasmocephalus", "lycosinus")
         .bas_authors(Some("1873"), &["S?rensen"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
     assert_name("Adaina microdactyla (H\u{FFFD}bner, 1813)")
         .species("Adaina", "microdactyla")
         .bas_authors(Some("1813"), &["H\u{FFFD}bner"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
     assert_name_auth("Absconditella fossarum", "V?zda & Pišút, 1985")
         .species("Absconditella", "fossarum")
         .comb_authors(Some("1985"), &["V?zda", "Pišút"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
     // a lost apostrophe is put back, "dOrbigny" was read as an epithet
     assert_name("Aus bus d?Orbigny, 1839")
         .species("Aus", "bus")
         .comb_authors(Some("1839"), &["d'Orbigny"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
     // in an epithet the letter stays glued, flagged as before

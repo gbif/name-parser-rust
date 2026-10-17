@@ -377,7 +377,6 @@ fn the_designation_capture_leaves_epithets_and_authors_alone() {
     assert_name("Benthogone rosea var. 4-lineata R. Perrier, 1896")
         .infra_species("Benthogone", "rosea", Rank::Variety, "4-lineata")
         .comb_authors(Some("1896"), &["R.Perrier"])
-        .code(NomCode::Zoological)
         .nothing_else();
     for (input, author) in [
         ("Abies alba var.", None),
@@ -751,7 +750,6 @@ fn aff_binomial_with_authorship_stays_parsed() {
         .warning(&[
             "authorship year was extract but originally was a year range or other form of year",
         ])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -877,7 +875,6 @@ fn bare_spec_with_an_authorship_is_a_real_epithet() {
     assert_name("Hemicloeina spec Platnick, 2002")
         .species("Hemicloeina", "spec")
         .comb_authors(Some("2002"), &["Platnick"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -1073,7 +1070,6 @@ fn a_year_or_a_numeral_epithet_after_a_uninomial_stays() {
     assert_name_auth("Callidium 2 fasciatum", "Zimsen, 1964")
         .species("Callidium", "2-fasciatum")
         .comb_authors(Some("1964"), &["Zimsen"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -1121,9 +1117,8 @@ fn an_unnamed_genus_after_its_taxon_is_the_phrase() {
 
     // a genus-group name after `gen.` is an infrageneric name, unranked as after `unr.`
     assert_name("Achatinella gen. Baldwinia Ancey, 1899")
-        .infrageneric_at("Achatinella", Rank::Subgenus, "Baldwinia")
+        .infrageneric_at("Achatinella", Rank::InfragenericName, "Baldwinia")
         .comb_authors(Some("1899"), &["Ancey"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Plusiocampa gen. Pentachaetocampa")
         .infrageneric_at("Plusiocampa", Rank::InfragenericName, "Pentachaetocampa")
@@ -1137,7 +1132,6 @@ fn an_unnamed_genus_after_its_taxon_is_the_phrase() {
     )
     .monomial_rank("Aegeria", Rank::Genus)
     .comb_authors(Some("1807"), &["Fabricius"])
-    .code(NomCode::Zoological)
     .nothing_else();
     // a bare `gen.` labels the genus
     assert_name("Ojrotella gen.")

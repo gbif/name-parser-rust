@@ -296,7 +296,8 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // rarely bracket it: `Tradescantia (sect. Zebrina) Pellegrini 2017`, `Cephalozia sect.
     // Prionolobus Spruce, 1882`. Written out without a year it is no botanical section either, but
     // of no code: `Hypanis (section Adacna)` is a mollusc, `Synura (section Petersenia)` an alga.
-    // Zoologists name no supersection: `Pinus suprasect. Taeda` stays botanical.
+    // Zoologists name no supersection: `Pinus suprasect. Taeda` stays botanical. The year tells
+    // the rank only, not the code (#60).
     let zoological = ctx.requested_code == Some(NomCode::Zoological)
         || (ctx.requested_code.is_none()
             && ((ctx.bracketed_infrageneric_marker
@@ -317,9 +318,6 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
                 && ctx.requested_code != Some(NomCode::Botanical)));
     if unranked_section {
         ctx.name.rank = Rank::InfragenericName;
-        if zoological {
-            ctx.name.code = Some(NomCode::Zoological);
-        }
     }
     if ctx.name.code.is_none() {
         code_inference::infer(ctx, auth_state.filter(|_| !authorship_dropped));
@@ -337,8 +335,8 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
 
     // Step 13: zoological trinomials default to SUBSPECIES, not the generic
     // INFRASPECIFIC_NAME: ICZN doesn't use rank markers for subspecies, so a bare "Genus
-    // species infra" with the zoological code (caller-supplied or inferred) is by convention
-    // a subspecies.
+    // species infra" with the zoological code (given by the caller, or by a zoological-only
+    // rank or status) is by convention a subspecies.
     if ctx.name.rank == Rank::InfraspecificName
         && ctx.name.code == Some(NomCode::Zoological)
         && ctx.name.infraspecific_epithet.is_some()

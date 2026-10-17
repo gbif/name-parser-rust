@@ -18,7 +18,6 @@ fn botanical_code_from_separate_recombination_authorship() {
     .infra_species("Cerastium", "ligusticum", Rank::Subspecies, "granulatum")
     .bas_authors(None, &["Huter", "al."])
     .comb_authors(None, &["P.D.Sell", "Whitehead"])
-    .code(NomCode::Botanical)
     .nothing_else();
 }
 
@@ -92,7 +91,6 @@ fn virus_false_positive_animals() {
     assert_name("Prion Lacépède, 1799")
         .monomial("Prion")
         .comb_authors(Some("1799"), &["Lacépède"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -108,7 +106,6 @@ fn phage_inside_a_word_is_not_viral() {
     assert_name("Sphagesauridae Kuhn, 1968")
         .monomial("Sphagesauridae")
         .comb_authors(Some("1968"), &["Kuhn"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_hinted(
         "Sphagesauridae",
@@ -137,7 +134,6 @@ fn phage_inside_a_word_is_not_viral() {
     assert_name("Phagesaurus Price, 1950")
         .monomial("Phagesaurus")
         .comb_authors(Some("1950"), &["Price"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Phagesaurus neuquenensis")
         .species("Phagesaurus", "neuquenensis")
@@ -146,7 +142,6 @@ fn phage_inside_a_word_is_not_viral() {
     assert_name("Sphagebranchus Bloch, 1795")
         .monomial("Sphagebranchus")
         .comb_authors(Some("1795"), &["Bloch"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Treponema phagedenis")
         .species("Treponema", "phagedenis")
@@ -199,25 +194,21 @@ fn apostrophe_epithets() {
     assert_name("Junellia o'donelli Moldenke, 1946")
         .species("Junellia", "o'donelli")
         .comb_authors(Some("1946"), &["Moldenke"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Trophon d'orbignyi Carcelles, 1946")
         .species("Trophon", "d'orbignyi")
         .comb_authors(Some("1946"), &["Carcelles"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Arca m'coyi Tenison-Woods, 1878")
         .species("Arca", "m'coyi")
         .comb_authors(Some("1878"), &["Tenison-Woods"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Nucula m'andrewii Hanley, 1860")
         .species("Nucula", "m'andrewii")
         .comb_authors(Some("1860"), &["Hanley"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Eristalis l'herminierii Macquart")
@@ -267,7 +258,6 @@ fn initials_after_surname() {
     assert_name("Purana guttularis (Walker, F., 1858)")
         .species("Purana", "guttularis")
         .bas_authors(Some("1858"), &["F.Walker"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Physomerinus septemfoveolatus Schaufuss, L. W.")
@@ -278,13 +268,11 @@ fn initials_after_surname() {
     assert_name("Physomerinus septemfoveolatus Schaufuss, L. W., 1877")
         .species("Physomerinus", "septemfoveolatus")
         .comb_authors(Some("1877"), &["L.W.Schaufuss"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Euplectus cavicollis LeConte, J. L., 1878")
         .species("Euplectus", "cavicollis")
         .comb_authors(Some("1878"), &["J.L.LeConte"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -299,7 +287,6 @@ fn redundant_authorship() {
     )
     .species("Euplectus", "cavicollis")
     .comb_authors(Some("1878"), &["J.L.LeConte"])
-    .code(NomCode::Zoological)
     .nothing_else();
 
     // Java calls this as `assertName(rawName, (String)null, canonical)` — the cast
@@ -329,19 +316,16 @@ fn redundant_authorship() {
     assert_name_auth("Puma concolor (Linnaeus, 1771)", "(Linnaeus, 1771)")
         .species("Puma", "concolor")
         .bas_authors(Some("1771"), &["Linnaeus"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name_auth("Puma concolor", "(Linnaeus, 1771)")
         .species("Puma", "concolor")
         .bas_authors(Some("1771"), &["Linnaeus"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name_auth("Puma concolor ( Linnaeus, 1771 )", "(Linnaeus 1771)")
         .species("Puma", "concolor")
         .bas_authors(Some("1771"), &["Linnaeus"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -409,9 +393,8 @@ fn null_name_parts() {
 #[test]
 fn r_na_names() {
     assert_name("Calathus (Lindrothius) KURNAKOV 1961")
-        .infrageneric_at("Calathus", Rank::Subgenus, "Lindrothius")
+        .infrageneric_at("Calathus", Rank::InfragenericName, "Lindrothius")
         .comb_authors(Some("1961"), &["Kurnakov"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert!(is_viral_name("Ustilaginoidea virens RNA virus"));
@@ -488,7 +471,6 @@ fn indet_names() {
         .binomial("Nitzschia", None, "sinuata", Rank::Variety)
         .bas_authors(None, &["Grunow"])
         .comb_authors(None, &["Lange-Bert."])
-        .code(NomCode::Botanical)
         .type_(NameType::Informal)
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
@@ -496,7 +478,6 @@ fn indet_names() {
     assert_name("Canis lupus subsp. Linnaeus, 1758")
         .binomial("Canis", None, "lupus", Rank::Subspecies)
         .comb_authors(Some("1758"), &["Linnaeus"])
-        .code(NomCode::Zoological)
         .type_(NameType::Informal)
         .warning(&[warnings::INDETERMINED])
         .nothing_else();
@@ -675,16 +656,14 @@ fn zoo_subspecies() {
 
     // inferred code
     assert_name("Vulpes vulpes silaceus Miller, 1907")
-        .infra_species("Vulpes", "vulpes", Rank::Subspecies, "silaceus")
+        .infra_species("Vulpes", "vulpes", Rank::InfraspecificName, "silaceus")
         .comb_authors(Some("1907"), &["Miller"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // sp likely misspelled ssp for subspecies
     assert_name("Vulpes vulpes sp. silaceus Miller, 1907")
         .infra_species("Vulpes", "vulpes", Rank::Subspecies, "silaceus")
         .comb_authors(Some("1907"), &["Miller"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -701,19 +680,16 @@ fn chinese_authors() {
     assert_name("Abaxisotima acuminata (Wang & Liu, 1996)")
         .species("Abaxisotima", "acuminata")
         .bas_authors(Some("1996"), &["Wang", "Liu"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Abaxisotima acuminata (Wang, Yuwen & Xian-wei Liu, 1996)")
         .species("Abaxisotima", "acuminata")
         .bas_authors(Some("1996"), &["Yuwen Wang", "Xian-wei Liu"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Abaxisotima bicolor (Liu, Xian-wei, Z. Zheng & G. Xi, 1991)")
         .species("Abaxisotima", "bicolor")
         .bas_authors(Some("1991"), &["Xian-wei Liu", "Z.Zheng", "G.Xi"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

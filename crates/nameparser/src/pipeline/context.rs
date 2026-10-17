@@ -3,7 +3,6 @@
 //! across pipeline stages.
 
 use crate::model::{NomCode, ParsedName, Rank};
-use crate::pipeline::authorship_parser::AuthState;
 use crate::token::Token;
 
 /// Mutable per-parse state shared across pipeline stages. Faithful port of Java
@@ -120,19 +119,12 @@ pub(crate) struct ParseContext {
     /// An "(Approved Lists 1980)" citation was stripped: the name is a prokaryote's (see
     /// `code_inference::infer`).
     pub approved_lists: bool,
-    /// The authorship coded its diacritics with a colon and a digit ("C. Mu:2ller"), as only
-    /// bryophyte sources do — botanical evidence for code inference.
-    pub coded_diacritics: bool,
     /// The marker of an infrageneric name stood in its brackets, `Achatinella (sect. Auriculella)`,
     /// as ZooBank has it — zoological evidence beside a year after a comma (#171).
     pub bracketed_infrageneric_marker: bool,
     /// The marker of a bracketed infrageneric name was written out, `Aphodius (section
     /// Cytoderhinus)`, as zoologists do — zoological evidence beside a year (#171).
     pub written_out_infrageneric_marker: bool,
-    /// The species author of an infraspecific name, standing before its rank marker ("Acacia
-    /// aneura F.Muell. ex Benth. var. latifolia J.M.Black"), when code inference reads another
-    /// authorship: its evidence votes too.
-    pub species_code_state: Option<AuthState>,
     /// The infraspecific rank marker was "m.": the morpha of zoologists (Breuning's "Eunidia
     /// simplex m. bifuscomaculata"), but monstrositas or modificatio in botany, so NameTokens gives
     /// it the shared INFRASUBSPECIFIC_NAME. Assemble makes it MORPH once the code is zoological.
@@ -186,8 +178,6 @@ impl ParseContext {
             preflight_complete: false,
             qualified_genus: false,
             approved_lists: false,
-            species_code_state: None,
-            coded_diacritics: false,
             bracketed_infrageneric_marker: false,
             written_out_infrageneric_marker: false,
             morpha_marker: false,

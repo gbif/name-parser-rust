@@ -24,22 +24,18 @@ fn names_with_a_dash() {
     assert_name("Drosophila obscura-x Burla, 1951")
         .species("Drosophila", "obscura-x")
         .comb_authors(Some("1951"), &["Burla"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Sanogasta x-signata (Keyserling,1891)")
         .species("Sanogasta", "x-signata")
         .bas_authors(Some("1891"), &["Keyserling"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Aedes w-albus (Theobald, 1905)")
         .species("Aedes", "w-albus")
         .bas_authors(Some("1905"), &["Theobald"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Abryna regis-petri Paiva, 1860")
         .species("Abryna", "regis-petri")
         .comb_authors(Some("1860"), &["Paiva"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Solms-laubachia orbiculata Y.C. Lan & T.Y. Cheo")
         .species("Solms-laubachia", "orbiculata")
@@ -64,62 +60,51 @@ fn authorship_with_filius_son_of() {
     assert_name("Oxytropis minjanensis Rech. f.")
         .species("Oxytropis", "minjanensis")
         .comb_authors(None, &["Rech.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Platypus bicaudatulus Schedl f. 1935")
         .species("Platypus", "bicaudatulus")
         .comb_authors(Some("1935"), &["Schedl f."])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Platypus bicaudatulus Schedl filius 1935")
         .species("Platypus", "bicaudatulus")
         .comb_authors(Some("1935"), &["Schedl filius"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Fimbristylis ovata (Burm. f.) J. Kern")
         .species("Fimbristylis", "ovata")
         .comb_authors(None, &["J.Kern"])
         .bas_authors(None, &["Burm.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Amelanchier arborea var. arborea (Michx. f.) Fernald")
         .infra_species("Amelanchier", "arborea", Rank::Variety, "arborea")
         .comb_authors(None, &["Fernald"])
         .bas_authors(None, &["Michx.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Cerastium arvense var. fuegianum Hook. f.")
         .infra_species("Cerastium", "arvense", Rank::Variety, "fuegianum")
         .comb_authors(None, &["Hook.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Cerastium arvense var. fuegianum Hook.f.")
         .infra_species("Cerastium", "arvense", Rank::Variety, "fuegianum")
         .comb_authors(None, &["Hook.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Jacquemontia spiciflora (Choisy) Hall. fil.")
         .species("Jacquemontia", "spiciflora")
         .comb_authors(None, &["Hall.fil."])
         .bas_authors(None, &["Choisy"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Amelanchier arborea f. hirsuta (Michx. f.) Fernald")
         .infra_species("Amelanchier", "arborea", Rank::Form, "hirsuta")
         .comb_authors(None, &["Fernald"])
         .bas_authors(None, &["Michx.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Betula pendula fo. dalecarlica (L. f.) C.K. Schneid.")
         .infra_species("Betula", "pendula", Rank::Form, "dalecarlica")
         .comb_authors(None, &["C.K.Schneid."])
         .bas_authors(None, &["L.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Polypodium pectinatum L. f.")
         .species("Polypodium", "pectinatum")
         .comb_authors(None, &["L.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -174,19 +159,16 @@ fn names_with_an_unparsed_tail() {
     .species_ig("Procamallanus", "Spirocamallanus", "soodi")
     .comb_authors(Some("2001"), &["Lakshmi", "Kumari"])
     .sensu("nec (Gupta & Masood, 1988)")
-    .code(NomCode::Zoological)
     .nothing_else();
     assert_name("Membranipora minuscula Canu, 1911 non Hincks, 1882")
         .species("Membranipora", "minuscula")
         .comb_authors(Some("1911"), &["Canu"])
         .sensu("non Hincks, 1882")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Proboscina subechinata Canu & Bassler, 1920 non d'Orbigny, 1853")
         .species("Proboscina", "subechinata")
         .comb_authors(Some("1920"), &["Canu", "Bassler"])
         .sensu("non d'Orbigny, 1853")
-        .code(NomCode::Zoological)
         .nothing_else();
     // "Author in Source, YYYY vide Other (YYYY)": the "in" tail goes into publishedIn; "vide …"
     // (see) is where the name was found, the taxonomic note.
@@ -206,23 +188,19 @@ fn non_ascii_utf8_characters_in_a_name() {
     assert_name("Seleuca chûjôi Voss, 1957")
         .species("Seleuca", "chûjôi")
         .comb_authors(Some("1957"), &["Voss"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Pleurotus ëous (Berk.) Sacc. 1887")
         .species("Pleurotus", "ëous")
         .comb_authors(Some("1887"), &["Sacc."])
         .bas_authors(None, &["Berk."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Sténométope laevissimus Bibron 1855")
         .species("Sténométope", "laevissimus")
         .comb_authors(Some("1855"), &["Bibron"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Choriozopella trägårdhi Lawrence, 1947")
         .species("Choriozopella", "trägårdhi")
         .comb_authors(Some("1947"), &["Lawrence"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Isoëtes asplundii H. P. Fuchs")
         .species("Isoëtes", "asplundii")
@@ -256,12 +234,10 @@ fn epithets_with_an_apostrophe() {
     assert_name("Junellia o'donelli Moldenke, 1946")
         .species("Junellia", "o'donelli")
         .comb_authors(Some("1946"), &["Moldenke"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Trophon d'orbignyi Carcelles, 1946")
         .species("Trophon", "d'orbignyi")
         .comb_authors(Some("1946"), &["Carcelles"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Phrynosoma m’callii")
         .species("Phrynosoma", "m'callii")
@@ -269,12 +245,10 @@ fn epithets_with_an_apostrophe() {
     assert_name("Arca m'coyi Tenison-Woods, 1878")
         .species("Arca", "m'coyi")
         .comb_authors(Some("1878"), &["Tenison-Woods"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Nucula m'andrewii Hanley, 1860")
         .species("Nucula", "m'andrewii")
         .comb_authors(Some("1860"), &["Hanley"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Eristalis l'herminierii Macquart")
         .species("Eristalis", "l'herminierii")
@@ -301,7 +275,6 @@ fn authors_with_an_apostrophe() {
         .comb_authors(None, &["Brüch."])
         .bas_authors(None, &["È.Neé"])
         .warning(&["Removed: subsp. mackayana", warnings::QUADRINOMIAL])
-        .code(NomCode::Botanical)
         .specific_authors(None, &["L'Hèr."])
         .specific_bas_authors(None, &["L."])
         .nothing_else();
@@ -310,7 +283,6 @@ fn authors_with_an_apostrophe() {
         .comb_authors(None, &["Brüch."])
         .bas_authors(None, &["È.Neé"])
         .warning(&["Removed: subsp. mackayana", warnings::QUADRINOMIAL])
-        .code(NomCode::Botanical)
         .specific_authors(None, &["L'Hèr."])
         .specific_bas_authors(None, &["L."])
         .nothing_else();
@@ -319,7 +291,6 @@ fn authors_with_an_apostrophe() {
         .comb_authors(None, &["Brüch."])
         .bas_authors(None, &["È.Neé"])
         .warning(&["Removed: subsp. mackayana", warnings::QUADRINOMIAL])
-        .code(NomCode::Botanical)
         .specific_authors(None, &["L'Hèr."])
         .specific_bas_authors(None, &["L."])
         .nothing_else();
@@ -331,42 +302,34 @@ fn digraph_unicode_characters() {
     assert_name("Crisia romanica Zágoršek Silye & Szabó 2008")
         .species("Crisia", "romanica")
         .comb_authors(Some("2008"), &["Zágoršek Silye", "Szabó"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Æschopalæa grisella Pascoe, 1864")
         .species("Æschopalæa", "grisella")
         .comb_authors(Some("1864"), &["Pascoe"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Læptura laetifica Dow, 1913")
         .species("Læptura", "laetifica")
         .comb_authors(Some("1913"), &["Dow"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Leptura lætifica Dow, 1913")
         .species("Leptura", "lætifica")
         .comb_authors(Some("1913"), &["Dow"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Leptura leætifica Dow, 1913")
         .species("Leptura", "leætifica")
         .comb_authors(Some("1913"), &["Dow"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Leæptura laetifica Dow, 1913")
         .species("Leæptura", "laetifica")
         .comb_authors(Some("1913"), &["Dow"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Leœptura laetifica Dow, 1913")
         .species("Leœptura", "laetifica")
         .comb_authors(Some("1913"), &["Dow"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Ærenea cognata Lacordaire, 1872")
         .species("Ærenea", "cognata")
         .comb_authors(Some("1872"), &["Lacordaire"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Œdicnemus capensis")
         .species("Œdicnemus", "capensis")
@@ -394,13 +357,11 @@ fn old_style_s() {
         .species("Musca", "domestica")
         .comb_authors(Some("1758"), &["Linnaeus"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Amphisbæna fuliginoſa Linnaeus 1758")
         .species("Amphisbæna", "fuliginosa")
         .comb_authors(Some("1758"), &["Linnaeus"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Dreyfusia nüßlini")
         .species("Dreyfusia", "nüßlini")
@@ -483,14 +444,12 @@ fn open_nomenclature_approximate_names() {
         .bas_authors(None, &["Morton"])
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Abturia cf alabamensis (Morton )")
         .species("Abturia", "alabamensis")
         .bas_authors(None, &["Morton"])
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Calidris cf. cooperi")
         .species("Calidris", "cooperi")
@@ -542,7 +501,6 @@ fn virus_like_normal_names() {
     assert_name("Ceylonesmus vector Chamberlin, 1941")
         .species("Ceylonesmus", "vector")
         .comb_authors(Some("1941"), &["Chamberlin"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -728,9 +686,8 @@ fn name_strings_with_rna() {
         .type_(NameType::Informal)
         .nothing_else();
     assert_name("Carabus satyrus satyrus KURNAKOV, 1962")
-        .infra_species("Carabus", "satyrus", Rank::Subspecies, "satyrus")
+        .infra_species("Carabus", "satyrus", Rank::InfraspecificName, "satyrus")
         .comb_authors(Some("1962"), &["Kurnakov"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -760,7 +717,6 @@ fn bacterial_genus() {
         .bas_authors(None, &["Castellani"])
         .published_in("Hauduroy 1937")
         .published_in_year(Some(1937))
-        .code(NomCode::Botanical)
         .comb_in_authors(&["Hauduroy"])
         .nothing_else();
 }
@@ -823,7 +779,6 @@ fn stray_ex_is_not_parsed_as_species() {
         .comb_anon(None, &["Soland."])
         .comb_ex_authors(&["L'Her."])
         .bas_authors(None, &["L."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // "ex gr." — ex grege, "of the species group of" — is a paleontological qualifier like cf.
     assert_name("Acastella ex gr. rouaulti")
@@ -861,7 +816,6 @@ fn double_parenthesis() {
         .species("Eichornia", "crassipes")
         .comb_authors(None, &["Solms-Laub."])
         .bas_authors(None, &["Martius"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -885,28 +839,24 @@ fn year_range() {
         .species("Eurodryas", "orientalis")
         .comb_authors(Some("1845"), &["Herrich-Schäffer"])
         .warning(&[warnings::YEAR_INTERPRETED])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Tridentella tangeroae Bruce, 1987-92")
         .species("Tridentella", "tangeroae")
         .comb_authors(Some("1987"), &["Bruce"])
         .warning(&[warnings::YEAR_INTERPRETED])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Macroplectra unicolor Moore, 1858/59")
         .species("Macroplectra", "unicolor")
         .comb_authors(Some("1858"), &["Moore"])
         .warning(&[warnings::YEAR_INTERPRETED])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Seryda basirei Druce, 1891/901")
         .species("Seryda", "basirei")
         .comb_authors(Some("1891"), &["Druce"])
         .warning(&[warnings::YEAR_INTERPRETED])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -918,13 +868,11 @@ fn year_with_page_number() {
         .species("Recilia", "truncatus")
         .comb_authors(Some("1998"), &["Dash", "Viraktamath"])
         .published_in_page("29")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Recilia truncatus Dash & Viraktamath, 1998:29")
         .species("Recilia", "truncatus")
         .comb_authors(Some("1998"), &["Dash", "Viraktamath"])
         .published_in_page("29")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

@@ -2002,7 +2002,6 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
     }
     out.push_str(&s[last..]);
     ctx.name.add_warning(warnings::HOMOGLYHPS);
-    ctx.coded_diacritics = true;
     out
 }
 
@@ -3421,8 +3420,8 @@ static QUOTED_ATTRIBUTED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
 
 /// The [`QUOTED_ATTRIBUTED_AUTHOR`] is the author of the manuscript name, the one after it
 /// published it, as malacologists write it — no cultivar, which Java made it ("a land snail").
-/// Rewritten as the "Dall MS, Pils." that the authorship parser reads as an ex citation casting no
-/// botanical vote. Its own year goes; the name's is the publishing author's. Not after an indet
+/// Rewritten as the "Dall MS, Pils." that the authorship parser reads as the ex citation of a
+/// manuscript name. Its own year goes; the name's is the publishing author's. Not after an indet
 /// marker ('Phytophthora species "Tokoroa" McAlonan' is a provisional name).
 fn strip_quoted_attributed_author(s: String) -> String {
     let Some(caps) = QUOTED_ATTRIBUTED_AUTHOR.captures(&s) else {
@@ -6534,7 +6533,7 @@ static MANUSCRIPT_IN: LazyLock<Regex> = LazyLock::new(|| {
 
 /// See [`MANUSCRIPT_IN`]: rewritten to the form the authorship parser reads as an ex citation of a
 /// manuscript name, "A MS, B" ("Carpenter MS, Dall"), so neither the manuscript flag nor the
-/// in-citation is set — the name is published — and the ex-author casts no botanical vote.
+/// in-citation is set — the name is published.
 /// Rust-only; run on the name string and a separate authorship.
 pub(crate) fn manuscript_in_as_ex(s: &str) -> String {
     MANUSCRIPT_IN.replace_all(s, "${1} MS, ${2}").into_owned()
@@ -8133,7 +8132,6 @@ mod tests {
         let mut c = ctx("x");
         let out = repair_colon_diacritics(&mut c, "A:1ngstro:2m, Vondra:4c:3ek".to_string());
         assert_eq!(out, "Ångström, Vondráček");
-        assert!(c.coded_diacritics);
         assert!(c.name.warnings.contains(&warnings::HOMOGLYHPS.to_string()));
     }
 
@@ -8143,7 +8141,6 @@ mod tests {
         let input = "Smith DOI:10.1234, names:864424, Mus:9";
         let out = repair_colon_diacritics(&mut c, input.to_string());
         assert_eq!(out, input);
-        assert!(!c.coded_diacritics);
         assert!(c.name.warnings.is_empty());
     }
 

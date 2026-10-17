@@ -17,7 +17,6 @@ fn a_species_author_before_the_rank_marker_is_kept() {
         .bas_authors(None, &["Rchb."])
         .bas_ex_authors(None, &["Boenn."])
         .comb_authors(None, &["K.Richt."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Serjania meridionalis Cambess. var. paucidentata Radlk.")
         .infra_species("Serjania", "meridionalis", Rank::Variety, "paucidentata")
@@ -37,7 +36,6 @@ fn an_autonym_keeps_the_species_author_apart() {
         .infra_species("Crepis", "arenaria", Rank::Subspecies, "arenaria")
         .specific_authors(None, &["Pomel"])
         .specific_bas_authors(None, &["Pomel"])
-        .code(NomCode::Botanical)
         .nothing_else();
     // given after the autonym, it is the name's as written
     assert_name("Abies alba subsp. alba Mill.")
@@ -57,7 +55,6 @@ fn a_separate_authorship_repeating_an_autonyms_species_author_is_no_authorship_o
     .specific_authors(None, &["M.Roemer"])
     .specific_ex_authors(&["Nuttall"])
     .specific_bas_authors(None, &["Nuttall"])
-    .code(NomCode::Botanical)
     .nothing_else();
 }
 
@@ -104,14 +101,12 @@ fn a_species_author_with_a_filius_in_a_team_ends_at_the_rank_marker() {
     assert_name("Conostomum pusillum Hook.f. & Wilson var. pusillum")
         .infra_species("Conostomum", "pusillum", Rank::Variety, "pusillum")
         .specific_authors(None, &["Hook.f.", "Wilson"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Parnassia foliosa Hook.f. et Thomson var. japonica (Nakai) Ohwi")
         .infra_species("Parnassia", "foliosa", Rank::Variety, "japonica")
         .comb_authors(None, &["Ohwi"])
         .bas_authors(None, &["Nakai"])
         .specific_authors(None, &["Hook.f.", "Thomson"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -124,7 +119,6 @@ fn more_species_author_shapes_before_the_rank_marker() {
         .bas_authors(None, &["Nakai"])
         .specific_authors(None, &["'t Hart"])
         .specific_bas_authors(None, &["L."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // a hybrid sign after the rank marker
     assert_name("Eriophorum ×medium Andersson subsp. ×medium")
@@ -142,12 +136,10 @@ fn a_spaced_numeral_epithet() {
     assert_name("Sphex 2 punctata Fabricius, 1793")
         .species("Sphex", "2-punctata")
         .comb_authors(Some("1793"), &["Fabricius"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Coccinella 12 guttata Poda, 1761")
         .species("Coccinella", "12-guttata")
         .comb_authors(Some("1761"), &["Poda"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Episyron rufipes 7. maculatus")
         .infra_species(
@@ -185,19 +177,16 @@ fn a_capitalised_species_epithet_is_put_in_lower_case() {
     assert_name_auth("Hyla Everetti", "Boulenger, 1897")
         .species("Hyla", "everetti")
         .comb_authors(Some("1897"), &["Boulenger"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::CAPITALISED_EPITHET])
         .nothing_else();
     assert_name("Ischyodon Johnsonii (Agassiz, 1843)")
         .species("Ischyodon", "johnsonii")
         .bas_authors(Some("1843"), &["Agassiz"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::CAPITALISED_EPITHET])
         .nothing_else();
     // a genus with a surname of two words keeps it
     assert_name_auth("Homalaspis Milne Edwards, 1863", "Milne Edwards 1863")
         .monomial("Homalaspis")
         .comb_authors(Some("1863"), &["Milne Edwards"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }

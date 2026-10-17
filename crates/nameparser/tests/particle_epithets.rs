@@ -31,7 +31,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NomCode, Rank};
+use nameparser::model::Rank;
 
 // ---- the 7 ChecklistBank dataset 56185 (World Spider Catalog) names --------------------------
 
@@ -40,37 +40,30 @@ fn wsc_particle_epithets_parse_as_species_under_a_species_rank_hint() {
     assert_name_rank("Cantuaria delli Forster, 1968", Rank::Species)
         .species("Cantuaria", "delli")
         .comb_authors(Some("1968"), &["Forster"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Gasparia delli (Forster, 1955)", Rank::Species)
         .species("Gasparia", "delli")
         .bas_authors(Some("1955"), &["Forster"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Eresus da Lin & Li, 2022", Rank::Species)
         .species("Eresus", "da")
         .comb_authors(Some("2022"), &["Lin", "Li"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Leptonetela la Wang & Li, 2017", Rank::Species)
         .species("Leptonetela", "la")
         .comb_authors(Some("2017"), &["Wang", "Li"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Malamatidia zu Jäger & Dankittipakul, 2010", Rank::Species)
         .species("Malamatidia", "zu")
         .comb_authors(Some("2010"), &["Jäger", "Dankittipakul"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Orcevia zu Yu & Zhang, 2023", Rank::Species)
         .species("Orcevia", "zu")
         .comb_authors(Some("2023"), &["Yu", "Zhang"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Zodarion van Bosmans, 2009", Rank::Species)
         .species("Zodarion", "van")
         .comb_authors(Some("2009"), &["Bosmans"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -82,22 +75,18 @@ fn the_same_names_without_a_rank_hint_stay_uninomials_with_a_particled_author() 
     assert_name("Cantuaria delli Forster, 1968")
         .monomial("Cantuaria")
         .comb_authors(Some("1968"), &["delli Forster"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Eresus da Lin & Li, 2022")
         .monomial("Eresus")
         .comb_authors(Some("2022"), &["da Lin", "Li"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Leptonetela la Wang & Li, 2017")
         .monomial("Leptonetela")
         .comb_authors(Some("2017"), &["la Wang", "Li"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Zodarion van Bosmans, 2009")
         .monomial("Zodarion")
         .comb_authors(Some("2009"), &["van Bosmans"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -112,18 +101,15 @@ fn genuine_particled_authors_of_uninomials_are_not_split() {
     assert_name("Allidothrips zur Strassen, 1968")
         .monomial("Allidothrips")
         .comb_authors(Some("1968"), &["zur Strassen"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Allidothrips zur Strassen, 1968", Rank::Genus)
         .monomial_rank("Allidothrips", Rank::Genus)
         .comb_authors(Some("1968"), &["zur Strassen"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // Stefano delle Chiaje.
     assert_name("Balanoglossus delle Chiaje, 1829")
         .monomial("Balanoglossus")
         .comb_authors(Some("1829"), &["delle Chiaje"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -135,12 +121,10 @@ fn a_particle_chain_is_never_taken_as_an_epithet() {
     assert_name("Cladoniicola van den Boom, 2001")
         .monomial("Cladoniicola")
         .comb_authors(Some("2001"), &["van den Boom"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Verrucaria von der Linde, 1902")
         .monomial("Verrucaria")
         .comb_authors(Some("1902"), &["von der Linde"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // Under a (mistaken) SPECIES hint the chain is still refused: rather than inventing the
     // epithet "van" and the author "den Boom", the name stays indetermined.
@@ -175,12 +159,10 @@ fn a_particle_after_a_real_epithet_is_still_an_author() {
     assert_name_rank("Cladoniicola staurospora van den Boom, 2001", Rank::Species)
         .species("Cladoniicola", "staurospora")
         .comb_authors(Some("2001"), &["van den Boom"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Aaaba nodosa de Laubenfels, 1936", Rank::Species)
         .species("Aaaba", "nodosa")
         .comb_authors(Some("1936"), &["de Laubenfels"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -191,12 +173,10 @@ fn non_table_prefix_like_epithets_are_unaffected_by_the_hint() {
     assert_name_rank("Antaplaga dela Druce, 1904", Rank::Species)
         .species("Antaplaga", "dela")
         .comb_authors(Some("1904"), &["Druce"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_rank("Agnetina den Cao, T.K.T. & Bae, 2006", Rank::Species)
         .species("Agnetina", "den")
         .comb_authors(Some("2006"), &["T.K.T.Cao", "Bae"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -205,13 +185,11 @@ fn den_dem_and_ver_are_particles_only_before_a_surname() {
     assert_name("Metrocoris ciliatus den Boer, 1965")
         .species("Metrocoris", "ciliatus")
         .comb_authors(Some("1965"), &["den Boer"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // an epithet otherwise: the amphipod Gnathopleustes den, the stonefly Agnetina den
     assert_name("Gnathopleustes den (J.L.Barnard, 1969)")
         .species("Gnathopleustes", "den")
         .bas_authors(Some("1969"), &["J.L.Barnard"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Agnetina den")
         .species("Agnetina", "den")
@@ -225,18 +203,15 @@ fn an_epithet_with_its_particle_apart_is_one_word() {
         .species("Amphoropsis", "vanheurckii")
         .bas_authors(None, &["Grunow"])
         .comb_authors(None, &["Mereschkowsky"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Moneilema le contei Thomson, 1878")
         .species("Moneilema", "lecontei")
         .comb_authors(Some("1878"), &["Thomson"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a run of particles, or one before a capital, is an author's
     assert_name("Eutonia van der Wulp, 1874")
         .monomial("Eutonia")
         .comb_authors(Some("1874"), &["van der Wulp"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -248,12 +223,10 @@ fn a_whitelisted_name_takes_the_particle_as_its_epithet() {
     assert_name("Sympycnus du Curran, 1929")
         .species("Sympycnus", "du")
         .comb_authors(Some("1929"), &["Curran"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Stoermeriana das (Hering, 1928)")
         .species("Stoermeriana", "das")
         .bas_authors(Some("1928"), &["Hering"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Ficus du K.Schum. & Lauterb.")
         .species("Ficus", "du")
@@ -262,12 +235,10 @@ fn a_whitelisted_name_takes_the_particle_as_its_epithet() {
     assert_name_auth("Hepialus los", "Strecker, 1893")
         .species("Hepialus", "los")
         .comb_authors(Some("1893"), &["Strecker"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // an unlisted name is unchanged: a uninomial with a particled author
     assert_name("Aus du Smith, 1900")
         .monomial("Aus")
         .comb_authors(Some("1900"), &["du Smith"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }

@@ -11,7 +11,6 @@ fn imprint_years() {
         .species("Ophidocampa", "tapacumae")
         .comb_authors(Some("1870"), &["Ehrenberg"])
         .imprint_year("1869")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name(
@@ -31,42 +30,41 @@ fn imprint_years() {
         ],
     )
     .imprint_year("1982")
-    .code(NomCode::Zoological)
     .nothing_else();
 
     assert_name("Gyrosigma angulatum var. gamma Griffith & Henfrey, 1860, 1856")
         .infra_species("Gyrosigma", "angulatum", Rank::Variety, "gamma")
         .comb_authors(Some("1860"), &["Griffith", "Henfrey"])
         .imprint_year("1856")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Ctenotus alacer Storr, 1970 [\"1969\"]")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Ctenotus alacer Storr, 1970 (imprint 1969)")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Ctenotus alacer Storr, 1887 (\"1886-1888\")")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1887"), &["Storr"])
         .imprint_year("1886-1888")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Melanargia halimede menetriesi Wagener, 1959 & 1961")
-        .infra_species("Melanargia", "halimede", Rank::Subspecies, "menetriesi")
+        .infra_species(
+            "Melanargia",
+            "halimede",
+            Rank::InfraspecificName,
+            "menetriesi",
+        )
         .comb_authors(Some("1959"), &["Wagener"])
         .imprint_year("1961")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -79,28 +77,24 @@ fn iczn_imprint() {
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Ctenotus alacer Storr, 1970 [\"1969\"]")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Ctenotus alacer Storr, 1970 (imprint 1969)")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Ctenotus alacer Storr, 1970 (not 1969)")
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // unquoted bracketed imprint year
@@ -108,14 +102,12 @@ fn iczn_imprint() {
         .species("Ctenotus", "alacer")
         .comb_authors(Some("1970"), &["Storr"])
         .imprint_year("1969")
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Anomalopus truncatus (Peters, 1876 [\"1877\"])")
         .species("Anomalopus", "truncatus")
         .bas_authors(Some("1876"), &["Peters"])
         .bas_imprint_year("1877")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -392,10 +384,9 @@ fn phrase_names() {
 #[test]
 fn all_caps_authors_with_page() {
     assert_name(" Anolis marmoratus girafus LAZELL 1964: 377")
-        .infra_species("Anolis", "marmoratus", Rank::Subspecies, "girafus")
+        .infra_species("Anolis", "marmoratus", Rank::InfraspecificName, "girafus")
         .comb_authors(Some("1964"), &["Lazell"])
         .published_in_page("377")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -476,7 +467,6 @@ fn senior_epithet() {
     assert_name("Mesotrichia senior (Vachal)")
         .species("Mesotrichia", "senior")
         .bas_authors(None, &["Vachal"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Xylocopa (Koptortosoma) senior clitelligera Friese")
@@ -532,7 +522,6 @@ fn sensu_stricto_ss() {
         .species("Amitostigma", "formosana")
         .comb_authors(None, &["S.S.Ying"])
         .bas_authors(None, &["S.S.Ying"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -544,7 +533,6 @@ fn lowercase_subgenus() {
     assert_name("Acanthoderes (acanthoderes) satanas Aurivillius, 1923")
         .species_ig("Acanthoderes", "Acanthoderes", "satanas")
         .comb_authors(Some("1923"), &["Aurivillius"])
-        .code(NomCode::Zoological)
         .doubtful()
         .nothing_else();
 }
@@ -611,7 +599,6 @@ fn hyphens() {
     assert_name("Minilimosina v-atrum (Villeneuve, 1917)")
         .species("Minilimosina", "v-atrum")
         .bas_authors(Some("1917"), &["Villeneuve"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Aelurillus v-insignitus")
@@ -635,7 +622,6 @@ fn hyphens() {
         .infra_species("Asarum", "sieboldii", Rank::Form, "non-maculatum")
         .comb_authors(None, &["M.Kim"])
         .bas_authors(None, &["Y.N.Lee"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     // atypical hyphens, https://github.com/CatalogueOfLife/backend/issues/1178
@@ -643,7 +629,6 @@ fn hyphens() {
         .species_ig("Passalus", "Pertinax", "gaboi")
         .infrageneric("Pertinax")
         .comb_authors(Some("2022"), &["Jiménez-Ferbans", "Reyes-Castillo"])
-        .code(NomCode::Zoological)
         .warning(&[warnings::HOMOGLYHPS])
         .nothing_else();
 }
@@ -653,9 +638,8 @@ fn a_rank_or_code_hint_settles_a_bracketed_word_after_the_genus() {
     let name = "Humiriastrum (Urban) Cuatrecasas, 1961";
     // no hint: the year outside the bracket makes it the zoological subgenus
     assert_name(name)
-        .infrageneric_at("Humiriastrum", Rank::Subgenus, "Urban")
+        .infrageneric_at("Humiriastrum", Rank::InfragenericName, "Urban")
         .comb_authors(Some("1961"), &["Cuatrecasas"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a genus: Urban is the basionym author
     assert_name_rank(name, Rank::Genus)
@@ -667,7 +651,6 @@ fn a_rank_or_code_hint_settles_a_bracketed_word_after_the_genus() {
     assert_name_rank(name, Rank::Subgenus)
         .infrageneric_at("Humiriastrum", Rank::Subgenus, "Urban")
         .comb_authors(Some("1961"), &["Cuatrecasas"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // the botanical code: a genus with its basionym author, the year notwithstanding
     assert_name_code(name, NomCode::Botanical)
