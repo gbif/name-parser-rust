@@ -3,7 +3,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::warnings;
+use nameparser::model::{warnings, Rank};
 
 #[test]
 fn in_with_a_colon_is_an_in_citation() {
@@ -63,6 +63,23 @@ fn a_year_after_the_sanctioning_author_is_the_names() {
         .species("Clitocybe", "nebularis")
         .comb_authors(Some("1801"), &["Pers."])
         .sanct_author("Fr.")
+        .nothing_else();
+}
+
+#[test]
+fn a_sanctioned_species_author_before_a_rank_marker() {
+    // the sanctioning author used to swallow the rank marker and the epithet: "Fr.subsp.edulis"
+    assert_name("Boletus edulis Bull. : Fr. subsp. edulis")
+        .infra_species("Boletus", "edulis", Rank::Subspecies, "edulis")
+        .specific_authors(None, &["Bull."])
+        .specific_sanct_author("Fr.")
+        .autonym()
+        .nothing_else();
+    assert_name("Agaricus campestris L.:Fr. var. alba Smith")
+        .infra_species("Agaricus", "campestris", Rank::Variety, "alba")
+        .specific_authors(None, &["L."])
+        .specific_sanct_author("Fr.")
+        .comb_authors(None, &["Smith"])
         .nothing_else();
 }
 

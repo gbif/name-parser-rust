@@ -425,6 +425,8 @@ enum Np {
     SpecificComb,
     /// The ex authors of `specific_authorship`'s combination half.
     SpecificEx,
+    /// The sanctioning author of `specific_authorship`'s combination half.
+    SpecificSanct,
     /// The basionym half of `specific_authorship`.
     SpecificBas,
     Sanct,
@@ -714,6 +716,22 @@ impl NameAssertion {
             .expect("specificAuthorship set");
         assert_eq!(sa.combination_authorship.ex_authors, str_vec(authors));
         self.mark(&[Np::SpecificEx])
+    }
+
+    /// The sanctioning author of the species authorship ("Fr." of "Boletus edulis Bull. : Fr.
+    /// subsp. edulis"), botanical evidence.
+    pub fn specific_sanct_author(self, author: &str) -> Self {
+        let sa = self
+            .n
+            .specific_authorship
+            .as_ref()
+            .expect("specificAuthorship set");
+        assert_eq!(
+            sa.combination_authorship.sanctioning_author.as_deref(),
+            Some(author)
+        );
+        assert_eq!(self.n.code, Some(NomCode::Botanical));
+        self.mark(&[Np::SpecificSanct, Np::Code])
     }
 
     /// Basionym authors of the species authorship ("(Aubl.)" of "… (Aubl.) Sw. var. robusta …").
@@ -1086,6 +1104,7 @@ impl NameAssertion {
             generic_authorship,
             untested(Np::GenericComb),
             true,
+            true,
             untested(Np::GenericBas),
         );
         check_combined_authorship_default(
@@ -1093,6 +1112,7 @@ impl NameAssertion {
             specific_authorship,
             untested(Np::SpecificComb),
             untested(Np::SpecificEx),
+            untested(Np::SpecificSanct),
             untested(Np::SpecificBas),
         );
         if untested(Np::Rank) {
@@ -1233,6 +1253,7 @@ fn check_combined_authorship_default(
     ca: &Option<CombinedAuthorship>,
     comb_untested: bool,
     ex_untested: bool,
+    sanct_untested: bool,
     bas_untested: bool,
 ) {
     let Some(CombinedAuthorship {
@@ -1241,19 +1262,20 @@ fn check_combined_authorship_default(
     }) = ca
     else {
         assert!(
-            comb_untested && ex_untested && bas_untested,
+            comb_untested && ex_untested && sanct_untested && bas_untested,
             "{label} asserted but absent"
         );
         return;
     };
-    for (half, a, untested, ex_untested) in [
+    for (half, a, untested, ex_untested, sanct_untested) in [
         (
             "combination",
             combination_authorship,
             comb_untested,
             ex_untested,
+            sanct_untested,
         ),
-        ("basionym", basionym_authorship, bas_untested, true),
+        ("basionym", basionym_authorship, bas_untested, true, true),
     ] {
         check_authorship_default(
             &format!("{label}.{half}"),
@@ -1263,7 +1285,7 @@ fn check_combined_authorship_default(
             true,
             true,
             true,
-            true,
+            sanct_untested,
         );
         assert!(!a.anonymous, "unexpected anonymous {label}.{half}");
     }

@@ -55,7 +55,9 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         return;
     }
     // Sanctioning by Fries or Persoon exists under the botanical code only ("Link:Fr., 1809"), the
-    // basionym's too ("(Wulfen : Fr.)"). Any other author after a colon is a misread colon.
+    // basionym's too ("(Wulfen : Fr.)"), and the species author's of an infraspecific name
+    // ("Agaricus campestris L. : Fr. var. alba"). Any other author after a colon is a misread colon.
+    let species = ctx.name.specific_authorship.as_ref();
     let sanctioned = [
         auth_state.and_then(|st| st.combination.sanctioning_author.as_deref()),
         auth_state.and_then(|st| st.basionym.sanctioning_author.as_deref()),
@@ -64,6 +66,8 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
             .sanctioning_author
             .as_deref(),
         ctx.name.basionym_authorship.sanctioning_author.as_deref(),
+        species.and_then(|a| a.combination_authorship.sanctioning_author.as_deref()),
+        species.and_then(|a| a.basionym_authorship.sanctioning_author.as_deref()),
     ];
     if sanctioned.into_iter().flatten().any(is_sanctioning_author) {
         ctx.name.code = Some(NomCode::Botanical);
