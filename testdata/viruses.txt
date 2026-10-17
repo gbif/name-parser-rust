@@ -3226,11 +3226,6 @@ Milvetsatellite
 Subclovsatellite
 
 # https://github.com/gbif/name-parser/issues/17
-Activation tagging vector pGA2772
 Bse prion (Bovine spongiform encephalopathy)
 Borna disease virus rescue plasmid pBRT7-HrBDVnc
 Ageratum yellow vein alphasatellite
-Activation-tagging vector pSKI015
-siRNA vector pAAV9(5)-CMV-EGFP-CytB-AS-ohneNot
-Binary RNAi Gateway destination vector pAGSM552
-20S RNA replicon

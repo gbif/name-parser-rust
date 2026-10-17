@@ -404,9 +404,10 @@ fn viral_names() {
     assert!(is_viral_name("Carrot carlavirus WM-, 2008"));
     assert!(is_viral_name("C2-like viruses"));
     assert!(is_viral_name("C1 bacteriophage"));
-    assert!(is_viral_name("C-terminal Gfp fusion vector pUG23"));
-    assert!(is_viral_name("C-terminal Gfp fusion vector"));
-    assert!(is_viral_name("CMVd3 Flexi Vector pFN24K (HaloTag 7)"));
+    // a cloning vector is no virus (#124)
+    assert!(!is_viral_name("C-terminal Gfp fusion vector pUG23"));
+    assert!(!is_viral_name("C-terminal Gfp fusion vector"));
+    assert!(!is_viral_name("CMVd3 Flexi Vector pFN24K (HaloTag 7)"));
     assert!(is_viral_name("bacteriophage, 315.6"));
     assert!(is_viral_name("bacteriophages"));
     assert!(is_viral_name("\"T1-like viruses\""));

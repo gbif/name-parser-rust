@@ -2247,6 +2247,7 @@ fn unbracket_infrageneric_marker(ctx: &mut ParseContext, s: String) -> String {
                 _ => &caps[2],
             }
             .to_string();
+            ctx.bracketed_infrageneric_marker = true;
             ctx.written_out_infrageneric_marker = marker.len() < caps[2].len();
             format!("{} {marker}. {}{rest}", &caps[1], &caps[3])
         }

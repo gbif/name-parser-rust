@@ -291,14 +291,16 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // A section or series within a genus is a botanical rank, but zoologists name them too, below
     // the ICZN's ranks: `Achatinella (sect. Auriculella) Pfeiffer, 1854`, `Aphodius (section
     // Cytoderhinus) Seabra 1909` (#171). Under the zoological code, given or told by a year after a
-    // comma or beside a marker written out, it is an unranked infrageneric name, not a botanical
-    // section. Botanists abbreviate the marker, with or without a comma: `Tradescantia (sect.
-    // Zebrina) Pellegrini 2017`. Written out without a year it is no botanical section either, but
+    // comma or beside a marker written out, both in brackets, it is an unranked infrageneric name,
+    // not a botanical section. Botanists abbreviate the marker, with or without a comma, and
+    // rarely bracket it: `Tradescantia (sect. Zebrina) Pellegrini 2017`, `Cephalozia sect.
+    // Prionolobus Spruce, 1882`. Written out without a year it is no botanical section either, but
     // of no code: `Hypanis (section Adacna)` is a mollusc, `Synura (section Petersenia)` an alga.
     // Zoologists name no supersection: `Pinus suprasect. Taeda` stays botanical.
     let zoological = ctx.requested_code == Some(NomCode::Zoological)
         || (ctx.requested_code.is_none()
-            && (auth_state.is_some_and(|s| s.combination_year_after_comma)
+            && ((ctx.bracketed_infrageneric_marker
+                && auth_state.is_some_and(|s| s.combination_year_after_comma))
                 || (ctx.written_out_infrageneric_marker
                     && ctx.name.combination_authorship.year.is_some())));
     let unranked_section = ctx.name.genus.is_some()

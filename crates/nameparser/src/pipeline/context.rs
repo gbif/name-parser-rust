@@ -123,6 +123,9 @@ pub(crate) struct ParseContext {
     /// The authorship coded its diacritics with a colon and a digit ("C. Mu:2ller"), as only
     /// bryophyte sources do — botanical evidence for code inference.
     pub coded_diacritics: bool,
+    /// The marker of an infrageneric name stood in its brackets, `Achatinella (sect. Auriculella)`,
+    /// as ZooBank has it — zoological evidence beside a year after a comma (#171).
+    pub bracketed_infrageneric_marker: bool,
     /// The marker of a bracketed infrageneric name was written out, `Aphodius (section
     /// Cytoderhinus)`, as zoologists do — zoological evidence beside a year (#171).
     pub written_out_infrageneric_marker: bool,
@@ -185,6 +188,7 @@ impl ParseContext {
             approved_lists: false,
             species_code_state: None,
             coded_diacritics: false,
+            bracketed_infrageneric_marker: false,
             written_out_infrageneric_marker: false,
             morpha_marker: false,
         }
