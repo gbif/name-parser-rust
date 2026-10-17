@@ -1359,10 +1359,15 @@ fn issue_171_zoological_sections() {
             .code(NomCode::Zoological)
             .nothing_else();
     }
-    // a botanist's section keeps its rank, with or without a year
+    // a botanist's section keeps its rank, with or without a year, a comma or brackets
     assert_name("Tradescantia (sect. Zebrina) Pellegrini 2017")
         .infrageneric_at("Tradescantia", Rank::SectionBotany, "Zebrina")
         .comb_authors(Some("2017"), &["Pellegrini"])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    assert_name_auth("Cephalozia sect. Prionolobus", "Spruce, 1882")
+        .infrageneric_at("Cephalozia", Rank::SectionBotany, "Prionolobus")
+        .comb_authors(Some("1882"), &["Spruce"])
         .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Guatteria (sect. Trichostemon) R.E.Fr.")
