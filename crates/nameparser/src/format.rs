@@ -731,12 +731,14 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                         );
                     }
                     sb.push(' ');
-                    // we show zoological infragenerics in brackets, but use rank markers for
-                    // botanical names (unless its no defined rank). Of no code, an unranked
-                    // infrageneric keeps its brackets too: "infragen." is no marker anyone writes
-                    // ("Calathus (Lindrothius) Kurnakov, 1961").
-                    if n.code == Some(NomCode::Zoological)
-                        || (n.code.is_none() && n.rank == Rank::InfragenericName)
+                    // Only a subgenus and an unranked infrageneric go in brackets, with no
+                    // marker: "infragen." is no marker anyone writes ("Calathus (Lindrothius)
+                    // Kurnakov, 1961", "Agaricus (Hypholoma) Fr."). A subgenus only when
+                    // zoological: of no code it keeps the marker it was written with, as a
+                    // botanical one must (ICN Art. 21.1). Every other rank shows its marker
+                    // ("Achillea sect. Ptarmica").
+                    if n.rank == Rank::InfragenericName
+                        || (n.rank == Rank::Subgenus && n.code == Some(NomCode::Zoological))
                     {
                         sb.push('(');
                         append_qualifier(&mut sb, n, NamePart::Infrageneric, f.show_qualifier);
@@ -1293,6 +1295,38 @@ mod tests {
         assert_eq!(
             pn.canonical_name_complete().as_deref(),
             Some("Aaa bbb null")
+        );
+    }
+
+    #[test]
+    fn only_a_subgenus_or_an_unranked_infrageneric_goes_in_brackets() {
+        use crate::model::NomCode;
+        let canonical = |name: &str, code| {
+            parse(name, None, None, code)
+                .unwrap()
+                .canonical_name()
+                .unwrap()
+        };
+        assert_eq!(
+            canonical("Agaricus trib. Pholiota Fr.", None),
+            "Agaricus (Pholiota) Fr."
+        );
+        assert_eq!(
+            canonical("Hieracium unr. Verbasciformia", Some(NomCode::Botanical)),
+            "Hieracium (Verbasciformia)"
+        );
+        assert_eq!(
+            canonical("Carabus subgen. Megodontus", Some(NomCode::Zoological)),
+            "Carabus (Megodontus)"
+        );
+        // of no code a subgenus keeps its marker
+        assert_eq!(
+            canonical("Carabus subgen. Megodontus", None),
+            "Carabus subgen. Megodontus"
+        );
+        assert_eq!(
+            canonical("Achillea sect. Ptarmica", None),
+            "Achillea sect. Ptarmica"
         );
     }
 

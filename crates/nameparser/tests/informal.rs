@@ -1174,7 +1174,7 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
         .nothing_else();
     // the section is lost with the rank; a botanical anchor has no rank to tell
     assert_informal("Abies sect. Grandes sp. 1")
-        .taxon("Abies infragen. Grandes")
+        .taxon("Abies (Grandes)")
         .taxon_rank(Rank::InfragenericName)
         .rank(Rank::Species)
         .phrase("sp. 1")
