@@ -160,6 +160,41 @@ fn rare_infrageneric_markers() {
 }
 
 #[test]
+fn a_tribe_within_a_genus_is_an_unranked_subdivision() {
+    // ICN Art. F.4.1: Fries's tribus of Agaricus are unranked subdivisions of the genus. The
+    // genus was dropped and the epithet became a tribe.
+    assert_name("Agaricus trib. Pholiota Fr.")
+        .infrageneric_at("Agaricus", Rank::InfragenericName, "Pholiota")
+        .comb_authors(None, &["Fr."])
+        .nothing_else();
+    assert_name("Agaricus subtrib. Calodontes")
+        .infrageneric_at("Agaricus", Rank::InfragenericName, "Calodontes")
+        .nothing_else();
+    assert_name("Hypnum trib Chrysophylla Hampe")
+        .infrageneric_at("Hypnum", Rank::InfragenericName, "Chrysophylla")
+        .comb_authors(None, &["Hampe"])
+        .nothing_else();
+    // a family-group name before or after the marker makes it a tribe
+    assert_name("Apocynaceae trib. Tabernaemontaneae G. Don")
+        .monomial_rank("Tabernaemontaneae", Rank::Tribe)
+        .comb_authors(None, &["G.Don"])
+        .nothing_else();
+    assert_name("Benoistia trib Benoistieae Radcl.-Sm.")
+        .monomial_rank("Benoistieae", Rank::Tribe)
+        .comb_authors(None, &["Radcl.-Sm."])
+        .nothing_else();
+    assert_name("Cornaceae tribus Griselinieae Wangerin")
+        .monomial_rank("Griselinieae", Rank::Tribe)
+        .comb_authors(None, &["Wangerin"])
+        .nothing_else();
+    // otherwise "tribus" is an epithet
+    assert_name("Erionota tribus Evans, 1941")
+        .species("Erionota", "tribus")
+        .comb_authors(Some("1941"), &["Evans"])
+        .nothing_else();
+}
+
+#[test]
 fn an_unranked_marker_marks_an_unranked_name() {
     // #98: IPNI's "[unranked]" put the epithet into the authorship
     assert_name("Aetheorhiza bulbosa [unranked] montana (Willk.) Gand.")

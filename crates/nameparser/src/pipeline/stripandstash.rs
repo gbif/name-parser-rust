@@ -6761,7 +6761,7 @@ static DANGLING_EX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(?-u:\s+
 fn supra_rank_marker(word: &str) -> Option<Rank> {
     match word {
         "subfam" | "subfamily" => Some(Rank::Subfamily),
-        "trib" | "tribe" => Some(Rank::Tribe),
+        "trib" | "tribe" | "tribus" => Some(Rank::Tribe),
         "subtrib" | "subtribe" => Some(Rank::Subtribe),
         "supertrib" => Some(Rank::Supertribe),
         "infratrib" => Some(Rank::Infratribe),
@@ -6780,7 +6780,7 @@ fn supra_rank_marker(word: &str) -> Option<Rank> {
 /// exposure to weigh, unlike some of the batch 2d fancy_regex patterns.
 static SUPRA_RANK_PREFIX: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"(?i)^(?:[\p{Lu}][\p{L}]{2,}\s+)?((?:notho)?(?:subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?))\.?\s+(?=[\p{Lu}])",
+        r"(?i)^(?:([\p{Lu}][\p{L}]{2,})\s+)?((?:notho)?(?:subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e|us)?))\.?\s+(?=([\p{Lu}][\p{L}]*))",
     )
     .unwrap()
 });
@@ -6797,9 +6797,38 @@ static SUPRA_RANK_PREFIX: LazyLock<FancyRegex> = LazyLock::new(|| {
 /// Scolochloinae Soreng" and "Poaceae subtrib. Scolochloinae Soreng" both come back
 /// `rank=SUBTRIBE`, `uninomial=Scolochloinae` (the family prefix, when present, is
 /// discarded entirely, not preserved anywhere in the parsed output).
+/// A family-group name by its ending: a family, subfamily, tribe or subtribe of either code.
+fn is_family_group(word: &str) -> bool {
+    ["aceae", "idae", "oideae", "eae", "inae", "ini"]
+        .iter()
+        .any(|e| word.len() > e.len() + 2 && word.ends_with(e))
+}
+
 fn strip_supra_rank_prefix(ctx: &mut ParseContext, s: String) -> String {
     if let Ok(Some(caps)) = SUPRA_RANK_PREFIX.captures(&s) {
-        let marker = caps.get(1).unwrap().as_str().to_lowercase();
+        let marker = caps.get(2).unwrap().as_str().to_lowercase();
+        let epithet = caps.get(3).unwrap().as_str();
+        // "tribus" is new here, and taken only before a capital ("Tribus chareae" is no tribe
+        // the parser can tell)
+        if marker == "tribus" && !epithet.starts_with(char::is_uppercase) {
+            return s;
+        }
+        // Within a genus a tribe is no tribe: Fries's tribus of Agaricus are unranked
+        // subdivisions of the genus (ICN Art. F.4.1, "Agaricus trib. Pholiota Fr."), as are
+        // Hampe's of Hypnum. Only a family-group name before or after the marker makes it one.
+        if let Some(genus) = caps.get(1) {
+            if !is_family_group(genus.as_str()) && !is_family_group(epithet) {
+                let rest = &s[caps.get(0).unwrap().end()..];
+                match marker.as_str() {
+                    "trib" | "tribe" => return format!("{} tr. {rest}", genus.as_str()),
+                    "subtrib" | "subtribe" => return format!("{} subtr. {rest}", genus.as_str()),
+                    // with no family-group name "tribus" is a species epithet ("Erionota
+                    // tribus Evans, 1941")
+                    "tribus" => return s,
+                    _ => {}
+                }
+            }
+        }
         // a nothotaxon's marker, IPNI's "nothosubtrib. Pachynyctocereinae" (#167)
         let notho = marker.strip_prefix("notho");
         if let Some(r) = supra_rank_marker(notho.unwrap_or(&marker)) {
