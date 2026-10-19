@@ -179,6 +179,13 @@ static CULTURE_ACCESSION_STANDALONE: LazyLock<Regex> = LazyLock::new(|| {
 // `restructured_matches(s) && has_digit(s)` is exactly equivalent to Java's
 // `PURE_ALPHANUM.matches(s) && hasDigit(s)` at that one call site.
 static PURE_ALPHANUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\p{L}\d_.\-]+$").unwrap());
+
+/// A capitalised word, an underscore and a label opening with a capital or a digit, in a word with
+/// a digit: a designation under a real taxon, `Entodinium_1`, `Acrididae_20230928_001_ORT_001`,
+/// `Stygiellidae_STYG2` (#193). Assemble makes it the uninomial with a phrase, as a GTDB name
+/// (`Clostridium_R`). A lower-case label would become an epithet: `Acrocirridae_gen1` stays junk.
+static UNDERSCORE_LABEL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}{2,}_[\p{Lu}\d][\p{L}\d_.\-]*$").unwrap());
 // Patterns like "Basal_Cryptophyceae-1" — single underscore-separated parts with a digit
 // suffix. Java: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 // NB (dead-code finding, not fixed — faithful port keeps it): every character PR2_LIKE's
@@ -747,6 +754,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         && PURE_ALPHANUM.is_match(&s)
         && has_digit(&s)
         && !is_plausible_single_word_name(&s)
+        && !UNDERSCORE_LABEL.is_match(&s)
     {
         return Err(ParseError::new(NameType::Other, None, s));
     }

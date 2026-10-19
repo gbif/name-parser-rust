@@ -782,3 +782,24 @@ fn author_variations() {
 fn assert_hybrid_formula(name: &str) {
     assert_unparsable(name, NameType::Formula);
 }
+
+#[test]
+fn an_underscore_label_with_a_digit_is_a_phrase() {
+    // #193: rejected as junk, like any single word with a digit
+    for (input, taxon, phrase) in [
+        (
+            "Acrididae_20230928_001_ORT_001",
+            "Acrididae",
+            "20230928_001_ORT_001",
+        ),
+        ("Anthomyiidae_2619441", "Anthomyiidae", "2619441"),
+        ("Entodinium_1", "Entodinium", "1"),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+}
