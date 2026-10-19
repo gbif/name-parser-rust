@@ -125,6 +125,9 @@ pub(crate) struct ParseContext {
     /// The marker of a bracketed infrageneric name was written out, `Aphodius (section
     /// Cytoderhinus)`, as zoologists do — zoological evidence beside a year (#171).
     pub written_out_infrageneric_marker: bool,
+    /// The infrageneric name came with a rank marker (`tr.`, `unr.`, `[unranked]`, `nothogrex`),
+    /// so its rank is no zoological subgenus even when it is unranked.
+    pub infrageneric_rank_marker: bool,
     /// The infraspecific rank marker was "m.": the morpha of zoologists (Breuning's "Eunidia
     /// simplex m. bifuscomaculata"), but monstrositas or modificatio in botany, so NameTokens gives
     /// it the shared INFRASUBSPECIFIC_NAME. Assemble makes it MORPH once the code is zoological.
@@ -180,6 +183,7 @@ impl ParseContext {
             approved_lists: false,
             bracketed_infrageneric_marker: false,
             written_out_infrageneric_marker: false,
+            infrageneric_rank_marker: false,
             morpha_marker: false,
         }
     }

@@ -895,6 +895,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         if i < ts.len() && ts[i].kind == TokenKind::Word && starts_upper(&ts[i]) {
                             infragen_epithet = Some(ts[i].text.clone());
                             infrageneric = Some(rm_infragen);
+                            ctx.infrageneric_rank_marker = true;
                             if gnotho {
                                 ctx.name.add_notho(NamePart::Infrageneric);
                             }

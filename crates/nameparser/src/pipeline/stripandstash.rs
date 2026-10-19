@@ -6928,6 +6928,7 @@ fn strip_leading_infrageneric_marker(ctx: &mut ParseContext, s: String) -> Strin
                 }
             }
             ctx.name.rank = r;
+            ctx.infrageneric_rank_marker = true;
             if let Some(code) = r.code() {
                 if ctx.name.code.is_none() {
                     ctx.name.code = Some(code);

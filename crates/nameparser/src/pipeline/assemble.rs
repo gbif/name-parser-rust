@@ -345,8 +345,10 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
     // Likewise a zoological "Genus (Subgenus)": the only rank the ICZN puts in parentheses
     // after a genus is the subgenus (Art. 6.1). Rust-only: Java kept INFRAGENERIC_NAME. Not a
-    // section its marker names (#171).
+    // section its marker names (#171), nor a name its marker says is unranked ("Hieracium unr.
+    // Verbasciformia", "Agaricus trib. Pholiota").
     if !unranked_section
+        && !ctx.infrageneric_rank_marker
         && ctx.name.rank == Rank::InfragenericName
         && ctx.name.code == Some(NomCode::Zoological)
         && ctx.name.infrageneric_epithet.is_some()
