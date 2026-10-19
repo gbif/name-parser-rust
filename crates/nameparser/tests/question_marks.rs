@@ -94,9 +94,67 @@ fn glued_to_the_last_epithet_it_doubts_that_epithet_not_an_author() {
 
 #[test]
 fn glued_to_a_uninomial_it_doubts_the_uninomial() {
-    assert_name("Abies?")
-        .monomial("Abies")
-        .qualifiers(&[(NamePart::Generic, "?")])
+    for name in ["Abies?", "Abies ?"] {
+        assert_name(name)
+            .monomial("Abies")
+            .qualifiers(&[(NamePart::Generic, "?")])
+            .doubtful()
+            .warning(&[warnings::QUESTION_MARKS_REMOVED])
+            .nothing_else();
+    }
+}
+
+#[test]
+fn trailing_a_bare_name_it_doubts_the_last_epithet_glued_or_not() {
+    assert_name("Abies alba ?")
+        .species("Abies", "alba")
+        .qualifiers(&[(NamePart::Specific, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+    assert_name("Abies alba var. nana ?")
+        .infra_species("Abies", "alba", Rank::Variety, "nana")
+        .qualifiers(&[(NamePart::Infraspecific, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+}
+
+#[test]
+fn trailing_a_bare_subgenus_it_doubts_the_subgenus() {
+    assert_name("Faunus (Pseudobellardia) ?")
+        .infrageneric_at("Faunus", Rank::InfragenericName, "Pseudobellardia")
+        .qualifiers(&[(NamePart::Infrageneric, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+}
+
+#[test]
+fn trailing_a_phrase_it_only_doubts_the_name() {
+    assert_name("Siphonodendron sp. a ?")
+        .genus_rank("Siphonodendron", Rank::Species)
+        .phrase("sp. a")
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED, warnings::INDETERMINED])
+        .nothing_else();
+}
+
+#[test]
+fn trailing_an_authorship_it_only_doubts_the_name() {
+    assert_name("Abies alba Mill. ?")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Mill."])
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+    assert_name("Aus bus (Smith, 1886) ?")
+        .species("Aus", "bus")
+        .bas_authors(Some("1886"), &["Smith"])
         .doubtful()
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();

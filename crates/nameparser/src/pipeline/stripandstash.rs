@@ -293,6 +293,7 @@ static UNCERTAIN_AUTHOR_SLASH: LazyLock<Regex> =
 /// transcription artefacts ("Istv?nffi") are left to `repair_question_mark_in_word` (step 7).
 fn flag_uncertain_authorship(ctx: &mut ParseContext, mut s: String) -> String {
     if TRAILING_QMARK.is_match(&s) {
+        ctx.trailing_qmark = true;
         ctx.name.doubtful = true;
         ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
         s = java_trim(&TRAILING_QMARK.replace_all(&s, "")).to_string();
@@ -7648,7 +7649,11 @@ mod tests {
 
     #[test]
     fn qmark_after_an_abbreviated_author_flags_uncertain() {
-        for s in ["Mikania attenuata DC.?", "Bidens rosaefolius H.B.K.?", " d'Orb.?"] {
+        for s in [
+            "Mikania attenuata DC.?",
+            "Bidens rosaefolius H.B.K.?",
+            " d'Orb.?",
+        ] {
             let mut c = ctx("x");
             assert_eq!(flag_uncertain_authorship(&mut c, s.to_string()), s);
             assert!(c.name.doubtful, "{s}");
@@ -7661,7 +7666,12 @@ mod tests {
 
     #[test]
     fn qmark_after_an_epithet_or_the_genus_is_no_uncertain_author() {
-        for s in ["Abies alba?", "Abies?", "Abies alba var. nana?", "Abies? alba"] {
+        for s in [
+            "Abies alba?",
+            "Abies?",
+            "Abies alba var. nana?",
+            "Abies? alba",
+        ] {
             let mut c = ctx("x");
             assert_eq!(flag_uncertain_authorship(&mut c, s.to_string()), s);
             assert!(!c.name.doubtful, "{s}");

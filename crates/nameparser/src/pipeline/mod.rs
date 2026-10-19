@@ -24,8 +24,8 @@ use std::sync::LazyLock;
 use regex::Regex;
 
 use crate::model::{
-    warnings, Authorship, CombinedAuthorship, NameType, NomCode, ParseError, ParsedName, Rank,
-    State,
+    warnings, Authorship, CombinedAuthorship, NamePart, NameType, NomCode, ParseError, ParsedName,
+    Rank, State,
 };
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
@@ -508,9 +508,44 @@ pub fn run(
         }
     }
     restore_lost_letters(&mut ctx);
+    qualify_trailing_doubt(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
 
     Ok(ctx.name)
+}
+
+/// A free-standing "?" after a bare name (`Abies alba ?`, `Faunus (Pseudobellardia) ?`) doubts its
+/// last part, as a glued one does (`Abies alba?`). Rust-only: Java dropped it, and only the
+/// doubtful flag told of it. After an authorship, a note or a phrase it stays no more than that
+/// flag, and a part already qualified keeps its qualifier (`Machairodus cf. crenatidens ?`).
+fn qualify_trailing_doubt(ctx: &mut ParseContext) {
+    let n = &mut ctx.name;
+    if !ctx.trailing_qmark
+        || !n.type_.is_parsable()
+        || n.epithet_qualifier.is_some()
+        || n.phrase.is_some()
+        || n.cultivar_epithet.is_some()
+        || n.has_authorship()
+        || n.nomenclatural_note.is_some()
+        || n.taxonomic_note.is_some()
+        || n.unparsed.is_some()
+    {
+        return;
+    }
+    let part = if n.infraspecific_epithet.is_some() {
+        NamePart::Infraspecific
+    } else if n.specific_epithet.is_some() {
+        NamePart::Specific
+    } else if n.infrageneric_epithet.is_some() {
+        NamePart::Infrageneric
+    } else {
+        NamePart::Generic
+    };
+    n.set_epithet_qualifier(part, "?");
+    // a doubted uninomial keeps its type, as `?Monotremata` does
+    if part != NamePart::Generic {
+        n.type_ = NameType::Informal;
+    }
 }
 
 /// A note that a spelling is a misspelling, a lapsus or an error, perhaps of other authors:
