@@ -452,12 +452,13 @@ fn names_with_multiple_dashes_in_specific_epithet() {
 #[test]
 fn genus_with_question_mark() {
     // group: Genus with question mark — open-nomenclature doubtful identification.
-    // The "?" is captured as a SPECIFIC epithet qualifier (like cf. or aff.).
+    // The "?" glued to the genus doubts the genus, as "?Ferganoconcha oblonga" does (gnparser
+    // and Java gave it to the species).
     assert_name("Ferganoconcha? oblonga")
         .species("Ferganoconcha", "oblonga")
         .type_(NameType::Informal)
         .doubtful()
-        .qualifiers(&[(NamePart::Specific, "?")])
+        .qualifiers(&[(NamePart::Generic, "?")])
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 }
