@@ -258,8 +258,18 @@ static INED_QMARK: LazyLock<Regex> =
 /// Rust-only, also before a year when the word is capitalised: `Barovski? 1926`, `Rondot? 1887?`,
 /// which Java dropped silently (#80). A lower-case word before the year is an epithet, not an
 /// author.
+///
+/// Rust-only, the word must look like an author, as before the year: capitalised, after a space,
+/// bracket or slash, maybe abbreviated (`Sess?`, `DC.?`, `d'Orb.?`, `Roque et al./Savoie?`), and
+/// may close a square bracket (`Schaufuss, C. [or L.W.?]`). Java took any letter, so the doubted
+/// epithet of `Abies alba?` and the genus of `Abies?` were uncertain authors, and missed the dot of
+/// `Mikania attenuata DC.?`, whose `?` was dropped without a trace. A separate authorship comes
+/// here with a space put in front ([`on_authorship`]).
 static UNCERTAIN_AUTHOR_QMARK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\p{L}\?\s*(?:$|[&,])|(?:^|[\s(])\p{Lu}[\p{L}'.\-]*\?\s+\d{4}").unwrap()
+    Regex::new(
+        r"[\s(/](?:\p{Ll}{1,3}')?\p{Lu}[\p{L}'.\-]*\?\s*(?:$|[&,\]])|(?:^|[\s(])\p{Lu}[\p{L}'.\-]*\?\s+\d{4}",
+    )
+    .unwrap()
 });
 
 /// Java UNCERTAIN_AUTHOR_OR (StripAndStash.java:304-305): `\p{Lu}\p{L}*\s+or\s+\p{Lu}`,
@@ -284,6 +294,7 @@ static UNCERTAIN_AUTHOR_SLASH: LazyLock<Regex> =
 /// transcription artefacts ("Istv?nffi") are left to `repair_question_mark_in_word` (step 7).
 fn flag_uncertain_authorship(ctx: &mut ParseContext, mut s: String) -> String {
     if TRAILING_QMARK.is_match(&s) {
+        ctx.trailing_qmark = true;
         ctx.name.doubtful = true;
         ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
         s = java_trim(&TRAILING_QMARK.replace_all(&s, "")).to_string();
@@ -537,11 +548,11 @@ static BRACKETED_GENUS_DOUBT: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
-/// A question mark inside a subgenus's brackets, before or after it: `Glenea (? Macroglenea)
-/// anulicornis`, `Glenea (Macroglenea?) anulicornis`. Group 1 is the genus, 2 or 3 the subgenus,
-/// 4 the epithet and what follows.
+/// A question mark inside a subgenus's brackets, before or after it, or glued after them: `Glenea
+/// (? Macroglenea) anulicornis`, `Glenea (Macroglenea?) anulicornis`, `Glenea (Macroglenea)?
+/// anulicornis`. Group 1 is the genus, 2, 3 or 4 the subgenus, 5 the epithet and what follows.
 static BRACKETED_SUBGENUS_DOUBT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)\((?:(?-u:\s*)\?(?-u:\s*)(\p{Lu}\p{Ll}+)|(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\?)(?-u:\s*)\)(?-u:\s*)(\p{Ll}[\p{Ll}\-]+(?:(?-u:\s).*)?)$")
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)\((?:(?-u:\s*)\?(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\)|(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\?(?-u:\s*)\)|(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\)\?)(?-u:\s*)(\p{Ll}[\p{Ll}\-]+\??(?:(?-u:\s).*)?)$")
         .unwrap()
 });
 
@@ -557,11 +568,16 @@ fn strip_bracketed_genus_doubt(ctx: &mut ParseContext, s: String) -> String {
             caps[2].split_whitespace().next().unwrap_or("").to_string(),
         )
     } else if let Some(caps) = BRACKETED_SUBGENUS_DOUBT.captures(&s) {
-        let subgenus = caps.get(2).or(caps.get(3)).unwrap().as_str();
+        let subgenus = caps
+            .get(2)
+            .or(caps.get(3))
+            .or(caps.get(4))
+            .unwrap()
+            .as_str();
         (
-            format!("{} ({subgenus}) {}", &caps[1], &caps[4]),
+            format!("{} ({subgenus}) {}", &caps[1], &caps[5]),
             NamePart::Infrageneric,
-            caps[4].split_whitespace().next().unwrap_or("").to_string(),
+            caps[5].split_whitespace().next().unwrap_or("").to_string(),
         )
     } else {
         return s;
@@ -7635,6 +7651,38 @@ mod tests {
         let out = flag_uncertain_authorship(&mut c, "Aus bus Smith/Jones, 1900".to_string());
         assert_eq!(out, "Aus bus Smith/Jones, 1900");
         assert!(c.name.doubtful);
+    }
+
+    #[test]
+    fn qmark_after_an_abbreviated_author_flags_uncertain() {
+        for s in [
+            "Mikania attenuata DC.?",
+            "Bidens rosaefolius H.B.K.?",
+            " d'Orb.?",
+        ] {
+            let mut c = ctx("x");
+            assert_eq!(flag_uncertain_authorship(&mut c, s.to_string()), s);
+            assert!(c.name.doubtful, "{s}");
+            assert!(c
+                .name
+                .warnings
+                .contains(&warnings::UNCERTAIN_AUTHORSHIP.to_string()));
+        }
+    }
+
+    #[test]
+    fn qmark_after_an_epithet_or_the_genus_is_no_uncertain_author() {
+        for s in [
+            "Abies alba?",
+            "Abies?",
+            "Abies alba var. nana?",
+            "Abies? alba",
+        ] {
+            let mut c = ctx("x");
+            assert_eq!(flag_uncertain_authorship(&mut c, s.to_string()), s);
+            assert!(!c.name.doubtful, "{s}");
+            assert!(c.name.warnings.is_empty(), "{s}");
+        }
     }
 
     #[test]

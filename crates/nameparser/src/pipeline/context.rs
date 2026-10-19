@@ -116,6 +116,9 @@ pub(crate) struct ParseContext {
     /// (`?Sydonia alba`, `cf. Platypeltis croftii`);
     /// `Pipeline::run` types the name INFORMAL once it knows a species epithet follows.
     pub qualified_genus: bool,
+    /// Set by StripAndStash when it removed a free-standing trailing `?` (`Abies alba ?`);
+    /// `Pipeline::run` gives it to the last part of a name without authorship.
+    pub trailing_qmark: bool,
     /// An "(Approved Lists 1980)" citation was stripped: the name is a prokaryote's (see
     /// `code_inference::infer`).
     pub approved_lists: bool,
@@ -180,6 +183,7 @@ impl ParseContext {
             pending_serovar: None,
             preflight_complete: false,
             qualified_genus: false,
+            trailing_qmark: false,
             approved_lists: false,
             bracketed_infrageneric_marker: false,
             written_out_infrageneric_marker: false,

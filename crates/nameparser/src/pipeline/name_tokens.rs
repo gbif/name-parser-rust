@@ -268,11 +268,40 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
             i += 1;
             continue;
         }
-        // Open-nomenclature doubtful-identification marker: "?" between epithets, like
-        // "Ferganoconcha? oblonga" or "Buteo borealis ? ventralis". Treat exactly like
-        // cf./aff.: skip the token, attach the qualifier to the next epithet (specific when
-        // no species yet, infraspecific when one exists), set type=INFORMAL, doubtful, and
-        // emit QUESTION_MARKS_REMOVED.
+        // A "?" glued to the end of a word doubts that word: the genus of "Ferganoconcha?
+        // oblonga" (as "?Ferganoconcha oblonga"), the species of "Buteo borealis? ventralis",
+        // the epithet of "Abies alba var. nana?". Rust-only: Java gave it to the next epithet,
+        // and to a species missing from "Abies?".
+        if genus.is_some() && t.kind == TokenKind::Other && t.text == "?" && i > 0 {
+            let prev = &ts[i - 1];
+            let glued = prev.kind == TokenKind::Word && prev.end == t.start;
+            let doubts_genus = glued
+                && lower_epithets.is_empty()
+                && genus
+                    .as_deref()
+                    .is_some_and(|g| g.eq_ignore_ascii_case(&prev.text));
+            let doubts_epithet = glued && lower_epithets.last() == Some(&prev.text.to_lowercase());
+            if doubts_genus {
+                ctx.name.set_epithet_qualifier(NamePart::Generic, "?");
+                ctx.qualified_genus = true;
+            } else if doubts_epithet && cf_aff_qualifier.is_none() {
+                // a cf. already there stays: "Afiacyathus cf. sibiricus?"
+                qualifier_at = lower_epithets.len() - 1;
+                cf_aff_qualifier = Some("?".to_string());
+                ctx.name.type_ = NameType::Informal;
+            }
+            if doubts_genus || doubts_epithet {
+                ctx.name.doubtful = true;
+                ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+                i += 1;
+                continue;
+            }
+        }
+        // Open-nomenclature doubtful-identification marker: a "?" standing free or glued to the
+        // next epithet, "Buteo borealis ? ventralis", "Abies ?alba". Treat exactly like cf./aff.:
+        // skip the token, attach the qualifier to the next epithet (specific when no species
+        // yet, infraspecific when one exists), set type=INFORMAL, doubtful, and emit
+        // QUESTION_MARKS_REMOVED.
         if genus.is_some()
             && cf_aff_qualifier.is_none()
             && t.kind == TokenKind::Other
@@ -1104,8 +1133,11 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     }
     if let Some(q) = cf_aff_qualifier.as_ref().filter(|_| !qualifier_phrase) {
         // Qualifier applies to the epithet after it, or the last one when it trails them all.
+        // With no epithet at all it can only doubt the genus.
         let followed = lower_epithets.len() > qualifier_at;
-        let part = if infraspecific.is_none() || (qualifier_at == 0 && followed) {
+        let part = if specific.is_none() {
+            NamePart::Generic
+        } else if infraspecific.is_none() || (qualifier_at == 0 && followed) {
             NamePart::Specific
         } else {
             NamePart::Infraspecific
