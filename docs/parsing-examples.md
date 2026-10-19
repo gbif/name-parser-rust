@@ -104,10 +104,41 @@ A capitalised word in brackets after the genus is an infrageneric name, a subgen
 | `Carabus (Carabus) auronitens Fabricius, 1792` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Carabus` · infragenericEpithet `Carabus` · specificEpithet `auronitens`<br>combination: authors `Fabricius` · year `1792`<br>→ `Carabus (Carabus) auronitens Fabricius, 1792` |
 | `Phalium (Semicassis) vector R. T. Abbott, 1993` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Phalium` · infragenericEpithet `Semicassis` · specificEpithet `vector`<br>combination: authors `R.T.Abbott` · year `1993`<br>→ `Phalium (Semicassis) vector R.T.Abbott, 1993` |
 | `Astragalus sect. Phaca` | **Parsed** · `SCIENTIFIC` · rank `SECTION_BOTANY` · code `BOTANICAL`<br>genus `Astragalus` · infragenericEpithet `Phaca`<br>→ `Astragalus sect. Phaca` |
-| `Centaurea L. subg. Jacea` | **Parsed** · `SCIENTIFIC` · rank `SUBGENUS`<br>genus `Centaurea` · infragenericEpithet `Jacea`<br>genericAuthorship combination: authors `L.`<br>→ `Centaurea L. subgen. Jacea` |
+| `Centaurea L. subg. Jacea` | **Parsed** · `SCIENTIFIC` · rank `SUBGENUS`<br>genus `Centaurea` · infragenericEpithet `Jacea`<br>genericAuthorship combination: authors `L.`<br>→ `Centaurea L. subg. Jacea` |
 | `Cordia (Adans.) Kuntze sect. Salimori` | **Parsed** · `SCIENTIFIC` · rank `SECTION_BOTANY` · code `BOTANICAL`<br>genus `Cordia` · infragenericEpithet `Salimori`<br>genericAuthorship combination: authors `Kuntze`<br>genericAuthorship basionym: authors `Adans.`<br>→ `Cordia (Adans.) Kuntze sect. Salimori` |
 | `Hieracium unr. Verbasciformia`<br>*unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Hieracium` · infragenericEpithet `Verbasciformia`<br>→ `Hieracium (Verbasciformia)` |
 | `Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux`<br>*no stirps rank: unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Cortinarius` · infragenericEpithet `Balteatus`<br>combination: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>basionym: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>→ `Cortinarius (Balteatus) (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux` |
+
+## Infrageneric names by code
+
+Each name parsed with no code, and with the `ZOOLOGICAL` or `BOTANICAL` code given, as ChecklistBank passes a dataset's code.
+
+
+
+**Parsing.** A rank marker gives the rank: `subg.` or `subgen.` the `SUBGENUS`; `sect.`, `subsect.`, `ser.`, `subser.` and `div.` the botanical ranks, which also set the `BOTANICAL` code when none is given. Under the zoological code a section or series inside a genus has no rank of its own, so it is an `INFRAGENERIC_NAME`. A marker that names no rank gives an `INFRAGENERIC_NAME` under every code: `unr.`, `[unranked]`, a made-up rank (`grex`, `cycl.`), and Fries's `tr.` or `trib.` after a genus, unranked subdivisions of the genus by ICN Art. F.4.1. A capitalised word in brackets after the genus, with no marker, is an `INFRAGENERIC_NAME`, and a `SUBGENUS` under the zoological code (ICZN Art. 6.1). Followed by an author with no year, or under the botanical code, the bracket is read as the basionym author of a genus instead. A rank of another code than the one given keeps both, with a warning. In a species the bracketed subgenus is kept as the `infragenericEpithet`.
+
+
+
+**Formatting.** An unranked infrageneric name of any code, and a zoological subgenus, are written in brackets with no marker. Every other rank shows its marker, a subgenus the botanical `subg.` (ICN Art. 21).
+
+| Name | No code | `ZOOLOGICAL` given | `BOTANICAL` given |
+|---|---|---|---|
+| `Carabus subgen. Megodontus` | `SUBGENUS`<br>→ `Carabus subg. Megodontus` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Carabus (Megodontus)` | `SUBGENUS` · `BOTANICAL`<br>→ `Carabus subg. Megodontus` |
+| `Astragalus subg. Cercidothrix` | `SUBGENUS`<br>→ `Astragalus subg. Cercidothrix` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Astragalus (Cercidothrix)` | `SUBGENUS` · `BOTANICAL`<br>→ `Astragalus subg. Cercidothrix` |
+| `Achillea sect. Ptarmica` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achillea sect. Ptarmica` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Achillea (Ptarmica)` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achillea sect. Ptarmica` |
+| `Ranunculus subsect. Auricomus` | `SUBSECTION_BOTANY` · `BOTANICAL`<br>→ `Ranunculus subsect. Auricomus` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Ranunculus (Auricomus)` | `SUBSECTION_BOTANY` · `BOTANICAL`<br>→ `Ranunculus subsect. Auricomus` |
+| `Carex ser. Acutae` | `SERIES_BOTANY` · `BOTANICAL`<br>→ `Carex ser. Acutae` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Carex (Acutae)` | `SERIES_BOTANY` · `BOTANICAL`<br>→ `Carex ser. Acutae` |
+| `Rosa div. Caninae` | `DIVISION_BOTANY` · `BOTANICAL`<br>→ `Rosa div. Caninae` | `DIVISION_BOTANY` · `ZOOLOGICAL`<br>→ `Rosa div. Caninae`<br>warnings `nomenclatural code does not fit the parsed name` | `DIVISION_BOTANY` · `BOTANICAL`<br>→ `Rosa div. Caninae` |
+| `Pinus suprasect. Taeda` | `SUPERSECTION_BOTANY` · `BOTANICAL`<br>→ `Pinus supersect. Taeda` | `SUPERSECTION_BOTANY` · `ZOOLOGICAL`<br>→ `Pinus supersect. Taeda`<br>warnings `nomenclatural code does not fit the parsed name` | `SUPERSECTION_BOTANY` · `BOTANICAL`<br>→ `Pinus supersect. Taeda` |
+| `Achatinella (sect. Auriculella) Pfeiffer 1854` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achatinella sect. Auriculella Pfeiffer, 1854` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Achatinella (Auriculella) Pfeiffer, 1854` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achatinella sect. Auriculella Pfeiffer, 1854` |
+| `Agaricus trib. Pholiota Fr.` | `INFRAGENERIC_NAME`<br>→ `Agaricus (Pholiota) Fr.` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Agaricus (Pholiota) Fr.` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Agaricus (Pholiota) Fr.` |
+| `Hieracium unr. Verbasciformia` | `INFRAGENERIC_NAME`<br>→ `Hieracium (Verbasciformia)` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Hieracium (Verbasciformia)` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Hieracium (Verbasciformia)` |
+| `Viola [unranked] Mirabiles Nyman` | `INFRAGENERIC_NAME`<br>→ `Viola (Mirabiles) Nyman` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Viola (Mirabiles) Nyman` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Viola (Mirabiles) Nyman` |
+| `Malus nothogrex Prunifoliae` | `INFRAGENERIC_NAME`<br>→ `Malus (× Prunifoliae)` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Malus (× Prunifoliae)` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Malus (× Prunifoliae)` |
+| `Calathus (Lindrothius)` | `INFRAGENERIC_NAME`<br>→ `Calathus (Lindrothius)` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Calathus (Lindrothius)` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Calathus (Lindrothius)` |
+| `Calathus (Lindrothius) Kurnakov, 1961` | `INFRAGENERIC_NAME`<br>→ `Calathus (Lindrothius) Kurnakov, 1961` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Calathus (Lindrothius) Kurnakov, 1961` | `UNRANKED` · `BOTANICAL`<br>uninomial `Calathus`<br>basionym `Lindrothius`<br>→ `Calathus (Lindrothius) Kurnakov, 1961` |
+| `Calathus (Lindrothius) Kurnakov` | `UNRANKED`<br>uninomial `Calathus`<br>basionym `Lindrothius`<br>→ `Calathus (Lindrothius) Kurnakov` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Calathus (Lindrothius) Kurnakov` | `UNRANKED` · `BOTANICAL`<br>uninomial `Calathus`<br>basionym `Lindrothius`<br>→ `Calathus (Lindrothius) Kurnakov` |
+| `Carabus (Megodontus) violaceus L.` | `SPECIES`<br>→ `Carabus (Megodontus) violaceus L.` | `SPECIES` · `ZOOLOGICAL`<br>→ `Carabus (Megodontus) violaceus L.` | `SPECIES` · `BOTANICAL`<br>→ `Carabus (Megodontus) violaceus L.` |
 
 ## Hybrids
 

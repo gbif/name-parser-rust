@@ -60,6 +60,30 @@ Cordia (Adans.) Kuntze sect. Salimori
 Hieracium unr. Verbasciformia  # unranked
 Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux  # no stirps rank: unranked
 
+## Infrageneric names by code
+> Each name parsed with no code, and with the `ZOOLOGICAL` or `BOTANICAL` code given, as ChecklistBank passes a dataset's code.
+>
+> **Parsing.** A rank marker gives the rank: `subg.` or `subgen.` the `SUBGENUS`; `sect.`, `subsect.`, `ser.`, `subser.` and `div.` the botanical ranks, which also set the `BOTANICAL` code when none is given. Under the zoological code a section or series inside a genus has no rank of its own, so it is an `INFRAGENERIC_NAME`. A marker that names no rank gives an `INFRAGENERIC_NAME` under every code: `unr.`, `[unranked]`, a made-up rank (`grex`, `cycl.`), and Fries's `tr.` or `trib.` after a genus, unranked subdivisions of the genus by ICN Art. F.4.1. A capitalised word in brackets after the genus, with no marker, is an `INFRAGENERIC_NAME`, and a `SUBGENUS` under the zoological code (ICZN Art. 6.1). Followed by an author with no year, or under the botanical code, the bracket is read as the basionym author of a genus instead. A rank of another code than the one given keeps both, with a warning. In a species the bracketed subgenus is kept as the `infragenericEpithet`.
+>
+> **Formatting.** An unranked infrageneric name of any code, and a zoological subgenus, are written in brackets with no marker. Every other rank shows its marker, a subgenus the botanical `subg.` (ICN Art. 21).
+@by-code
+Carabus subgen. Megodontus
+Astragalus subg. Cercidothrix
+Achillea sect. Ptarmica
+Ranunculus subsect. Auricomus
+Carex ser. Acutae
+Rosa div. Caninae
+Pinus suprasect. Taeda
+Achatinella (sect. Auriculella) Pfeiffer 1854
+Agaricus trib. Pholiota Fr.
+Hieracium unr. Verbasciformia
+Viola [unranked] Mirabiles Nyman
+Malus nothogrex Prunifoliae
+Calathus (Lindrothius)
+Calathus (Lindrothius) Kurnakov, 1961
+Calathus (Lindrothius) Kurnakov
+Carabus (Megodontus) violaceus L.
+
 ## Hybrids
 > The hybrid sign `×` marks the part of the name that is a nothotaxon (`notho`). A formula naming two parents is no name of its own.
 Mentha × piperita L.
