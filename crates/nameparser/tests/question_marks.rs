@@ -36,6 +36,19 @@ fn glued_to_the_genus_it_doubts_the_genus() {
 }
 
 #[test]
+fn glued_to_the_subgenus_brackets_it_doubts_the_subgenus() {
+    // the epithet was lost to the unparsed rest
+    assert_name("Glenea (Macroglenea)? anulicornis Pic, 1926")
+        .species_ig("Glenea", "Macroglenea", "anulicornis")
+        .qualifiers(&[(NamePart::Infrageneric, "?")])
+        .comb_authors(Some("1926"), &["Pic"])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+}
+
+#[test]
 fn glued_to_the_species_it_doubts_the_species() {
     assert_name("Buteo borealis? ventralis")
         .infra_species("Buteo", "borealis", Rank::InfraspecificName, "ventralis")

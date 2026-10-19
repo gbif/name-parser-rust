@@ -547,11 +547,11 @@ static BRACKETED_GENUS_DOUBT: LazyLock<Regex> = LazyLock::new(|| {
         .unwrap()
 });
 
-/// A question mark inside a subgenus's brackets, before or after it: `Glenea (? Macroglenea)
-/// anulicornis`, `Glenea (Macroglenea?) anulicornis`. Group 1 is the genus, 2 or 3 the subgenus,
-/// 4 the epithet and what follows.
+/// A question mark inside a subgenus's brackets, before or after it, or glued after them: `Glenea
+/// (? Macroglenea) anulicornis`, `Glenea (Macroglenea?) anulicornis`, `Glenea (Macroglenea)?
+/// anulicornis`. Group 1 is the genus, 2, 3 or 4 the subgenus, 5 the epithet and what follows.
 static BRACKETED_SUBGENUS_DOUBT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)\((?:(?-u:\s*)\?(?-u:\s*)(\p{Lu}\p{Ll}+)|(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\?)(?-u:\s*)\)(?-u:\s*)(\p{Ll}[\p{Ll}\-]+(?:(?-u:\s).*)?)$")
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)\((?:(?-u:\s*)\?(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\)|(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\?(?-u:\s*)\)|(?-u:\s*)(\p{Lu}\p{Ll}+)(?-u:\s*)\)\?)(?-u:\s*)(\p{Ll}[\p{Ll}\-]+\??(?:(?-u:\s).*)?)$")
         .unwrap()
 });
 
@@ -567,11 +567,16 @@ fn strip_bracketed_genus_doubt(ctx: &mut ParseContext, s: String) -> String {
             caps[2].split_whitespace().next().unwrap_or("").to_string(),
         )
     } else if let Some(caps) = BRACKETED_SUBGENUS_DOUBT.captures(&s) {
-        let subgenus = caps.get(2).or(caps.get(3)).unwrap().as_str();
+        let subgenus = caps
+            .get(2)
+            .or(caps.get(3))
+            .or(caps.get(4))
+            .unwrap()
+            .as_str();
         (
-            format!("{} ({subgenus}) {}", &caps[1], &caps[4]),
+            format!("{} ({subgenus}) {}", &caps[1], &caps[5]),
             NamePart::Infrageneric,
-            caps[4].split_whitespace().next().unwrap_or("").to_string(),
+            caps[5].split_whitespace().next().unwrap_or("").to_string(),
         )
     } else {
         return s;
