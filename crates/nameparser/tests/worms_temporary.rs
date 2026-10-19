@@ -667,3 +667,16 @@ fn a_question_mark_in_brackets_after_the_genus_doubts_it() {
         .partial("(?)")
         .nothing_else();
 }
+
+#[test]
+fn a_quoted_genus_loses_its_quotes_but_stays_doubtful() {
+    // #190
+    assert_name("“Centrolene” durrellorum")
+        .species("Centrolene", "durrellorum")
+        .doubtful()
+        .nothing_else();
+    assert_name("\"Cryptorhynchops\"")
+        .monomial("Cryptorhynchops")
+        .doubtful()
+        .nothing_else();
+}

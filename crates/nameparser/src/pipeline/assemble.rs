@@ -426,17 +426,6 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         }
         ctx.name.type_ = NameType::Informal;
     }
-
-    // Step 19: re-wrap a quoted leading monomial ("'Prosthète'") so the output keeps the
-    // quotes that mark it as an unavailable name; the quotes were stripped for parsing in
-    // StripAndStash.
-    if let Some(q) = ctx.quoted_monomial.clone() {
-        if let Some(uninomial) = ctx.name.uninomial.take() {
-            ctx.name.uninomial = Some(format!("{q}{uninomial}{q}"));
-        } else if let Some(genus) = ctx.name.genus.take() {
-            ctx.name.genus = Some(format!("{q}{genus}{q}"));
-        }
-    }
 }
 
 /// The INDETERMINED warning flags exactly the names [`ParsedName::is_indetermined`] holds for: the
@@ -933,27 +922,6 @@ mod tests {
         assert_eq!(ctx.name.genus, Some("Baeckea".to_string()));
         assert_eq!(ctx.name.uninomial, None);
         assert_eq!(ctx.name.type_, NameType::Informal);
-    }
-
-    // ---- Step 19: quoted-monomial re-wrap ----
-
-    #[test]
-    fn quoted_monomial_is_rewrapped_around_the_uninomial() {
-        let mut ctx = base_ctx();
-        ctx.quoted_monomial = Some("'".to_string());
-        ctx.name.uninomial = Some("Prosthete".to_string());
-        finish(&mut ctx, None);
-        assert_eq!(ctx.name.uninomial, Some("'Prosthete'".to_string()));
-    }
-
-    #[test]
-    fn quoted_monomial_is_rewrapped_around_the_genus_when_no_uninomial() {
-        let mut ctx = base_ctx();
-        ctx.quoted_monomial = Some("\"".to_string());
-        ctx.name.genus = Some("Prosthete".to_string());
-        ctx.name.specific_epithet = Some("alba".to_string());
-        finish(&mut ctx, None);
-        assert_eq!(ctx.name.genus, Some("\"Prosthete\"".to_string()));
     }
 
     // ---- direct helper-function tests ----

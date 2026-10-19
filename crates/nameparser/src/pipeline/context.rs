@@ -69,11 +69,6 @@ pub(crate) struct ParseContext {
     /// settled by other authorship cues; a publication year can attach to zoological,
     /// botanical, or bacteriological names alike.)
     pub pending_year_from_publication: bool,
-    /// Quote char ("'" or "\"") a leading monomial was wrapped in (e.g. "'Prosthète'
-    /// Hesse, 1861"). Such quotes mark a name that is not an available scientific name;
-    /// the quotes are stripped for parsing and re-wrapped around the parsed uninomial in
-    /// Assemble so the output keeps them, and the name is flagged doubtful.
-    pub quoted_monomial: Option<String>,
     /// Token index range [`mid_author_from`, `mid_author_to`) of an author span that
     /// sits between the species epithet and a following infraspecific rank marker
     /// ("Cirsium creticum d'Urv. subsp. creticum", "Trimezia spathata (Klatt) Baker
@@ -172,7 +167,6 @@ impl ParseContext {
             viral_shape: false,
             pending_year: None,
             pending_year_from_publication: false,
-            quoted_monomial: None,
             mid_author_from: -1,
             mid_author_to: -1,
             pending_imprint_year: None,

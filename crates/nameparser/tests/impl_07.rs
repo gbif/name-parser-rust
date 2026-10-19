@@ -351,8 +351,10 @@ fn quote_normalisation() {
     // It was a French vernacular (common-language) name introduced by the French zoologist Eugène Hesse in 1861 for an isopod crustacean.
     // The name was later ruled to be a vernacular term rather than an available zoological name under the ICZN.
     // The Official Index of Zoological Names explicitly lists 'Prosthète' Hesse, 1861 as "a vernacular name."
+    // The quotes no longer stay on the uninomial (#190): ColDP and name matching need it clean;
+    // the doubtful flag keeps the information.
     assert_name("'Prosthète' Hesse 1861")
-        .monomial("'Prosthète'")
+        .monomial("Prosthète")
         .doubtful() // because the quotes indicate it is not a valid scientific name
         .comb_authors(Some("1861"), &["Hesse"])
         .nothing_else();

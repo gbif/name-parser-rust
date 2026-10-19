@@ -363,13 +363,12 @@ static QUOTED_MONOMIAL: LazyLock<FancyRegex> =
 
 /// Java `StripAndStash.stripQuotedMonomial` (StripAndStash.java:655-666). A leading
 /// monomial wrapped in quotes ("'Prosthète' Hesse, 1861" / "\"Foo\" Bar, 2000") marks a
-/// word that is not an available scientific name. Strips the quotes for parsing, remembers
-/// the quote char in `ctx.quoted_monomial` (so `Assemble` can re-wrap the
-/// parsed uninomial — confirmed against the Java CLI oracle: the final `uninomial` comes
-/// back as `'Prosthète'`, quotes and all), and flags doubtful.
+/// word that is not an available scientific name. Strips the quotes and flags doubtful. Java
+/// put the quotes back on the parsed uninomial or genus (`'Prosthète'`); Rust-only, the name
+/// part comes out clean, as ColDP and name matching need it, and only the doubtful flag tells
+/// of the quotes (#190).
 fn strip_quoted_monomial(ctx: &mut ParseContext, s: String) -> String {
     if let Ok(Some(caps)) = QUOTED_MONOMIAL.captures(&s) {
-        ctx.quoted_monomial = Some(caps.get(1).unwrap().as_str().to_string());
         ctx.name.doubtful = true;
         let tail = caps.get(3).map(|m| m.as_str()).unwrap_or("");
         return java_trim(&format!("{}{}", caps.get(2).unwrap().as_str(), tail)).to_string();
@@ -7724,7 +7723,6 @@ mod tests {
         let mut c = ctx("x");
         let out = strip_quoted_monomial(&mut c, "'Prosthète' Hesse, 1861".to_string());
         assert_eq!(out, "Prosthète Hesse, 1861");
-        assert_eq!(c.quoted_monomial, Some("'".to_string()));
         assert!(c.name.doubtful);
     }
 
@@ -7733,7 +7731,7 @@ mod tests {
         let mut c = ctx("x");
         let out = strip_quoted_monomial(&mut c, "\"Foo\"".to_string());
         assert_eq!(out, "Foo");
-        assert_eq!(c.quoted_monomial, Some("\"".to_string()));
+        assert!(c.name.doubtful);
     }
 
     #[test]
@@ -7741,7 +7739,7 @@ mod tests {
         let mut c = ctx("x");
         let out = strip_quoted_monomial(&mut c, "Abies alba".to_string());
         assert_eq!(out, "Abies alba");
-        assert_eq!(c.quoted_monomial, None);
+        assert!(!c.name.doubtful);
     }
 
     // ---- Step 4: applyMissingGenusPlaceholder ----
