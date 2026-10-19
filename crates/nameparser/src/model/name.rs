@@ -168,6 +168,13 @@ pub struct ParsedName {
     pub phrase: Option<String>,
     /// Primitive `boolean` in Java — always serializes, including `false`.
     pub candidatus: bool,
+    /// Java `ParsedName.graftChimaera` (name-parser-api 6.0): a graft-chimaera, tissue of two
+    /// genera grown together at a graft, not a hybrid, named under the cultivated-plants code. Its
+    /// genus is written with a plus sign (`+Crataegomespilus`, `+Laburnocytisus adamii`), and it
+    /// carries no [`Self::notho`]. Primitive `boolean` in Java — always serializes, like
+    /// `candidatus`.
+    #[serde(rename = "graftChimaera")]
+    pub graft_chimaera: bool,
     /// `EnumSet<NamePart>` in Java (null when unset) — omitted when `None`, else an
     /// array in ordinal order, e.g. `["SPECIFIC"]`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -395,16 +402,22 @@ impl ParsedName {
     /// *Grevillea brachystylis* and `Abies cf. alba` on the genus *Abies*.
     ///
     /// The anchor keeps the name parts down to the deepest one that is present and not qualified
-    /// (cf., aff., ?, ...). A genus doubted with `?` is the exception: `?Sydonia alba` and
-    /// `Ferganoconcha? oblonga` are anchored on that genus, as no part of the name is surer. The
-    /// anchor takes the rank of its deepest part and the authorship that belongs to it: the
+    /// (cf., aff., ?, ...). A qualified genus is the exception: `?Sydonia alba`, `Ferganoconcha?
+    /// oblonga` and `cf. Craticula` are anchored on that genus, as no part of the name is surer.
+    /// The anchor takes the rank of its deepest part and the authorship that belongs to it: the
     /// specific authorship for a species anchor of an infraspecific name, the generic one for a
     /// genus, the name's own when nothing below the anchor is given. The phrase, qualifiers, notes,
-    /// publication, warnings and flags other than `candidatus` and `extinct` are left out. A complete
+    /// publication, warnings and flags other than `candidatus`, `graft_chimaera` and `extinct` are
+    /// left out. A complete
     /// scientific name is its own anchor, without those details. `None` when no part of the name
-    /// is determined or its type is not parsable.
+    /// is determined or its type is not parsable. A placeholder is anchored on the real taxon it
+    /// hangs off (`Chromista incertae sedis` on *Chromista*, #185), not on the `?` that stands in
+    /// for a missing genus (`? alba`).
     pub fn anchor(&self) -> Option<ParsedName> {
-        if !self.type_.is_parsable() {
+        if !self.type_.is_parsable() && self.type_ != NameType::Placeholder {
+            return None;
+        }
+        if self.genus.as_deref() == Some("?") || self.uninomial.as_deref() == Some("?") {
             return None;
         }
         let qualified = |p: NamePart| {
@@ -412,16 +425,13 @@ impl ParsedName {
                 .as_ref()
                 .is_some_and(|q| q.contains_key(&p))
         };
-        // only doubted, the genus anchors the name all the same: `?Sydonia alba`
-        let doubted_genus = self
-            .epithet_qualifier
-            .as_ref()
-            .and_then(|q| q.get(&NamePart::Generic))
-            .is_some_and(|q| q == "?");
+        // qualified, the genus anchors the name all the same, but alone: `?Sydonia alba`
+        let qualified_genus = qualified(NamePart::Generic);
         let mut a = ParsedName {
             type_: NameType::Scientific,
             code: self.code,
             candidatus: self.candidatus,
+            graft_chimaera: self.graft_chimaera,
             extinct: self.extinct,
             ..ParsedName::default()
         };
@@ -442,9 +452,6 @@ impl ParsedName {
 
         let Some(genus) = self.genus.clone() else {
             if let Some(uninomial) = self.uninomial.clone() {
-                if qualified(NamePart::Generic) && !doubted_genus {
-                    return None;
-                }
                 a.uninomial = Some(uninomial);
                 a.rank = if self.rank.not_other_or_unranked()
                     && !self.rank.is_species_or_below()
@@ -478,11 +485,8 @@ impl ParsedName {
             return Some(a);
         };
 
-        if qualified(NamePart::Generic) && !doubted_genus {
-            return None;
-        }
         let mut kept = NamePart::Generic;
-        if !doubted_genus {
+        if !qualified_genus {
             if self.infrageneric_epithet.is_some() && !qualified(NamePart::Infrageneric) {
                 kept = NamePart::Infrageneric;
             }
@@ -599,6 +603,7 @@ impl Default for ParsedName {
             cultivar_epithet: None,
             phrase: None,
             candidatus: false,
+            graft_chimaera: false,
             notho: None,
             original_spelling: None,
             epithet_qualifier: None,
@@ -644,7 +649,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
+        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"graftChimaera":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -667,7 +672,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
+        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"graftChimaera":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -693,7 +698,7 @@ mod tests {
         // Sanity check independent of the two golden rows above: a bare `default()`
         // must omit every Option field and every nested-struct Option, while still
         // emitting the always-on primitives/collections/enums.
-        let expected = r#"{"rank":"UNRANKED","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
+        let expected = r#"{"rank":"UNRANKED","candidatus":false,"graftChimaera":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(
             serde_json::to_string(&ParsedName::default()).unwrap(),
             expected

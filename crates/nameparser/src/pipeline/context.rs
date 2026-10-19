@@ -69,11 +69,6 @@ pub(crate) struct ParseContext {
     /// settled by other authorship cues; a publication year can attach to zoological,
     /// botanical, or bacteriological names alike.)
     pub pending_year_from_publication: bool,
-    /// Quote char ("'" or "\"") a leading monomial was wrapped in (e.g. "'Prosthète'
-    /// Hesse, 1861"). Such quotes mark a name that is not an available scientific name;
-    /// the quotes are stripped for parsing and re-wrapped around the parsed uninomial in
-    /// Assemble so the output keeps them, and the name is flagged doubtful.
-    pub quoted_monomial: Option<String>,
     /// Token index range [`mid_author_from`, `mid_author_to`) of an author span that
     /// sits between the species epithet and a following infraspecific rank marker
     /// ("Cirsium creticum d'Urv. subsp. creticum", "Trimezia spathata (Klatt) Baker
@@ -119,6 +114,10 @@ pub(crate) struct ParseContext {
     /// Set by StripAndStash when it removed a free-standing trailing `?` (`Abies alba ?`);
     /// `Pipeline::run` gives it to the last part of a name without authorship.
     pub trailing_qmark: bool,
+    /// Set by Preflight when a placeholder keyword followed a real taxon (`Chromista incertae
+    /// sedis`, `Cisticola unnamed`): the keyword tail, set aside while the taxon parses. Assemble
+    /// makes it the phrase of a PLACEHOLDER name anchored on that taxon (#185).
+    pub placeholder_tail: Option<String>,
     /// An "(Approved Lists 1980)" citation was stripped: the name is a prokaryote's (see
     /// `code_inference::infer`).
     pub approved_lists: bool,
@@ -172,7 +171,6 @@ impl ParseContext {
             viral_shape: false,
             pending_year: None,
             pending_year_from_publication: false,
-            quoted_monomial: None,
             mid_author_from: -1,
             mid_author_to: -1,
             pending_imprint_year: None,
@@ -184,6 +182,7 @@ impl ParseContext {
             preflight_complete: false,
             qualified_genus: false,
             trailing_qmark: false,
+            placeholder_tail: None,
             approved_lists: false,
             bracketed_infrageneric_marker: false,
             written_out_infrageneric_marker: false,

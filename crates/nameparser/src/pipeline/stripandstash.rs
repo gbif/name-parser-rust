@@ -273,9 +273,12 @@ static UNCERTAIN_AUTHOR_QMARK: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Java UNCERTAIN_AUTHOR_OR (StripAndStash.java:304-305): `\p{Lu}\p{L}*\s+or\s+\p{Lu}`,
-/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode. Rust-only, the author before the
+/// `or` stands after a space or bracket, never first: the genus of the moth `Tethea or
+/// Schiffermüller & Denis, 1776` is no author. A separate authorship comes with a space put in
+/// front ([`on_authorship`]).
 static UNCERTAIN_AUTHOR_OR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\p{Lu}\p{L}*\s+or\s+\p{Lu}").unwrap());
+    LazyLock::new(|| Regex::new(r"[\s(]\p{Lu}\p{L}*\s+or\s+\p{Lu}").unwrap());
 
 /// Java UNCERTAIN_AUTHOR_SLASH (StripAndStash.java:306-307): `\p{L}\s*/\s*\p{L}`,
 /// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.
@@ -363,13 +366,12 @@ static QUOTED_MONOMIAL: LazyLock<FancyRegex> =
 
 /// Java `StripAndStash.stripQuotedMonomial` (StripAndStash.java:655-666). A leading
 /// monomial wrapped in quotes ("'Prosthète' Hesse, 1861" / "\"Foo\" Bar, 2000") marks a
-/// word that is not an available scientific name. Strips the quotes for parsing, remembers
-/// the quote char in `ctx.quoted_monomial` (so `Assemble` can re-wrap the
-/// parsed uninomial — confirmed against the Java CLI oracle: the final `uninomial` comes
-/// back as `'Prosthète'`, quotes and all), and flags doubtful.
+/// word that is not an available scientific name. Strips the quotes and flags doubtful. Java
+/// put the quotes back on the parsed uninomial or genus (`'Prosthète'`); Rust-only, the name
+/// part comes out clean, as ColDP and name matching need it, and only the doubtful flag tells
+/// of the quotes (#190).
 fn strip_quoted_monomial(ctx: &mut ParseContext, s: String) -> String {
     if let Ok(Some(caps)) = QUOTED_MONOMIAL.captures(&s) {
-        ctx.quoted_monomial = Some(caps.get(1).unwrap().as_str().to_string());
         ctx.name.doubtful = true;
         let tail = caps.get(3).map(|m| m.as_str()).unwrap_or("");
         return java_trim(&format!("{}{}", caps.get(2).unwrap().as_str(), tail)).to_string();
@@ -2023,9 +2025,10 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
 }
 
 /// A BOLD BIN (`BOLD:AAF5952`, `BOLD-2016`, canonical `BOLD:2016`) or a UNITE species hypothesis (`SH1957732.10FU`)
-/// after a name. On its own it is an IDENTIFIER (see `preflight`).
+/// after a name. On its own it is an IDENTIFIER (see `preflight`). A `BIN` label before the code
+/// goes with it, `Bledius BIN BOLD:ACU5439` (#187): it was taken for an author.
 static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(.*[^\s])(?-u:\s+)(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)$").unwrap()
+    Regex::new(r"(?i)^(.*?[^\s])(?-u:\s+)(?:BIN(?-u:\s+))?(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)$").unwrap()
 });
 
 /// Sets a trailing BOLD BIN or SH code aside, to be appended to the phrase by Assemble: the
@@ -7723,7 +7726,6 @@ mod tests {
         let mut c = ctx("x");
         let out = strip_quoted_monomial(&mut c, "'Prosthète' Hesse, 1861".to_string());
         assert_eq!(out, "Prosthète Hesse, 1861");
-        assert_eq!(c.quoted_monomial, Some("'".to_string()));
         assert!(c.name.doubtful);
     }
 
@@ -7732,7 +7734,7 @@ mod tests {
         let mut c = ctx("x");
         let out = strip_quoted_monomial(&mut c, "\"Foo\"".to_string());
         assert_eq!(out, "Foo");
-        assert_eq!(c.quoted_monomial, Some("\"".to_string()));
+        assert!(c.name.doubtful);
     }
 
     #[test]
@@ -7740,7 +7742,7 @@ mod tests {
         let mut c = ctx("x");
         let out = strip_quoted_monomial(&mut c, "Abies alba".to_string());
         assert_eq!(out, "Abies alba");
-        assert_eq!(c.quoted_monomial, None);
+        assert!(!c.name.doubtful);
     }
 
     // ---- Step 4: applyMissingGenusPlaceholder ----

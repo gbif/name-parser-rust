@@ -323,6 +323,10 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     if ctx.name.code.is_none() {
         code_inference::infer(ctx, auth_state.filter(|_| !authorship_dropped));
     }
+    // a graft-chimaera is named at the genus only: `+Crataegomespilus`
+    if ctx.name.graft_chimaera && ctx.name.uninomial.is_some() && ctx.name.rank == Rank::Unranked {
+        ctx.name.rank = Rank::Genus;
+    }
 
     // Step 11: a virally-shaped name (ICTV rank suffix, Preflight-detected) with no other
     // code signal defaults to VIRUS.
@@ -425,17 +429,6 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
             ctx.name.genus = ctx.name.uninomial.take();
         }
         ctx.name.type_ = NameType::Informal;
-    }
-
-    // Step 19: re-wrap a quoted leading monomial ("'Prosthète'") so the output keeps the
-    // quotes that mark it as an unavailable name; the quotes were stripped for parsing in
-    // StripAndStash.
-    if let Some(q) = ctx.quoted_monomial.clone() {
-        if let Some(uninomial) = ctx.name.uninomial.take() {
-            ctx.name.uninomial = Some(format!("{q}{uninomial}{q}"));
-        } else if let Some(genus) = ctx.name.genus.take() {
-            ctx.name.genus = Some(format!("{q}{genus}{q}"));
-        }
     }
 }
 
@@ -933,27 +926,6 @@ mod tests {
         assert_eq!(ctx.name.genus, Some("Baeckea".to_string()));
         assert_eq!(ctx.name.uninomial, None);
         assert_eq!(ctx.name.type_, NameType::Informal);
-    }
-
-    // ---- Step 19: quoted-monomial re-wrap ----
-
-    #[test]
-    fn quoted_monomial_is_rewrapped_around_the_uninomial() {
-        let mut ctx = base_ctx();
-        ctx.quoted_monomial = Some("'".to_string());
-        ctx.name.uninomial = Some("Prosthete".to_string());
-        finish(&mut ctx, None);
-        assert_eq!(ctx.name.uninomial, Some("'Prosthete'".to_string()));
-    }
-
-    #[test]
-    fn quoted_monomial_is_rewrapped_around_the_genus_when_no_uninomial() {
-        let mut ctx = base_ctx();
-        ctx.quoted_monomial = Some("\"".to_string());
-        ctx.name.genus = Some("Prosthete".to_string());
-        ctx.name.specific_epithet = Some("alba".to_string());
-        finish(&mut ctx, None);
-        assert_eq!(ctx.name.genus, Some("\"Prosthete\"".to_string()));
     }
 
     // ---- direct helper-function tests ----

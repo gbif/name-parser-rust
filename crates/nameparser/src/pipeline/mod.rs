@@ -29,7 +29,7 @@ use crate::model::{
 };
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
-use crate::unicode::{is_fullwidth, java_trim, normalize_input, normalize_quotes};
+use crate::unicode::{has_mojibake, is_fullwidth, java_trim, normalize_input, normalize_quotes};
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -144,6 +144,8 @@ pub fn run(
         .chars()
         .chain(authorship.unwrap_or_default().chars())
         .any(is_fullwidth);
+    // repaired up front (see `normalize_input`), but flagged: the source's encoding is broken
+    let mojibake = has_mojibake(name) || authorship.is_some_and(has_mojibake);
     let authorship = authorship
         .map(|a| stripandstash::collapse_double_brackets(normalize_quotes(&normalize_input(a))));
 
@@ -164,17 +166,26 @@ pub fn run(
     if fullwidth {
         ctx.name.add_warning(warnings::HOMOGLYHPS);
     }
+    if mojibake {
+        ctx.name.add_warning(warnings::UNUSUAL_CHARACTERS);
+    }
     if full_length > LONG_NAME_LENGTH {
         ctx.name.add_warning(warnings::LONG_NAME);
     }
     split_glued_phrase_name(&mut ctx);
 
-    preflight::run(name, &mut ctx)?;
+    // a taxon split off a placeholder that is no name itself leaves the placeholder as it was:
+    // `Viruses incertae sedis`, `Mediterranean clade incertae sedis`
+    preflight::run(name, &mut ctx).map_err(|e| match ctx.placeholder_tail {
+        Some(_) => ParseError::new(NameType::Placeholder, None, name),
+        None => e,
+    })?;
 
     // 5.0.0: Preflight may RESCUE an anchored informal grouping ("Bartonella group",
     // "Vermistella-lineage") into a complete INFORMAL ParsedName instead of erroring — return it
     // as-is, skipping the tokenizer/classifier/assembler (there is nothing left to parse).
     if ctx.preflight_complete {
+        apply_placeholder_tail(&mut ctx);
         assemble::flag_indetermined(&mut ctx.name);
         return Ok(ctx.name);
     }
@@ -213,11 +224,11 @@ pub fn run(
             ctx.name.rank = Rank::Serovar;
         }
     }
-    // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a binomial open
-    // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`.
-    // A bare qualified uninomial (`?Monotremata`) keeps its type, as in 5.x, where an INFORMAL one
-    // would have lost the qualifier and the doubtful flag to the flat Informal result.
-    if ctx.qualified_genus && ctx.name.specific_epithet.is_some() {
+    // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a name open
+    // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`, and so does a qualified
+    // uninomial (`?Monotremata`, `aff. Anthurium`, #192): anchored on itself, it is no longer the
+    // flat Informal result of 5.x that lost the qualifier and the doubtful flag.
+    if ctx.qualified_genus {
         ctx.name.type_ = NameType::Informal;
     }
 
@@ -510,9 +521,22 @@ pub fn run(
     restore_lost_letters(&mut ctx);
     qualify_trailing_doubt(&mut ctx);
     keep_unplaced_doubt(&mut ctx);
+    apply_placeholder_tail(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
 
     Ok(ctx.name)
+}
+
+/// A placeholder keyword set aside by Preflight after a real taxon (#185): the name is a placeholder
+/// anchored on that taxon, the keyword (and any phrase of the taxon before it) its phrase.
+fn apply_placeholder_tail(ctx: &mut ParseContext) {
+    if let Some(tail) = ctx.placeholder_tail.take() {
+        ctx.name.phrase = Some(match ctx.name.phrase.take() {
+            Some(p) => format!("{p} {tail}"),
+            None => tail,
+        });
+        ctx.name.type_ = NameType::Placeholder;
+    }
 }
 
 /// A word ending in a "?" after a letter or a dot (`pentagona?`, `sensu?,`), as long as no "?"
@@ -569,10 +593,7 @@ fn qualify_trailing_doubt(ctx: &mut ParseContext) {
         NamePart::Generic
     };
     n.set_epithet_qualifier(part, "?");
-    // a doubted uninomial keeps its type, as `?Monotremata` does
-    if part != NamePart::Generic {
-        n.type_ = NameType::Informal;
-    }
+    n.type_ = NameType::Informal;
 }
 
 /// A note that a spelling is a misspelling, a lapsus or an error, perhaps of other authors:

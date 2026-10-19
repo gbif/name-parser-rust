@@ -179,6 +179,28 @@ static CULTURE_ACCESSION_STANDALONE: LazyLock<Regex> = LazyLock::new(|| {
 // `restructured_matches(s) && has_digit(s)` is exactly equivalent to Java's
 // `PURE_ALPHANUM.matches(s) && hasDigit(s)` at that one call site.
 static PURE_ALPHANUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\p{L}\d_.\-]+$").unwrap());
+
+/// Two names given as alternatives, `or` right after the first name's last epithet: `Achilidae or
+/// Cixiidae`, `Antechinomys laninger or Antechinomys auritus` (#194). There is no one name to parse
+/// (the first became a species with the epithet "or"). Uncertain alternative authors stand after
+/// the name and are left alone: `Aus bus Jarocki or Schinz`. So is the moth `Tethea or`, whose
+/// authorship follows ([`AUTHORSHIP_AFTER_OR`]).
+static ALTERNATIVE_NAMES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\p{Lu}\p{Ll}+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+){0,2}(?-u:\s+)or(?-u:\s+)\p{Lu}")
+        .unwrap()
+});
+/// An authorship after an epithet "or": capitalised words up to a comma, an `&`, a bracket or a
+/// year, `Tethea or Schiffermüller & Denis, 1776`, `Monocloeus or Jordan, 1904`.
+static AUTHORSHIP_AFTER_OR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s)or(?-u:\s+)\p{Lu}[\p{L}'.\-]*(?:(?-u:\s+)\p{Lu}[\p{L}'.\-]*)*(?-u:\s*)(?:[,&(]|(?-u:\d{4}))").unwrap()
+});
+
+/// A capitalised word, an underscore and a label opening with a capital or a digit, in a word with
+/// a digit: a designation under a real taxon, `Entodinium_1`, `Acrididae_20230928_001_ORT_001`,
+/// `Stygiellidae_STYG2` (#193). Assemble makes it the uninomial with a phrase, as a GTDB name
+/// (`Clostridium_R`). A lower-case label would become an epithet: `Acrocirridae_gen1` stays junk.
+static UNDERSCORE_LABEL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}{2,}_[\p{Lu}\d][\p{L}\d_.\-]*$").unwrap());
 // Patterns like "Basal_Cryptophyceae-1" — single underscore-separated parts with a digit
 // suffix. Java: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 // NB (dead-code finding, not fixed — faithful port keeps it): every character PR2_LIKE's
@@ -211,6 +233,21 @@ static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
         r"(?i)(?-u:(?:\(delete\)|incertae[\s_]*sedis\b|\b(?:inc\.\s*sed\.?|not\s+assigned|unassigned|unknown|unaccepted|unidentified|undetermined|undet|indet\.?|indeterminate|uncultured|undescribed(?:\s+(?:species|genus|family))?|temp\s+dummy(?:\s+name)?)\b))",
     )
+    .unwrap()
+});
+/// A real taxon followed by a placeholder keyword: `Chromista incertae sedis`, `Cisticola unnamed`,
+/// `Balaenoptera acutorostrata subsp. unnamed`, `Erpocotyle (incertae sedis)`. Group 1 is the
+/// taxon (a genus, perhaps its bracketed subgenus, up to two epithets), group 2 the placeholder
+/// from its keyword on, rank markers or words before it included (`Davidsonia species
+/// (unnamed)`, `Saccharum hybrid cultivar (unknown)`). A bracketed keyword ends the name: inside it, `Oxypoda (incertae sedis) inimica
+/// Casey, 1911`, it is a note on the species, before an author, `(unknown) C. Agardh`, the basionym
+/// author unknown. `unnamed` counts only here: an
+/// `Unnamed clade` names nothing.
+static ANCHORED_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    let keyword = r"(?i:incertae(?-u:\s+)sedis|inc\.(?-u:\s*)sed\.?|unknown|unnamed|unassigned|not(?-u:\s+)assigned|unidentified|undetermined|indeterminate)";
+    Regex::new(&format!(
+        r"^(\p{{Lu}}\p{{Ll}}+(?:(?-u:\s+)\(\p{{Lu}}\p{{Ll}}+\))?(?:(?-u:\s+)\p{{Ll}}[\p{{Ll}}\-]+){{0,2}}?)(?-u:\s+)((?:(?:\p{{Ll}}{{1,8}}\.|species|genus|family|subspecies|variety|form|hybrid|cultivar)(?-u:\s+)){{0,2}}(?:[(\[]{keyword}[)\]]|{keyword}\b.*))$"
+    ))
     .unwrap()
 });
 // One to four lowercase words ending in a generic organism word. Group 1 = the qualifier words
@@ -596,6 +633,20 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         return Err(ParseError::new(NameType::Other, None, original));
     }
 
+    // A placeholder keyword after a real taxon keeps the taxon: it is the anchor of the
+    // placeholder (#185). Only the taxon parses on; Assemble makes the tail its phrase.
+    // An authorship placeholder ("Ascidia zara author unknown") is no placeholder taxon, see below.
+    let authorship_placeholder =
+        super::stripandstash::without_authorship_placeholder(&s).len() != s.len();
+    if let Some(caps) = ANCHORED_PLACEHOLDER
+        .captures(&s)
+        .filter(|_| !authorship_placeholder)
+    {
+        ctx.placeholder_tail = Some(caps[2].to_string());
+        s = caps[1].to_string();
+        ctx.working = s.clone();
+    }
+
     // Placeholder keywords first — some placeholder strings contain "virus" (e.g.
     // "uncultured virus") and the explicit keyword wins over the virus marker. A trailing
     // authorship placeholder ("Ascidia zara author unknown") is no placeholder taxon — StripAndStash
@@ -747,7 +798,11 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         && PURE_ALPHANUM.is_match(&s)
         && has_digit(&s)
         && !is_plausible_single_word_name(&s)
+        && !UNDERSCORE_LABEL.is_match(&s)
     {
+        return Err(ParseError::new(NameType::Other, None, s));
+    }
+    if ALTERNATIVE_NAMES.is_match(&s) && !AUTHORSHIP_AFTER_OR.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
     }
     // PR2-style underscored name with hyphenated digit suffix → NO_NAME.
@@ -938,8 +993,11 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
         }
         // Graft-chimera formula: single genus on each side (e.g. "Crataegus + Mespilus").
         // Java re-trims `right.trim()` a second time here even though `right` is already
-        // trimmed above; idempotent, so `right` is used directly.
-        if plus
+        // trimmed above; idempotent, so `right` is used directly. Rust-only, a cross alike: a genus
+        // crossed with a capitalised name is an intergeneric hybrid formula, "Crataegus × Mespilus"
+        // or "Crataegus × Mespilus germanica" was the uninomial Crataegus by the author "Mespilus".
+        // An author after the cross is none: "Aloe x L.C. Leach", "Dasytes x Waltl, 1835".
+        if (plus || (NAME_AFTER_CROSS.is_match(right) && !AUTHOR_AFTER_CROSS.is_match(right)))
             && count_latin_words(left) == 1
             && !left.is_empty()
             && left.chars().next().is_some_and(|c| c.is_uppercase())
@@ -951,6 +1009,14 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
     }
     false
 }
+
+/// A name after a cross, as opposed to an author or a cultivar: a plain capitalised Latin word
+/// first ("Mespilus germanica", not "L.C. Leach", "Waltl, 1835" or "Alladin's").
+static NAME_AFTER_CROSS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+(?:(?-u:\s)|$)").unwrap());
+/// An author after a cross all the same: an `&` or a year in it.
+static AUTHOR_AFTER_CROSS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"&|\b(?:1[5-9]|20)(?-u:\d\d)\b").unwrap());
 
 /// A genus with nothing but a bracketed subgenus or a cf./aff. qualifier after it.
 static GENUS_WITH_SUBGENUS_OR_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {

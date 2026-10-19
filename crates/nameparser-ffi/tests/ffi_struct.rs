@@ -152,6 +152,7 @@ struct DecodedHeader {
     original_spelling: u8,
     notho_bits: u8,
     authorship_flags: u8,
+    name_flags: u8,
     published_in_year: i32,
 }
 
@@ -170,6 +171,7 @@ fn decode_header(buf: &[u8]) -> DecodedHeader {
         original_spelling: buf[layout::OFF_ORIGINAL_SPELLING],
         notho_bits: buf[layout::OFF_NOTHO_BITS],
         authorship_flags: buf[layout::OFF_AUTHORSHIP_FLAGS],
+        name_flags: buf[layout::OFF_NAME_FLAGS],
         published_in_year: read_i32(buf, layout::OFF_PUBLISHED_IN_YEAR),
     }
 }
@@ -295,6 +297,11 @@ fn assert_decoded_matches(name: &str, decoded: &Decoded, pn: &ParsedName) {
     assert_eq!(
         decoded.header.candidatus, pn.candidatus,
         "{name}: candidatus"
+    );
+    assert_eq!(
+        decoded.header.name_flags & layout::GRAFT_CHIMAERA_BIT != 0,
+        pn.graft_chimaera,
+        "{name}: graft_chimaera"
     );
     assert_eq!(decoded.header.doubtful, pn.doubtful, "{name}: doubtful");
     assert_eq!(
@@ -966,8 +973,27 @@ fn overflow_path_reports_needed_size_then_succeeds_with_exactly_that_buffer() {
 }
 
 #[test]
-fn np_abi_version_is_8() {
-    assert_eq!(nameparser_ffi::np_abi_version(), 8);
+fn np_abi_version_is_9() {
+    assert_eq!(nameparser_ffi::np_abi_version(), 9);
+}
+
+// ---- graft-chimaera (ABI 9) ----
+
+#[test]
+fn a_graft_chimaera_rides_the_name_flags() {
+    for name in [
+        "+Crataegomespilus",
+        "+Laburnocytisus adamii",
+        "×Agropogon lutosus",
+    ] {
+        let buf = parse_struct_success(name);
+        let pn = nameparser::parse_name(name, None, None, None).expect("must parse");
+        assert_decoded_matches(name, &decode(&buf), &pn);
+    }
+    let decoded = decode(&parse_struct_success("+Crataegomespilus"));
+    assert_ne!(decoded.header.name_flags & layout::GRAFT_CHIMAERA_BIT, 0);
+    let decoded = decode(&parse_struct_success("×Agropogon lutosus"));
+    assert_eq!(decoded.header.name_flags, 0);
 }
 
 // ---- in-authors (ABI 8) ----

@@ -160,6 +160,26 @@ pub fn assert_informal_hinted(
     }
 }
 
+/// A placeholder hanging off a real taxon (`Chromista incertae sedis`, #185): a Parsed name of type
+/// PLACEHOLDER, its anchor that taxon and its phrase the placeholder, asserted like an informal
+/// name.
+#[track_caller]
+pub fn assert_placeholder(input: &str) -> InformalAssertion {
+    let call = Call {
+        input,
+        authorship: None,
+        rank: None,
+        code: None,
+    };
+    check_paths(call, Shape::Name);
+    match nameparser::parse(input, None, None, None) {
+        ParseResult::Parsed(pn) if pn.type_ == NameType::Placeholder => {
+            InformalAssertion::new(pn, &call.label())
+        }
+        other => panic!("expected `{input}` to be a parsed placeholder, got {other:?}"),
+    }
+}
+
 /// `assertNoName(name)` — the input must be unparsable. Java asserts `NameType.NO_NAME`, which the
 /// 5.x `NameType` folds into `Other` (see the mapping note in the module doc).
 pub fn assert_no_name(input: &str) {
@@ -407,6 +427,7 @@ enum Np {
     Cultivar,
     Extinct,
     Candidate,
+    Graft,
     Notho,
     Sic,
     Auth,
@@ -879,6 +900,21 @@ impl NameAssertion {
         self.mark(&[Np::Candidate, Np::Code])
     }
 
+    /// A graft-chimaera: the flag and the cultivated-plants code. Its genus carries no notho.
+    pub fn graft_chimaera(self) -> Self {
+        assert!(self.n.graft_chimaera, "graft_chimaera");
+        assert!(
+            !self
+                .n
+                .notho
+                .as_ref()
+                .is_some_and(|n| n.contains(&NamePart::Generic)),
+            "a graft-chimaera's genus is no hybrid"
+        );
+        assert_eq!(self.n.code, Some(NomCode::Cultivars));
+        self.mark(&[Np::Graft, Np::Code])
+    }
+
     pub fn phrase(self, phrase: &str) -> Self {
         assert!(self.n.cultivar_epithet.is_none());
         assert_eq!(self.n.phrase.as_deref(), Some(phrase));
@@ -1014,6 +1050,7 @@ impl NameAssertion {
             cultivar_epithet,
             phrase,
             candidatus,
+            graft_chimaera,
             notho,
             original_spelling,
             epithet_qualifier,
@@ -1062,6 +1099,9 @@ impl NameAssertion {
         }
         if untested(Np::Candidate) {
             assert!(!candidatus, "unexpected candidatus");
+        }
+        if untested(Np::Graft) {
+            assert!(!graft_chimaera, "unexpected graft_chimaera");
         }
         if untested(Np::Extinct) {
             assert!(!extinct, "unexpected extinct");

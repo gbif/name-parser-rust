@@ -62,6 +62,9 @@ final class StructCodec {
   // ABI 5: the anonymous flags of the combination (bit 0) and basionym (bit 1) authorships; a
   // present nested group carries the same bits in a u32 right after its present flag.
   private static final int OFF_AUTHORSHIP_FLAGS = 30;
+  // ABI 9: the flags of the name itself, formerly padding: the graft-chimaera (bit 0).
+  private static final int OFF_NAME_FLAGS = 31;
+  private static final int GRAFT_CHIMAERA_BIT = 1;
   private static final int ANON_COMBINATION_BIT = 1;
   private static final int ANON_BASIONYM_BIT = 2;
   // ABI 7: the bracketedYear flags of the combination (bit 2) and basionym (bit 3) authorships, in
@@ -135,10 +138,10 @@ final class StructCodec {
 
   static {
     int abi = Ffi.nativeAbiVersion();
-    if (abi != 8) {
+    if (abi != 9) {
       throw new ExceptionInInitializerError(new IllegalStateException(
           "Rust/Java enum ABI desync -- nameparser-ffi np_abi_version()=" + abi
-              + ", StructCodec was written against 8 -- rebuild the cdylib "
+              + ", StructCodec was written against 9 -- rebuild the cdylib "
               + "(`cargo build -p nameparser-ffi --release`) or update StructCodec"));
     }
     requireEnumShape("Rank", Rank.values().length, 117);
@@ -243,12 +246,14 @@ final class StructCodec {
 
   /**
    * Turns a successfully decoded {@link ParsedName} into a {@link ParseResult}: a
-   * {@link ParseResult.Parsed}, informal names included, or — for a name whose type is not parsable
-   * (a placeholder with its genus missing, "? alba Smith") — an {@link ParseResult.Unparsable}
-   * echoing {@code name}, as in Rust's {@code parse}.
+   * {@link ParseResult.Parsed}, informal names and placeholders hanging off a real taxon included
+   * ("Chromista incertae sedis"), or — for a name whose type is not parsable and that has no
+   * anchor (a placeholder with its genus missing, "? alba Smith") — an
+   * {@link ParseResult.Unparsable} echoing {@code name}, as in Rust's {@code parse}.
    */
   static ParseResult toParseResult(ParsedName pn, String name) {
-    if (!pn.getType().isParsable()) {
+    boolean anchoredPlaceholder = pn.getType() == NameType.PLACEHOLDER && pn.anchor().isPresent();
+    if (!pn.getType().isParsable() && !anchoredPlaceholder) {
       return new ParseResult.Unparsable(pn.getType(), pn.getCode(), name);
     }
     return new ParseResult.Parsed(pn);
@@ -288,6 +293,7 @@ final class StructCodec {
     int nameTypeOrd = seg.get(LE_INT, OFF_NAME_TYPE);
     int stateOrd = seg.get(LE_INT, OFF_STATE);
     boolean candidatus = seg.get(ValueLayout.JAVA_BYTE, OFF_CANDIDATUS) != 0;
+    boolean graftChimaera = (seg.get(ValueLayout.JAVA_BYTE, OFF_NAME_FLAGS) & GRAFT_CHIMAERA_BIT) != 0;
     boolean doubtful = seg.get(ValueLayout.JAVA_BYTE, OFF_DOUBTFUL) != 0;
     boolean manuscript = seg.get(ValueLayout.JAVA_BYTE, OFF_MANUSCRIPT) != 0;
     boolean extinct = seg.get(ValueLayout.JAVA_BYTE, OFF_EXTINCT) != 0;
@@ -356,6 +362,7 @@ final class StructCodec {
     pn.setState(enumByOrdinal(ParsedName.State.values(), stateOrd, "state"));
 
     pn.setCandidatus(candidatus);
+    pn.setGraftChimaera(graftChimaera);
     pn.setDoubtful(doubtful);
     pn.setManuscript(manuscript);
     pn.setExtinct(extinct);

@@ -821,7 +821,7 @@ Xylosma quichensis Donn.Sm.	true	Xylosma quichensis Donn.Sm.	Xylosma quichensis	
 Xylosma quichensis var. subalpina Donn.Sm.	true	Xylosma quichensis var. subalpina Donn.Sm.	Xylosma quichensis var. subalpina	Xylosma quichensis subalpina	Xylosma quichensis var. subalpina Donn.Sm.	Donn.Sm.
 Zexmenia guatemalensis Donn.Sm.	true	Zexmenia guatemalensis Donn.Sm.	Zexmenia guatemalensis	Zexmenia guatemalensis	Zexmenia guatemalensis Donn.Sm.	Donn.Sm.
 Zinnia jugistyla Paul G.Wilson	true	Zinnia jugistyla Paul G.Wilson	Zinnia jugistyla	Zinnia jugistyla	Zinnia jugistyla Paul G.Wilson	Paul G.Wilson
-Poa indeterminate	false					
+Poa indeterminate	true	Poa indeterminate	Poa indeterminate	Poa	Poa indeterminate	
 Pezizomycotina, ordines incertae sedis	false					
 Ascomycota, families incertae sedis	false					
 Heterokontophyta, genera incertae sedis	false					
@@ -4281,8 +4281,8 @@ Tilletia caries (Bjerk.) Tul. × T. foetida (Wallr.) Liro.	false
 Brassica oleracea L. subsp. capitata (L.) DC. convar. fruticosa (Metzg.) Alef. × B. oleracea L. subsp. capitata (L.) var. costata DC.	false					
 Ambystoma laterale × A. texanum × A. tigrinum	false					
 Pseudocercospora broussonetiae (Chupp & Linder) X.J. Liu & Y.L. Guo 1989	true	Pseudocercospora broussonetiae (Chupp & Linder) X.J.Liu & Y.L.Guo, 1989	Pseudocercospora broussonetiae	Pseudocercospora broussonetiae	Pseudocercospora broussonetiae (Chupp & Linder) X.J.Liu & Y.L.Guo, 1989	(Chupp & Linder) X.J.Liu & Y.L.Guo, 1989
-+ Crataegomespilus	true	× Crataegomespilus	× Crataegomespilus	Crataegomespilus	× Crataegomespilus	
-+Crataegomespilus	true	× Crataegomespilus	× Crataegomespilus	Crataegomespilus	× Crataegomespilus	
++ Crataegomespilus	true	+ Crataegomespilus	+ Crataegomespilus	Crataegomespilus	+ Crataegomespilus	
++Crataegomespilus	true	+ Crataegomespilus	+ Crataegomespilus	Crataegomespilus	+ Crataegomespilus	
 Cytisus purpureus + Laburnum anagyroides	false					
 Crataegus + Mespilus	false					
 Saxo-Fridericia R. H. Schomb.	true	Saxo-Fridericia R.H.Schomb.	Saxo-Fridericia	Saxo-Fridericia	Saxo-Fridericia R.H.Schomb.	R.H.Schomb.
@@ -4801,7 +4801,7 @@ Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 7
 Passiflora eglandulosa J.M. MacDougal. Lingua franca de Missouri Botanical Garden 75: 1658-1662. figs 1, 2B, and 3. 1988. Figs 36-37	true	Passiflora eglandulosa J.M.MacDougal	Passiflora eglandulosa	Passiflora eglandulosa	Passiflora eglandulosa J.M.MacDougal	J.M.MacDougal
 Abies null Hood	true	Abies null Hood	Abies null	Abies null	Abies null Hood	Hood
 Unidentified unidentified Hood	false					
-Abies unidentified	false					
+Abies unidentified	true	Abies unidentified	Abies unidentified	Abies	Abies unidentified	
 Passiflora possible Müller	true	Passiflora possible Müller	Passiflora possible	Passiflora possible	Passiflora possible Müller	Müller
 Passiflora eglandulosa J.M. MacDougal. Annals of the Missouri Botanical Garden 75. figs 1, 2B, and 3. 1988. Figs 36-37	true	Passiflora eglandulosa J.M.MacDougal, 1988	Passiflora eglandulosa	Passiflora eglandulosa	Passiflora eglandulosa J.M.MacDougal, 1988	J.M.MacDougal, 1988
 Samyda arborea Rich., Actes Soc. Hist. Nat. Paris 1: 109 (1792).	true	Samyda arborea Rich., 1792	Samyda arborea	Samyda arborea	Samyda arborea Rich., 1792	Rich., 1792
@@ -4875,9 +4875,9 @@ Woodsiaceae (Hooker) Herter	true	Woodsiaceae (Hooker) Herter	Woodsiaceae	Woodsia
 Diatrypella favacea var. favacea (Fr.) Ces. & De Not.	true	Diatrypella favacea var. favacea (Fr.) Ces. & De Not.	Diatrypella favacea var. favacea	Diatrypella favacea favacea	Diatrypella favacea var. favacea (Fr.) Ces. & De Not.	(Fr.) Ces. & De Not.
 Protoventuria rosae (De Not.) Berl. & Sacc.	true	Protoventuria rosae (De Not.) Berl. & Sacc.	Protoventuria rosae	Protoventuria rosae	Protoventuria rosae (De Not.) Berl. & Sacc.	(De Not.) Berl. & Sacc.
 Hormospora De Not.	true	Hormospora De Not.	Hormospora	Hormospora	Hormospora De Not.	De Not.
-Mollusca not assigned	false					
+Mollusca not assigned	true	Mollusca not assigned	Mollusca not assigned	Mollusca	Mollusca not assigned	
 [unassigned] Cladobranchia	false					
-Biota incertae sedis	false					
+Biota incertae sedis	true	Biota incertae sedis	Biota incertae sedis	Biota	Biota incertae sedis	
 Unaccepted	false					
 uncultured Verrucomicrobiales bacterium	false					
 uncultured Vibrio sp.	false					
@@ -4890,7 +4890,7 @@ N.n. (Chitinivorax)	false
 Gen.nov. sp.nov.	false					
 Gen.nov.	false					
 Aster indet.	true	Aster sp.	Aster sp.	Aster	Aster sp.	
-Asteraceae incertae sedis	false					
+Asteraceae incertae sedis	true	Asteraceae incertae sedis	Asteraceae incertae sedis	Asteraceae	Asteraceae incertae sedis	
 unassigned Abies	false					
 Unident-Boraginaceae	false					
 Unident	false					
@@ -4990,7 +4990,7 @@ Euchlanis dilatata β-larga	true	Euchlanis dilatata β-larga	Euchlanis dilatata 
 Trianosperma ficifolia var. βrigida Cogn.	true	Trianosperma ficifolia var. βrigida Cogn.	Trianosperma ficifolia var. βrigida	Trianosperma ficifolia βrigida	Trianosperma ficifolia var. βrigida Cogn.	Cogn.
 Agaricus collinitus β mucosus (Bull.) Fr.	true	Agaricus collinitus mucosus (Bull.) Fr.	Agaricus collinitus mucosus	Agaricus collinitus mucosus	Agaricus collinitus mucosus (Bull.) Fr.	(Bull.) Fr.
 Cyclotus amethystinus var. β Guppy, 1868	true	Cyclotus amethystinus var. β Guppy, 1868	Cyclotus amethystinus var. β	Cyclotus amethystinus β	Cyclotus amethystinus var. β Guppy, 1868	Guppy, 1868
-+ Pyrocrataegus willei L.L.Daniel	true	× Pyrocrataegus willei L.L.Daniel	× Pyrocrataegus willei	Pyrocrataegus willei	× Pyrocrataegus willei L.L.Daniel	L.L.Daniel
++ Pyrocrataegus willei L.L.Daniel	true	+ Pyrocrataegus willei L.L.Daniel	+ Pyrocrataegus willei	Pyrocrataegus willei	+ Pyrocrataegus willei L.L.Daniel	L.L.Daniel
 ×Pyrocrataegus willei L.L. Daniel	true	× Pyrocrataegus willei L.L.Daniel	× Pyrocrataegus willei	Pyrocrataegus willei	× Pyrocrataegus willei L.L.Daniel	L.L.Daniel
 × Pyrocrataegus willei  L. L. Daniel	true	× Pyrocrataegus willei L.L.Daniel	× Pyrocrataegus willei	Pyrocrataegus willei	× Pyrocrataegus willei L.L.Daniel	L.L.Daniel
 X Pyrocrataegus willei L. L. Daniel	true	× Pyrocrataegus willei L.L.Daniel	× Pyrocrataegus willei	Pyrocrataegus willei	× Pyrocrataegus willei L.L.Daniel	L.L.Daniel
@@ -5000,7 +5000,7 @@ Pyrocrataegus x willei L. L. Daniel	true	Pyrocrataegus × willei L.L.Daniel	Pyro
 Pyrocrataegus X willei L. L. Daniel	true	Pyrocrataegus × willei L.L.Daniel	Pyrocrataegus × willei	Pyrocrataegus willei	Pyrocrataegus × willei L.L.Daniel	L.L.Daniel
 Pyrocrataegus willei ×libidi  L.L.Daniel	true	Pyrocrataegus willei × libidi L.L.Daniel	Pyrocrataegus willei × libidi	Pyrocrataegus willei libidi	Pyrocrataegus willei × libidi L.L.Daniel	L.L.Daniel
 Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel	true	Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	Pyrocrataegus willei nothosubsp. libidi	Pyrocrataegus willei libidi	Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	L.L.Daniel
-+ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel	true	× Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	× Pyrocrataegus willei nothosubsp. libidi	Pyrocrataegus willei libidi	× Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	L.L.Daniel
++ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel	true	+ Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	+ Pyrocrataegus willei nothosubsp. libidi	Pyrocrataegus willei libidi	+ Pyrocrataegus willei nothosubsp. libidi L.L.Daniel	L.L.Daniel
 Asplenium cyprium Viane & Van den heede	true	Asplenium cyprium Viane & Van den heede	Asplenium cyprium	Asplenium cyprium	Asplenium cyprium Viane & Van den heede	Viane & Van den heede
 Lagenophora queenslandica Jian Wang ter & A.R.Bean	true	Lagenophora queenslandica Jian Wang ter & A.R.Bean	Lagenophora queenslandica	Lagenophora queenslandica	Lagenophora queenslandica Jian Wang ter & A.R.Bean	Jian Wang ter & A.R.Bean
 Abies arctica A.Murray bis	true	Abies arctica A.Murray bis	Abies arctica	Abies arctica	Abies arctica A.Murray bis	A.Murray bis
@@ -5689,8 +5689,8 @@ Tilletia caries (Bjerk.) Tul. × T. foetida (Wallr.) Liro.	false
 Brassica oleracea L. subsp. capitata (L.) DC. convar. fruticosa (Metzg.) Alef. × B. oleracea L. subsp. capitata (L.) var. costata DC.	false					
 Ambystoma laterale × A. texanum × A. tigrinum	false					
 Pseudocercospora broussonetiae (Chupp & Linder) X.J. Liu & Y.L. Guo 1989	true	Pseudocercospora broussonetiae (Chupp & Linder) X.J.Liu & Y.L.Guo, 1989	Pseudocercospora broussonetiae	Pseudocercospora broussonetiae	Pseudocercospora broussonetiae (Chupp & Linder) X.J.Liu & Y.L.Guo, 1989	(Chupp & Linder) X.J.Liu & Y.L.Guo, 1989
-+ Crataegomespilus	true	× Crataegomespilus	× Crataegomespilus	Crataegomespilus	× Crataegomespilus	
-+Crataegomespilus	true	× Crataegomespilus	× Crataegomespilus	Crataegomespilus	× Crataegomespilus	
++ Crataegomespilus	true	+ Crataegomespilus	+ Crataegomespilus	Crataegomespilus	+ Crataegomespilus	
++Crataegomespilus	true	+ Crataegomespilus	+ Crataegomespilus	Crataegomespilus	+ Crataegomespilus	
 Cytisus purpureus + Laburnum anagyroides	false					
 Crataegus + Mespilus	false					
 Saxo-Fridericia R. H. Schomb.	true	Saxo-Fridericia R.H.Schomb.	Saxo-Fridericia	Saxo-Fridericia	Saxo-Fridericia R.H.Schomb.	R.H.Schomb.

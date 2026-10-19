@@ -26,6 +26,8 @@ use crate::model::name::{Authorship, CombinedAuthorship, ParsedName};
 use crate::unicode::java_trim;
 
 const HYBRID_MARKER: char = '×';
+/// Java `NameFormatter.GRAFT_MARKER`: the plus sign before the genus of a graft-chimaera.
+const GRAFT_MARKER: char = '+';
 const NOTHO_PREFIX: &str = "notho";
 const ET_AL: &str = "et al.";
 const ITALICS_OPEN: &str = "<i>";
@@ -390,7 +392,10 @@ fn append_genus(
         sb.push_str(qualifier(n, NamePart::Generic));
         sb.push(' ');
     }
-    if hybrid_marker && has_notho(n, NamePart::Generic) {
+    if hybrid_marker && n.graft_chimaera {
+        sb.push(GRAFT_MARKER);
+        sb.push(' ');
+    } else if hybrid_marker && has_notho(n, NamePart::Generic) {
         sb.push(HYBRID_MARKER);
         sb.push(' ');
     }
@@ -713,7 +718,10 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
 
     if let Some(uninomial) = &n.uninomial {
         // higher rank names being just a uninomial!
-        if f.hybrid_marker && has_notho(n, NamePart::Generic) {
+        if f.hybrid_marker && n.graft_chimaera {
+            sb.push(GRAFT_MARKER);
+            sb.push(' ');
+        } else if f.hybrid_marker && has_notho(n, NamePart::Generic) {
             sb.push(HYBRID_MARKER);
             sb.push(' ');
         }

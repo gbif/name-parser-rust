@@ -10,6 +10,7 @@ import com.google.gson.JsonObject;
 
 import org.gbif.nameparser.api.NameType;
 import org.gbif.nameparser.api.ParseResult;
+import org.gbif.nameparser.api.ParsedName;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -105,9 +106,12 @@ class ParityTest {
   private static String compare(ParseResult got, JsonObject row) {
     JsonObject oracleParsed = row.has("parsed") ? row.getAsJsonObject("parsed") : null;
     // a parsed oracle row of a non-parsable type (a placeholder with its genus missing) is
-    // unparsable after the three-way split too, as in StructCodec.toParseResult
+    // unparsable after the three-way split too, as in StructCodec.toParseResult -- unless it is a
+    // placeholder hanging off a real taxon, its anchor ("Chromista incertae sedis")
     boolean oracleUnparsable = oracleParsed != null
-        && !NameType.valueOf(oracleParsed.get("type").getAsString()).isParsable();
+        && !NameType.valueOf(oracleParsed.get("type").getAsString()).isParsable()
+        && !(NameType.valueOf(oracleParsed.get("type").getAsString()) == NameType.PLACEHOLDER
+            && GSON.fromJson(oracleParsed, ParsedName.class).anchor().isPresent());
     boolean oracleError = row.has("error") || oracleUnparsable;
 
     if (got instanceof ParseResult.Unparsable u) {

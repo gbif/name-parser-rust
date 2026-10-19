@@ -13,14 +13,48 @@ use nameparser::model::{warnings, NamePart, NameType, Rank};
 
 #[test]
 fn incertae_sedis_variants_are_placeholders() {
+    // hanging off a real taxon, a placeholder is parsed, anchored on it (#185)
+    for (name, taxon, phrase) in [
+        (
+            "Abyssochrysoidea incertae sedis",
+            "Abyssochrysoidea",
+            "incertae sedis",
+        ),
+        (
+            "Ophiuroidea Incertae sedis",
+            "Ophiuroidea",
+            "Incertae sedis",
+        ),
+        (
+            "Erpocotyle (incertae sedis)",
+            "Erpocotyle",
+            "(incertae sedis)",
+        ),
+        (
+            "Paleopneustina incertae sedis A",
+            "Paleopneustina",
+            "incertae sedis A",
+        ),
+        (
+            "Sordariomycetes incertae sedis (fam.)",
+            "Sordariomycetes",
+            "incertae sedis (fam.)",
+        ),
+        (
+            "Astrophorida incertae sedis Hooper & Maldonado, 2002",
+            "Astrophorida",
+            "incertae sedis Hooper & Maldonado, 2002",
+        ),
+    ] {
+        assert_placeholder(name)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
     for name in [
-        "Abyssochrysoidea incertae sedis",
         "Cephalopoda <i>incertae sedis</i>",
-        "Ophiuroidea Incertae sedis",
-        "Erpocotyle (incertae sedis)",
-        "Paleopneustina incertae sedis A",
-        "Sordariomycetes incertae sedis (fam.)",
-        "Astrophorida incertae sedis Hooper & Maldonado, 2002",
         "[unassigned] Decapodiformes",
     ] {
         assert_unparsable(name, NameType::Placeholder);
@@ -51,15 +85,22 @@ fn bracketed_of_citation_after_sp_stays_in_the_phrase() {
 
 #[test]
 fn nbsp_incertae_sedis_is_a_placeholder() {
-    assert_unparsable(
+    // a placeholder hanging off its taxon (#185)
+    assert_placeholder("Assimineidae\u{a0}incertae\u{a0}sedis")
+        .taxon("Assimineidae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("incertae sedis")
+        .nothing_else();
+    let hinted = nameparser::parse(
         "Assimineidae\u{a0}incertae\u{a0}sedis",
-        NameType::Placeholder,
+        None,
+        Some(Rank::Genus),
+        None,
     );
-    assert_unparsable_rank(
-        "Assimineidae\u{a0}incertae\u{a0}sedis",
-        Rank::Genus,
-        NameType::Placeholder,
-    );
+    let pn = hinted.parsed().expect("a parsed placeholder");
+    assert_eq!(pn.type_, NameType::Placeholder);
+    assert_eq!(pn.phrase.as_deref(), Some("incertae sedis"));
 }
 
 #[test]
@@ -482,10 +523,11 @@ fn leading_question_mark_doubts_the_genus() {
         .warning(&["question marks removed"])
         .comb_authors(Some("1940"), &["Leene"])
         .nothing_else();
-    // a bare uninomial stays a Parsed name, so the qualifier and the flag survive
+    // a bare uninomial is informal too, anchored on itself (#192)
     assert_name("?Monotremata")
         .monomial("Monotremata")
         .qualifiers(&[(NamePart::Generic, "?")])
+        .type_(NameType::Informal)
         .doubtful()
         .warning(&["question marks removed"])
         .nothing_else();
@@ -557,6 +599,7 @@ fn leading_cf_aff_qualifies_the_genus() {
     assert_name("cf. Anthomuricea")
         .monomial("Anthomuricea")
         .qualifiers(&[(NamePart::Generic, "cf.")])
+        .type_(NameType::Informal)
         .nothing_else();
 }
 
@@ -666,4 +709,39 @@ fn a_question_mark_in_brackets_after_the_genus_doubts_it() {
         .comb_authors(None, &["de Selys"])
         .partial("(?)")
         .nothing_else();
+}
+
+#[test]
+fn a_quoted_genus_loses_its_quotes_but_stays_doubtful() {
+    // #190
+    assert_name("“Centrolene” durrellorum")
+        .species("Centrolene", "durrellorum")
+        .doubtful()
+        .nothing_else();
+    assert_name("\"Cryptorhynchops\"")
+        .monomial("Cryptorhynchops")
+        .doubtful()
+        .nothing_else();
+}
+
+#[test]
+fn a_qualified_uninomial_is_informal_and_anchored_on_itself() {
+    // #186, #192
+    for (name, q) in [("aff. Anthurium", "aff."), ("cf. Craticula", "cf.")] {
+        let taxon = name.split(' ').nth(1).unwrap();
+        assert_name(name)
+            .monomial(taxon)
+            .qualifiers(&[(NamePart::Generic, q)])
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    for name in ["Sacculina?", "Sacculina ?"] {
+        assert_name(name)
+            .monomial("Sacculina")
+            .qualifiers(&[(NamePart::Generic, "?")])
+            .type_(NameType::Informal)
+            .doubtful()
+            .warning(&["question marks removed"])
+            .nothing_else();
+    }
 }

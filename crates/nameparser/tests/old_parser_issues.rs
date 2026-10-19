@@ -524,8 +524,13 @@ fn issue_153_unknown_authors() {
         .species("Turricaspia", "moquiana")
         .warning(&[warnings::AUTHORSHIP_REMOVED])
         .nothing_else();
-    // an unknown cultivar stays a placeholder
-    assert_unparsable("Saccharum hybrid cultivar (unknown)", NameType::Placeholder);
+    // an unknown cultivar stays a placeholder, anchored on its genus (#185)
+    assert_placeholder("Saccharum hybrid cultivar (unknown)")
+        .taxon("Saccharum")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("hybrid cultivar (unknown)")
+        .nothing_else();
 }
 
 #[test]

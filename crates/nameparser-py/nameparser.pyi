@@ -112,6 +112,8 @@ class ParsedName:
     @property
     def candidatus(self) -> bool: ...
     @property
+    def graft_chimaera(self) -> bool: ...
+    @property
     def notho(self) -> list[str] | None:
         """Which name part(s) a hybrid marker (`×`/`x`) applies to, each rendered as its
         `NamePart` wire name (e.g. `["INFRASPECIFIC"]`); `None` for a non-hybrid name."""

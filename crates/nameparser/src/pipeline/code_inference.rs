@@ -46,6 +46,12 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         return;
     }
 
+    // A graft-chimaera is named under the cultivated-plants code (ICNCP), even a species described
+    // while the botanical code still covered them (`+Laburnocytisus adamii`).
+    if ctx.name.graft_chimaera {
+        ctx.name.code = Some(NomCode::Cultivars);
+        return;
+    }
     // A named hybrid is botanical: zoology and bacteriology name no hybrids. Not with a bracketed
     // subgenus, rarer in botany than in zoology: the water flea "Daphnia (Daphnia) x krausi
     // Flossner 1993" is no plant. A cultivar hybrid's rank pinned the cultivated-plant code above.

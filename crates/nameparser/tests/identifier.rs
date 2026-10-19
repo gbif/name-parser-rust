@@ -314,3 +314,14 @@ fn everything_after_the_sp_of_an_aggregate_is_the_phrase() {
         .type_(NameType::Informal)
         .nothing_else();
 }
+
+#[test]
+fn a_bin_label_before_the_code_is_no_author() {
+    // #187
+    assert_informal("Bledius BIN BOLD:ACU5439")
+        .taxon("Bledius")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("BOLD:ACU5439")
+        .nothing_else();
+}
