@@ -509,9 +509,36 @@ pub fn run(
     }
     restore_lost_letters(&mut ctx);
     qualify_trailing_doubt(&mut ctx);
+    keep_unplaced_doubt(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
 
     Ok(ctx.name)
+}
+
+/// A word ending in a "?" after a letter or a dot (`pentagona?`, `sensu?,`), as long as no "?"
+/// stands between its letters: a lost letter, `Petrovi?-Obradovi?` (see [`restore_lost_letters`]).
+static WORD_DOUBT_QMARK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"[\p{L}.]\?[,;)\]]*$").unwrap());
+static LOST_LETTER_QMARK: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\p{L}\?[\p{L}\-]").unwrap());
+
+/// A "?" glued to the end of a word that no step placed — as a qualifier or an uncertain author —
+/// still flags the name doubtful, where the shape around it was not understood: `Argiope Argiope
+/// pentagona?`, `Colpidium cucullus Kent, sensu?, 1881`. Java took every such "?" for an uncertain
+/// author.
+fn keep_unplaced_doubt(ctx: &mut ParseContext) {
+    if ctx.name.doubtful {
+        return;
+    }
+    let doubt = [Some(ctx.original.as_str()), ctx.authorship_input.as_deref()]
+        .into_iter()
+        .flatten()
+        .flat_map(str::split_whitespace)
+        .any(|w| WORD_DOUBT_QMARK.is_match(w) && !LOST_LETTER_QMARK.is_match(w));
+    if doubt {
+        ctx.name.doubtful = true;
+        ctx.name.add_warning(warnings::QUESTION_MARKS_REMOVED);
+    }
 }
 
 /// A free-standing "?" after a bare name (`Abies alba ?`, `Faunus (Pseudobellardia) ?`) doubts its

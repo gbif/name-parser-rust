@@ -280,13 +280,12 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 && genus
                     .as_deref()
                     .is_some_and(|g| g.eq_ignore_ascii_case(&prev.text));
-            let doubts_epithet = glued
-                && cf_aff_qualifier.is_none()
-                && lower_epithets.last() == Some(&prev.text.to_lowercase());
+            let doubts_epithet = glued && lower_epithets.last() == Some(&prev.text.to_lowercase());
             if doubts_genus {
                 ctx.name.set_epithet_qualifier(NamePart::Generic, "?");
                 ctx.qualified_genus = true;
-            } else if doubts_epithet {
+            } else if doubts_epithet && cf_aff_qualifier.is_none() {
+                // a cf. already there stays: "Afiacyathus cf. sibiricus?"
                 qualifier_at = lower_epithets.len() - 1;
                 cf_aff_qualifier = Some("?".to_string());
                 ctx.name.type_ = NameType::Informal;

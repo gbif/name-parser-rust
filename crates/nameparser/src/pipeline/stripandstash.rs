@@ -259,14 +259,15 @@ static INED_QMARK: LazyLock<Regex> =
 /// which Java dropped silently (#80). A lower-case word before the year is an epithet, not an
 /// author.
 ///
-/// Rust-only, the word must look like an author, as before the year: capitalised, after a space
-/// or bracket, maybe abbreviated (`Sess?`, `DC.?`, `d'Orb.?`). Java took any letter, so the doubted
+/// Rust-only, the word must look like an author, as before the year: capitalised, after a space,
+/// bracket or slash, maybe abbreviated (`Sess?`, `DC.?`, `d'Orb.?`, `Roque et al./Savoie?`), and
+/// may close a square bracket (`Schaufuss, C. [or L.W.?]`). Java took any letter, so the doubted
 /// epithet of `Abies alba?` and the genus of `Abies?` were uncertain authors, and missed the dot of
 /// `Mikania attenuata DC.?`, whose `?` was dropped without a trace. A separate authorship comes
 /// here with a space put in front ([`on_authorship`]).
 static UNCERTAIN_AUTHOR_QMARK: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"[\s(](?:\p{Ll}{1,3}')?\p{Lu}[\p{L}'.\-]*\?\s*(?:$|[&,])|(?:^|[\s(])\p{Lu}[\p{L}'.\-]*\?\s+\d{4}",
+        r"[\s(/](?:\p{Ll}{1,3}')?\p{Lu}[\p{L}'.\-]*\?\s*(?:$|[&,\]])|(?:^|[\s(])\p{Lu}[\p{L}'.\-]*\?\s+\d{4}",
     )
     .unwrap()
 });

@@ -209,3 +209,59 @@ fn a_doubted_genus_anchors_the_name() {
     // another qualifier of the genus still leaves nothing
     assert_eq!(anchor("cf. Platypeltis croftii"), None);
 }
+
+#[test]
+fn a_qualifier_already_there_stays_and_the_question_mark_still_doubts() {
+    for name in [
+        "Afiacyathus cf. sibiricus?",
+        "Machairodus cf. crenatidens ?",
+    ] {
+        let epithet = name.split(' ').nth(2).unwrap().trim_end_matches([' ', '?']);
+        assert_name(name)
+            .species(name.split(' ').next().unwrap(), epithet)
+            .qualifiers(&[(NamePart::Specific, "cf.")])
+            .type_(NameType::Informal)
+            .doubtful()
+            .warning(&[warnings::QUESTION_MARKS_REMOVED])
+            .nothing_else();
+    }
+}
+
+#[test]
+fn glued_to_an_author_after_a_slash_or_in_square_brackets() {
+    assert_name("Ophryoglena bacterocaryon Roque et al./Savoie?, 1965")
+        .species("Ophryoglena", "bacterocaryon")
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP]);
+    assert_name("Baridius brannani Schaufuss, C. [or L.W.?] , 1866")
+        .species("Baridius", "brannani")
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP]);
+}
+
+#[test]
+fn a_question_mark_no_step_placed_still_doubts_the_name() {
+    for name in [
+        "Argiope Argiope pentagona?",
+        "Colpidium cucullus Kent, sensu?, 1881",
+        "Agrodiaetus merzbacherii (Cram?)",
+        "Acontiodus sp.?",
+    ] {
+        let pn = nameparser::parse(name, None, None, None)
+            .parsed()
+            .cloned()
+            .unwrap_or_else(|| panic!("{name} parses"));
+        assert!(pn.doubtful, "{name}");
+    }
+    // a "?" between letters is a lost letter, a "?" after a digit a doubtful year
+    for name in [
+        "Aphis myrsinitidis Petrovi?-Obradovi? & Leclant, 1998",
+        "Aus bus Smith, 1887?",
+    ] {
+        let pn = nameparser::parse(name, None, None, None)
+            .parsed()
+            .cloned()
+            .unwrap_or_else(|| panic!("{name} parses"));
+        assert!(!pn.doubtful, "{name}");
+    }
+}
