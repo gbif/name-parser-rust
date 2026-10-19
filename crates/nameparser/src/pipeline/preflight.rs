@@ -964,8 +964,11 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
         }
         // Graft-chimera formula: single genus on each side (e.g. "Crataegus + Mespilus").
         // Java re-trims `right.trim()` a second time here even though `right` is already
-        // trimmed above; idempotent, so `right` is used directly.
-        if plus
+        // trimmed above; idempotent, so `right` is used directly. Rust-only, a cross alike: a genus
+        // crossed with a capitalised name is an intergeneric hybrid formula, "Crataegus × Mespilus"
+        // or "Crataegus × Mespilus germanica" was the uninomial Crataegus by the author "Mespilus".
+        // An author after the cross is none: "Aloe x L.C. Leach", "Dasytes x Waltl, 1835".
+        if (plus || (NAME_AFTER_CROSS.is_match(right) && !AUTHOR_AFTER_CROSS.is_match(right)))
             && count_latin_words(left) == 1
             && !left.is_empty()
             && left.chars().next().is_some_and(|c| c.is_uppercase())
@@ -977,6 +980,14 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
     }
     false
 }
+
+/// A name after a cross, as opposed to an author or a cultivar: a plain capitalised Latin word
+/// first ("Mespilus germanica", not "L.C. Leach", "Waltl, 1835" or "Alladin's").
+static NAME_AFTER_CROSS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+(?:(?-u:\s)|$)").unwrap());
+/// An author after a cross all the same: an `&` or a year in it.
+static AUTHOR_AFTER_CROSS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"&|\b(?:1[5-9]|20)(?-u:\d\d)\b").unwrap());
 
 /// A genus with nothing but a bracketed subgenus or a cf./aff. qualifier after it.
 static GENUS_WITH_SUBGENUS_OR_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {

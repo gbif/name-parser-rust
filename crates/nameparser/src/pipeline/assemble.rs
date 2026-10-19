@@ -323,6 +323,10 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     if ctx.name.code.is_none() {
         code_inference::infer(ctx, auth_state.filter(|_| !authorship_dropped));
     }
+    // a graft-chimaera is named at the genus only: `+Crataegomespilus`
+    if ctx.name.graft_chimaera && ctx.name.uninomial.is_some() && ctx.name.rank == Rank::Unranked {
+        ctx.name.rank = Rank::Genus;
+    }
 
     // Step 11: a virally-shaped name (ICTV rank suffix, Preflight-detected) with no other
     // code signal defaults to VIRUS.

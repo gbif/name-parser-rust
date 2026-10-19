@@ -144,7 +144,10 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         let t = &ts[i];
 
         if t.kind == TokenKind::HybridMark {
-            if genus.is_some() && lower_epithets.is_empty() {
+            // a plus sign before the genus is a graft-chimaera's, no hybrid's: `+Crataegomespilus`
+            if genus.is_none() && t.text == "+" {
+                ctx.name.graft_chimaera = true;
+            } else if genus.is_some() && lower_epithets.is_empty() {
                 ctx.name.add_notho(NamePart::Specific);
             } else if genus.is_none() {
                 ctx.name.add_notho(NamePart::Generic);

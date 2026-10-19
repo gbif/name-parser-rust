@@ -57,7 +57,7 @@ out[, c("scientificName", "parsed", "rank", "genus", "specificEpithet",
 
 All 50 columns, in order: `scientificName`, `result`, `parsed`, `error`, `type`, `anchor`,
 `anchorRank`, `rank`, `code`, `uninomial`, `genus`, `infragenericEpithet`, `specificEpithet`,
-`infraspecificEpithet`, `cultivarEpithet`, `phrase`, `candidatus`, `notho`, `originalSpelling`,
+`infraspecificEpithet`, `cultivarEpithet`, `phrase`, `candidatus`, `graftChimaera`, `notho`, `originalSpelling`,
 `epithetQualifier`, `extinct`, `taxonomicNote`, `nomenclaturalNote`, `publishedIn`,
 `publishedInYear`, `publishedInPage`, `unparsed`, `doubtful`, `manuscript`, `state`,
 `combinationAuthors`, `combinationExAuthors`, `combinationInAuthors`, `combinationYear`,

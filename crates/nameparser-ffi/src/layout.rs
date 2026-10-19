@@ -48,7 +48,7 @@
 //! | 28 | 1 | u8  | `original_spelling` | [`ORIGINAL_SPELLING_FALSE`]/[`_TRUE`]/[`_UNKNOWN`] (0/1/2) |
 //! | 29 | 1 | u8  | `notho_bits` | bitset, bit `i` = `NamePart` ordinal `i` present in the notho set |
 //! | 30 | 1 | u8  | `authorship_flags` | bit 0 = `combination_authorship.anonymous`, bit 1 = `basionym_authorship.anonymous` (ABI 5), bit 2 = `combination_authorship.bracketed_year`, bit 3 = `basionym_authorship.bracketed_year` (ABI 7) |
-//! | 31 | 1 | —   | *(padding)* | reserved, always zero, keeps `published_in_year` 4-aligned |
+//! | 31 | 1 | u8  | `name_flags` | bit 0 = `graft_chimaera` (ABI 9); the byte keeps `published_in_year` 4-aligned |
 //! | 32 | 4 | i32 | `published_in_year` | -1 if absent |
 //!
 //! `rank`/`state` are never actually optional on [`ParsedName`] itself (both are `@Nonnull` in
@@ -239,9 +239,13 @@ pub const OFF_ORIGINAL_SPELLING: usize = 28;
 pub const OFF_NOTHO_BITS: usize = 29;
 /// The anonymous and bracketed-year flags of the two base authorships, see
 /// [`ANON_COMBINATION_BIT`] / [`ANON_BASIONYM_BIT`] / [`BRACKETED_YEAR_COMBINATION_BIT`] /
-/// [`BRACKETED_YEAR_BASIONYM_BIT`]. Offset 31 is 1 byte of reserved padding (keeps
-/// `published_in_year` 4-aligned).
+/// [`BRACKETED_YEAR_BASIONYM_BIT`].
 pub const OFF_AUTHORSHIP_FLAGS: usize = 30;
+/// Flags of the name itself, see [`GRAFT_CHIMAERA_BIT`] (ABI 9). Before ABI 9 offset 31 was
+/// reserved padding, always zero; it still keeps `published_in_year` 4-aligned.
+pub const OFF_NAME_FLAGS: usize = 31;
+/// `name_flags` bit: `graft_chimaera` (ABI 9).
+pub const GRAFT_CHIMAERA_BIT: u8 = 1;
 pub const OFF_PUBLISHED_IN_YEAR: usize = 32;
 
 /// `authorship_flags` bit: `combination_authorship.anonymous`.
@@ -484,6 +488,7 @@ struct Header {
     original_spelling: u8,
     notho_bits: u8,
     authorship_flags: u8,
+    name_flags: u8,
     published_in_year: i32,
 }
 
@@ -505,7 +510,7 @@ impl Header {
         buf.push(self.original_spelling); // OFF_ORIGINAL_SPELLING
         buf.push(self.notho_bits); // OFF_NOTHO_BITS
         buf.push(self.authorship_flags); // OFF_AUTHORSHIP_FLAGS
-        buf.push(0u8); // padding, offset 31
+        buf.push(self.name_flags); // OFF_NAME_FLAGS
         buf.extend_from_slice(&self.published_in_year.to_le_bytes()); // OFF_PUBLISHED_IN_YEAR
         debug_assert_eq!(buf.len(), HEADER_SIZE);
     }
@@ -826,6 +831,11 @@ pub fn encode(pn: &ParsedName, abi_version: u32) -> Vec<u8> {
         original_spelling: original_spelling_byte(pn.original_spelling),
         notho_bits: notho_bits(&pn.notho),
         authorship_flags: authorship_flags(&pn.combination_authorship, &pn.basionym_authorship),
+        name_flags: if pn.graft_chimaera {
+            GRAFT_CHIMAERA_BIT
+        } else {
+            0
+        },
         published_in_year: pn.published_in_year.unwrap_or(-1),
     };
     header.write_to(&mut buf);
@@ -878,6 +888,7 @@ pub fn encode_unparsable(err: &ParseError, abi_version: u32) -> Vec<u8> {
         original_spelling: ORIGINAL_SPELLING_UNKNOWN,
         notho_bits: 0,
         authorship_flags: 0,
+        name_flags: 0,
         published_in_year: -1,
     };
     let name = err.name.as_bytes();

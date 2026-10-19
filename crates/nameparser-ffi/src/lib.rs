@@ -49,10 +49,12 @@ use nameparser::model::{NameType, NomCode, ParseError, Rank};
 /// `Authorship.inAuthors` (name-parser-api 5.6) in two more run-slots after the epithet qualifier
 /// ([`layout::RUN_INAUTHORS_COMB`], [`layout::RUN_INAUTHORS_BAS`]) and two more run tables in a
 /// present nested group — an older decoder would read the nested groups and the blob from the
-/// wrong offset.
+/// wrong offset. **Version 9** carries `ParsedName.graftChimaera` (name-parser-api 6.0) in the
+/// former padding byte 31, now the name flags ([`layout::OFF_NAME_FLAGS`]): the layout is
+/// unchanged, but an older decoder would silently drop it.
 #[no_mangle]
 pub extern "C" fn np_abi_version() -> u32 {
-    std::panic::catch_unwind(|| 8u32).unwrap_or(0)
+    std::panic::catch_unwind(|| 9u32).unwrap_or(0)
 }
 
 /// SAFETY: `p` must be either null or a valid, NUL-terminated C string for the duration of
@@ -197,8 +199,8 @@ mod tests {
     use std::ffi::CString;
 
     #[test]
-    fn np_abi_version_is_8() {
-        assert_eq!(np_abi_version(), 8);
+    fn np_abi_version_is_9() {
+        assert_eq!(np_abi_version(), 9);
     }
 
     #[test]

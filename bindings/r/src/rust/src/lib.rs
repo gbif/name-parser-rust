@@ -41,6 +41,7 @@ struct Cols {
     cultivar_epithet: Vec<Option<String>>,
     phrase: Vec<Option<String>>,
     candidatus: Vec<Option<bool>>,
+    graft_chimaera: Vec<Option<bool>>,
     notho: Vec<Option<String>>,
     original_spelling: Vec<Option<bool>>,
     epithet_qualifier: Vec<Option<String>>,
@@ -95,7 +96,7 @@ impl Cols {
             anchor: v!(), anchor_rank: v!(), rank: v!(),
             code: v!(), uninomial: v!(), genus: v!(), infrageneric_epithet: v!(),
             specific_epithet: v!(), infraspecific_epithet: v!(), cultivar_epithet: v!(),
-            phrase: v!(), candidatus: v!(), notho: v!(), original_spelling: v!(),
+            phrase: v!(), candidatus: v!(), graft_chimaera: v!(), notho: v!(), original_spelling: v!(),
             epithet_qualifier: v!(), extinct: v!(), taxonomic_note: v!(),
             nomenclatural_note: v!(), published_in: v!(), published_in_year: v!(),
             published_in_page: v!(), unparsed: v!(), doubtful: v!(), manuscript: v!(),
@@ -135,6 +136,7 @@ impl Cols {
         self.cultivar_epithet.push(pn.cultivar_epithet.clone());
         self.phrase.push(pn.phrase.clone());
         self.candidatus.push(Some(pn.candidatus));
+        self.graft_chimaera.push(Some(pn.graft_chimaera));
         self.notho.push(pn.notho.as_ref().map(|parts| {
             parts.iter().filter_map(enum_name).collect::<Vec<_>>().join(", ")
         }));
@@ -209,6 +211,7 @@ impl Cols {
             col.push(None);
         }
         self.candidatus.push(None);
+        self.graft_chimaera.push(None);
         self.original_spelling.push(None);
         self.extinct.push(None);
         self.published_in_year.push(None);
@@ -256,7 +259,7 @@ fn parse_names_impl(
             "scientificName", "result", "parsed", "error", "type", "anchor", "anchorRank",
             "rank", "code", "uninomial",
             "genus", "infragenericEpithet", "specificEpithet", "infraspecificEpithet",
-            "cultivarEpithet", "phrase", "candidatus", "notho", "originalSpelling",
+            "cultivarEpithet", "phrase", "candidatus", "graftChimaera", "notho", "originalSpelling",
             "epithetQualifier", "extinct", "taxonomicNote", "nomenclaturalNote",
             "publishedIn", "publishedInYear", "publishedInPage", "unparsed", "doubtful",
             "manuscript", "state", "combinationAuthors", "combinationExAuthors",
@@ -271,7 +274,7 @@ fn parse_names_impl(
             r!(c.anchor), r!(c.anchor_rank), r!(c.rank),
             r!(c.code), r!(c.uninomial), r!(c.genus), r!(c.infrageneric_epithet),
             r!(c.specific_epithet), r!(c.infraspecific_epithet), r!(c.cultivar_epithet),
-            r!(c.phrase), r!(c.candidatus), r!(c.notho), r!(c.original_spelling),
+            r!(c.phrase), r!(c.candidatus), r!(c.graft_chimaera), r!(c.notho), r!(c.original_spelling),
             r!(c.epithet_qualifier), r!(c.extinct), r!(c.taxonomic_note),
             r!(c.nomenclatural_note), r!(c.published_in), r!(c.published_in_year),
             r!(c.published_in_page), r!(c.unparsed), r!(c.doubtful), r!(c.manuscript),

@@ -168,6 +168,13 @@ pub struct ParsedName {
     pub phrase: Option<String>,
     /// Primitive `boolean` in Java — always serializes, including `false`.
     pub candidatus: bool,
+    /// Java `ParsedName.graftChimaera` (name-parser-api 6.0): a graft-chimaera, tissue of two
+    /// genera grown together at a graft, not a hybrid, named under the cultivated-plants code. Its
+    /// genus is written with a plus sign (`+Crataegomespilus`, `+Laburnocytisus adamii`), and it
+    /// carries no [`Self::notho`]. Primitive `boolean` in Java — always serializes, like
+    /// `candidatus`.
+    #[serde(rename = "graftChimaera")]
+    pub graft_chimaera: bool,
     /// `EnumSet<NamePart>` in Java (null when unset) — omitted when `None`, else an
     /// array in ordinal order, e.g. `["SPECIFIC"]`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -400,7 +407,8 @@ impl ParsedName {
     /// anchor takes the rank of its deepest part and the authorship that belongs to it: the
     /// specific authorship for a species anchor of an infraspecific name, the generic one for a
     /// genus, the name's own when nothing below the anchor is given. The phrase, qualifiers, notes,
-    /// publication, warnings and flags other than `candidatus` and `extinct` are left out. A complete
+    /// publication, warnings and flags other than `candidatus`, `graft_chimaera` and `extinct` are
+    /// left out. A complete
     /// scientific name is its own anchor, without those details. `None` when no part of the name
     /// is determined or its type is not parsable.
     pub fn anchor(&self) -> Option<ParsedName> {
@@ -422,6 +430,7 @@ impl ParsedName {
             type_: NameType::Scientific,
             code: self.code,
             candidatus: self.candidatus,
+            graft_chimaera: self.graft_chimaera,
             extinct: self.extinct,
             ..ParsedName::default()
         };
@@ -599,6 +608,7 @@ impl Default for ParsedName {
             cultivar_epithet: None,
             phrase: None,
             candidatus: false,
+            graft_chimaera: false,
             notho: None,
             original_spelling: None,
             epithet_qualifier: None,
@@ -644,7 +654,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
+        let expected = r#"{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"graftChimaera":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -667,7 +677,7 @@ mod tests {
             },
             ..Default::default()
         };
-        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
+        let expected = r#"{"rank":"SPECIES","genus":"Abies","specificEpithet":"alba","candidatus":false,"graftChimaera":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Mill."],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(serde_json::to_string(&pn).unwrap(), expected);
     }
 
@@ -693,7 +703,7 @@ mod tests {
         // Sanity check independent of the two golden rows above: a bare `default()`
         // must omit every Option field and every nested-struct Option, while still
         // emitting the always-on primitives/collections/enums.
-        let expected = r#"{"rank":"UNRANKED","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
+        let expected = r#"{"rank":"UNRANKED","candidatus":false,"graftChimaera":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}"#;
         assert_eq!(
             serde_json::to_string(&ParsedName::default()).unwrap(),
             expected

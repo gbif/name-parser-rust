@@ -454,11 +454,11 @@ fn alpha_beta_theta_names() {
 
 #[test]
 fn hybrid_names() {
+    // a graft-chimaera, no hybrid (#191)
     assert_name("+ Pyrocrataegus willei L.L.Daniel")
         .species("Pyrocrataegus", "willei")
         .comb_authors(None, &["L.L.Daniel"])
-        .notho(&[NamePart::Generic])
-        .code(NomCode::Botanical)
+        .graft_chimaera()
         .nothing_else();
 
     assert_name("×Pyrocrataegus willei L.L. Daniel")
@@ -527,8 +527,8 @@ fn hybrid_names() {
     assert_name("+ Pyrocrataegus willei nothosubsp. libidi  L.L.Daniel")
         .infra_species("Pyrocrataegus", "willei", Rank::Subspecies, "libidi")
         .comb_authors(None, &["L.L.Daniel"])
-        .notho(&[NamePart::Generic, NamePart::Infraspecific])
-        .code(NomCode::Botanical)
+        .graft_chimaera()
+        .notho(&[NamePart::Infraspecific])
         .nothing_else();
 }
 
@@ -830,4 +830,41 @@ fn the_epithet_or_is_no_alternative() {
         .species("Tethea", "or")
         .comb_authors(Some("1776"), &["Schiffermüller", "Denis"])
         .nothing_else();
+}
+
+#[test]
+fn a_graft_chimaera_is_no_hybrid() {
+    // #191: the plus sign of a graft-chimaera was read as a hybrid's cross
+    assert_name("+Crataegomespilus")
+        .monomial_rank("Crataegomespilus", Rank::Genus)
+        .graft_chimaera()
+        .code(NomCode::Cultivars)
+        .nothing_else();
+    assert_name("+Crataegomespilus ‘Jules d’Asnières’")
+        .cultivar("Crataegomespilus", "Jules d'Asnières")
+        .graft_chimaera()
+        .nothing_else();
+    // a species described while the botanical code covered them
+    assert_name("+ Pyrocrataegus willei L.L.Daniel")
+        .species("Pyrocrataegus", "willei")
+        .comb_authors(None, &["L.L.Daniel"])
+        .graft_chimaera()
+        .code(NomCode::Cultivars)
+        .nothing_else();
+    assert_eq!(
+        nameparser::parse_name("+Laburnocytisus adamii", None, None, None)
+            .unwrap()
+            .canonical_name()
+            .as_deref(),
+        Some("+ Laburnocytisus adamii")
+    );
+    // a graft formula stays a formula, and so does a hybrid formula of two genera
+    for name in [
+        "Crataegus + Mespilus",
+        "Cytisus purpureus + Laburnum anagyroides",
+        "Crataegus × Mespilus",
+        "Crataegus × Mespilus germanica",
+    ] {
+        assert_hybrid_formula(name);
+    }
 }

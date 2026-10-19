@@ -240,6 +240,11 @@ impl PyParsedName {
         self.inner.candidatus
     }
 
+    #[getter]
+    fn graft_chimaera(&self) -> bool {
+        self.inner.graft_chimaera
+    }
+
     /// `Optional[list[str]]` — each [`::nameparser::model::NamePart`] rendered as its
     /// SCREAMING_SNAKE_CASE name (e.g. `["INFRASPECIFIC"]`), via `pythonize`.
     #[getter]
