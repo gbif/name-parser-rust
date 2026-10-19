@@ -15,7 +15,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NomCode, Rank};
+use nameparser::model::Rank;
 
 #[test]
 fn separate_authorship_splits_an_in_citation_like_the_embedded_one() {
@@ -158,7 +158,6 @@ fn a_redundant_authorship_does_not_repeat_the_reference() {
     .bas_authors(None, &["Grunow"])
     .comb_authors(None, &["P.B.Ham."])
     .published_in("Hamilton, Poulin, Charles & Angell")
-    .code(NomCode::Botanical)
     .comb_in_authors(&["Hamilton", "Poulin", "Charles", "Angell"])
     .bas_in_authors(&["Van Heurck"])
     .nothing_else();
@@ -237,7 +236,6 @@ fn in_authors_of_the_combination_and_the_basionym() {
         .bas_in_authors(&["Kuhl"])
         .published_in("Kuhl, 1817")
         .published_in_year(Some(1817))
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Atriplex prostrata Boucher ex DC. in Lam. & DC.")
         .species("Atriplex", "prostrata")
@@ -245,7 +243,6 @@ fn in_authors_of_the_combination_and_the_basionym() {
         .comb_ex_authors(&["Boucher"])
         .comb_in_authors(&["Lam.", "DC."])
         .published_in("Lam. & DC.")
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Navicula cryptocephala Grunow in Van Heurck, 1883")
         .species("Navicula", "cryptocephala")
@@ -261,7 +258,6 @@ fn in_authors_of_the_combination_and_the_basionym() {
         .comb_in_authors(&["Cleve", "Grunow"])
         .published_in("Cleve & Grunow, 1880")
         .published_in_year(Some(1880))
-        .code(NomCode::Botanical)
         .nothing_else();
     // the basionym's, while the combination has none
     assert_name("Nitzschia sigma (Grunow in Van Heurck) W.Sm.")
@@ -270,7 +266,6 @@ fn in_authors_of_the_combination_and_the_basionym() {
         .bas_in_authors(&["Van Heurck"])
         .comb_authors(None, &["W.Sm."])
         .published_in("Van Heurck")
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Amphora ovalis (Kütz.) Kütz. in Rabenh.")
         .species("Amphora", "ovalis")
@@ -278,7 +273,6 @@ fn in_authors_of_the_combination_and_the_basionym() {
         .comb_authors(None, &["Kütz."])
         .comb_in_authors(&["Rabenh."])
         .published_in("Rabenh.")
-        .code(NomCode::Botanical)
         .nothing_else();
     // both: the basionym's host is no longer lost to the combination's citation
     assert_name("Aus bus (Smith in Jones, 1900) Brown in Miller, 1920")
@@ -356,14 +350,12 @@ fn a_reference_has_no_in_authors() {
         .species("Puffinus", "lherminieri")
         .comb_authors(Some("1839"), &["Lesson"])
         .published_in("Ann. Sci. Nat.")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Rhizoclonium hieroglyphicum (C.Agardh) Kütz. in Phycol. Germ.")
         .species("Rhizoclonium", "hieroglyphicum")
         .bas_authors(None, &["C.Agardh"])
         .comb_authors(None, &["Kütz."])
         .published_in("Phycol. Germ.")
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Adelium cupreum", "Gray in Griffith's Cuvier 1832")
         .species("Adelium", "cupreum")

@@ -24,7 +24,6 @@ fn infra_species() {
     .bas_authors(None, &["Gaudin"])
     .comb_authors(Some("1824"), &["Dumort."])
     .warning(&[warnings::SUBSPECIES_ASSIGNED])
-    .code(NomCode::Botanical)
     .nothing_else();
 
     assert_name("Abies alba ssp. alpina Mill.")
@@ -54,7 +53,6 @@ fn infra_species() {
         )
         .comb_authors(None, &["Fr."])
         .bas_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Baccharis microphylla Kunth var. rhomboidea Wedd. ex Sch. Bip. (nom. nud.)")
@@ -62,7 +60,6 @@ fn infra_species() {
         .comb_authors(None, &["Sch.Bip."])
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
-        .code(NomCode::Botanical)
         .specific_authors(None, &["Kunth"])
         .nothing_else();
 
@@ -93,7 +90,6 @@ fn ex_authors() {
         .bas_authors(None, &["Burm.f."])
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Hoffmanns."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     // In botany (99% of ex author use) the ex author comes first, see https://en.wikipedia.org/wiki/Author_citation_(botany)#Usage_of_the_term_.22ex.22
@@ -102,14 +98,12 @@ fn ex_authors() {
         .comb_authors(None, &["F.Ritter"])
         .comb_ex_authors(&["Plesnik"])
         .warning(&[warnings::HOMOGLYHPS]) // the ¡ in Plesn¡k is not a regular i
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abutilon bastardioides Baker f. ex Rose")
         .species("Abutilon", "bastardioides")
         .comb_authors(None, &["Rose"])
         .comb_ex_authors(&["Baker f."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Baccharis microphylla Kunth var. rhomboidea Wedd. ex Sch. Bip. (nom. nud.)")
@@ -117,7 +111,6 @@ fn ex_authors() {
         .comb_authors(None, &["Sch.Bip."])
         .comb_ex_authors(&["Wedd."])
         .nom_note("nom. nud.")
-        .code(NomCode::Botanical)
         .specific_authors(None, &["Kunth"])
         .nothing_else();
 
@@ -128,14 +121,12 @@ fn ex_authors() {
         .species("Abies", "brevifolia")
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Dallim."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abies brevifolia cv. ex Dallim.")
         .species("Abies", "brevifolia")
         .comb_ex_authors(&["hort."])
         .comb_authors(None, &["Dallim."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Abutilon ×hybridum cv. ex Voss")
@@ -201,13 +192,11 @@ fn monomial() {
     assert_name("Acripeza Guérin-Ménéville 1838")
         .monomial("Acripeza")
         .comb_authors(Some("1838"), &["Guérin-Ménéville"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // https://github.com/gbif/name-parser/issues/98
     assert_name("Salmonidae Jarocki or Schinz, 1822")
         .monomial("Salmonidae")
         .comb_authors(Some("1822"), &["Jarocki or Schinz"])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
         .nothing_else();
@@ -220,7 +209,6 @@ fn in_references() {
         .species("Amathia", "tricornis")
         .comb_authors(Some("1987"), &["Chimonides"])
         .comb_ex_authors(&["Busk"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Xolisma turquini Small apud Britton & Wilson")
@@ -293,10 +281,11 @@ fn infra_generic() {
         .code(NomCode::Botanical)
         .nothing_else();
 
-    // with zoological code it is an impossible name! The zoological section is above family rank and cannot be enclosed in a genus
+    // with zoological code it is an impossible name! The zoological section is above family rank
+    // and cannot be enclosed in a genus. Rank and code stay as given, with a warning (#60).
     assert_name_code("Pinus suprasect. Taeda", NomCode::Zoological)
         .infrageneric_at("Pinus", Rank::SupersectionBotany, "Taeda")
-        .code(NomCode::Botanical)
+        .code(NomCode::Zoological)
         .warning(&[warnings::CODE_MISMATCH])
         .nothing_else();
 
@@ -328,7 +317,6 @@ fn infra_generic() {
     assert_name("Rubus nothosubgen. Cylarubus")
         .infrageneric_at("Rubus", Rank::Subgenus, "Cylarubus")
         .notho(&[NamePart::Infrageneric])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name_rank("Arrhoges (Antarctohoges)", Rank::Subgenus)
@@ -365,7 +353,6 @@ fn infra_generic() {
         .infrageneric_at("Polygonum", Rank::Subgenus, "Bistorta")
         .comb_authors(None, &["Zernov"])
         .bas_authors(None, &["L."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     // "Arrhoges (Antarctohoges)" without an explicit rank: the parenthesised single word is a
@@ -379,7 +366,6 @@ fn infra_generic() {
         .infrageneric_at("Festuca", Rank::Subgenus, "Schedonorus")
         .comb_authors(None, &["Peterm."])
         .bas_authors(None, &["P.Beauv."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Catapodium subg.Agropyropsis  Trab.")
@@ -396,7 +382,6 @@ fn infra_generic() {
         .monomial_rank("Woodsiaceae", Rank::Family)
         .comb_authors(None, &["Herter"])
         .bas_authors(None, &["Hooker"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -406,14 +391,12 @@ fn not_names() {
         .infra_species("Diatrypella", "favacea", Rank::Variety, "favacea")
         .comb_authors(None, &["Ces.", "De Not."])
         .bas_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Protoventuria rosae (De Not.) Berl. & Sacc.")
         .species("Protoventuria", "rosae")
         .comb_authors(None, &["Berl.", "Sacc."])
         .bas_authors(None, &["De Not."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Hormospora De Not.")
@@ -479,7 +462,8 @@ fn autonym_authorship() {
     assert_eq!(trim.specific_epithet.as_deref(), Some("spathata"));
     assert_eq!(trim.infraspecific_epithet.as_deref(), Some("spathata"));
     assert_eq!(trim.infrageneric_epithet, None);
-    assert_eq!(trim.code, Some(NomCode::Botanical));
+    // the (Basionym) Combination shape tells no code (#60)
+    assert_eq!(trim.code, None);
     assert_eq!(trim.authorship_complete(), None);
     assert_eq!(
         trim.canonical_name_complete().as_deref(),
@@ -554,7 +538,6 @@ fn unparsable_placeholder() {
     assert_name("Gen nilotica Simon 1906")
         .species("Gen", "nilotica")
         .comb_authors(Some("1906"), &["Simon"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // "Aster indet." parses to genus "Aster" with a missing (indeterminate) specific epithet.
@@ -625,7 +608,6 @@ fn placeholder() {
     assert_raw_name("Missing penchinati Bourguignat, 1870")
         .species("?", "penchinati")
         .comb_authors(Some("1870"), &["Bourguignat"])
-        .code(NomCode::Zoological)
         .type_(NameType::Placeholder)
         .nothing_else();
 

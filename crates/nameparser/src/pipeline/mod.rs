@@ -421,14 +421,11 @@ pub fn run(
         }
     }
 
-    // Code inference reads the authorship the name ends up with: the separately supplied one
-    // when it carries authors or a basionym (it is applied last, so it wins), else the name
-    // string's own, else the species author before the rank marker. Java 4.2.0 consulted a separate
-    // authorship only when the name string had none AND it carried a basionym with a year or a
-    // combination author, so `Aus bus` + `L., 1758` got no code while `Aus bus L., 1758` was
-    // zoological — a deliberate change: both paths now infer alike. A name whose only authorship
-    // is the species author before its rank marker ("Orchis punctulata Steven ex Lindl. var.")
-    // infers from that one.
+    // Code inference (a sanctioning author, a revived name) and Assemble read the authorship the
+    // name ends up with: the separately supplied one when it carries authors or a basionym (it is
+    // applied last, so it wins), else the name string's own, else the species author before the
+    // rank marker ("Orchis punctulata Steven ex Lindl. var."). Java 4.2.0 consulted a separate
+    // authorship only when the name string had none, so both paths now read alike.
     let has_signal = |st: &&AuthState| !code_state_needs_fallback(Some(st));
     let code_state: Option<&AuthState> = extra_state
         .as_ref()
@@ -437,16 +434,11 @@ pub fn run(
         .or_else(|| species_state.as_ref().filter(has_signal))
         .or(auth_state.as_ref())
         .or(extra_state.as_ref());
-    if !code_state.is_some_and(|c| species_state.as_ref().is_some_and(|s| std::ptr::eq(c, s))) {
-        ctx.species_code_state = species_state.clone();
-    }
 
     // Year that came directly off the author span (e.g. "Linnaeus, 1771") is applied
-    // BEFORE code inference because it IS the zoological author-year citation we want to
-    // detect. A year extracted from a stripped publishedIn reference is just the
-    // publication year — code-neutral — so it's applied AFTER inference instead (below),
-    // so the same year on a botanical or bacterial name doesn't get misread as a
-    // zoological author-year.
+    // BEFORE Assemble, whose zoological-section rule reads the author's year (#171). A year
+    // extracted from a stripped publishedIn reference is just the publication year, so it's
+    // applied AFTER Assemble instead (below).
     if ctx.pending_year.is_some()
         && !ctx.pending_year_from_publication
         && ctx.name.combination_authorship.exists()
@@ -1112,39 +1104,48 @@ mod tests {
     fn sanctioning_author_goes_with_the_authorship_that_wins() {
         // The sanctioning author is part of its authorship: the separately supplied one, applied
         // last, wins with it.
-        let pn =
-            run("Boletus versicolor L. : Fr.", Some("X. : Y."), None, None).expect("should parse");
+        let pn = run(
+            "Boletus versicolor L. : Fr.",
+            Some("X. : Persoon"),
+            None,
+            None,
+        )
+        .expect("should parse");
         assert_eq!(pn.combination_authorship.authors, vec!["X.".to_string()]);
         assert_eq!(
             pn.combination_authorship.sanctioning_author,
-            Some("Y.".to_string())
+            Some("Pers.".to_string())
         );
     }
 
     #[test]
     fn code_state_falls_back_to_separately_supplied_authorship_when_embedded_has_none() {
-        // Pipeline.java's own worked example for the codeState fallback, split across the
-        // two arguments instead of embedded in one string: a bare uninomial (no embedded
-        // trailing authorship at all, so `auth_state` stays `None`) with a separately
-        // supplied basionym-only citation with a year — `extraState.basionymPresent &&
-        // extraState.basionym.getYear() != null` — must drive code inference to
-        // ZOOLOGICAL exactly as it would if "Heptacyclus (Vasileyev, 1939)" were one name.
-        let pn = run("Heptacyclus", Some("(Vasileyev, 1939)"), None, None).expect("should parse");
-        assert_eq!(pn.code, Some(NomCode::Zoological));
+        // A bare uninomial (no embedded trailing authorship at all, so `auth_state` stays `None`)
+        // with a separately supplied revived-name citation must drive code inference to
+        // BACTERIAL exactly as it would if it were one name. Java's own example, a basionym-only
+        // `(Vasileyev, 1939)` meaning ZOOLOGICAL, is no evidence since #60.
+        let pn = run(
+            "Heptacyclus",
+            Some("(ex Choukévitch 1911) Nakamura 1984"),
+            None,
+            None,
+        )
+        .expect("should parse");
+        assert_eq!(pn.code, Some(NomCode::Bacterial));
         assert_eq!(
-            pn.basionym_authorship.authors,
-            vec!["Vasileyev".to_string()]
+            pn.combination_authorship.authors,
+            vec!["Nakamura".to_string()]
         );
-        assert_eq!(pn.basionym_authorship.year, Some("1939".to_string()));
+        assert_eq!(pn.combination_authorship.year, Some("1984".to_string()));
     }
 
     #[test]
-    fn autonym_species_author_drives_code_inference_when_no_other_authorship() {
+    fn autonym_species_author_is_the_specific_authorship() {
         // Pipeline.java's own worked example (Pipeline.java:138-140) for the autonym
         // codeState fallback: the mid-name "(Klatt) Baker" span IS the species author of
-        // the autonym "spathata subsp. spathata" and infers BOTANICAL from its
-        // basionym+combination authors, with no separately-supplied authorship involved. It is
-        // the specific authorship, not the autonym's (#86).
+        // the autonym "spathata subsp. spathata". It is the specific authorship, not the
+        // autonym's (#86). Java inferred BOTANICAL from its basionym+combination authors; that
+        // shape is no evidence since #60.
         let pn = run(
             "Trimezia spathata (Klatt) Baker subsp. spathata",
             None,
@@ -1153,7 +1154,7 @@ mod tests {
         )
         .expect("should parse");
         assert!(pn.is_autonym());
-        assert_eq!(pn.code, Some(NomCode::Botanical));
+        assert_eq!(pn.code, None);
         assert!(!pn.has_authorship());
         let species = pn.specific_authorship.expect("species authorship");
         assert_eq!(

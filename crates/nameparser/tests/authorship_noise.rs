@@ -49,7 +49,6 @@ fn a_reference_with_volume_and_page_is_no_author() {
         .comb_ex_authors(&["Spruce"])
         .published_in("Gen. Pl. 1: 563. 1865")
         .published_in_year(Some(1865))
-        .code(NomCode::Botanical)
         .nothing_else();
     // with the issue of the volume, a page range, the year after the page without a full stop
     // (#147); the page or the issue was left unparsed
@@ -86,20 +85,17 @@ fn a_journal_with_volume_and_page_after_the_year_is_the_reference() {
         .species("Aus", "bus")
         .comb_authors(Some("1850"), &["Smith"])
         .published_in("Journal of Zoology 8(5): 563")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Aus bus Smith 1850 Bull. Soc. ent. Fr. 8(5): 563")
         .species("Aus", "bus")
         .comb_authors(Some("1850"), &["Smith"])
         .published_in("Bull. Soc. ent. Fr. 8(5): 563")
-        .code(NomCode::Zoological)
         .nothing_else();
     // a zoologist's page after the year stays the page
     assert_name_auth("Typhlops gracilis", "STERNFELD 1910: 70")
         .species("Typhlops", "gracilis")
         .comb_authors(Some("1910"), &["Sternfeld"])
         .published_in_page("70")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -224,7 +220,6 @@ fn nomen_nudum_in_brackets_is_the_nomenclatural_note() {
         .species("Chrysopelea", "erythrochloris")
         .comb_authors(Some("1826"), &["Schlegel"])
         .nom_note("nomen nudum")
-        .code(NomCode::Zoological)
         .nothing_else();
     // spelled out, "illegitimum" is zoologists' usage (botanists write "nom. illeg."): no botanical
     // vote against the year's zoological one
@@ -232,7 +227,6 @@ fn nomen_nudum_in_brackets_is_the_nomenclatural_note() {
         .species("Testudo", "macropus")
         .comb_authors(Some("1782"), &["Walbaun"])
         .nom_note("nomen illegitimum")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -244,7 +238,6 @@ fn a_manuscript_marker_before_the_year() {
         .comb_authors(Some("1866"), &["Schwager"])
         .nom_note("ms.")
         .manuscript()
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -287,7 +280,6 @@ fn an_of_note_needs_authors_and_no_corporate_name() {
     assert_name_auth("Elimaea grandis", "Research Group of Orthoptera, 1983")
         .species("Elimaea", "grandis")
         .comb_authors(Some("1983"), &["Research Group of Orthoptera"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth(
         "Rana maculosa chayuensis",
@@ -304,7 +296,6 @@ fn an_of_note_needs_authors_and_no_corporate_name() {
         .species("Thelastoma", "bulhoesi")
         .bas_authors(None, &["Mag"])
         .sensu("of Dollfus 1952")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth(
         "Aus bus",
@@ -323,7 +314,6 @@ fn an_of_note_needs_authors_and_no_corporate_name() {
     .species("Praeskinnerella", "tamanouchiensis")
     .bas_authors(Some("1956"), &["Sakagami"])
     .sensu("Em. Chisaka, 1960")
-    .code(NomCode::Zoological)
     .nothing_else();
     // after the basionym it is the note
     assert_name_auth(
@@ -333,7 +323,6 @@ fn an_of_note_needs_authors_and_no_corporate_name() {
     .species("Pseudohaliotrema", "platicephali")
     .bas_authors(Some("1948"), &["Yin", "Sproston"])
     .sensu("of Young (1968)")
-    .code(NomCode::Zoological)
     .nothing_else();
 }
 
@@ -350,7 +339,6 @@ fn a_page_reference_starts_after_the_last_author() {
         .bas_ex_authors(None, &["H.Z.Zhang"])
         .published_in("Front. Plant Sci. 10 - 1731: 10. 2020")
         .published_in_year(Some(2020))
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth(
         "Hevansia ovalongata",
@@ -366,7 +354,6 @@ fn a_page_reference_starts_after_the_last_author() {
         .comb_authors(Some("1872"), &["Rchb.f."])
         .published_in("Flora 55: 276. 1872")
         .published_in_year(Some(1872))
-        .code(NomCode::Botanical)
         .nothing_else();
     // the title's own "&"
     assert_name_auth(
@@ -429,7 +416,6 @@ fn a_stray_lower_case_word_ends_the_authorship() {
         )
         .specific_bas_authors(None, &["L.f."])
         .comb_authors(None, &["Rosent"])
-        .code(NomCode::Botanical)
         .nothing_else();
     // a note keyword is no epithet
     assert_name("Abies alba Mill. teste Smith")
@@ -460,7 +446,6 @@ fn lower_case_words_an_author_carries_stay() {
         .species("Cryptopleura", "farlowiana")
         .comb_authors(None, &["ver Steeg", "Jossly"])
         .bas_authors(None, &["J.Agardh"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Schizonema crinoideum Crouan frat., 1867")
         .species("Schizonema", "crinoideum")
@@ -470,7 +455,6 @@ fn lower_case_words_an_author_carries_stay() {
     assert_name("Desmodora scaldensis De man, 1889")
         .species("Desmodora", "scaldensis")
         .comb_authors(Some("1889"), &["De man"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Amelanchier cretica Hal csy")
         .species("Amelanchier", "cretica")
@@ -485,7 +469,6 @@ fn an_ex_with_no_author_after_it_keeps_the_authors_before() {
         .species("Bembicia", "uniflora")
         .comb_authors(None, &["Capuron"])
         .bas_authors(None, &["H.Perrier"])
-        .code(NomCode::Botanical)
         .doubtful()
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
@@ -502,7 +485,6 @@ fn a_new_sentence_after_the_authorship_is_no_author() {
         .monomial("Gephyrella")
         .comb_authors(Some("1918"), &["Mello-Leitão"])
         .partial("Rev. Soc. Brasil. Sci.")
-        .code(NomCode::Zoological)
         .nothing_else();
     // after the dot ending the epithet, prose
     assert_name("Negalasa fumalis. Next sentence")
@@ -513,7 +495,6 @@ fn a_new_sentence_after_the_authorship_is_no_author() {
     assert_name("Amphiporus microocelli. Kajihara et al,2008")
         .species("Amphiporus", "microocelli")
         .comb_authors(Some("2008"), &["Kajihara", "al"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -531,7 +512,6 @@ fn a_second_name_after_an_ampersand_is_no_author() {
         .species("Mesalia", "zinkeni")
         .bas_authors(Some("1851"), &["Dunker"])
         .partial("& Promathildia turritella (Dunker 1851)")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Sillago ciliata & Sillago maculata")
         .species("Sillago", "ciliata")
@@ -560,13 +540,11 @@ fn sic_and_corrig_spellings_in_a_separate_authorship() {
     assert_name_auth("Bunodeopsis strumosa", "AANDRES, 1881 sic.")
         .species("Bunodeopsis", "strumosa")
         .comb_authors(Some("1881"), &["Aandres"])
-        .code(NomCode::Zoological)
         .sic()
         .nothing_else();
     assert_name_auth("Stephanauge nexilis", "(Verril, 1883) [sic.]")
         .species("Stephanauge", "nexilis")
         .bas_authors(Some("1883"), &["Verril"])
-        .code(NomCode::Zoological)
         .sic()
         .nothing_else();
     assert_name_auth("Anemonia pelagica", "Quoy et Gaymard [sic.]")
@@ -577,13 +555,11 @@ fn sic_and_corrig_spellings_in_a_separate_authorship() {
     assert_name_auth("Abies alba", "Smith corrig., 1900")
         .species("Abies", "alba")
         .comb_authors(Some("1900"), &["Smith"])
-        .code(NomCode::Zoological)
         .corrig()
         .nothing_else();
     assert_name_auth("Aus bus", "corrig.Yoon et al. 2001")
         .species("Aus", "bus")
         .comb_authors(Some("2001"), &["Yoon", "al."])
-        .code(NomCode::Zoological)
         .corrig()
         .nothing_else();
 }
@@ -596,13 +572,11 @@ fn a_page_after_the_year_is_the_page() {
         .species("Trichaporoidella", "margiventris")
         .comb_authors(Some("1913"), &["Girault"])
         .published_in_page("244")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Aus bus", "Smith, 1900, pp. 12-14")
         .species("Aus", "bus")
         .comb_authors(Some("1900"), &["Smith"])
         .published_in_page("12-14")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth(
         "Parhabdocidaris",
@@ -640,13 +614,11 @@ fn a_page_in_the_basionym_brackets_is_dropped() {
         assert_name_auth("Actinia bermudensis", authorship)
             .species("Actinia", "bermudensis")
             .bas_authors(Some("1889"), &["McMurrich"])
-            .code(NomCode::Zoological)
             .nothing_else();
     }
     assert_name("Actinia bermudensis (McMurrich 1889, p. 111)")
         .species("Actinia", "bermudensis")
         .bas_authors(Some("1889"), &["McMurrich"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -670,7 +642,6 @@ fn an_implausible_year_is_no_year() {
         .comb_authors(None, &["Allard"])
         .partial("187")
         .doubtful()
-        .code(NomCode::Zoological)
         .warning(&[warnings::UNLIKELY_YEAR])
         .nothing_else();
 }
@@ -682,7 +653,6 @@ fn minor_authorship_shapes_of_the_reimport() {
         .species("Amphiesma", "parallelum")
         .bas_authors(Some("1890"), &["Boulenger"])
         .sensu("Kramer, 1977")
-        .code(NomCode::Zoological)
         .nothing_else();
     // a basionym author written after the combination author: turned round when abbreviated,
     // never merged into one person
@@ -690,7 +660,6 @@ fn minor_authorship_shapes_of_the_reimport() {
         .species("Cordyceps", "militaris")
         .bas_authors(None, &["L."])
         .comb_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Penicillium mariae-crucis var. flavescens Quintanilla (Saez)")
         .infra_species("Penicillium", "mariae-crucis", Rank::Variety, "flavescens")
@@ -709,7 +678,6 @@ fn minor_authorship_shapes_of_the_reimport() {
         .species("Hoploseius", "tenuis")
         .qualifiers(&[(NamePart::Specific, "aff.")])
         .comb_authors(Some("1965"), &["Lindquist"])
-        .code(NomCode::Zoological)
         .type_(NameType::Informal)
         .nothing_else();
     // the comment of a sic is a note
@@ -729,28 +697,24 @@ fn a_lowercase_bracket_after_the_authors_is_no_part_of_them() {
         .bas_authors(None, &["Forssk."])
         .comb_authors(None, &["Chiov."])
         .partial("(native)")
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Pennisetum setaceum", "(Forssk.) Chiov. (native)")
         .species("Pennisetum", "setaceum")
         .bas_authors(None, &["Forssk."])
         .comb_authors(None, &["Chiov."])
         .partial("(native)")
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Andreaea rothii ssp. falcata (Schimp.) Lindb. (huntii)")
         .infra_species("Andreaea", "rothii", Rank::Subspecies, "falcata")
         .bas_authors(None, &["Schimp."])
         .comb_authors(None, &["Lindb."])
         .partial("(huntii)")
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Brachythecium curtum (Lindb.) J.Lange & C.Jens. (oedipodium)")
         .species("Brachythecium", "curtum")
         .bas_authors(None, &["Lindb."])
         .comb_authors(None, &["J.Lange", "C.Jens."])
         .partial("(oedipodium)")
-        .code(NomCode::Botanical)
         .nothing_else();
     // filed like a note after the year: a status, a manuscript, "in part"
     assert_name("Angraecum carifolium H.Perrier (sphalm)")
@@ -777,7 +741,6 @@ fn a_lowercase_bracket_after_the_authors_is_no_part_of_them() {
         .species("Asterina", "penicillaris")
         .comb_authors(Some("1889"), &["Sladen"])
         .doubtful()
-        .code(NomCode::Zoological)
         .nothing_else();
     // not after a uninomial
     assert_name("Acantharea (awaiting allocation)")
@@ -796,45 +759,38 @@ fn doubled_brackets_are_single_ones() {
     assert_name("Aurotipula orion ( (Hudson, 1895) )")
         .species("Aurotipula", "orion")
         .bas_authors(Some("1895"), &["Hudson"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Aus bus Smith, 1900 [[nomen nudum]]")
         .species("Aus", "bus")
         .comb_authors(Some("1900"), &["Smith"])
         .nom_note("nomen nudum")
-        .code(NomCode::Zoological)
         .nothing_else();
     // an unclosed one
     assert_name("Aganisia cyanea f. alba ((Roeth & O.Gruss) Meneguzzo")
         .infra_species("Aganisia", "cyanea", Rank::Form, "alba")
         .bas_authors(None, &["Roeth", "O.Gruss"])
         .comb_authors(None, &["Meneguzzo"])
-        .code(NomCode::Botanical)
         .nothing_else();
     // a surplus closing one, in whichever column the authorship comes
     assert_name("Aus bus Smith, 1900 [nomen nudum]]")
         .species("Aus", "bus")
         .comb_authors(Some("1900"), &["Smith"])
         .nom_note("nomen nudum")
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Schedonorus inermis", "(Leysser) ) Palisot de Beauvois")
         .species("Schedonorus", "inermis")
         .bas_authors(None, &["Leysser"])
         .comb_authors(None, &["Palisot de Beauvois"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Abies alba", "((L.)) Mill.")
         .species("Abies", "alba")
         .bas_authors(None, &["L."])
         .comb_authors(None, &["Mill."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // brackets that do enclose more stay nested
     assert_name("Ageniella serrula ((Fox), 1897)")
         .species("Ageniella", "serrula")
         .bas_authors(Some("1897"), &["Fox"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -877,12 +833,10 @@ fn lowercase_words_after_a_comma_are_no_authorship() {
     assert_name("Devibursaphelenchus wangi, gu, wang & zheng, 2010")
         .species("Devibursaphelenchus", "wangi")
         .comb_authors(Some("2010"), &["gu", "wang", "zheng"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Nemophora apiciprocessa, wang et li, 2022")
         .species("Nemophora", "apiciprocessa")
         .comb_authors(Some("2022"), &["wang", "li"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -905,7 +859,6 @@ fn a_comma_next_to_a_rank_marker_keeps_the_infraspecific_name() {
         .infra_species("Abies", "alba", Rank::Subspecies, "alpina")
         .comb_authors(None, &["Mill."])
         .bas_authors(None, &["L."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // right after the marker it stands for the abbreviation dot
     assert_name("Hieracium nigrescens subsp, linophyton")
@@ -937,7 +890,6 @@ fn the_epithet_repeated_in_capitals_is_no_author() {
         Some("1977"),
         &["Taverne", "Thys van den Audenaerde", "Heymer"],
     )
-    .code(NomCode::Zoological)
     .warning(&["Removed: GABONENSIS"])
     .nothing_else();
     assert_name_auth("Loigolactobacillus binensis", "BINENSIS 2020")
@@ -954,7 +906,6 @@ fn the_epithet_repeated_in_capitals_is_no_author() {
     assert_name("Aurelia coerulea COERULEA VON LENDENFELD 1884")
         .species("Aurelia", "coerulea")
         .comb_authors(Some("1884"), &["von Lendenfeld"])
-        .code(NomCode::Zoological)
         .warning(&["Removed: COERULEA"])
         .nothing_else();
 }

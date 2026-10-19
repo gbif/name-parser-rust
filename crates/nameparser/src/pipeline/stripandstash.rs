@@ -107,6 +107,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_double_underscores(ctx, s);
     s = stash_trailing_otu_code(ctx, s);
     s = strip_serovar_serotype(ctx, s);
+    s = stash_antigenic_formula(ctx, s);
     s = strip_angle_bracket_authorship(ctx, s);
     s = strip_html(ctx, s);
     s = unquote_note(ctx, s);
@@ -2002,7 +2003,6 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
     }
     out.push_str(&s[last..]);
     ctx.name.add_warning(warnings::HOMOGLYHPS);
-    ctx.coded_diacritics = true;
     out
 }
 
@@ -2223,17 +2223,21 @@ fn strip_superspecies_marker(ctx: &mut ParseContext, s: String) -> String {
 }
 
 /// An infrageneric rank marker and its epithet in brackets after the genus: `Achatinella (sect.
-/// Auriculella)`, `Balanus (section Ortho-Balanus)`. Group 1 the genus, group 2 the marker, group
-/// 3 the epithet.
+/// Auriculella)`, `Balanus (section Ortho-Balanus)`, with the citation of the infrageneric name
+/// inside as the Prokaryotic Code has it (Rule 10c), `Acetobacter (subgen. Gluconoacetobacter
+/// Yamada and Kondo 1985) liquefaciens`. Group 1 the genus, group 2 the marker, group 3 the epithet,
+/// group 4 the citation.
 static BRACKETED_INFRAGENERIC_MARKER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)\((?-u:\s*)((?i:section|subsection|series|subseries|subgenus|sect|subsect|supersect|subgen|subg|ser|subser|div))\.?(?-u:\s+)(\p{Lu}\p{Ll}+(?:-\p{L}[\p{Ll}\-]*)*)(?-u:\s*)\)").unwrap()
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)\((?-u:\s*)((?i:section|subsection|series|subseries|subgenus|sect|subsect|supersect|subgen|subg|ser|subser|div))\.?(?-u:\s+)(\p{Lu}\p{Ll}+(?:-\p{L}[\p{Ll}\-]*)*)(?:(?-u:\s+)(\p{Lu}[^()]*?))?(?-u:\s*)\)").unwrap()
 });
 
 /// ZooBank and others put the marker of an infrageneric name inside its brackets, `Achatinella
 /// (sect. Auriculella) Pfeiffer 1854`; the epithet was lost and the bracket read as a basionym
 /// author `sect.Auriculella` (#88). Without the brackets the marker is read as it always is; a
 /// word written out is abbreviated, `(section Ortho-Balanus)`, and noted as zoologists' usage
-/// (#171).
+/// (#171). A citation in the brackets is the author of the infrageneric name: of a species in it,
+/// a subgenus author has no place in the name and is dropped with a warning; on its own it is the
+/// name's authorship.
 fn unbracket_infrageneric_marker(ctx: &mut ParseContext, s: String) -> String {
     match BRACKETED_INFRAGENERIC_MARKER.captures(&s) {
         Some(caps) => {
@@ -2249,7 +2253,25 @@ fn unbracket_infrageneric_marker(ctx: &mut ParseContext, s: String) -> String {
             .to_string();
             ctx.bracketed_infrageneric_marker = true;
             ctx.written_out_infrageneric_marker = marker.len() < caps[2].len();
-            format!("{} {marker}. {}{rest}", &caps[1], &caps[3])
+            match caps.get(4) {
+                Some(citation) if rest.trim_start().starts_with(char::is_lowercase) => {
+                    ctx.name.add_warning(&format!(
+                        "{}{}",
+                        warnings::REMOVED_PREFIX,
+                        citation.as_str()
+                    ));
+                    format!("{} {marker}. {}{rest}", &caps[1], &caps[3])
+                }
+                Some(citation) => {
+                    format!(
+                        "{} {marker}. {} {}{rest}",
+                        &caps[1],
+                        &caps[3],
+                        citation.as_str()
+                    )
+                }
+                None => format!("{} {marker}. {}{rest}", &caps[1], &caps[3]),
+            }
         }
         None => s,
     }
@@ -2730,6 +2752,40 @@ fn strip_serovar_serotype(ctx: &mut ParseContext, mut s: String) -> String {
         s = strip(&SEROVAR_BARE, s);
     }
     s
+}
+
+/// A binomial or a genus (group 1) and the antigenic formula of a serotype, perhaps after its
+/// pathotype, an O antigen (or two) and after a colon its K and H antigens or their absence, with
+/// what follows (group 2): "Escherichia coli O157:H7 str. K7140", "Escherichia coli O145:NM str.
+/// 12E70", "Escherichia coli O10:K5(L):H4", "Escherichia coli STEC O174:H2 str. 02-04446".
+static ANTIGENIC_FORMULA: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^(\p{Lu}\p{Ll}+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+)?)(?-u:\s+)((?:[A-Z][A-Za-z]{1,3}EC(?-u:\s+))?(?:[A-Z]\d+/)?O\d+[a-z]*(?:/O\d+[a-z]*)*:[^\s]+(?:(?-u:\s+).+)?)$",
+    )
+    .unwrap()
+});
+
+/// A strain marker in what follows an antigenic formula.
+static STRAIN_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?:^|(?-u:\s))(?:str|strain)(?:\.|(?-u:\s))").unwrap());
+
+/// The antigenic formula of a serotype after a binomial and the strain after it are the phrase,
+/// as a numbered serotype is ([`stash_serovar_of_binomial`]): their colons are no sanctioning
+/// author's, `O157` no author. With a strain marker the rank is the strain's. Rust-only.
+fn stash_antigenic_formula(ctx: &mut ParseContext, s: String) -> String {
+    if !s.contains(':') {
+        return s;
+    }
+    let Some(caps) = ANTIGENIC_FORMULA.captures(&s) else {
+        return s;
+    };
+    let phrase = java_trim(&caps[2]).to_string();
+    if STRAIN_MARKER.is_match(&phrase) {
+        ctx.name.rank = Rank::Strain;
+    }
+    ctx.name.phrase = Some(phrase);
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
 }
 
 // ---- Step 18: stripAngleBracketAuthorship ----
@@ -3421,8 +3477,8 @@ static QUOTED_ATTRIBUTED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
 
 /// The [`QUOTED_ATTRIBUTED_AUTHOR`] is the author of the manuscript name, the one after it
 /// published it, as malacologists write it — no cultivar, which Java made it ("a land snail").
-/// Rewritten as the "Dall MS, Pils." that the authorship parser reads as an ex citation casting no
-/// botanical vote. Its own year goes; the name's is the publishing author's. Not after an indet
+/// Rewritten as the "Dall MS, Pils." that the authorship parser reads as the ex citation of a
+/// manuscript name. Its own year goes; the name's is the publishing author's. Not after an indet
 /// marker ('Phytophthora species "Tokoroa" McAlonan' is a provisional name).
 fn strip_quoted_attributed_author(s: String) -> String {
     let Some(caps) = QUOTED_ATTRIBUTED_AUTHOR.captures(&s) else {
@@ -6534,7 +6590,7 @@ static MANUSCRIPT_IN: LazyLock<Regex> = LazyLock::new(|| {
 
 /// See [`MANUSCRIPT_IN`]: rewritten to the form the authorship parser reads as an ex citation of a
 /// manuscript name, "A MS, B" ("Carpenter MS, Dall"), so neither the manuscript flag nor the
-/// in-citation is set — the name is published — and the ex-author casts no botanical vote.
+/// in-citation is set — the name is published.
 /// Rust-only; run on the name string and a separate authorship.
 pub(crate) fn manuscript_in_as_ex(s: &str) -> String {
     MANUSCRIPT_IN.replace_all(s, "${1} MS, ${2}").into_owned()
@@ -6727,7 +6783,7 @@ static DANGLING_EX: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"(?i)(?-u:\s+
 fn supra_rank_marker(word: &str) -> Option<Rank> {
     match word {
         "subfam" | "subfamily" => Some(Rank::Subfamily),
-        "trib" | "tribe" => Some(Rank::Tribe),
+        "trib" | "tribe" | "tribus" => Some(Rank::Tribe),
         "subtrib" | "subtribe" => Some(Rank::Subtribe),
         "supertrib" => Some(Rank::Supertribe),
         "infratrib" => Some(Rank::Infratribe),
@@ -6746,7 +6802,7 @@ fn supra_rank_marker(word: &str) -> Option<Rank> {
 /// exposure to weigh, unlike some of the batch 2d fancy_regex patterns.
 static SUPRA_RANK_PREFIX: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(
-        r"(?i)^(?:[\p{Lu}][\p{L}]{2,}\s+)?((?:notho)?(?:subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e)?))\.?\s+(?=[\p{Lu}])",
+        r"(?i)^(?:([\p{Lu}][\p{L}]{2,})\s+)?((?:notho)?(?:subfam(?:ily)?|subtrib(?:e)?|supertrib|infratrib|trib(?:e|us)?))\.?\s+(?=([\p{Lu}][\p{L}]*))",
     )
     .unwrap()
 });
@@ -6763,9 +6819,38 @@ static SUPRA_RANK_PREFIX: LazyLock<FancyRegex> = LazyLock::new(|| {
 /// Scolochloinae Soreng" and "Poaceae subtrib. Scolochloinae Soreng" both come back
 /// `rank=SUBTRIBE`, `uninomial=Scolochloinae` (the family prefix, when present, is
 /// discarded entirely, not preserved anywhere in the parsed output).
+/// A family-group name by its ending: a family, subfamily, tribe or subtribe of either code.
+fn is_family_group(word: &str) -> bool {
+    ["aceae", "idae", "oideae", "eae", "inae", "ini"]
+        .iter()
+        .any(|e| word.len() > e.len() + 2 && word.ends_with(e))
+}
+
 fn strip_supra_rank_prefix(ctx: &mut ParseContext, s: String) -> String {
     if let Ok(Some(caps)) = SUPRA_RANK_PREFIX.captures(&s) {
-        let marker = caps.get(1).unwrap().as_str().to_lowercase();
+        let marker = caps.get(2).unwrap().as_str().to_lowercase();
+        let epithet = caps.get(3).unwrap().as_str();
+        // "tribus" is new here, and taken only before a capital ("Tribus chareae" is no tribe
+        // the parser can tell)
+        if marker == "tribus" && !epithet.starts_with(char::is_uppercase) {
+            return s;
+        }
+        // Within a genus a tribe is no tribe: Fries's tribus of Agaricus are unranked
+        // subdivisions of the genus (ICN Art. F.4.1, "Agaricus trib. Pholiota Fr."), as are
+        // Hampe's of Hypnum. Only a family-group name before or after the marker makes it one.
+        if let Some(genus) = caps.get(1) {
+            if !is_family_group(genus.as_str()) && !is_family_group(epithet) {
+                let rest = &s[caps.get(0).unwrap().end()..];
+                match marker.as_str() {
+                    "trib" | "tribe" => return format!("{} tr. {rest}", genus.as_str()),
+                    "subtrib" | "subtribe" => return format!("{} subtr. {rest}", genus.as_str()),
+                    // with no family-group name "tribus" is a species epithet ("Erionota
+                    // tribus Evans, 1941")
+                    "tribus" => return s,
+                    _ => {}
+                }
+            }
+        }
         // a nothotaxon's marker, IPNI's "nothosubtrib. Pachynyctocereinae" (#167)
         let notho = marker.strip_prefix("notho");
         if let Some(r) = supra_rank_marker(notho.unwrap_or(&marker)) {
@@ -6865,6 +6950,7 @@ fn strip_leading_infrageneric_marker(ctx: &mut ParseContext, s: String) -> Strin
                 }
             }
             ctx.name.rank = r;
+            ctx.infrageneric_rank_marker = true;
             if let Some(code) = r.code() {
                 if ctx.name.code.is_none() {
                     ctx.name.code = Some(code);
@@ -8133,7 +8219,6 @@ mod tests {
         let mut c = ctx("x");
         let out = repair_colon_diacritics(&mut c, "A:1ngstro:2m, Vondra:4c:3ek".to_string());
         assert_eq!(out, "Ångström, Vondráček");
-        assert!(c.coded_diacritics);
         assert!(c.name.warnings.contains(&warnings::HOMOGLYHPS.to_string()));
     }
 
@@ -8143,7 +8228,6 @@ mod tests {
         let input = "Smith DOI:10.1234, names:864424, Mus:9";
         let out = repair_colon_diacritics(&mut c, input.to_string());
         assert_eq!(out, input);
-        assert!(!c.coded_diacritics);
         assert!(c.name.warnings.is_empty());
     }
 

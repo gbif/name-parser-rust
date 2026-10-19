@@ -66,7 +66,6 @@ fn todo_names() {
     assert_name("Pseudoleptomesochrella incerta (Chap. and Delam. -deb., 1956)")
         .species("Pseudoleptomesochrella", "incerta")
         .bas_authors(Some("1956"), &["Chap.", "Delam.-deb."])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // homoglyph "?" in the author abbreviation cannot be recovered, so it is kept as given (#104)
@@ -94,7 +93,6 @@ fn todo_names() {
         .comb_ex_authors(&["Kotschy"])
         .comb_authors(None, &["A.DC."])
         .nom_note("nom. subnud.")
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Spermacoce lanceolata Frank ex C.Presl, pro syn.")
@@ -102,7 +100,6 @@ fn todo_names() {
         .comb_ex_authors(&["Frank"])
         .comb_authors(None, &["C.Presl"])
         .nom_note("pro syn.")
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Cavendishia polyantha H?rold, pro syn.")
@@ -174,7 +171,6 @@ fn todo_names() {
     assert_name("Uroleptopsis viridis (Perejaslawzewa, 1886) ?")
         .species("Uroleptopsis", "viridis")
         .bas_authors(Some("1886"), &["Perejaslawzewa"])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
@@ -189,7 +185,6 @@ fn todo_names() {
     assert_name("Scleropogon kelloggi (Wilcox, 137)")
         .species("Scleropogon", "kelloggi")
         .bas_authors(None, &["Wilcox"])
-        .code(NomCode::Zoological)
         .doubtful()
         .partial("137")
         .warning(&[warnings::UNLIKELY_YEAR])
@@ -198,7 +193,6 @@ fn todo_names() {
     assert_name("Ospriocerus arizonensis (Bromley, 193k7)")
         .species("Ospriocerus", "arizonensis")
         .bas_authors(None, &["Bromley"])
-        .code(NomCode::Zoological)
         .doubtful()
         .partial("193")
         .warning(&[warnings::UNLIKELY_YEAR])
@@ -217,7 +211,6 @@ fn todo_names() {
         .species("Scopula", "cajanderi")
         .bas_authors(Some("1903"), &["Herz"])
         .comb_authors(Some("1903"), &[])
-        .code(NomCode::Zoological)
         .warning(&[warnings::YEAR_INTERPRETED])
         .nothing_else();
 
@@ -225,7 +218,6 @@ fn todo_names() {
         .species("Gnathamitermes", "tubiformans")
         .bas_authors(Some("1862"), &["Buckley"])
         .comb_authors(Some("1862"), &[])
-        .code(NomCode::Zoological)
         .warning(&[warnings::YEAR_INTERPRETED])
         .nothing_else();
 
@@ -235,7 +227,6 @@ fn todo_names() {
         .comb_authors(None, &["Kuntze"])
         .comb_ex_authors(&["Cogn."])
         .warning(&["Removed: in Kuntze"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(
@@ -251,7 +242,6 @@ fn todo_names() {
         .species("Kanimia", "nitida")
         .bas_authors(None, &["DC"])
         .comb_authors(None, &["Baker"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -670,7 +660,6 @@ fn strains() {
     assert_name("Anniella nigra FISCHER 1885")
         .species("Anniella", "nigra")
         .comb_authors(Some("1885"), &["Fischer"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -847,7 +836,6 @@ fn parenthesised_subgenus_not_basionym() {
     assert_name("Abies alba (Smith)")
         .species("Abies", "alba")
         .bas_authors(None, &["Smith"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -863,13 +851,11 @@ fn genus_basionym_versus_subgenus() {
         .monomial("Kyphocarpa")
         .bas_authors(None, &["Fenzl"])
         .comb_authors(None, &["Lopr."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Thliphthisa (Griseb.) P.Caputo & Del Guacchio")
         .monomial("Thliphthisa")
         .bas_authors(None, &["Griseb."])
         .comb_authors(None, &["P.Caputo", "Del Guacchio"])
-        .code(NomCode::Botanical)
         .nothing_else();
     // an ABBREVIATED parenthesised word is always an author, never a subgenus (subgenera are a
     // single unabbreviated capitalised word) — so it is a basionym even with a trailing year,
@@ -879,35 +865,29 @@ fn genus_basionym_versus_subgenus() {
         .monomial("Foa")
         .bas_authors(None, &["Grev."])
         .comb_authors(Some("1849"), &["Kutz."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // (2) zoological genus basionym — year inside the brackets, no combination author
     assert_name("Heptacyclus (Vasileyev, 1939)")
         .monomial("Heptacyclus")
         .bas_authors(Some("1939"), &["Vasileyev"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // (3) genus + subgenus + authorship — year OUTSIDE the brackets (ZooBank mixed format); a
     // zoological name has no other rank in parentheses after the genus (ICZN Art. 6.1)
     assert_name("Dicromita (Pterodicromita) Fowler, 1925")
-        .infrageneric_at("Dicromita", Rank::Subgenus, "Pterodicromita")
+        .infrageneric_at("Dicromita", Rank::InfragenericName, "Pterodicromita")
         .comb_authors(Some("1925"), &["Fowler"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Tenthredo (Macrophya) Dahlbom, 1835")
-        .infrageneric_at("Tenthredo", Rank::Subgenus, "Macrophya")
+        .infrageneric_at("Tenthredo", Rank::InfragenericName, "Macrophya")
         .comb_authors(Some("1835"), &["Dahlbom"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Caranx (Usa) Whitley, 1927")
-        .infrageneric_at("Caranx", Rank::Subgenus, "Usa")
+        .infrageneric_at("Caranx", Rank::InfragenericName, "Usa")
         .comb_authors(Some("1927"), &["Whitley"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Oligota (Logiota) Mulsant & Rey 1873")
-        .infrageneric_at("Oligota", Rank::Subgenus, "Logiota")
+        .infrageneric_at("Oligota", Rank::InfragenericName, "Logiota")
         .comb_authors(Some("1873"), &["Mulsant", "Rey"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

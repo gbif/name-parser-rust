@@ -3,8 +3,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::warnings;
-use nameparser::model::NomCode;
+use nameparser::model::{warnings, Rank};
 
 #[test]
 fn in_with_a_colon_is_an_in_citation() {
@@ -35,7 +34,6 @@ fn in_with_a_colon_is_an_in_citation() {
     .comb_authors(Some("2013"), &["Mercado-Salas"])
     .published_in("Gutiérrez-Aguirre, Mercado-Salas & Cervantes-Martínez, 2013")
     .published_in_year(Some(2013))
-    .code(NomCode::Zoological)
     .comb_in_authors(&["Gutiérrez-Aguirre", "Mercado-Salas", "Cervantes-Martínez"])
     .nothing_else();
     assert_name_auth("Aus bus", "Young {in}: Young & Lu, 1988")
@@ -65,6 +63,23 @@ fn a_year_after_the_sanctioning_author_is_the_names() {
         .species("Clitocybe", "nebularis")
         .comb_authors(Some("1801"), &["Pers."])
         .sanct_author("Fr.")
+        .nothing_else();
+}
+
+#[test]
+fn a_sanctioned_species_author_before_a_rank_marker() {
+    // the sanctioning author used to swallow the rank marker and the epithet: "Fr.subsp.edulis"
+    assert_name("Boletus edulis Bull. : Fr. subsp. edulis")
+        .infra_species("Boletus", "edulis", Rank::Subspecies, "edulis")
+        .specific_authors(None, &["Bull."])
+        .specific_sanct_author("Fr.")
+        .autonym()
+        .nothing_else();
+    assert_name("Agaricus campestris L.:Fr. var. alba Smith")
+        .infra_species("Agaricus", "campestris", Rank::Variety, "alba")
+        .specific_authors(None, &["L."])
+        .specific_sanct_author("Fr.")
+        .comb_authors(None, &["Smith"])
         .nothing_else();
 }
 
@@ -100,7 +115,6 @@ fn a_colon_after_a_year_is_still_a_concept_reference() {
         .species("Vespa", "emarginata")
         .comb_authors(Some("1758"), &["Linnaeus"])
         .sensu("Fabricius, 1793")
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -112,45 +126,38 @@ fn a_diacritic_coded_with_a_colon_is_restored() {
         .species("Polytrichum", "baldwinii")
         .comb_authors(Some("1896"), &["C.Müller"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Bryum algovicum", "Sendtn. ex C. Mu:2ller")
         .species("Bryum", "algovicum")
         .comb_authors(None, &["C.Müller"])
         .comb_ex_authors(&["Sendtn."])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Syrrhopodon binsteadii", "The:4riot & Dixon, 1916")
         .species("Syrrhopodon", "binsteadii")
         .comb_authors(Some("1916"), &["Thériot", "Dixon"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Botanical)
         .nothing_else();
     // alone, the coded author used to look like a strain code
     assert_name_auth("Bryum pallescens", "A:1ngstro:2m")
         .species("Bryum", "pallescens")
         .comb_authors(None, &["Ångström"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Grimmia unicolor", "Vondra:4c:3ek, 1950")
         .species("Grimmia", "unicolor")
         .comb_authors(Some("1950"), &["Vondráček"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Fissidens crispus", "Mun:6oz")
         .species("Fissidens", "crispus")
         .comb_authors(None, &["Muñoz"])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Dicranella heteromalla", "(Hedw.) Corbie:9re")
         .species("Dicranella", "heteromalla")
         .comb_authors(None, &["Corbière"])
         .bas_authors(None, &["Hedw."])
         .warning(&[warnings::HOMOGLYHPS])
-        .code(NomCode::Botanical)
         .nothing_else();
 }

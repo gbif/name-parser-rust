@@ -75,7 +75,7 @@ impl Authorship {
     }
 
     /// True if there are authors or the work is anonymous: an anonymous author takes an author's
-    /// place in `pipeline::code_inference`'s votes ("(Fr.) anon." is a botanical recombination).
+    /// place ("(Fr.) anon." is a recombination).
     pub fn has_authors_or_anon(&self) -> bool {
         !self.authors.is_empty() || self.anonymous
     }
@@ -83,8 +83,8 @@ impl Authorship {
     /// Java `Authorship.hasAuthors()`: true if `authors` is non-empty. (Java's own
     /// null-guard, `authors != null && …`, is unreachable here — `Vec<String>` is eagerly
     /// initialized and never absent, matching the field's Java default `= new
-    /// ArrayList<>()`.) Used by `pipeline::code_inference`'s vote tally, distinct from
-    /// [`Self::exists`] (which additionally counts a bare year with no authors).
+    /// ArrayList<>()`.) Distinct from [`Self::exists`] (which additionally counts a bare year
+    /// with no authors).
     pub fn has_authors(&self) -> bool {
         !self.authors.is_empty()
     }

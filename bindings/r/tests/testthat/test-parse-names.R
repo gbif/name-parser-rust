@@ -19,9 +19,10 @@ test_that("scalar columns match the known Java/Python oracle values", {
   expect_equal(out$specificEpithet[1], "alba")
   expect_true(is.na(out$code[1]))
   expect_false(out$candidatus[1])
-  # Vulpes vulpes silaceus Miller, 1907 -> zoological subspecies
-  expect_equal(out$rank[2], "SUBSPECIES")
-  expect_equal(out$code[2], "ZOOLOGICAL")
+  # Vulpes vulpes silaceus Miller, 1907 -> a trinomial of no code: the year
+  # tells none (#60)
+  expect_equal(out$rank[2], "INFRASPECIFIC_NAME")
+  expect_true(is.na(out$code[2]))
   expect_equal(out$infraspecificEpithet[2], "silaceus")
   # Tobacco mosaic virus -> unparsable, NameType OTHER (ParseError.code is
   # VIRUS, but NameType has no VIRUS variant -- confirmed against the core's

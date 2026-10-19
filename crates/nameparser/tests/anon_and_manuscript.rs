@@ -11,7 +11,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{warnings, NomCode, Rank};
+use nameparser::model::{warnings, Rank};
 
 #[test]
 fn anon_is_normalised_in_both_paths() {
@@ -29,7 +29,6 @@ fn anon_is_normalised_in_both_paths() {
         .species("Physalospora", "sepincoliformis")
         .comb_anon(None, &[])
         .bas_authors(None, &["De Not."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // the spelled-out forms are the anonymous flag too
     assert_name_auth("Aus bus", "Anonymous")
@@ -55,7 +54,6 @@ fn a_trailing_manuscript_marker_sets_the_flag_in_both_paths() {
         .bas_authors(None, &["L."])
         .nom_note("ined.")
         .manuscript()
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name_auth("Acosmeta", "Moeschler, MS.")
         .monomial("Acosmeta")
@@ -127,20 +125,17 @@ fn a_manuscript_marker_inside_a_bracket() {
         .bas_authors(None, &["Parreyss"])
         .nom_note("ms.")
         .manuscript()
-        .code(NomCode::Zoological)
         .nothing_else();
     // a manuscript name another author published is an ex citation, not unpublished
     assert_name("Haustellum kiiensis (Kuroda MS in Kira, 1959)")
         .species("Haustellum", "kiiensis")
         .bas_authors(Some("1959"), &["Kira"])
         .bas_ex_authors(Some("1959"), &["Kuroda"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Haustellum kiiensis", "Kuroda MS in Kira, 1959")
         .species("Haustellum", "kiiensis")
         .comb_authors(Some("1959"), &["Kira"])
         .comb_ex_authors(&["Kuroda"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a provisional name's phrase keeps it verbatim
     assert_informal("Celmisia sp. (pulchella ms)")

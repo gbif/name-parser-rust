@@ -47,7 +47,7 @@ class NameParserRustSmokeTest {
 
   @Test
   void parsesAVulpesSubspeciesWithCombinationAuthorship() throws UnparsableNameException {
-    ParsedName pn = parser.parse("Vulpes vulpes silaceus Miller, 1907", null, null, null).orElseThrow();
+    ParsedName pn = parser.parse("Vulpes vulpes silaceus Miller, 1907", null, null, NomCode.ZOOLOGICAL).orElseThrow();
 
     assertEquals("Vulpes", pn.getGenus());
     assertEquals("vulpes", pn.getSpecificEpithet());
@@ -81,7 +81,7 @@ class NameParserRustSmokeTest {
     assertEquals(List.of("Bennett"), pn.getBasionymAuthorship().getAuthors());
     assertEquals("([Bennett], 1830)", pn.authorshipComplete());
 
-    ParsedName bot = parser.parse("Physalospora rubiginosa (Fr.) anon.", null, null, null).orElseThrow();
+    ParsedName bot = parser.parse("Physalospora rubiginosa (Fr.) anon.", null, null, NomCode.BOTANICAL).orElseThrow();
     assertTrue(bot.getCombinationAuthorship().isAnonymous());
     assertFalse(bot.getCombinationAuthorship().hasAuthors());
     assertEquals(NomCode.BOTANICAL, bot.getCode());

@@ -288,15 +288,16 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // rank marker — it belongs to the (unnamed) infraspecific taxon and is not a parsing
     // artefact. All code-setting heuristics live in `code_inference` (called only when the
     // name has no code yet).
-    // A section or series within a genus is a botanical rank, but zoologists name them too, below
-    // the ICZN's ranks: `Achatinella (sect. Auriculella) Pfeiffer, 1854`, `Aphodius (section
-    // Cytoderhinus) Seabra 1909` (#171). Under the zoological code, given or told by a year after a
+    // A section, series or division within a genus is a botanical rank, but zoologists name them
+    // too, below the ICZN's ranks: `Achatinella (sect. Auriculella) Pfeiffer, 1854`, `Aphodius
+    // (section Cytoderhinus) Seabra 1909` (#171), Dejean's `Feronia (div. Percus) Dejean, 1828`. Under the zoological code, given or told by a year after a
     // comma or beside a marker written out, both in brackets, it is an unranked infrageneric name,
     // not a botanical section. Botanists abbreviate the marker, with or without a comma, and
     // rarely bracket it: `Tradescantia (sect. Zebrina) Pellegrini 2017`, `Cephalozia sect.
     // Prionolobus Spruce, 1882`. Written out without a year it is no botanical section either, but
     // of no code: `Hypanis (section Adacna)` is a mollusc, `Synura (section Petersenia)` an alga.
-    // Zoologists name no supersection: `Pinus suprasect. Taeda` stays botanical.
+    // Zoologists name no supersection: `Pinus suprasect. Taeda` stays botanical. The year tells
+    // the rank only, not the code (#60).
     let zoological = ctx.requested_code == Some(NomCode::Zoological)
         || (ctx.requested_code.is_none()
             && ((ctx.bracketed_infrageneric_marker
@@ -311,15 +312,13 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
                 | Rank::SubsectionBotany
                 | Rank::SeriesBotany
                 | Rank::SubseriesBotany
+                | Rank::DivisionBotany
         )
         && (zoological
             || (ctx.written_out_infrageneric_marker
                 && ctx.requested_code != Some(NomCode::Botanical)));
     if unranked_section {
         ctx.name.rank = Rank::InfragenericName;
-        if zoological {
-            ctx.name.code = Some(NomCode::Zoological);
-        }
     }
     if ctx.name.code.is_none() {
         code_inference::infer(ctx, auth_state.filter(|_| !authorship_dropped));
@@ -337,8 +336,8 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
 
     // Step 13: zoological trinomials default to SUBSPECIES, not the generic
     // INFRASPECIFIC_NAME: ICZN doesn't use rank markers for subspecies, so a bare "Genus
-    // species infra" with the zoological code (caller-supplied or inferred) is by convention
-    // a subspecies.
+    // species infra" with the zoological code (given by the caller, or by a zoological-only
+    // rank or status) is by convention a subspecies.
     if ctx.name.rank == Rank::InfraspecificName
         && ctx.name.code == Some(NomCode::Zoological)
         && ctx.name.infraspecific_epithet.is_some()
@@ -347,8 +346,10 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
     // Likewise a zoological "Genus (Subgenus)": the only rank the ICZN puts in parentheses
     // after a genus is the subgenus (Art. 6.1). Rust-only: Java kept INFRAGENERIC_NAME. Not a
-    // section its marker names (#171).
+    // section its marker names (#171), nor a name its marker says is unranked ("Hieracium unr.
+    // Verbasciformia", "Agaricus trib. Pholiota").
     if !unranked_section
+        && !ctx.infrageneric_rank_marker
         && ctx.name.rank == Rank::InfragenericName
         && ctx.name.code == Some(NomCode::Zoological)
         && ctx.name.infrageneric_epithet.is_some()
@@ -788,13 +789,13 @@ mod tests {
     }
 
     #[test]
-    fn rank_code_mismatch_wired_through_finish_overrides_and_warns() {
+    fn rank_code_mismatch_wired_through_finish_keeps_the_code_and_warns() {
         let mut ctx = base_ctx();
         ctx.name.rank = Rank::SupersectionBotany; // BOTANICAL-restricted
         ctx.name.code = Some(NomCode::Zoological); // pre-set: step 10 must skip
         ctx.requested_code = Some(NomCode::Zoological);
         finish(&mut ctx, None);
-        assert_eq!(ctx.name.code, Some(NomCode::Botanical));
+        assert_eq!(ctx.name.code, Some(NomCode::Zoological));
         assert!(ctx
             .name
             .warnings

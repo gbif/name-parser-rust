@@ -28,7 +28,8 @@ A name is parsed into one of two results:
 
 - **Parsed** — a `ParsedName`: the name parts (`uninomial`, or `genus`, `infragenericEpithet`,
   `specificEpithet`, `infraspecificEpithet`, `cultivarEpithet`), the `rank`, the nomenclatural
-  `code` when there is evidence for it, the `type`, the authorship, notes and flags. Its `state` is
+  `code` when the name carries evidence of one code only (never the style of its authorship), the
+  `type`, the authorship, notes and flags. Its `state` is
   `COMPLETE`, or `PARTIAL` when a rest could not be read (`unparsed`). The `type` is `SCIENTIFIC`,
   or `INFORMAL` for a name in open nomenclature: a provisional designation (`Bacillus sp. 1`), kept
   verbatim as the `phrase`, a qualified epithet (`Abies cf. alba`) or a missing one. The `anchor`
@@ -162,6 +163,31 @@ def render_parsed(pn) -> list[str]:
     return lines
 
 
+CODES = [None, "ZOOLOGICAL", "BOTANICAL"]
+
+
+def render_by_code(name: str, authorship: str | None, nom_code: str | None) -> str:
+    """One cell of a by-code table: the rank, the code and the rebuilt name under a code hint."""
+    try:
+        pn = nameparser.parse(name, authorship=authorship, code=nom_code)
+    except nameparser.UnparsableNameError as err:
+        return "**Unparsable** " + code(err.name_type)
+    head = code(pn.rank)
+    if pn.code:
+        head += " · " + code(pn.code)
+    lines = [head]
+    if pn.uninomial:
+        lines.append("uninomial " + code(pn.uninomial))
+    if pn.basionym_authorship and pn.basionym_authorship.authors:
+        lines.append("basionym " + ", ".join(code(a) for a in pn.basionym_authorship.authors))
+    canonical = pn.canonical_name_complete()
+    if canonical:
+        lines.append("→ " + code(canonical))
+    if pn.warnings:
+        lines.append("warnings " + ", ".join(code(w) for w in pn.warnings))
+    return "<br>".join(lines)
+
+
 def render(name: str, authorship: str | None) -> list[str]:
     try:
         result = nameparser.parse(name, authorship=authorship)
@@ -177,18 +203,26 @@ def main() -> None:
     out = [INTRO]
     count = 0
     in_table = False
+    by_code = False
     for raw in SOURCE.read_text(encoding="utf-8").splitlines():
         if not raw.strip() or (raw.startswith("#") and not raw.startswith("## ")):
             continue
         if raw.startswith("## "):
             out.append(f"\n## {raw[3:].strip()}\n")
             in_table = False
+            by_code = False
+            continue
+        if raw.strip() == "@by-code":
+            by_code = True
             continue
         if raw.startswith(">"):
             out.append(raw[1:].strip() + "\n")
             continue
         if not in_table:
-            out.append("| Name | Parsed as |\n|---|---|")
+            if by_code:
+                out.append("| Name | No code | `ZOOLOGICAL` given | `BOTANICAL` given |\n|---|---|---|---|")
+            else:
+                out.append("| Name | Parsed as |\n|---|---|")
             in_table = True
         line, _, remark = raw.partition("  # ")
         name, _, authorship = line.partition("\t")
@@ -198,7 +232,11 @@ def main() -> None:
             cell += "<br>authorship given separately: " + code(authorship)
         if remark.strip():
             cell += "<br>*" + remark.strip() + "*"
-        out.append(f"| {cell} | {'<br>'.join(render(name, authorship))} |")
+        if by_code:
+            cells = " | ".join(render_by_code(name, authorship, c) for c in CODES)
+            out.append(f"| {cell} | {cells} |")
+        else:
+            out.append(f"| {cell} | {'<br>'.join(render(name, authorship))} |")
         count += 1
     TARGET.write_text("\n".join(out).rstrip("\n") + "\n", encoding="utf-8")
     print(f"{count} examples written to {TARGET}")

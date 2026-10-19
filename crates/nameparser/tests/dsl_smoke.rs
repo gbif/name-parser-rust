@@ -11,9 +11,8 @@ use nameparser::model::{NameType, NomCode, Rank};
 #[test]
 fn infraspecies_with_authorship_and_code() {
     assert_name("Vulpes vulpes silaceus Miller, 1907")
-        .infra_species("Vulpes", "vulpes", Rank::Subspecies, "silaceus")
+        .infra_species("Vulpes", "vulpes", Rank::InfraspecificName, "silaceus")
         .comb_authors(Some("1907"), &["Miller"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

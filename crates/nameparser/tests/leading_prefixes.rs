@@ -6,7 +6,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NameType, NomCode, Rank};
+use nameparser::model::{NameType, Rank};
 
 // ---- unclassified ------------------------------------------------------------------------------
 
@@ -52,9 +52,8 @@ fn a_vernacular_organism_label_with_a_capital_is_no_name() {
     }
     // a Latin epithet is no label
     assert_name("Andrena minutula alga Warncke, 1974")
-        .infra_species("Andrena", "minutula", Rank::Subspecies, "alga")
+        .infra_species("Andrena", "minutula", Rank::InfraspecificName, "alga")
         .comb_authors(Some("1974"), &["Warncke"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -101,7 +100,6 @@ fn organism_word_as_a_missing_genus_epithet_is_untouched() {
     assert_raw_name("fungi Meigen, 1830")
         .species("?", "fungi")
         .comb_authors(Some("1830"), &["Meigen"])
-        .code(nameparser::model::NomCode::Zoological)
         .warning(&["epithet without genus"])
         .type_(NameType::Placeholder)
         .nothing_else();
@@ -159,21 +157,18 @@ fn organism_label_word_before_an_author_or_infraspecific_name_is_a_real_epithet(
         .species("Rinodina", "archaea")
         .comb_authors(None, &["Arnold"])
         .bas_authors(None, &["Ach."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Rinodina archaea f. cinerascens H. Magn.")
         .infra_species("Rinodina", "archaea", Rank::Form, "cinerascens")
         .comb_authors(None, &["H.Magn."])
         .nothing_else();
     assert_name("Orania archaea hitomiae Houart & Moe, 2011")
-        .infra_species("Orania", "archaea", Rank::Subspecies, "hitomiae")
+        .infra_species("Orania", "archaea", Rank::InfraspecificName, "hitomiae")
         .comb_authors(Some("2011"), &["Houart", "Moe"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Lithochytris archaea Riedel and Sanfilippo, 1970")
         .species("Lithochytris", "archaea")
         .comb_authors(Some("1970"), &["Riedel", "Sanfilippo"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // `archaea` after a genus is the Latin "ancient", no label
     assert_name("Neoschoengastia archaea")
@@ -245,7 +240,6 @@ fn rank_prefixed_taxon_keeps_its_authorship() {
     assert_name("fam. Arrenuridae Thor, 1900")
         .monomial_rank("Arrenuridae", Rank::Family)
         .comb_authors(Some("1900"), &["Thor"])
-        .code(nameparser::model::NomCode::Zoological)
         .nothing_else();
 }
 
@@ -265,7 +259,6 @@ fn leading_species_label_is_dropped_from_a_binomial() {
     assert_name("Sp. Lupocyclus sexspinosus Leene, 1940")
         .species("Lupocyclus", "sexspinosus")
         .comb_authors(Some("1940"), &["Leene"])
-        .code(nameparser::model::NomCode::Zoological)
         .nothing_else();
 }
 

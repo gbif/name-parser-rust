@@ -13,7 +13,7 @@ Lepidoptera Linnaeus, 1758
 Pinus	L.
 
 ## Species
-> A genus with a lower-case epithet is a species. The authorship is split into the combination authorship and, in brackets, the basionym authorship (the author of the original combination). A year with a comma and a bracketed original author are typical of zoology, a recombining author after the bracket of botany; both become evidence for the nomenclatural `code`.
+> A genus with a lower-case epithet is a species. The authorship is split into the combination authorship and, in brackets, the basionym authorship (the author of the original combination). Neither tells the nomenclatural `code`: botanists and bacteriologists cite years too, and bacteriologists recombine in brackets like botanists. The code is set only by evidence that exists under one code alone, such as a rank of that code (`sect.`, `pv.`, `ab.`), `Candidatus`, a cultivar, a named hybrid or a sanctioning author (`: Fr.`), or when the caller gives it.
 Abies alba Mill.
 Quercus robur L.
 Homo sapiens Linnaeus, 1758
@@ -26,7 +26,7 @@ Abies alba	Mill.
 Puma concolor	(Linnaeus, 1771)
 
 ## Infraspecific names
-> A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. Without a marker, zoological trinomials are subspecies; otherwise the rank stays the generic `INFRASPECIFIC_NAME`. The author of the species, standing before the marker, is kept apart as the `specificAuthorship`. An autonym repeats the species epithet and has no author of its own.
+> A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. Without a marker the rank stays the generic `INFRASPECIFIC_NAME`; a trinomial under the zoological code, given by the caller, is a subspecies. The author of the species, standing before the marker, is kept apart as the `specificAuthorship`. An autonym repeats the species epithet and has no author of its own.
 Vulpes vulpes silaceus Miller, 1907
 Poa pratensis subsp. angustifolia (L.) Lej.
 Abies alba var. nana Carrière
@@ -51,7 +51,7 @@ Fusarium oxysporum f. sp. lycopersici
 Rubus hirtus Rchb. microg pectinatus Sudre & Gavet
 
 ## Subgenera and other infrageneric names
-> A capitalised word in brackets after the genus is a subgenus. Infrageneric rank markers (`sect.`, `subg.`, `ser.`) work like the infraspecific ones; an author before the marker is the genus author.
+> A capitalised word in brackets after the genus is an infrageneric name, a subgenus under the zoological code. Infrageneric rank markers (`sect.`, `subg.`, `ser.`) work like the infraspecific ones; an author before the marker is the genus author.
 Carabus (Carabus) auronitens Fabricius, 1792
 Phalium (Semicassis) vector R. T. Abbott, 1993
 Astragalus sect. Phaca
@@ -59,6 +59,32 @@ Centaurea L. subg. Jacea
 Cordia (Adans.) Kuntze sect. Salimori
 Hieracium unr. Verbasciformia  # unranked
 Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux  # no stirps rank: unranked
+
+## Infrageneric names by code
+> Each name parsed with no code, and with the `ZOOLOGICAL` or `BOTANICAL` code given, as ChecklistBank passes a dataset's code.
+>
+> **Parsing.** A rank marker gives the rank: `subg.` or `subgen.` the `SUBGENUS`; `sect.`, `subsect.`, `ser.`, `subser.` and `div.` the botanical ranks, which also set the `BOTANICAL` code when none is given. Under the zoological code a section, series or division inside a genus has no rank of its own, so it is an `INFRAGENERIC_NAME`; with no code a year after a comma tells it. A marker that names no rank gives an `INFRAGENERIC_NAME` under every code: `unr.`, `[unranked]`, a made-up rank (`grex`, `cycl.`), and Fries's `tr.` or `trib.` after a genus, unranked subdivisions of the genus by ICN Art. F.4.1. A capitalised word in brackets after the genus, with no marker, is an `INFRAGENERIC_NAME`, and a `SUBGENUS` under the zoological code (ICZN Art. 6.1). Followed by an author with no year, or under the botanical code, the bracket is read as the basionym author of a genus instead. A rank of another code than the one given keeps both, with a warning. In a species the bracketed subgenus is kept as the `infragenericEpithet`; its author, cited inside the brackets as the Prokaryotic Code has it (Rule 10c), has no place there and is dropped with a warning.
+>
+> **Formatting.** An unranked infrageneric name of any code, and a zoological subgenus, are written in brackets with no marker. Every other rank shows its marker, a subgenus the botanical `subg.` (ICN Art. 21), or `subgen.` under the bacterial code, which also puts it in the brackets of a species: `Acetobacter (subgen. Gluconoacetobacter) liquefaciens` (Prokaryotic Code Rule 10c).
+@by-code
+Carabus subgen. Megodontus
+Astragalus subg. Cercidothrix
+Achillea sect. Ptarmica
+Ranunculus subsect. Auricomus
+Carex ser. Acutae
+Rosa div. Caninae
+Pinus suprasect. Taeda
+Achatinella (sect. Auriculella) Pfeiffer 1854
+Feronia (div. Percus) Dejean, 1828
+Agaricus trib. Pholiota Fr.
+Hieracium unr. Verbasciformia
+Viola [unranked] Mirabiles Nyman
+Malus nothogrex Prunifoliae
+Calathus (Lindrothius)
+Calathus (Lindrothius) Kurnakov, 1961
+Calathus (Lindrothius) Kurnakov
+Carabus (Megodontus) violaceus L.
+Acetobacter (subgen. Gluconoacetobacter Yamada and Kondo 1985) liquefaciens (Asai 1935) Gosselé et al. 1983
 
 ## Hybrids
 > The hybrid sign `×` marks the part of the name that is a nothotaxon (`notho`). A formula naming two parents is no name of its own.
@@ -129,7 +155,7 @@ Acosmeta	Moeschler, MS.
 Oxalis barrelieri ined.?
 
 ## Nomenclatural notes
-> Notes on nomenclatural status are moved out of the authorship into `nomenclaturalNote`. A status that exists in one code only also sets the code.
+> Notes on nomenclatural status are moved out of the authorship into `nomenclaturalNote`. A status that exists in the zoological code only (`nomen oblitum`, `nomen protectum`) also sets the code.
 Schedonorus arundinaceus (Schreb.) Dumort., nom. cons.
 Spermacoce hyssopifolia Sm., nom. rej.
 Lobelia parvifolia R.Br., nom. illeg.

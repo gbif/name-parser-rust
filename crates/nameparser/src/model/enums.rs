@@ -35,11 +35,8 @@ impl NameType {
 /// Java `org.gbif.nameparser.api.NomCode`. Nomenclatural codes governing biological taxonomic
 /// nomenclature.
 ///
-/// `Hash` (beyond the `Rank`-parity `Debug, Clone, Copy, PartialEq, Eq, Serialize` set) is
-/// needed for `pipeline::code_inference::infer`'s vote tally, a `HashSet<NomCode>` mirroring
-/// Java's `EnumSet<NomCode> votes` (`CodeInference.java:66`) — added here (Phase 1 Slice 4
-/// Task 3) rather than duplicated as a local newtype, since `Rank` already sets this same
-/// precedent (it derives `Hash` for its own `HashMap`/`HashSet` static tables above).
+/// `Hash` (beyond the `Rank`-parity `Debug, Clone, Copy, PartialEq, Eq, Serialize` set) lets a
+/// `NomCode` key a set or map, as `Rank` does for its own static tables above.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum NomCode {
@@ -719,7 +716,9 @@ impl Rank {
             Rank::SupragenericName => Some("supragen."),
             Rank::Supergenus => Some("supergen."),
             Rank::Genus => Some("gen."),
-            Rank::Subgenus => Some("subgen."),
+            // the botanical "subg." (ICN Art. 21 Ex. 1, 3): zoologists bracket a subgenus instead
+            // (ICZN Art. 6.1); Java's "subgen."
+            Rank::Subgenus => Some("subg."),
             Rank::Infragenus => Some("infrag."),
             Rank::InfragenericName => Some("infragen."),
             Rank::SpeciesAggregate => Some("agg."),

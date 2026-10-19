@@ -17,7 +17,6 @@ fn names_with_the_dagger_char() {
         .species("Henriksenopterix", "paucistriata")
         .bas_authors(Some("1922"), &["Henriksen"])
         .extinct()
-        .code(NomCode::Zoological)
         .nothing_else();
     // Trailing surname-first all-caps initials ("Huia N E") flip to "E.N.Huia"
     // per the surname-first author convention.
@@ -82,7 +81,6 @@ fn hybrids_with_notho_ranks() {
     assert_name("Biscogniauxia nothofagi Whalley, Læssøe & Kile 1990")
         .species("Biscogniauxia", "nothofagi")
         .comb_authors(Some("1990"), &["Whalley", "Læssøe", "Kile"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a notho rank marker after an author span
     assert_name("Aconitum W. Mucher nothoser. Acotoxicum")
@@ -285,7 +283,6 @@ fn hybrid_formulae() {
         .species("Pseudocercospora", "broussonetiae")
         .comb_authors(Some("1989"), &["X.J.Liu", "Y.L.Guo"])
         .bas_authors(None, &["Chupp", "Linder"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -319,14 +316,12 @@ fn genus_with_hyphen_allowed_by_icn() {
         .species("Uva-ursi", "cinerea")
         .comb_authors(None, &["A.Heller"])
         .bas_authors(None, &["Howell"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Uva-Ursi cinerea (Howell) A. Heller")
         .species("Uva-ursi", "cinerea")
         .comb_authors(None, &["A.Heller"])
         .bas_authors(None, &["Howell"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Arctostaphylos uva-ursi")
@@ -357,18 +352,15 @@ fn genus_with_hyphen_allowed_by_icn() {
     assert_name("De-Filippii Gortani & Merla 1934")
         .monomial("De-filippii")
         .comb_authors(Some("1934"), &["Gortani", "Merla"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Eu-Scalpellum Hoek, 1907")
         .monomial("Eu-scalpellum")
         .comb_authors(Some("1907"), &["Hoek"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Eu-hookeria olfersiana (Hornsch.) Hampe")
         .species("Eu-hookeria", "olfersiana")
         .comb_authors(None, &["Hampe"])
         .bas_authors(None, &["Hornsch."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Le-monniera")
         .monomial("Le-monniera")
@@ -377,13 +369,11 @@ fn genus_with_hyphen_allowed_by_icn() {
         .species("Le-monniera", "clitandrifolia")
         .comb_authors(None, &["Lecomte"])
         .bas_authors(None, &["A.Chev."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Ne-ourbania adendrobium (Rchb.f. ) Fawc. & Rendle")
         .species("Ne-ourbania", "adendrobium")
         .comb_authors(None, &["Fawc.", "Rendle"])
         .bas_authors(None, &["Rchb.f."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // FIXME(review): an OCR artefact parsed as a uninomial
     // skipped: Ph-echinodermata
@@ -413,7 +403,6 @@ fn misspelled_name() {
     assert_name("Ambrysus-Stål, 1862")
         .monomial("Ambrysus")
         .comb_authors(Some("1862"), &["Stål"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -425,12 +414,10 @@ fn infrageneric_epithets_iczn() {
     assert_name("Hegeter (Hegeter) tenuipunctatus Brullé, 1838")
         .species_ig("Hegeter", "Hegeter", "tenuipunctatus")
         .comb_authors(Some("1838"), &["Brullé"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Hegeter (Hegeter) intercedens Lindberg H 1950")
         .species_ig("Hegeter", "Hegeter", "intercedens")
         .comb_authors(Some("1950"), &["H.Lindberg"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Cyprideis (Cyprideis) thessalonike amasyaensis")
         .infra_species(
@@ -459,7 +446,6 @@ fn names_with_multiple_dashes_in_specific_epithet() {
     assert_name("Puccinia band-i-amirii Durrieu, 1975")
         .species("Puccinia", "band-i-amirii")
         .comb_authors(Some("1975"), &["Durrieu"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -491,12 +477,10 @@ fn epithets_starting_with_non() {
         .comb_authors(None, &["Rothm."])
         .comb_ex_authors(&["Chouard"])
         .bas_authors(None, &["L."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Monocelis non-scripta Curini-Galletti, 2014")
         .species("Monocelis", "non-scripta")
         .comb_authors(Some("2014"), &["Curini-Galletti"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -515,9 +499,13 @@ fn epithets_starting_with_authors_prefixes_de_di_la_von_etc() {
         .infra_species("Theope", "thestias", Rank::InfraspecificName, "discus")
         .nothing_else();
     assert_name("Ocydromus dalmatinus dalmatinus (Dejean, 1831)")
-        .infra_species("Ocydromus", "dalmatinus", Rank::Subspecies, "dalmatinus")
+        .infra_species(
+            "Ocydromus",
+            "dalmatinus",
+            Rank::InfraspecificName,
+            "dalmatinus",
+        )
         .bas_authors(Some("1831"), &["Dejean"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Rhipidia gracilirama lassula")
         .infra_species(
@@ -536,14 +524,22 @@ fn authorship_missing_one_parenthesis() {
     // ignored and the inner authorship parses as a regular zoological
     // combination. Year-bearing trinomial → ZOOLOGICAL → SUBSPECIES.
     assert_name("Ocydromus dalmatinus dalmatinus Dejean, 1831)")
-        .infra_species("Ocydromus", "dalmatinus", Rank::Subspecies, "dalmatinus")
+        .infra_species(
+            "Ocydromus",
+            "dalmatinus",
+            Rank::InfraspecificName,
+            "dalmatinus",
+        )
         .comb_authors(Some("1831"), &["Dejean"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Ocydromus dalmatinus dalmatinus Dejean, 1831 )")
-        .infra_species("Ocydromus", "dalmatinus", Rank::Subspecies, "dalmatinus")
+        .infra_species(
+            "Ocydromus",
+            "dalmatinus",
+            Rank::InfraspecificName,
+            "dalmatinus",
+        )
         .comb_authors(Some("1831"), &["Dejean"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a missing closing paren is put back after the basionym's year
     for input in [
@@ -576,7 +572,6 @@ fn unknown_authorship() {
         .species("Physalospora", "rubiginosa")
         .comb_anon(None, &[])
         .bas_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Tragacantha leporina (?) Kuntze")
         .species("Tragacantha", "leporina")
@@ -592,7 +587,6 @@ fn unknown_authorship() {
         .infra_species("Lachenalia", "tricolor", Rank::Variety, "nelsonii")
         .comb_authors(None, &["Baker"])
         .bas_anon(None, &[])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Puya acris anon.")
         .species("Puya", "acris")
@@ -618,7 +612,6 @@ fn anon_authorship() {
     assert_name("Saccharomyces drosophilae anon. 1923")
         .species("Saccharomyces", "drosophilae")
         .comb_anon(Some("1923"), &[])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -646,7 +639,6 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .species("Amathia", "tricornis")
         .comb_authors(Some("1987"), &["Chimonides"])
         .comb_ex_authors(&["Busk"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Pisania billehousti Souverbie, in Souverbie and Montrouzier, 1864")
         .species("Pisania", "billehousti")
@@ -663,38 +655,32 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .comb_authors(None, &["R.C.Harris"])
         .bas_authors(None, &["Banker"])
         .bas_ex_authors(None, &["Nyl."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Arthopyrenia hyalospora (Nyl. ex. Banker) R.C. Harris")
         .species("Arthopyrenia", "hyalospora")
         .comb_authors(None, &["R.C.Harris"])
         .bas_authors(None, &["Banker"])
         .bas_ex_authors(None, &["Nyl."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Arthopyrenia hyalospora Nyl. ex Banker")
         .species("Arthopyrenia", "hyalospora")
         .comb_authors(None, &["Banker"])
         .comb_ex_authors(&["Nyl."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Arthopyrenia hyalospora Nyl. ex. Banker")
         .species("Arthopyrenia", "hyalospora")
         .comb_authors(None, &["Banker"])
         .comb_ex_authors(&["Nyl."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Glomopsis lonicerae Peck ex C.J. Gould 1945")
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Glomopsis lonicerae Peck ex. C.J. Gould 1945")
         .species("Glomopsis", "lonicerae")
         .comb_authors(Some("1945"), &["C.J.Gould"])
         .comb_ex_authors(&["Peck"])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Acanthobasidium delicatum (Wakef.) Oberw. ex Jülich 1979")
         .species("Acanthobasidium", "delicatum")
@@ -714,7 +700,6 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .comb_ex_authors(&["Johanson"])
         .bas_authors(None, &["Duby"])
         .bas_ex_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Mycosphaerella eryngii (Fr. ex. Duby) Johanson ex. Oudem. 1897")
         .species("Mycosphaerella", "eryngii")
@@ -722,12 +707,10 @@ fn names_with_ex_authors_we_follow_iczn_convention() {
         .comb_ex_authors(&["Johanson"])
         .bas_authors(None, &["Duby"])
         .bas_ex_authors(None, &["Fr."])
-        .code(NomCode::Botanical)
         .nothing_else();
     assert_name("Mycosphaerella eryngii (Fr. Duby) ex Oudem. 1897")
         .species("Mycosphaerella", "eryngii")
         .comb_authors(Some("1897"), &["Oudem."])
         .bas_authors(None, &["Fr.Duby"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }

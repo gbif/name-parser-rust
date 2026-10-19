@@ -10,7 +10,8 @@ A name is parsed into one of two results:
 
 - **Parsed** — a `ParsedName`: the name parts (`uninomial`, or `genus`, `infragenericEpithet`,
   `specificEpithet`, `infraspecificEpithet`, `cultivarEpithet`), the `rank`, the nomenclatural
-  `code` when there is evidence for it, the `type`, the authorship, notes and flags. Its `state` is
+  `code` when the name carries evidence of one code only (never the style of its authorship), the
+  `type`, the authorship, notes and flags. Its `state` is
   `COMPLETE`, or `PARTIAL` when a rest could not be read (`unparsed`). The `type` is `SCIENTIFIC`,
   or `INFORMAL` for a name in open nomenclature: a provisional designation (`Bacillus sp. 1`), kept
   verbatim as the `phrase`, a qualified epithet (`Abies cf. alba`) or a missing one. The `anchor`
@@ -41,51 +42,51 @@ A single word is a `uninomial`; its rank stays `UNRANKED` unless a suffix makes 
 | `Abies` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Abies`<br>→ `Abies` |
 | `Abies Mill.` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Abies`<br>combination: authors `Mill.`<br>→ `Abies Mill.` |
 | `Asteraceae` | **Parsed** · `SCIENTIFIC` · rank `FAMILY`<br>uninomial `Asteraceae`<br>→ `Asteraceae` |
-| `Carabidae Latreille, 1802` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED` · code `ZOOLOGICAL`<br>uninomial `Carabidae`<br>combination: authors `Latreille` · year `1802`<br>→ `Carabidae Latreille, 1802` |
-| `Lepidoptera Linnaeus, 1758` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED` · code `ZOOLOGICAL`<br>uninomial `Lepidoptera`<br>combination: authors `Linnaeus` · year `1758`<br>→ `Lepidoptera Linnaeus, 1758` |
+| `Carabidae Latreille, 1802` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Carabidae`<br>combination: authors `Latreille` · year `1802`<br>→ `Carabidae Latreille, 1802` |
+| `Lepidoptera Linnaeus, 1758` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Lepidoptera`<br>combination: authors `Linnaeus` · year `1758`<br>→ `Lepidoptera Linnaeus, 1758` |
 | `Pinus`<br>authorship given separately: `L.` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Pinus`<br>combination: authors `L.`<br>→ `Pinus L.` |
 
 ## Species
 
-A genus with a lower-case epithet is a species. The authorship is split into the combination authorship and, in brackets, the basionym authorship (the author of the original combination). A year with a comma and a bracketed original author are typical of zoology, a recombining author after the bracket of botany; both become evidence for the nomenclatural `code`.
+A genus with a lower-case epithet is a species. The authorship is split into the combination authorship and, in brackets, the basionym authorship (the author of the original combination). Neither tells the nomenclatural `code`: botanists and bacteriologists cite years too, and bacteriologists recombine in brackets like botanists. The code is set only by evidence that exists under one code alone, such as a rank of that code (`sect.`, `pv.`, `ab.`), `Candidatus`, a cultivar, a named hybrid or a sanctioning author (`: Fr.`), or when the caller gives it.
 
 | Name | Parsed as |
 |---|---|
 | `Abies alba Mill.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>combination: authors `Mill.`<br>→ `Abies alba Mill.` |
 | `Quercus robur L.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Quercus` · specificEpithet `robur`<br>combination: authors `L.`<br>→ `Quercus robur L.` |
-| `Homo sapiens Linnaeus, 1758` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Homo` · specificEpithet `sapiens`<br>combination: authors `Linnaeus` · year `1758`<br>→ `Homo sapiens Linnaeus, 1758` |
-| `Puma concolor (Linnaeus, 1771)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Puma` · specificEpithet `concolor`<br>basionym: authors `Linnaeus` · year `1771`<br>→ `Puma concolor (Linnaeus, 1771)` |
+| `Homo sapiens Linnaeus, 1758` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Homo` · specificEpithet `sapiens`<br>combination: authors `Linnaeus` · year `1758`<br>→ `Homo sapiens Linnaeus, 1758` |
+| `Puma concolor (Linnaeus, 1771)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Puma` · specificEpithet `concolor`<br>basionym: authors `Linnaeus` · year `1771`<br>→ `Puma concolor (Linnaeus, 1771)` |
 | `Bellis perennis L.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Bellis` · specificEpithet `perennis`<br>combination: authors `L.`<br>→ `Bellis perennis L.` |
-| `Picea abies (L.) H.Karst.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Picea` · specificEpithet `abies`<br>combination: authors `H.Karst.`<br>basionym: authors `L.`<br>→ `Picea abies (L.) H.Karst.` |
-| `Felis silvestris Schreber, 1777` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Felis` · specificEpithet `silvestris`<br>combination: authors `Schreber` · year `1777`<br>→ `Felis silvestris Schreber, 1777` |
+| `Picea abies (L.) H.Karst.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Picea` · specificEpithet `abies`<br>combination: authors `H.Karst.`<br>basionym: authors `L.`<br>→ `Picea abies (L.) H.Karst.` |
+| `Felis silvestris Schreber, 1777` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Felis` · specificEpithet `silvestris`<br>combination: authors `Schreber` · year `1777`<br>→ `Felis silvestris Schreber, 1777` |
 | `Taraxacum officinale F.H.Wigg.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Taraxacum` · specificEpithet `officinale`<br>combination: authors `F.H.Wigg.`<br>→ `Taraxacum officinale F.H.Wigg.` |
 | `Abies alba`<br>authorship given separately: `Mill.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>combination: authors `Mill.`<br>→ `Abies alba Mill.` |
-| `Puma concolor`<br>authorship given separately: `(Linnaeus, 1771)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Puma` · specificEpithet `concolor`<br>basionym: authors `Linnaeus` · year `1771`<br>→ `Puma concolor (Linnaeus, 1771)` |
+| `Puma concolor`<br>authorship given separately: `(Linnaeus, 1771)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Puma` · specificEpithet `concolor`<br>basionym: authors `Linnaeus` · year `1771`<br>→ `Puma concolor (Linnaeus, 1771)` |
 
 ## Infraspecific names
 
-A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. Without a marker, zoological trinomials are subspecies; otherwise the rank stays the generic `INFRASPECIFIC_NAME`. The author of the species, standing before the marker, is kept apart as the `specificAuthorship`. An autonym repeats the species epithet and has no author of its own.
+A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. Without a marker the rank stays the generic `INFRASPECIFIC_NAME`; a trinomial under the zoological code, given by the caller, is a subspecies. The author of the species, standing before the marker, is kept apart as the `specificAuthorship`. An autonym repeats the species epithet and has no author of its own.
 
 | Name | Parsed as |
 |---|---|
-| `Vulpes vulpes silaceus Miller, 1907` | **Parsed** · `SCIENTIFIC` · rank `SUBSPECIES` · code `ZOOLOGICAL`<br>genus `Vulpes` · specificEpithet `vulpes` · infraspecificEpithet `silaceus`<br>combination: authors `Miller` · year `1907`<br>→ `Vulpes vulpes silaceus Miller, 1907` |
-| `Poa pratensis subsp. angustifolia (L.) Lej.` | **Parsed** · `SCIENTIFIC` · rank `SUBSPECIES` · code `BOTANICAL`<br>genus `Poa` · specificEpithet `pratensis` · infraspecificEpithet `angustifolia`<br>combination: authors `Lej.`<br>basionym: authors `L.`<br>→ `Poa pratensis subsp. angustifolia (L.) Lej.` |
+| `Vulpes vulpes silaceus Miller, 1907` | **Parsed** · `SCIENTIFIC` · rank `INFRASPECIFIC_NAME`<br>genus `Vulpes` · specificEpithet `vulpes` · infraspecificEpithet `silaceus`<br>combination: authors `Miller` · year `1907`<br>→ `Vulpes vulpes silaceus Miller, 1907` |
+| `Poa pratensis subsp. angustifolia (L.) Lej.` | **Parsed** · `SCIENTIFIC` · rank `SUBSPECIES`<br>genus `Poa` · specificEpithet `pratensis` · infraspecificEpithet `angustifolia`<br>combination: authors `Lej.`<br>basionym: authors `L.`<br>→ `Poa pratensis subsp. angustifolia (L.) Lej.` |
 | `Abies alba var. nana Carrière` | **Parsed** · `SCIENTIFIC` · rank `VARIETY`<br>genus `Abies` · specificEpithet `alba` · infraspecificEpithet `nana`<br>combination: authors `Carrière`<br>→ `Abies alba var. nana Carrière` |
-| `Rosa canina f. dumetorum (Thuill.) Rouy` | **Parsed** · `SCIENTIFIC` · rank `FORM` · code `BOTANICAL`<br>genus `Rosa` · specificEpithet `canina` · infraspecificEpithet `dumetorum`<br>combination: authors `Rouy`<br>basionym: authors `Thuill.`<br>→ `Rosa canina f. dumetorum (Thuill.) Rouy` |
-| `Festuca ovina L. subsp. guestfalica (Boenn. ex Rchb.) K.Richt.` | **Parsed** · `SCIENTIFIC` · rank `SUBSPECIES` · code `BOTANICAL`<br>genus `Festuca` · specificEpithet `ovina` · infraspecificEpithet `guestfalica`<br>combination: authors `K.Richt.`<br>basionym: authors `Rchb.` · ex `Boenn.`<br>specificAuthorship combination: authors `L.`<br>→ `Festuca ovina L. subsp. guestfalica (Boenn. ex Rchb.) K.Richt.` |
+| `Rosa canina f. dumetorum (Thuill.) Rouy` | **Parsed** · `SCIENTIFIC` · rank `FORM`<br>genus `Rosa` · specificEpithet `canina` · infraspecificEpithet `dumetorum`<br>combination: authors `Rouy`<br>basionym: authors `Thuill.`<br>→ `Rosa canina f. dumetorum (Thuill.) Rouy` |
+| `Festuca ovina L. subsp. guestfalica (Boenn. ex Rchb.) K.Richt.` | **Parsed** · `SCIENTIFIC` · rank `SUBSPECIES`<br>genus `Festuca` · specificEpithet `ovina` · infraspecificEpithet `guestfalica`<br>combination: authors `K.Richt.`<br>basionym: authors `Rchb.` · ex `Boenn.`<br>specificAuthorship combination: authors `L.`<br>→ `Festuca ovina L. subsp. guestfalica (Boenn. ex Rchb.) K.Richt.` |
 | `Abies alba Mill. var. alba` | **Parsed** · `SCIENTIFIC` · rank `VARIETY`<br>genus `Abies` · specificEpithet `alba` · infraspecificEpithet `alba`<br>specificAuthorship combination: authors `Mill.`<br>→ `Abies alba Mill. var. alba` |
 | `Brassica oleracea var. capitata L.` | **Parsed** · `SCIENTIFIC` · rank `VARIETY`<br>genus `Brassica` · specificEpithet `oleracea` · infraspecificEpithet `capitata`<br>combination: authors `L.`<br>→ `Brassica oleracea var. capitata L.` |
 | `Loranthus incanus Schumach. & Thonn. sessilis Sprague`<br>*no rank marker* | **Parsed** · `SCIENTIFIC` · rank `INFRASPECIFIC_NAME`<br>genus `Loranthus` · specificEpithet `incanus` · infraspecificEpithet `sessilis`<br>combination: authors `Sprague`<br>specificAuthorship combination: authors `Schumach.`, `Thonn.`<br>→ `Loranthus incanus Schumach. & Thonn. sessilis Sprague` |
-| `Hydnellum scrobiculatum var. zonatum f. parvum (Banker) D. Hall & D.E. Stuntz 1972`<br>*the middle rank is dropped, with a warning* | **Parsed** · `SCIENTIFIC` · rank `FORM` · code `BOTANICAL`<br>genus `Hydnellum` · specificEpithet `scrobiculatum` · infraspecificEpithet `parvum`<br>combination: authors `D.Hall`, `D.E.Stuntz` · year `1972`<br>basionym: authors `Banker`<br>warnings `Removed: var. zonatum`, `name was quadrinomial`<br>→ `Hydnellum scrobiculatum f. parvum (Banker) D.Hall & D.E.Stuntz, 1972` |
-| `Agaricus collinitus β mucosus (Bull.) Fr.`<br>*a Greek letter as an informal marker* | **Parsed** · `SCIENTIFIC` · rank `INFRASPECIFIC_NAME` · code `BOTANICAL`<br>genus `Agaricus` · specificEpithet `collinitus` · infraspecificEpithet `mucosus`<br>combination: authors `Fr.`<br>basionym: authors `Bull.`<br>→ `Agaricus collinitus mucosus (Bull.) Fr.` |
+| `Hydnellum scrobiculatum var. zonatum f. parvum (Banker) D. Hall & D.E. Stuntz 1972`<br>*the middle rank is dropped, with a warning* | **Parsed** · `SCIENTIFIC` · rank `FORM`<br>genus `Hydnellum` · specificEpithet `scrobiculatum` · infraspecificEpithet `parvum`<br>combination: authors `D.Hall`, `D.E.Stuntz` · year `1972`<br>basionym: authors `Banker`<br>warnings `Removed: var. zonatum`, `name was quadrinomial`<br>→ `Hydnellum scrobiculatum f. parvum (Banker) D.Hall & D.E.Stuntz, 1972` |
+| `Agaricus collinitus β mucosus (Bull.) Fr.`<br>*a Greek letter as an informal marker* | **Parsed** · `SCIENTIFIC` · rank `INFRASPECIFIC_NAME`<br>genus `Agaricus` · specificEpithet `collinitus` · infraspecificEpithet `mucosus`<br>combination: authors `Fr.`<br>basionym: authors `Bull.`<br>→ `Agaricus collinitus mucosus (Bull.) Fr.` |
 
 ## Rarer rank markers
 
 | Name | Parsed as |
 |---|---|
 | `Scilla vindobonensis lus. alba (Beck) Kereszty` | **Parsed** · `SCIENTIFIC` · rank `LUSUS` · code `BOTANICAL`<br>genus `Scilla` · specificEpithet `vindobonensis` · infraspecificEpithet `alba`<br>combination: authors `Kereszty`<br>basionym: authors `Beck`<br>→ `Scilla vindobonensis lusus alba (Beck) Kereszty` |
-| `Eunidia simplex m. bifuscomaculata Breuning, 1957`<br>*m. = morpha, monstrositas or modificatio* | **Parsed** · `SCIENTIFIC` · rank `MORPH` · code `ZOOLOGICAL`<br>genus `Eunidia` · specificEpithet `simplex` · infraspecificEpithet `bifuscomaculata`<br>combination: authors `Breuning` · year `1957`<br>→ `Eunidia simplex morph bifuscomaculata Breuning, 1957` |
-| `Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.` | **Parsed** · `SCIENTIFIC` · rank `INFRASUBSPECIFIC_NAME` · code `BOTANICAL`<br>genus `Aquilegia` · specificEpithet `vulgaris` · infraspecificEpithet `corniculata`<br>combination: authors `Graebn.`, `P.Graebn.`<br>basionym: authors `Vill.`<br>→ `Aquilegia vulgaris corniculata (Vill.) Graebn. & P.Graebn.` |
+| `Eunidia simplex m. bifuscomaculata Breuning, 1957`<br>*m. = morpha, monstrositas or modificatio* | **Parsed** · `SCIENTIFIC` · rank `INFRASUBSPECIFIC_NAME`<br>genus `Eunidia` · specificEpithet `simplex` · infraspecificEpithet `bifuscomaculata`<br>combination: authors `Breuning` · year `1957`<br>→ `Eunidia simplex bifuscomaculata Breuning, 1957` |
+| `Aquilegia vulgaris monstr. corniculata (Vill.) Graebn. & P.Graebn.` | **Parsed** · `SCIENTIFIC` · rank `INFRASUBSPECIFIC_NAME`<br>genus `Aquilegia` · specificEpithet `vulgaris` · infraspecificEpithet `corniculata`<br>combination: authors `Graebn.`, `P.Graebn.`<br>basionym: authors `Vill.`<br>→ `Aquilegia vulgaris corniculata (Vill.) Graebn. & P.Graebn.` |
 | `Arvicola terrestris morpha subalpina` | **Parsed** · `SCIENTIFIC` · rank `MORPH` · code `ZOOLOGICAL`<br>genus `Arvicola` · specificEpithet `terrestris` · infraspecificEpithet `subalpina`<br>→ `Arvicola terrestris morph subalpina` |
 | `Acidalia remutaria ab. n. undularia`<br>*aberratio nova* | **Parsed** · `SCIENTIFIC` · rank `ABERRATION` · code `ZOOLOGICAL`<br>genus `Acidalia` · specificEpithet `remutaria` · infraspecificEpithet `undularia`<br>nomenclaturalNote `ab. n.`<br>→ `Acidalia remutaria ab. undularia, ab. n.` |
 | `Pseudomonas syringae pv. tomato` | **Parsed** · `SCIENTIFIC` · rank `PATHOVAR` · code `BACTERIAL`<br>genus `Pseudomonas` · specificEpithet `syringae` · infraspecificEpithet `tomato`<br>→ `Pseudomonas syringae pv. tomato` |
@@ -96,17 +97,50 @@ A rank marker (`subsp.`, `var.`, `f.`, …) gives the rank of the last epithet. 
 
 ## Subgenera and other infrageneric names
 
-A capitalised word in brackets after the genus is a subgenus. Infrageneric rank markers (`sect.`, `subg.`, `ser.`) work like the infraspecific ones; an author before the marker is the genus author.
+A capitalised word in brackets after the genus is an infrageneric name, a subgenus under the zoological code. Infrageneric rank markers (`sect.`, `subg.`, `ser.`) work like the infraspecific ones; an author before the marker is the genus author.
 
 | Name | Parsed as |
 |---|---|
-| `Carabus (Carabus) auronitens Fabricius, 1792` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Carabus` · infragenericEpithet `Carabus` · specificEpithet `auronitens`<br>combination: authors `Fabricius` · year `1792`<br>→ `Carabus (Carabus) auronitens Fabricius, 1792` |
-| `Phalium (Semicassis) vector R. T. Abbott, 1993` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Phalium` · infragenericEpithet `Semicassis` · specificEpithet `vector`<br>combination: authors `R.T.Abbott` · year `1993`<br>→ `Phalium (Semicassis) vector R.T.Abbott, 1993` |
+| `Carabus (Carabus) auronitens Fabricius, 1792` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Carabus` · infragenericEpithet `Carabus` · specificEpithet `auronitens`<br>combination: authors `Fabricius` · year `1792`<br>→ `Carabus (Carabus) auronitens Fabricius, 1792` |
+| `Phalium (Semicassis) vector R. T. Abbott, 1993` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Phalium` · infragenericEpithet `Semicassis` · specificEpithet `vector`<br>combination: authors `R.T.Abbott` · year `1993`<br>→ `Phalium (Semicassis) vector R.T.Abbott, 1993` |
 | `Astragalus sect. Phaca` | **Parsed** · `SCIENTIFIC` · rank `SECTION_BOTANY` · code `BOTANICAL`<br>genus `Astragalus` · infragenericEpithet `Phaca`<br>→ `Astragalus sect. Phaca` |
-| `Centaurea L. subg. Jacea` | **Parsed** · `SCIENTIFIC` · rank `SUBGENUS`<br>genus `Centaurea` · infragenericEpithet `Jacea`<br>genericAuthorship combination: authors `L.`<br>→ `Centaurea L. subgen. Jacea` |
+| `Centaurea L. subg. Jacea` | **Parsed** · `SCIENTIFIC` · rank `SUBGENUS`<br>genus `Centaurea` · infragenericEpithet `Jacea`<br>genericAuthorship combination: authors `L.`<br>→ `Centaurea L. subg. Jacea` |
 | `Cordia (Adans.) Kuntze sect. Salimori` | **Parsed** · `SCIENTIFIC` · rank `SECTION_BOTANY` · code `BOTANICAL`<br>genus `Cordia` · infragenericEpithet `Salimori`<br>genericAuthorship combination: authors `Kuntze`<br>genericAuthorship basionym: authors `Adans.`<br>→ `Cordia (Adans.) Kuntze sect. Salimori` |
-| `Hieracium unr. Verbasciformia`<br>*unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Hieracium` · infragenericEpithet `Verbasciformia`<br>→ `Hieracium infragen. Verbasciformia` |
-| `Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux`<br>*no stirps rank: unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME` · code `BOTANICAL`<br>genus `Cortinarius` · infragenericEpithet `Balteatus`<br>combination: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>basionym: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>→ `Cortinarius infragen. Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux` |
+| `Hieracium unr. Verbasciformia`<br>*unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Hieracium` · infragenericEpithet `Verbasciformia`<br>→ `Hieracium (Verbasciformia)` |
+| `Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux`<br>*no stirps rank: unranked* | **Parsed** · `SCIENTIFIC` · rank `INFRAGENERIC_NAME`<br>genus `Cortinarius` · infragenericEpithet `Balteatus`<br>combination: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>basionym: authors `Bidaud`, `Moënne-Loccoz`, `Reumaux`<br>→ `Cortinarius (Balteatus) (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-Loccoz & Reumaux` |
+
+## Infrageneric names by code
+
+Each name parsed with no code, and with the `ZOOLOGICAL` or `BOTANICAL` code given, as ChecklistBank passes a dataset's code.
+
+
+
+**Parsing.** A rank marker gives the rank: `subg.` or `subgen.` the `SUBGENUS`; `sect.`, `subsect.`, `ser.`, `subser.` and `div.` the botanical ranks, which also set the `BOTANICAL` code when none is given. Under the zoological code a section, series or division inside a genus has no rank of its own, so it is an `INFRAGENERIC_NAME`; with no code a year after a comma tells it. A marker that names no rank gives an `INFRAGENERIC_NAME` under every code: `unr.`, `[unranked]`, a made-up rank (`grex`, `cycl.`), and Fries's `tr.` or `trib.` after a genus, unranked subdivisions of the genus by ICN Art. F.4.1. A capitalised word in brackets after the genus, with no marker, is an `INFRAGENERIC_NAME`, and a `SUBGENUS` under the zoological code (ICZN Art. 6.1). Followed by an author with no year, or under the botanical code, the bracket is read as the basionym author of a genus instead. A rank of another code than the one given keeps both, with a warning. In a species the bracketed subgenus is kept as the `infragenericEpithet`; its author, cited inside the brackets as the Prokaryotic Code has it (Rule 10c), has no place there and is dropped with a warning.
+
+
+
+**Formatting.** An unranked infrageneric name of any code, and a zoological subgenus, are written in brackets with no marker. Every other rank shows its marker, a subgenus the botanical `subg.` (ICN Art. 21), or `subgen.` under the bacterial code, which also puts it in the brackets of a species: `Acetobacter (subgen. Gluconoacetobacter) liquefaciens` (Prokaryotic Code Rule 10c).
+
+| Name | No code | `ZOOLOGICAL` given | `BOTANICAL` given |
+|---|---|---|---|
+| `Carabus subgen. Megodontus` | `SUBGENUS`<br>→ `Carabus subg. Megodontus` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Carabus (Megodontus)` | `SUBGENUS` · `BOTANICAL`<br>→ `Carabus subg. Megodontus` |
+| `Astragalus subg. Cercidothrix` | `SUBGENUS`<br>→ `Astragalus subg. Cercidothrix` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Astragalus (Cercidothrix)` | `SUBGENUS` · `BOTANICAL`<br>→ `Astragalus subg. Cercidothrix` |
+| `Achillea sect. Ptarmica` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achillea sect. Ptarmica` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Achillea (Ptarmica)` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achillea sect. Ptarmica` |
+| `Ranunculus subsect. Auricomus` | `SUBSECTION_BOTANY` · `BOTANICAL`<br>→ `Ranunculus subsect. Auricomus` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Ranunculus (Auricomus)` | `SUBSECTION_BOTANY` · `BOTANICAL`<br>→ `Ranunculus subsect. Auricomus` |
+| `Carex ser. Acutae` | `SERIES_BOTANY` · `BOTANICAL`<br>→ `Carex ser. Acutae` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Carex (Acutae)` | `SERIES_BOTANY` · `BOTANICAL`<br>→ `Carex ser. Acutae` |
+| `Rosa div. Caninae` | `DIVISION_BOTANY` · `BOTANICAL`<br>→ `Rosa div. Caninae` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Rosa (Caninae)` | `DIVISION_BOTANY` · `BOTANICAL`<br>→ `Rosa div. Caninae` |
+| `Pinus suprasect. Taeda` | `SUPERSECTION_BOTANY` · `BOTANICAL`<br>→ `Pinus supersect. Taeda` | `SUPERSECTION_BOTANY` · `ZOOLOGICAL`<br>→ `Pinus supersect. Taeda`<br>warnings `nomenclatural code does not fit the parsed name` | `SUPERSECTION_BOTANY` · `BOTANICAL`<br>→ `Pinus supersect. Taeda` |
+| `Achatinella (sect. Auriculella) Pfeiffer 1854` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achatinella sect. Auriculella Pfeiffer, 1854` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Achatinella (Auriculella) Pfeiffer, 1854` | `SECTION_BOTANY` · `BOTANICAL`<br>→ `Achatinella sect. Auriculella Pfeiffer, 1854` |
+| `Feronia (div. Percus) Dejean, 1828` | `INFRAGENERIC_NAME`<br>→ `Feronia (Percus) Dejean, 1828` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Feronia (Percus) Dejean, 1828` | `DIVISION_BOTANY` · `BOTANICAL`<br>→ `Feronia div. Percus Dejean, 1828` |
+| `Agaricus trib. Pholiota Fr.` | `INFRAGENERIC_NAME`<br>→ `Agaricus (Pholiota) Fr.` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Agaricus (Pholiota) Fr.` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Agaricus (Pholiota) Fr.` |
+| `Hieracium unr. Verbasciformia` | `INFRAGENERIC_NAME`<br>→ `Hieracium (Verbasciformia)` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Hieracium (Verbasciformia)` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Hieracium (Verbasciformia)` |
+| `Viola [unranked] Mirabiles Nyman` | `INFRAGENERIC_NAME`<br>→ `Viola (Mirabiles) Nyman` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Viola (Mirabiles) Nyman` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Viola (Mirabiles) Nyman` |
+| `Malus nothogrex Prunifoliae` | `INFRAGENERIC_NAME`<br>→ `Malus (× Prunifoliae)` | `INFRAGENERIC_NAME` · `ZOOLOGICAL`<br>→ `Malus (× Prunifoliae)` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Malus (× Prunifoliae)` |
+| `Calathus (Lindrothius)` | `INFRAGENERIC_NAME`<br>→ `Calathus (Lindrothius)` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Calathus (Lindrothius)` | `INFRAGENERIC_NAME` · `BOTANICAL`<br>→ `Calathus (Lindrothius)` |
+| `Calathus (Lindrothius) Kurnakov, 1961` | `INFRAGENERIC_NAME`<br>→ `Calathus (Lindrothius) Kurnakov, 1961` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Calathus (Lindrothius) Kurnakov, 1961` | `UNRANKED` · `BOTANICAL`<br>uninomial `Calathus`<br>basionym `Lindrothius`<br>→ `Calathus (Lindrothius) Kurnakov, 1961` |
+| `Calathus (Lindrothius) Kurnakov` | `UNRANKED`<br>uninomial `Calathus`<br>basionym `Lindrothius`<br>→ `Calathus (Lindrothius) Kurnakov` | `SUBGENUS` · `ZOOLOGICAL`<br>→ `Calathus (Lindrothius) Kurnakov` | `UNRANKED` · `BOTANICAL`<br>uninomial `Calathus`<br>basionym `Lindrothius`<br>→ `Calathus (Lindrothius) Kurnakov` |
+| `Carabus (Megodontus) violaceus L.` | `SPECIES`<br>→ `Carabus (Megodontus) violaceus L.` | `SPECIES` · `ZOOLOGICAL`<br>→ `Carabus (Megodontus) violaceus L.` | `SPECIES` · `BOTANICAL`<br>→ `Carabus (Megodontus) violaceus L.` |
+| `Acetobacter (subgen. Gluconoacetobacter Yamada and Kondo 1985) liquefaciens (Asai 1935) Gosselé et al. 1983` | `SPECIES`<br>basionym `Asai`<br>→ `Acetobacter (Gluconoacetobacter) liquefaciens (Asai, 1935) Gosselé et al., 1983`<br>warnings `Removed: Yamada and Kondo 1985` | `SPECIES` · `ZOOLOGICAL`<br>basionym `Asai`<br>→ `Acetobacter (Gluconoacetobacter) liquefaciens (Asai, 1935) Gosselé et al., 1983`<br>warnings `Removed: Yamada and Kondo 1985` | `SPECIES` · `BOTANICAL`<br>basionym `Asai`<br>→ `Acetobacter (Gluconoacetobacter) liquefaciens (Asai, 1935) Gosselé et al., 1983`<br>warnings `Removed: Yamada and Kondo 1985` |
 
 ## Hybrids
 
@@ -135,23 +169,23 @@ Authors are kept as written, with spacing around initials and dots normalised. E
 
 | Name | Parsed as |
 |---|---|
-| `Acacia aneura F.Muell. ex Benth.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Acacia` · specificEpithet `aneura`<br>combination: authors `Benth.` · ex `F.Muell.`<br>→ `Acacia aneura F.Muell. ex Benth.` |
-| `Festuca pachyphylla`<br>authorship given separately: `Degen ex Nyár. ex Csürös, Gergely & Pop`<br>*a chain of ex-authors* | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Festuca` · specificEpithet `pachyphylla`<br>combination: authors `Csürös`, `Gergely`, `Pop` · ex `Degen`, `Nyár.`<br>→ `Festuca pachyphylla Degen & Nyár. ex Csürös, Gergely & Pop` |
+| `Acacia aneura F.Muell. ex Benth.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Acacia` · specificEpithet `aneura`<br>combination: authors `Benth.` · ex `F.Muell.`<br>→ `Acacia aneura F.Muell. ex Benth.` |
+| `Festuca pachyphylla`<br>authorship given separately: `Degen ex Nyár. ex Csürös, Gergely & Pop`<br>*a chain of ex-authors* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Festuca` · specificEpithet `pachyphylla`<br>combination: authors `Csürös`, `Gergely`, `Pop` · ex `Degen`, `Nyár.`<br>→ `Festuca pachyphylla Degen & Nyár. ex Csürös, Gergely & Pop` |
 | `Pisania billehousti Souverbie, in Souverbie and Montrouzier, 1864` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Pisania` · specificEpithet `billehousti`<br>combination: authors `Souverbie` · in `Souverbie`, `Montrouzier` · year `1864`<br>publishedIn `Souverbie and Montrouzier, 1864`<br>publishedInYear `1864`<br>→ `Pisania billehousti Souverbie in Souverbie & Montrouzier, 1864` |
-| `Pipistrellus kuhlii`<br>authorship given separately: `(Natterer in Kuhl, 1817)`<br>*the basionym's in-author* | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Pipistrellus` · specificEpithet `kuhlii`<br>basionym: authors `Natterer` · in `Kuhl` · year `1817`<br>publishedIn `Kuhl, 1817`<br>publishedInYear `1817`<br>→ `Pipistrellus kuhlii (Natterer in Kuhl, 1817)` |
-| `Atriplex prostrata`<br>authorship given separately: `Boucher ex DC. in Lam. & DC.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Atriplex` · specificEpithet `prostrata`<br>combination: authors `DC.` · ex `Boucher` · in `Lam.`, `DC.`<br>publishedIn `Lam. & DC.`<br>→ `Atriplex prostrata Boucher ex DC. in Lam. & DC.` |
+| `Pipistrellus kuhlii`<br>authorship given separately: `(Natterer in Kuhl, 1817)`<br>*the basionym's in-author* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Pipistrellus` · specificEpithet `kuhlii`<br>basionym: authors `Natterer` · in `Kuhl` · year `1817`<br>publishedIn `Kuhl, 1817`<br>publishedInYear `1817`<br>→ `Pipistrellus kuhlii (Natterer in Kuhl, 1817)` |
+| `Atriplex prostrata`<br>authorship given separately: `Boucher ex DC. in Lam. & DC.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Atriplex` · specificEpithet `prostrata`<br>combination: authors `DC.` · ex `Boucher` · in `Lam.`, `DC.`<br>publishedIn `Lam. & DC.`<br>→ `Atriplex prostrata Boucher ex DC. in Lam. & DC.` |
 | `Abies alba Mill. in Gard. Dict. ed. 8: no. 1. 1768`<br>*a reference, no in-authors* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>combination: authors `Mill.` · year `1768`<br>publishedIn `Gard. Dict. ed. 8: no. 1. 1768`<br>publishedInYear `1768`<br>→ `Abies alba Mill., 1768` |
-| `Conus textile Linnaeus, 1758` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Conus` · specificEpithet `textile`<br>combination: authors `Linnaeus` · year `1758`<br>→ `Conus textile Linnaeus, 1758` |
+| `Conus textile Linnaeus, 1758` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Conus` · specificEpithet `textile`<br>combination: authors `Linnaeus` · year `1758`<br>→ `Conus textile Linnaeus, 1758` |
 | `Rotalina cultrata d'Orb. 1840` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Rotalina` · specificEpithet `cultrata`<br>combination: authors `d'Orb.` · year `1840`<br>→ `Rotalina cultrata d'Orb., 1840` |
-| `Oxyporus Fabricius, 1775` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED` · code `ZOOLOGICAL`<br>uninomial `Oxyporus`<br>combination: authors `Fabricius` · year `1775`<br>→ `Oxyporus Fabricius, 1775` |
-| `Linnaea borealis L. f.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Linnaea` · specificEpithet `borealis`<br>combination: authors `L.f.`<br>→ `Linnaea borealis L.f.` |
-| `Clarkia unguiculata Lindl. f. pallida (Jeps.) H.Lewis & M.E.Lewis` | **Parsed** · `SCIENTIFIC` · rank `FORM` · code `BOTANICAL`<br>genus `Clarkia` · specificEpithet `unguiculata` · infraspecificEpithet `pallida`<br>combination: authors `H.Lewis`, `M.E.Lewis`<br>basionym: authors `Jeps.`<br>specificAuthorship combination: authors `Lindl.`<br>→ `Clarkia unguiculata Lindl. f. pallida (Jeps.) H.Lewis & M.E.Lewis` |
-| `Bryum argenteum Hedw. var. lanatum (P.Beauv.) Hampe` | **Parsed** · `SCIENTIFIC` · rank `VARIETY` · code `BOTANICAL`<br>genus `Bryum` · specificEpithet `argenteum` · infraspecificEpithet `lanatum`<br>combination: authors `Hampe`<br>basionym: authors `P.Beauv.`<br>specificAuthorship combination: authors `Hedw.`<br>→ `Bryum argenteum Hedw. var. lanatum (P.Beauv.) Hampe` |
-| `Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje` | **Parsed** · `SCIENTIFIC` · rank `VARIETY` · code `BOTANICAL`<br>genus `Stylosanthes` · specificEpithet `guianensis` · infraspecificEpithet `robusta`<br>combination: authors `L.'t Mannetje`<br>specificAuthorship combination: authors `Sw.`<br>specificAuthorship basionym: authors `Aubl.`<br>→ `Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje` |
-| `Chitra chitra javanensis`<br>authorship given separately: `MCCORD & PRITCHARD, 2003`<br>*all-capital authors* | **Parsed** · `SCIENTIFIC` · rank `SUBSPECIES` · code `ZOOLOGICAL`<br>genus `Chitra` · specificEpithet `chitra` · infraspecificEpithet `javanensis`<br>combination: authors `McCord`, `Pritchard` · year `2003`<br>→ `Chitra chitra javanensis McCord & Pritchard, 2003` |
-| `Eumenes elegans`<br>authorship given separately: `DE SAUSSURE 1852` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Eumenes` · specificEpithet `elegans`<br>combination: authors `de Saussure` · year `1852`<br>→ `Eumenes elegans de Saussure, 1852` |
-| `Homo naledi Berger et al., 2015` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Homo` · specificEpithet `naledi`<br>combination: authors `Berger`, `al.` · year `2015`<br>→ `Homo naledi Berger et al., 2015` |
-| `Ablepharus budaki`<br>authorship given separately: `Poulakakis Et Al., 2005`<br>*"et al." in any case* | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Ablepharus` · specificEpithet `budaki`<br>combination: authors `Poulakakis`, `al.` · year `2005`<br>→ `Ablepharus budaki Poulakakis et al., 2005` |
+| `Oxyporus Fabricius, 1775` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Oxyporus`<br>combination: authors `Fabricius` · year `1775`<br>→ `Oxyporus Fabricius, 1775` |
+| `Linnaea borealis L. f.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Linnaea` · specificEpithet `borealis`<br>combination: authors `L.f.`<br>→ `Linnaea borealis L.f.` |
+| `Clarkia unguiculata Lindl. f. pallida (Jeps.) H.Lewis & M.E.Lewis` | **Parsed** · `SCIENTIFIC` · rank `FORM`<br>genus `Clarkia` · specificEpithet `unguiculata` · infraspecificEpithet `pallida`<br>combination: authors `H.Lewis`, `M.E.Lewis`<br>basionym: authors `Jeps.`<br>specificAuthorship combination: authors `Lindl.`<br>→ `Clarkia unguiculata Lindl. f. pallida (Jeps.) H.Lewis & M.E.Lewis` |
+| `Bryum argenteum Hedw. var. lanatum (P.Beauv.) Hampe` | **Parsed** · `SCIENTIFIC` · rank `VARIETY`<br>genus `Bryum` · specificEpithet `argenteum` · infraspecificEpithet `lanatum`<br>combination: authors `Hampe`<br>basionym: authors `P.Beauv.`<br>specificAuthorship combination: authors `Hedw.`<br>→ `Bryum argenteum Hedw. var. lanatum (P.Beauv.) Hampe` |
+| `Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje` | **Parsed** · `SCIENTIFIC` · rank `VARIETY`<br>genus `Stylosanthes` · specificEpithet `guianensis` · infraspecificEpithet `robusta`<br>combination: authors `L.'t Mannetje`<br>specificAuthorship combination: authors `Sw.`<br>specificAuthorship basionym: authors `Aubl.`<br>→ `Stylosanthes guianensis (Aubl.) Sw. var. robusta L.'t Mannetje` |
+| `Chitra chitra javanensis`<br>authorship given separately: `MCCORD & PRITCHARD, 2003`<br>*all-capital authors* | **Parsed** · `SCIENTIFIC` · rank `INFRASPECIFIC_NAME`<br>genus `Chitra` · specificEpithet `chitra` · infraspecificEpithet `javanensis`<br>combination: authors `McCord`, `Pritchard` · year `2003`<br>→ `Chitra chitra javanensis McCord & Pritchard, 2003` |
+| `Eumenes elegans`<br>authorship given separately: `DE SAUSSURE 1852` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Eumenes` · specificEpithet `elegans`<br>combination: authors `de Saussure` · year `1852`<br>→ `Eumenes elegans de Saussure, 1852` |
+| `Homo naledi Berger et al., 2015` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Homo` · specificEpithet `naledi`<br>combination: authors `Berger`, `al.` · year `2015`<br>→ `Homo naledi Berger et al., 2015` |
+| `Ablepharus budaki`<br>authorship given separately: `Poulakakis Et Al., 2005`<br>*"et al." in any case* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Ablepharus` · specificEpithet `budaki`<br>combination: authors `Poulakakis`, `al.` · year `2005`<br>→ `Ablepharus budaki Poulakakis et al., 2005` |
 | `Fissidentalium zelandicum`<br>authorship given separately: `G.B. Sowerby II`<br>*a generation suffix* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Fissidentalium` · specificEpithet `zelandicum`<br>combination: authors `G.B.Sowerby II`<br>→ `Fissidentalium zelandicum G.B.Sowerby II` |
 
 ## Sanctioned fungal names
@@ -170,13 +204,13 @@ The year is kept as written in the citation: a letter telling apart works of the
 
 | Name | Parsed as |
 |---|---|
-| `Xyleborus muasi Browne, 1961a` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Xyleborus` · specificEpithet `muasi`<br>combination: authors `Browne` · year `1961a`<br>→ `Xyleborus muasi Browne, 1961a` |
-| `Acalles giraudi Mulsant, 1875?` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Acalles` · specificEpithet `giraudi`<br>combination: authors `Mulsant` · year `1875?`<br>→ `Acalles giraudi Mulsant, 1875?` |
-| `Phyllomacromia`<br>authorship given separately: `Westwood, [1851]` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED` · code `ZOOLOGICAL`<br>uninomial `Phyllomacromia`<br>combination: authors `Westwood` · year `1851` · bracketedYear<br>→ `Phyllomacromia Westwood, [1851]` |
-| `Acleris aspersana (Hübner, [1814-1817])` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Acleris` · specificEpithet `aspersana`<br>basionym: authors `Hübner` · year `1814` · bracketedYear<br>warnings `authorship year was extract but originally was a year range or other form of year`<br>→ `Acleris aspersana (Hübner, [1814])` |
-| `Ctenotus alacer Storr, 1970 [1969]` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Ctenotus` · specificEpithet `alacer`<br>combination: authors `Storr` · year `1970` · imprintYear `1969`<br>→ `Ctenotus alacer Storr, 1970 [1969]` |
-| `Anomalopus truncatus (Peters, 1876 [1877])` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Anomalopus` · specificEpithet `truncatus`<br>basionym: authors `Peters` · year `1876` · imprintYear `1877`<br>→ `Anomalopus truncatus (Peters, 1876 [1877])` |
-| `Acleris logiana (Clerck, 1759 "1758")` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Acleris` · specificEpithet `logiana`<br>basionym: authors `Clerck` · year `1759` · imprintYear `1758`<br>→ `Acleris logiana (Clerck, 1759 [1758])` |
+| `Xyleborus muasi Browne, 1961a` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Xyleborus` · specificEpithet `muasi`<br>combination: authors `Browne` · year `1961a`<br>→ `Xyleborus muasi Browne, 1961a` |
+| `Acalles giraudi Mulsant, 1875?` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Acalles` · specificEpithet `giraudi`<br>combination: authors `Mulsant` · year `1875?`<br>→ `Acalles giraudi Mulsant, 1875?` |
+| `Phyllomacromia`<br>authorship given separately: `Westwood, [1851]` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Phyllomacromia`<br>combination: authors `Westwood` · year `1851` · bracketedYear<br>→ `Phyllomacromia Westwood, [1851]` |
+| `Acleris aspersana (Hübner, [1814-1817])` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Acleris` · specificEpithet `aspersana`<br>basionym: authors `Hübner` · year `1814` · bracketedYear<br>warnings `authorship year was extract but originally was a year range or other form of year`<br>→ `Acleris aspersana (Hübner, [1814])` |
+| `Ctenotus alacer Storr, 1970 [1969]` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Ctenotus` · specificEpithet `alacer`<br>combination: authors `Storr` · year `1970` · imprintYear `1969`<br>→ `Ctenotus alacer Storr, 1970 [1969]` |
+| `Anomalopus truncatus (Peters, 1876 [1877])` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Anomalopus` · specificEpithet `truncatus`<br>basionym: authors `Peters` · year `1876` · imprintYear `1877`<br>→ `Anomalopus truncatus (Peters, 1876 [1877])` |
+| `Acleris logiana (Clerck, 1759 "1758")` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Acleris` · specificEpithet `logiana`<br>basionym: authors `Clerck` · year `1759` · imprintYear `1758`<br>→ `Acleris logiana (Clerck, 1759 [1758])` |
 
 ## Anonymous authors
 
@@ -184,10 +218,10 @@ An anonymously published work is `anonymous`; authors attributed to it from othe
 
 | Name | Parsed as |
 |---|---|
-| `Rhinobatos typus (Anonymous [Bennett], 1830)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Rhinobatos` · specificEpithet `typus`<br>basionym: authors `Bennett` · year `1830` · anonymous<br>→ `Rhinobatos typus ([Bennett], 1830)` |
-| `Apatura ilia ([Denis & Schiffermüller], 1775)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Apatura` · specificEpithet `ilia`<br>basionym: authors `Denis`, `Schiffermüller` · year `1775` · anonymous<br>→ `Apatura ilia ([Denis & Schiffermüller], 1775)` |
-| `Physalospora rubiginosa (Fr.) anon.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Physalospora` · specificEpithet `rubiginosa`<br>combination: anonymous<br>basionym: authors `Fr.`<br>→ `Physalospora rubiginosa (Fr.) anon.` |
-| `Lupinus [Tourn.] L.`<br>*a pre-Linnaean author, as ex-author* | **Parsed** · `SCIENTIFIC` · rank `UNRANKED` · code `BOTANICAL`<br>uninomial `Lupinus`<br>combination: authors `L.` · ex `Tourn.`<br>→ `Lupinus Tourn. ex L.` |
+| `Rhinobatos typus (Anonymous [Bennett], 1830)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Rhinobatos` · specificEpithet `typus`<br>basionym: authors `Bennett` · year `1830` · anonymous<br>→ `Rhinobatos typus ([Bennett], 1830)` |
+| `Apatura ilia ([Denis & Schiffermüller], 1775)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Apatura` · specificEpithet `ilia`<br>basionym: authors `Denis`, `Schiffermüller` · year `1775` · anonymous<br>→ `Apatura ilia ([Denis & Schiffermüller], 1775)` |
+| `Physalospora rubiginosa (Fr.) anon.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Physalospora` · specificEpithet `rubiginosa`<br>combination: anonymous<br>basionym: authors `Fr.`<br>→ `Physalospora rubiginosa (Fr.) Anon.` |
+| `Lupinus [Tourn.] L.`<br>*a pre-Linnaean author, as ex-author* | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Lupinus`<br>combination: authors `L.` · ex `Tourn.`<br>→ `Lupinus Tourn. ex L.` |
 
 ## Manuscript names and other ex citations
 
@@ -195,8 +229,8 @@ A name taken from someone's manuscript (`MS`) and published by another author is
 
 | Name | Parsed as |
 |---|---|
-| `Harpalus notatus Stephens (ex Kirby MS) 1828` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Harpalus` · specificEpithet `notatus`<br>combination: authors `Stephens` · ex `Kirby` · year `1828`<br>→ `Harpalus notatus Kirby ex Stephens, 1828` |
-| `Haustellum kiiensis Kuroda MS in Kira, 1959` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Haustellum` · specificEpithet `kiiensis`<br>combination: authors `Kira` · ex `Kuroda` · year `1959`<br>→ `Haustellum kiiensis Kuroda ex Kira, 1959` |
+| `Harpalus notatus Stephens (ex Kirby MS) 1828` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Harpalus` · specificEpithet `notatus`<br>combination: authors `Stephens` · ex `Kirby` · year `1828`<br>→ `Harpalus notatus Kirby ex Stephens, 1828` |
+| `Haustellum kiiensis Kuroda MS in Kira, 1959` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Haustellum` · specificEpithet `kiiensis`<br>combination: authors `Kira` · ex `Kuroda` · year `1959`<br>→ `Haustellum kiiensis Kuroda ex Kira, 1959` |
 | `Bacillus amylolyticus (ex Choukévitch 1911) Nakamura 1984`<br>*a revived bacterial name* | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BACTERIAL`<br>genus `Bacillus` · specificEpithet `amylolyticus`<br>combination: authors `Nakamura` · ex `Choukévitch` · year `1984`<br>→ `Bacillus amylolyticus Choukévitch ex Nakamura 1984` |
 | `Eucnidoideae ined.` | **Parsed** · `SCIENTIFIC` · rank `SUBFAMILY`<br>uninomial `Eucnidoideae`<br>manuscript<br>nomenclaturalNote `ined.`<br>→ `Eucnidoideae, ined.` |
 | `Abies alba Mill. ined.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>manuscript<br>combination: authors `Mill.`<br>nomenclaturalNote `ined.`<br>→ `Abies alba Mill., ined.` |
@@ -205,18 +239,18 @@ A name taken from someone's manuscript (`MS`) and published by another author is
 
 ## Nomenclatural notes
 
-Notes on nomenclatural status are moved out of the authorship into `nomenclaturalNote`. A status that exists in one code only also sets the code.
+Notes on nomenclatural status are moved out of the authorship into `nomenclaturalNote`. A status that exists in the zoological code only (`nomen oblitum`, `nomen protectum`) also sets the code.
 
 | Name | Parsed as |
 |---|---|
-| `Schedonorus arundinaceus (Schreb.) Dumort., nom. cons.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Schedonorus` · specificEpithet `arundinaceus`<br>combination: authors `Dumort.`<br>basionym: authors `Schreb.`<br>nomenclaturalNote `nom. cons.`<br>→ `Schedonorus arundinaceus (Schreb.) Dumort., nom. cons.` |
-| `Spermacoce hyssopifolia Sm., nom. rej.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Spermacoce` · specificEpithet `hyssopifolia`<br>combination: authors `Sm.`<br>nomenclaturalNote `nom. rej.`<br>→ `Spermacoce hyssopifolia Sm., nom. rej.` |
-| `Lobelia parvifolia R.Br., nom. illeg.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BOTANICAL`<br>genus `Lobelia` · specificEpithet `parvifolia`<br>combination: authors `R.Br.`<br>nomenclaturalNote `nom. illeg.`<br>→ `Lobelia parvifolia R.Br., nom. illeg.` |
+| `Schedonorus arundinaceus (Schreb.) Dumort., nom. cons.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Schedonorus` · specificEpithet `arundinaceus`<br>combination: authors `Dumort.`<br>basionym: authors `Schreb.`<br>nomenclaturalNote `nom. cons.`<br>→ `Schedonorus arundinaceus (Schreb.) Dumort., nom. cons.` |
+| `Spermacoce hyssopifolia Sm., nom. rej.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Spermacoce` · specificEpithet `hyssopifolia`<br>combination: authors `Sm.`<br>nomenclaturalNote `nom. rej.`<br>→ `Spermacoce hyssopifolia Sm., nom. rej.` |
+| `Lobelia parvifolia R.Br., nom. illeg.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Lobelia` · specificEpithet `parvifolia`<br>combination: authors `R.Br.`<br>nomenclaturalNote `nom. illeg.`<br>→ `Lobelia parvifolia R.Br., nom. illeg.` |
 | `Brachistus caracasanus Pittier, nom. nud.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Brachistus` · specificEpithet `caracasanus`<br>combination: authors `Pittier`<br>nomenclaturalNote `nom. nud.`<br>→ `Brachistus caracasanus Pittier, nom. nud.` |
-| `Santarosamyia erecta (Coquillett, 1902) comb. nov.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Santarosamyia` · specificEpithet `erecta`<br>basionym: authors `Coquillett` · year `1902`<br>nomenclaturalNote `comb. nov.`<br>→ `Santarosamyia erecta (Coquillett, 1902), comb. nov.` |
+| `Santarosamyia erecta (Coquillett, 1902) comb. nov.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Santarosamyia` · specificEpithet `erecta`<br>basionym: authors `Coquillett` · year `1902`<br>nomenclaturalNote `comb. nov.`<br>→ `Santarosamyia erecta (Coquillett, 1902), comb. nov.` |
 | `Mycena subulata Z. W. Liu, Y. P. Ge & Q. Na, sp. nov.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Mycena` · specificEpithet `subulata`<br>combination: authors `Z.W.Liu`, `Y.P.Ge`, `Q.Na`<br>nomenclaturalNote `sp. nov.`<br>→ `Mycena subulata Z.W.Liu, Y.P.Ge & Q.Na, sp. nov.` |
 | `Nocardia asteroides (Eppinger 1891) Blanchard 1896 (Approved Lists 1980)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BACTERIAL`<br>genus `Nocardia` · specificEpithet `asteroides`<br>combination: authors `Blanchard` · year `1896`<br>basionym: authors `Eppinger` · year `1891`<br>nomenclaturalNote `Approved Lists 1980`<br>→ `Nocardia asteroides (Eppinger 1891) Blanchard 1896, Approved Lists 1980` |
-| `Stephanauge nexilis`<br>authorship given separately: `(Verril, 1883) [sic.]`<br>*spelled so in the original* | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Stephanauge` · specificEpithet `nexilis`<br>originalSpelling `True`<br>basionym: authors `Verril` · year `1883`<br>→ `Stephanauge nexilis (Verril, 1883)` |
+| `Stephanauge nexilis`<br>authorship given separately: `(Verril, 1883) [sic.]`<br>*spelled so in the original* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Stephanauge` · specificEpithet `nexilis`<br>originalSpelling `True`<br>basionym: authors `Verril` · year `1883`<br>→ `Stephanauge nexilis (Verril, 1883)` |
 
 ## Taxonomic notes and references
 
@@ -229,9 +263,9 @@ Concepts (`sensu`, `auct.`, `non`, `s.l.`) go to `taxonomicNote`; a citation of 
 | `Trilepisium madagascariense auct. non DC., sensu Friedmann (1994)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Trilepisium` · specificEpithet `madagascariense`<br>taxonomicNote `auct. non DC., sensu Friedmann (1994)`<br>→ `Trilepisium madagascariense auct. non DC., sensu Friedmann (1994)` |
 | `Centaurea nigra L. s. l.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Centaurea` · specificEpithet `nigra`<br>combination: authors `L.`<br>taxonomicNote `s. l.`<br>→ `Centaurea nigra L. s. l.` |
 | `Andropogon saccharoides Sw. sensu lato` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Andropogon` · specificEpithet `saccharoides`<br>combination: authors `Sw.`<br>taxonomicNote `sensu lato`<br>→ `Andropogon saccharoides Sw. sensu lato` |
-| `Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Cyclostoma` · specificEpithet `thersites`<br>combination: authors `Shuttleworth` · year `1852`<br>taxonomicNote `Cyclophorus vel Leptopoma`<br>→ `Cyclostoma thersites Shuttleworth, 1852 Cyclophorus vel Leptopoma` |
-| `Batesia`<br>authorship given separately: `Spruce ex Benth., Gen. Pl. 1: 563. 1865.` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED` · code `BOTANICAL`<br>uninomial `Batesia`<br>combination: authors `Benth.` · ex `Spruce` · year `1865`<br>publishedIn `Gen. Pl. 1: 563. 1865`<br>publishedInYear `1865`<br>→ `Batesia Spruce ex Benth., 1865` |
-| `Recilia truncatus Dash & Viraktamath, 1998a: 29` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Recilia` · specificEpithet `truncatus`<br>combination: authors `Dash`, `Viraktamath` · year `1998a`<br>publishedInPage `29`<br>→ `Recilia truncatus Dash & Viraktamath, 1998a` |
+| `Cyclostoma (Cyclophorus vel Leptopoma) thersites Shuttleworth 1852` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Cyclostoma` · specificEpithet `thersites`<br>combination: authors `Shuttleworth` · year `1852`<br>taxonomicNote `Cyclophorus vel Leptopoma`<br>→ `Cyclostoma thersites Shuttleworth, 1852 Cyclophorus vel Leptopoma` |
+| `Batesia`<br>authorship given separately: `Spruce ex Benth., Gen. Pl. 1: 563. 1865.` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Batesia`<br>combination: authors `Benth.` · ex `Spruce` · year `1865`<br>publishedIn `Gen. Pl. 1: 563. 1865`<br>publishedInYear `1865`<br>→ `Batesia Spruce ex Benth., 1865` |
+| `Recilia truncatus Dash & Viraktamath, 1998a: 29` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Recilia` · specificEpithet `truncatus`<br>combination: authors `Dash`, `Viraktamath` · year `1998a`<br>publishedInPage `29`<br>→ `Recilia truncatus Dash & Viraktamath, 1998a` |
 
 ## Qualifiers and doubtful names
 
@@ -240,7 +274,7 @@ Open nomenclature (`cf.`, `aff.`, `?`) qualifies an epithet; such a name is `INF
 | Name | Parsed as |
 |---|---|
 | `Abies cf. alba` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>anchor `Abies` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Abies cf. alba` |
-| `Pomatoschistus aff. pictus (Malm, 1865)` | **Parsed** · `INFORMAL` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Pomatoschistus` · specificEpithet `pictus`<br>anchor `Pomatoschistus` · `GENUS`<br>epithetQualifier `SPECIFIC` `aff.`<br>basionym: authors `Malm` · year `1865`<br>→ `Pomatoschistus aff. pictus (Malm, 1865)` |
+| `Pomatoschistus aff. pictus (Malm, 1865)` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Pomatoschistus` · specificEpithet `pictus`<br>anchor `Pomatoschistus` · `GENUS`<br>epithetQualifier `SPECIFIC` `aff.`<br>basionym: authors `Malm` · year `1865`<br>→ `Pomatoschistus aff. pictus (Malm, 1865)` |
 | `Ferganoconcha? oblonga` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ferganoconcha` · specificEpithet `oblonga`<br>anchor `Ferganoconcha` · `GENUS`<br>epithetQualifier `SPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Ferganoconcha ? oblonga` |
 | `Buteo borealis ? ventralis` | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Buteo` · specificEpithet `borealis` · infraspecificEpithet `ventralis`<br>anchor `Buteo borealis` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Buteo borealis ? ventralis` |
 | `Sorex cf. S. shinto` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Sorex` · specificEpithet `shinto`<br>anchor `Sorex` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Sorex cf. shinto` |
@@ -280,8 +314,8 @@ A taxon carrying a provisional designation is an informal name: its anchor is th
 
 | Name | Parsed as |
 |---|---|
-| `Tyrannosaurus rex Osborn, 1905` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Tyrannosaurus` · specificEpithet `rex`<br>combination: authors `Osborn` · year `1905`<br>→ `Tyrannosaurus rex Osborn, 1905` |
-| `†Ammonites bucklandi Sowerby, 1816` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `ZOOLOGICAL`<br>genus `Ammonites` · specificEpithet `bucklandi`<br>extinct<br>combination: authors `Sowerby` · year `1816`<br>→ `Ammonites bucklandi Sowerby, 1816` |
+| `Tyrannosaurus rex Osborn, 1905` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Tyrannosaurus` · specificEpithet `rex`<br>combination: authors `Osborn` · year `1905`<br>→ `Tyrannosaurus rex Osborn, 1905` |
+| `†Ammonites bucklandi Sowerby, 1816` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Ammonites` · specificEpithet `bucklandi`<br>extinct<br>combination: authors `Sowerby` · year `1816`<br>→ `Ammonites bucklandi Sowerby, 1816` |
 | `†Pteranodon` | **Parsed** · `SCIENTIFIC` · rank `UNRANKED`<br>uninomial `Pteranodon`<br>extinct<br>→ `Pteranodon` |
 
 ## Unparsable names

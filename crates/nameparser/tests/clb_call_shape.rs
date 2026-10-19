@@ -15,33 +15,33 @@ fn a_separate_authorship_drives_code_inference() {
     assert_name_auth("Bombus rubicundus", "Smith, 1854")
         .species("Bombus", "rubicundus")
         .comb_authors(Some("1854"), &["Smith"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // a botanical recombination without a year
     assert_name_auth("Cybianthus brasiliensis", "(Mez) Lundell")
         .species("Cybianthus", "brasiliensis")
         .bas_authors(None, &["Mez"])
         .comb_authors(None, &["Lundell"])
-        .code(NomCode::Botanical)
         .nothing_else();
     // a zoological trinomial is a subspecies once the code is known
     assert_name_auth("Barbichthys laevis sumatranus", "Volz, 1904")
-        .infra_species("Barbichthys", "laevis", Rank::Subspecies, "sumatranus")
+        .infra_species(
+            "Barbichthys",
+            "laevis",
+            Rank::InfraspecificName,
+            "sumatranus",
+        )
         .comb_authors(Some("1904"), &["Volz"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
 #[test]
-fn the_separate_authorship_wins_and_drives_the_code_when_both_are_given() {
+fn the_separate_authorship_wins_when_both_are_given() {
     // A caller (unusually) passing a different authorship than the name string carries: the
-    // separate one is applied last, so it is the name's authorship, and it decides the code. The
-    // conflict is flagged.
+    // separate one is applied last, so it is the name's authorship. The conflict is flagged.
     assert_name_auth("Aus bus Smith, 1900", "(L.) Mill.")
         .species("Aus", "bus")
         .bas_authors(None, &["L."])
         .comb_authors(None, &["Mill."])
-        .code(NomCode::Botanical)
         .warning(&[warnings::AUTHORSHIP_CONFLICT])
         .nothing_else();
     // it replaces the whole authorship: no basionym author is left from the name string
@@ -58,7 +58,6 @@ fn the_separate_authorship_wins_and_drives_the_code_when_both_are_given() {
     .infra_species("Cyprinus", "carpio", Rank::Subspecies, "murgo")
     .specific_authors(Some("1758"), &["Linnaeus"])
     .comb_authors(Some("1869"), &["Dybowski"])
-    .code(NomCode::Zoological)
     .warning(&[warnings::AUTHORSHIP_CONFLICT])
     .nothing_else();
     // holding less is no conflict, and the name string's year and brackets stay: no citations mixed
@@ -72,7 +71,6 @@ fn the_separate_authorship_wins_and_drives_the_code_when_both_are_given() {
     assert_name_auth("Dumbletonius Dugdale, 1986", "Dugdale")
         .monomial("Dumbletonius")
         .comb_authors(Some("1986"), &["Dugdale"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -95,7 +93,6 @@ fn a_rank_hint_ranks_a_trinomial_without_a_marker() {
     )
     .infra_species("Vulpes", "vulpes", Rank::Subspecies, "silaceus")
     .comb_authors(Some("1907"), &["Miller"])
-    .code(NomCode::Zoological)
     .nothing_else();
     // the hint names the rank even where the code would suggest another one
     assert_name_hinted(
@@ -106,7 +103,6 @@ fn a_rank_hint_ranks_a_trinomial_without_a_marker() {
     )
     .infra_species("Apalis", "jacksoni", Rank::Form, "jacksoni")
     .comb_authors(Some("1891"), &["Sharpe"])
-    .code(NomCode::Zoological)
     .nothing_else();
     // a cultivar rank needs a cultivar epithet, which a plain trinomial does not have
     assert_name_hinted(
@@ -150,12 +146,10 @@ fn spec_with_a_separate_authorship_is_the_published_epithet() {
     assert_name_auth("Hemicloeina spec", "Platnick, 2002")
         .species("Hemicloeina", "spec")
         .comb_authors(Some("2002"), &["Platnick"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Gobiosoma spec", "(Ginsburg, 1939)")
         .species("Gobiosoma", "spec")
         .bas_authors(Some("1939"), &["Ginsburg"])
-        .code(NomCode::Zoological)
         .nothing_else();
     // with the dot it stays provisional, and the authorship rides along in the phrase
     assert_informal_hinted("Hemicloeina spec.", Some("Platnick, 2002"), None, None)

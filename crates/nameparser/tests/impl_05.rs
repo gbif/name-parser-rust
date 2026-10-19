@@ -62,7 +62,6 @@ fn in_author_inside_basionym() {
     assert_name("Hypsicera femoralis (Geoffroy in Fourcroy, 1785)")
         .species("Hypsicera", "femoralis")
         .bas_authors(Some("1785"), &["Geoffroy"])
-        .code(NomCode::Zoological)
         .published_in("Fourcroy, 1785")
         .published_in_year(Some(1785))
         .bas_in_authors(&["Fourcroy"])
@@ -72,28 +71,29 @@ fn in_author_inside_basionym() {
 #[test]
 fn norwegian_radiolaria() {
     assert_name("Actinomma leptodermum longispinum Cortese & Bjørklund 1998")
-        .infra_species("Actinomma", "leptodermum", Rank::Subspecies, "longispinum")
+        .infra_species(
+            "Actinomma",
+            "leptodermum",
+            Rank::InfraspecificName,
+            "longispinum",
+        )
         .comb_authors(Some("1998"), &["Cortese", "Bjørklund"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Arachnosphaera dichotoma  Jørgensen, 1900")
         .species("Arachnosphaera", "dichotoma")
         .comb_authors(Some("1900"), &["Jørgensen"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Hexaconthium pachydermum forma legitime Cortese & Bjørklund 1998")
         .infra_species("Hexaconthium", "pachydermum", Rank::Form, "legitime")
         .comb_authors(Some("1998"), &["Cortese", "Bjørklund"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Hexaconthium pachydermum form A Cortese & Bjørklund 1998")
         .infra_species("Hexaconthium", "pachydermum", Rank::Form, "A")
         .comb_authors(Some("1998"), &["Cortese", "Bjørklund"])
         .type_(NameType::Informal)
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Tripodiscium gephyristes  (Hülseman, 1963) BJ&KR-Atsdatabanken")
@@ -364,13 +364,11 @@ fn hybrid_alike_names() {
     assert_name("Huaiyuanella Xing, Yan & Yin, 1984")
         .monomial("Huaiyuanella")
         .comb_authors(Some("1984"), &["Xing", "Yan", "Yin"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Caveasphaera Xiao & Knoll, 2000")
         .monomial("Caveasphaera")
         .comb_authors(Some("2000"), &["Xiao", "Knoll"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -423,7 +421,6 @@ fn alpha_beta_theta_names() {
         .infra_species("Agaricus", "collinitus", Rank::InfraspecificName, "mucosus")
         .comb_authors(None, &["Fr."])
         .bas_authors(None, &["Bull."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     // a digitised `ß` for β is the same marker, but only as a word of its own
@@ -452,7 +449,6 @@ fn alpha_beta_theta_names() {
     assert_name("Cyclotus amethystinus var. β Guppy, 1868")
         .infra_species("Cyclotus", "amethystinus", Rank::Variety, "β")
         .comb_authors(Some("1868"), &["Guppy"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -560,7 +556,6 @@ fn author_variations() {
         .species("Abies", "lowiana")
         .bas_authors(None, &["Gordon"])
         .comb_authors(None, &["A.Murray bis"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Trappeindia Castellano, S.L. Mill., L. Singh bis & T.N. Lakh. 2012")
@@ -575,14 +570,12 @@ fn author_variations() {
         .species("Trichosporon", "cutaneum")
         .bas_authors(None, &["Beurm.", "Gougerot", "Vaucher bis"])
         .comb_authors(None, &["M.Ota"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     // van der
     assert_name("Megistocera tenuis (van der Wulp, 1885)")
         .species("Megistocera", "tenuis")
         .bas_authors(Some("1885"), &["van der Wulp"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     // turkish chars
@@ -602,29 +595,30 @@ fn author_variations() {
         .nothing_else();
 
     assert_name("Anatolidamnicola gloeri gloeri Şahin, Koca & Yildirim, 2012")
-        .infra_species("Anatolidamnicola", "gloeri", Rank::Subspecies, "gloeri")
+        .infra_species(
+            "Anatolidamnicola",
+            "gloeri",
+            Rank::InfraspecificName,
+            "gloeri",
+        )
         .comb_authors(Some("2012"), &["Şahin", "Koca", "Yildirim"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Modiola caroliniana L.f")
         .species("Modiola", "caroliniana")
         .comb_authors(None, &["L.f"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Modiola caroliniana (L.) G. Don filius")
         .species("Modiola", "caroliniana")
         .bas_authors(None, &["L."])
         .comb_authors(None, &["G.Don filius"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Modiola caroliniana (L.) G. Don fil.")
         .species("Modiola", "caroliniana")
         .bas_authors(None, &["L."])
         .comb_authors(None, &["G.Don fil."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Cirsium creticum d'Urv.")
@@ -683,7 +677,6 @@ fn author_variations() {
         .infra_species("Navicula", "ambigua", Rank::Form, "craticularis")
         .comb_authors(Some("1898"), &["Istv?nffi"])
         .imprint_year("1897")
-        .code(NomCode::Zoological)
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 
@@ -700,41 +693,35 @@ fn author_variations() {
     assert_name("Sepidium capricorne des Desbrochers des Loges, 1881")
         .species("Sepidium", "capricorne")
         .comb_authors(Some("1881"), &["des Desbrochers des Loges"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Sepidium capricorne Desbrochers des Loges, 1881")
         .species("Sepidium", "capricorne")
         .comb_authors(Some("1881"), &["Desbrochers des Loges"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Calycostylis aurantiaca Hort. ex Vilmorin")
         .species("Calycostylis", "aurantiaca")
         .comb_authors(None, &["Vilmorin"])
         .comb_ex_authors(&["hort."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pourretia magnispatha hortusa ex K. Koch")
         .species("Pourretia", "magnispatha")
         .comb_authors(None, &["K.Koch"])
         .comb_ex_authors(&["hort."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Pitcairnia pruinosa hortus ex K. Koch")
         .species("Pitcairnia", "pruinosa")
         .comb_authors(None, &["K.Koch"])
         .comb_ex_authors(&["hort."])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name("Platycarpha glomerata (Thunberg) A.P.de Candolle")
         .species("Platycarpha", "glomerata")
         .bas_authors(None, &["Thunberg"])
         .comb_authors(None, &["A.P.de Candolle"])
-        .code(NomCode::Botanical)
         .nothing_else();
 
     assert_name(
@@ -746,7 +733,6 @@ fn author_variations() {
         None,
         &["S.Rivas-Martínez", "F.Fernández González", "D.Sánchez-Mata"],
     )
-    .code(NomCode::Botanical)
     .nothing_else();
 
     assert_name(
@@ -755,19 +741,16 @@ fn author_variations() {
     .infra_species("Sida", "kohautiana", Rank::Variety, "corchorifolia")
     .bas_authors(None, &["H.da C.Monteiro Filho"])
     .comb_authors(None, &["H.da C.Monteiro Filho"])
-    .code(NomCode::Botanical)
     .nothing_else();
 
     assert_name("Stenosigma humerale Giordani Soika, 1990")
         .species("Stenosigma", "humerale")
         .comb_authors(Some("1990"), &["Giordani Soika"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Errantia Audouin & H Milne Edwards, 1832")
         .monomial("Errantia")
         .comb_authors(Some("1832"), &["Audouin", "H.Milne Edwards"])
-        .code(NomCode::Zoological)
         .nothing_else();
 
     assert_name("Thuja pyramidalis var. stricta John M.Mill.")
@@ -789,7 +772,6 @@ fn author_variations() {
     assert_name("Parachipteria van der Hammen, 1952")
         .monomial("Parachipteria")
         .comb_authors(Some("1952"), &["van der Hammen"])
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 

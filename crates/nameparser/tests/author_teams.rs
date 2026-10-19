@@ -87,7 +87,6 @@ fn spanish_double_surnames_in_a_name_string() {
     assert_name("Carabus (Tanaocarabus) hendrichsi Bolvar y Pieltain, Rotger & Coronado 1967")
         .species_ig("Carabus", "Tanaocarabus", "hendrichsi")
         .comb_authors(Some("1967"), &["Bolvar y Pieltain", "Rotger", "Coronado"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Dicranum saxatile Lagasca y Segura, García & Clemente y Rubio, 1802")
         .species("Dicranum", "saxatile")
@@ -95,7 +94,6 @@ fn spanish_double_surnames_in_a_name_string() {
             Some("1802"),
             &["Lagasca y Segura", "García", "Clemente y Rubio"],
         )
-        .code(NomCode::Zoological)
         .nothing_else();
 }
 
@@ -123,7 +121,6 @@ fn a_glued_etal_is_et_al() {
     assert_name("Pachypus baroniensis Ahrens, Bazzato, Lopez, etal, 2026")
         .species("Pachypus", "baroniensis")
         .comb_authors(Some("2026"), &["Ahrens", "Bazzato", "Lopez", "al."])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_authorship(
         "Ahrens, Bazzato, Lopez, etal, 2026",
@@ -167,7 +164,6 @@ fn a_capitalised_et_al_is_et_al() {
         assert_name_auth("Abies alba", raw)
             .species("Abies", "alba")
             .comb_authors(Some("2013"), &["Wilson", "al."])
-            .code(NomCode::Zoological)
             .nothing_else();
     }
     // a surname after "Et" stays one
@@ -186,13 +182,11 @@ fn a_chain_of_ex_authors_keeps_them_all() {
     .species("Festuca", "pachyphylla")
     .comb_authors(None, &["Csürös", "Gergely", "Pop"])
     .comb_ex_authors(&["Degen", "Nyár."])
-    .code(NomCode::Botanical)
     .nothing_else();
     assert_name_auth("Ageratum conyzoides", "Sieber ex Sieber ex Steudel")
         .species("Ageratum", "conyzoides")
         .comb_authors(None, &["Steudel"])
         .comb_ex_authors(&["Sieber"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -206,13 +200,11 @@ fn a_bracket_opening_with_ex_holds_the_ex_authors() {
         .species("Harpalus", "notatus")
         .comb_authors(Some("1828"), &["Stephens"])
         .comb_ex_authors(&["Kirby"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Phila obtusa", "v. Mochulski (? ex Dej. MS) 1850")
         .species("Phila", "obtusa")
         .comb_authors(Some("1850"), &["v.Mochulski"])
         .comb_ex_authors(&["Dej."])
-        .code(NomCode::Zoological)
         .nothing_else();
     // the revived name is the prokaryote code's
     assert_name_auth(
@@ -228,7 +220,6 @@ fn a_bracket_opening_with_ex_holds_the_ex_authors() {
         .infra_species("Argythamnia", "humilis", Rank::Variety, "laevis")
         .comb_authors(None, &["Shinners"])
         .comb_ex_authors(&["Torr."])
-        .code(NomCode::Botanical)
         .nothing_else();
     // nobody after them: they are the authors
     assert_name_auth("Alicyclobacillus mali", "(ex Matsubara et al. 2002)")
@@ -248,7 +239,6 @@ fn zoologists_put_the_publishing_author_first() {
         .species("Sabella", "aggregata")
         .comb_authors(Some("1847"), &["Nardo"])
         .comb_ex_authors(&["Chiereghini"])
-        .code(NomCode::Zoological)
         .nothing_else();
     assert_name_auth("Conferva nebulosa", "Grateloup ex Mertens in litt.")
         .species("Conferva", "nebulosa")
@@ -330,7 +320,6 @@ fn zoologists_put_the_publishing_author_first() {
         .species("Abies", "alba")
         .comb_authors(None, &["Jones"])
         .comb_ex_authors(&["Smith"])
-        .code(NomCode::Botanical)
         .nothing_else();
 }
 
@@ -340,14 +329,12 @@ fn a_question_mark_after_an_author_before_the_year_is_uncertain() {
     assert_name_auth("Aaages", "Barovski? 1926")
         .monomial("Aaages")
         .comb_authors(Some("1926"), &["Barovski"])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
         .nothing_else();
     assert_name_auth("Antheraea kausalia", "Rondot? 1887?")
         .species("Antheraea", "kausalia")
         .comb_authors(Some("1887?"), &["Rondot"])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
         .nothing_else();
@@ -355,7 +342,6 @@ fn a_question_mark_after_an_author_before_the_year_is_uncertain() {
     assert_name_auth("Anomalomma muju", "Chrysanthus & F? 1967")
         .species("Anomalomma", "muju")
         .comb_authors(Some("1967"), &["Chrysanthus", "F."])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
         .nothing_else();
@@ -363,7 +349,6 @@ fn a_question_mark_after_an_author_before_the_year_is_uncertain() {
     assert_name_auth("Otiorrhynchus mandibularis", "Redtenbacher, W?, 1842")
         .species("Otiorrhynchus", "mandibularis")
         .comb_authors(Some("1842"), &["W.Redtenbacher"])
-        .code(NomCode::Zoological)
         .doubtful()
         .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
         .nothing_else();

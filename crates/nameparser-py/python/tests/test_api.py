@@ -29,7 +29,7 @@ def sci(name: str, *args, **kwargs) -> nameparser.ParsedName:
 def test_vulpes_subspecies_core_fields_and_combination_authorship():
     # Golden reference row 1 (see crates/nameparser/src/model/name.rs's
     # `wire_matches_reference_row_1_vulpes_vulpes_silaceus`).
-    pn = nameparser.parse("Vulpes vulpes silaceus Miller, 1907")
+    pn = nameparser.parse("Vulpes vulpes silaceus Miller, 1907", code="ZOOLOGICAL")
 
     assert isinstance(pn, nameparser.ParsedName)
     assert pn.rank == "SUBSPECIES"
@@ -145,7 +145,7 @@ def test_parse_all_returns_none_for_unparsable_without_raising():
 
 
 def test_to_dict_uses_wire_field_names_and_string_enums():
-    pn = nameparser.parse("Vulpes vulpes silaceus Miller, 1907")
+    pn = nameparser.parse("Vulpes vulpes silaceus Miller, 1907", code="ZOOLOGICAL")
     d = pn.to_dict()
 
     # Wire (JSON/Java) field names, not the Python snake_case getter names.

@@ -163,7 +163,7 @@ fn parse_stdin_to_stdout_matches_a_verified_java_cli_transcript() {
     );
     assert_eq!(
         lines[1],
-        r#"{"line":2,"input":"Vulpes vulpes silaceus Miller, 1907","parsed":{"rank":"SUBSPECIES","code":"ZOOLOGICAL","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}"#
+        r#"{"line":2,"input":"Vulpes vulpes silaceus Miller, 1907","parsed":{"rank":"INFRASPECIFIC_NAME","genus":"Vulpes","specificEpithet":"vulpes","infraspecificEpithet":"silaceus","candidatus":false,"type":"SCIENTIFIC","extinct":false,"doubtful":false,"manuscript":false,"state":"COMPLETE","warnings":[],"combinationAuthorship":{"authors":["Miller"],"exAuthors":[],"year":"1907","bracketedYear":false,"anonymous":false},"basionymAuthorship":{"authors":[],"exAuthors":[],"bracketedYear":false,"anonymous":false}}}"#
     );
     assert_eq!(
         lines[2],

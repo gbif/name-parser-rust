@@ -1277,6 +1277,15 @@ pub(crate) fn continues_author_span(tokens: &[Token], j: usize, from: usize) -> 
                 || (inner && t.text == "f" && filius_before_marker_or_ex(tokens, j))
         }
         TokenKind::Dot | TokenKind::Ampersand | TokenKind::Comma => true,
+        // the sanctioning author of a species before its rank marker ("Boletus edulis Bull. : Fr.
+        // subsp. edulis")
+        TokenKind::Colon => {
+            inner
+                && tokens.get(j + 1).is_some_and(|nx| {
+                    nx.kind == TokenKind::Word
+                        && crate::pipeline::authorship_parser::is_sanctioning_author(&nx.text)
+                })
+        }
         TokenKind::Other => {
             t.text == "'"
                 || (inner
