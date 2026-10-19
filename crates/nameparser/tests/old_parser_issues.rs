@@ -1258,6 +1258,24 @@ fn a_subgenus_cited_in_its_brackets() {
 }
 
 #[test]
+fn a_zoological_division_within_a_genus_is_unranked() {
+    // Dejean's and Mulsant's "div." is no botanical divisio
+    assert_name_code("Feronia (div. Percus) Dejean, 1828", NomCode::Zoological)
+        .infrageneric_at("Feronia", Rank::InfragenericName, "Percus")
+        .comb_authors(Some("1828"), &["Dejean"])
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Feronia (div. Percus) Dejean, 1828")
+        .infrageneric_at("Feronia", Rank::InfragenericName, "Percus")
+        .comb_authors(Some("1828"), &["Dejean"])
+        .nothing_else();
+    assert_name("Rosa div. Caninae")
+        .infrageneric_at("Rosa", Rank::DivisionBotany, "Caninae")
+        .code(NomCode::Botanical)
+        .nothing_else();
+}
+
+#[test]
 fn issue_171_zoological_sections() {
     // ZooBank's sections within a genus are unranked infrageneric names, not botanical sections
     for (name, epithet) in [

@@ -288,9 +288,9 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // rank marker — it belongs to the (unnamed) infraspecific taxon and is not a parsing
     // artefact. All code-setting heuristics live in `code_inference` (called only when the
     // name has no code yet).
-    // A section or series within a genus is a botanical rank, but zoologists name them too, below
-    // the ICZN's ranks: `Achatinella (sect. Auriculella) Pfeiffer, 1854`, `Aphodius (section
-    // Cytoderhinus) Seabra 1909` (#171). Under the zoological code, given or told by a year after a
+    // A section, series or division within a genus is a botanical rank, but zoologists name them
+    // too, below the ICZN's ranks: `Achatinella (sect. Auriculella) Pfeiffer, 1854`, `Aphodius
+    // (section Cytoderhinus) Seabra 1909` (#171), Dejean's `Feronia (div. Percus) Dejean, 1828`. Under the zoological code, given or told by a year after a
     // comma or beside a marker written out, both in brackets, it is an unranked infrageneric name,
     // not a botanical section. Botanists abbreviate the marker, with or without a comma, and
     // rarely bracket it: `Tradescantia (sect. Zebrina) Pellegrini 2017`, `Cephalozia sect.
@@ -312,6 +312,7 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
                 | Rank::SubsectionBotany
                 | Rank::SeriesBotany
                 | Rank::SubseriesBotany
+                | Rank::DivisionBotany
         )
         && (zoological
             || (ctx.written_out_infrageneric_marker
