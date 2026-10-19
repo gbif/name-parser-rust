@@ -347,6 +347,16 @@ fn phrase_leads_with_rank_marker(n: &ParsedName) -> bool {
         .eq_ignore_ascii_case(marker.trim_end_matches('.'))
 }
 
+/// The Prokaryotic Code abbreviates subgenus "subgen." (Rules 10c, 34c), where the rank's own
+/// marker is the botanical "subg.".
+const BACTERIAL_SUBGENUS_MARKER: &str = "subgen.";
+
+/// The marker of a bacterial subgenus, which is not the rank's own.
+fn bacterial_subgenus_marker(n: &ParsedName) -> Option<&'static str> {
+    (n.rank == Rank::Subgenus && n.code == Some(NomCode::Bacterial))
+        .then_some(BACTERIAL_SUBGENUS_MARKER)
+}
+
 /// Java `NameFormatter.appendRankMarker(sb, rank, ifRank, nothoPrefix)` (both the 3- and
 /// 4-arg overloads; the 3-arg one passes `if_rank = None`). Returns true if a marker was
 /// appended.
@@ -756,12 +766,14 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                         // If we know the rank we use explicit rank markers — this is how
                         // botanical infrageneric names are formed, see
                         // http://www.iapt-taxon.org/nomen/main.php?page=art21
-                        if append_rank_marker(
-                            &mut sb,
-                            n.rank,
-                            None,
-                            f.hybrid_marker && has_notho(n, NamePart::Infrageneric),
-                        ) {
+                        let notho = f.hybrid_marker && has_notho(n, NamePart::Infrageneric);
+                        if let Some(marker) = bacterial_subgenus_marker(n) {
+                            if notho {
+                                sb.push_str(NOTHO_PREFIX);
+                            }
+                            sb.push_str(marker);
+                            sb.push(' ');
+                        } else if append_rank_marker(&mut sb, n.rank, None, notho) {
                             sb.push(' ');
                         }
                     }
@@ -773,8 +785,13 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                     append_genus(&mut sb, n, f.hybrid_marker, f.show_qualifier, html);
                 }
                 if f.infrageneric {
-                    // additional subgenus shown for binomial. Always shown in brackets
+                    // additional subgenus shown for binomial. Always shown in brackets, with
+                    // its marker in bacteriology (Prokaryotic Code Rule 10c)
                     sb.push_str(" (");
+                    if n.code == Some(NomCode::Bacterial) {
+                        sb.push_str(BACTERIAL_SUBGENUS_MARKER);
+                        sb.push(' ');
+                    }
                     append_qualifier(&mut sb, n, NamePart::Infrageneric, f.show_qualifier);
                     append_in_italics(&mut sb, infrageneric_epithet, html);
                     sb.push(')');
@@ -1323,6 +1340,31 @@ mod tests {
         assert_eq!(
             canonical("Carabus subgen. Megodontus", None),
             "Carabus subg. Megodontus"
+        );
+        // the Prokaryotic Code's "subgen.", in a species' brackets too (Rule 10c)
+        assert_eq!(
+            canonical(
+                "Acetobacter subg. Gluconoacetobacter",
+                Some(NomCode::Bacterial)
+            ),
+            "Acetobacter subgen. Gluconoacetobacter"
+        );
+        let complete = |name: &str, code| {
+            parse(name, None, None, code)
+                .unwrap()
+                .canonical_name_complete()
+                .unwrap()
+        };
+        assert_eq!(
+            complete(
+                "Acetobacter (Gluconoacetobacter) liquefaciens",
+                Some(NomCode::Bacterial)
+            ),
+            "Acetobacter (subgen. Gluconoacetobacter) liquefaciens"
+        );
+        assert_eq!(
+            complete("Acetobacter (Gluconoacetobacter) liquefaciens", None),
+            "Acetobacter (Gluconoacetobacter) liquefaciens"
         );
         assert_eq!(
             canonical("Achillea sect. Ptarmica", None),

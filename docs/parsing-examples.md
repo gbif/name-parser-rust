@@ -119,7 +119,7 @@ Each name parsed with no code, and with the `ZOOLOGICAL` or `BOTANICAL` code giv
 
 
 
-**Formatting.** An unranked infrageneric name of any code, and a zoological subgenus, are written in brackets with no marker. Every other rank shows its marker, a subgenus the botanical `subg.` (ICN Art. 21).
+**Formatting.** An unranked infrageneric name of any code, and a zoological subgenus, are written in brackets with no marker. Every other rank shows its marker, a subgenus the botanical `subg.` (ICN Art. 21), or `subgen.` under the bacterial code, which also puts it in the brackets of a species: `Acetobacter (subgen. Gluconoacetobacter) liquefaciens` (Prokaryotic Code Rule 10c).
 
 | Name | No code | `ZOOLOGICAL` given | `BOTANICAL` given |
 |---|---|---|---|
