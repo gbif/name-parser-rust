@@ -63,7 +63,7 @@ Cortinarius stirps Balteatus (Bidaud, Moënne-Loccoz & Reumaux) Bidaud, Moënne-
 ## Infrageneric names by code
 > Each name parsed with no code, and with the `ZOOLOGICAL` or `BOTANICAL` code given, as ChecklistBank passes a dataset's code.
 >
-> **Parsing.** A rank marker gives the rank: `subg.` or `subgen.` the `SUBGENUS`; `sect.`, `subsect.`, `ser.`, `subser.` and `div.` the botanical ranks, which also set the `BOTANICAL` code when none is given. Under the zoological code a section or series inside a genus has no rank of its own, so it is an `INFRAGENERIC_NAME`. A marker that names no rank gives an `INFRAGENERIC_NAME` under every code: `unr.`, `[unranked]`, a made-up rank (`grex`, `cycl.`), and Fries's `tr.` or `trib.` after a genus, unranked subdivisions of the genus by ICN Art. F.4.1. A capitalised word in brackets after the genus, with no marker, is an `INFRAGENERIC_NAME`, and a `SUBGENUS` under the zoological code (ICZN Art. 6.1). Followed by an author with no year, or under the botanical code, the bracket is read as the basionym author of a genus instead. A rank of another code than the one given keeps both, with a warning. In a species the bracketed subgenus is kept as the `infragenericEpithet`.
+> **Parsing.** A rank marker gives the rank: `subg.` or `subgen.` the `SUBGENUS`; `sect.`, `subsect.`, `ser.`, `subser.` and `div.` the botanical ranks, which also set the `BOTANICAL` code when none is given. Under the zoological code a section, series or division inside a genus has no rank of its own, so it is an `INFRAGENERIC_NAME`; with no code a year after a comma tells it. A marker that names no rank gives an `INFRAGENERIC_NAME` under every code: `unr.`, `[unranked]`, a made-up rank (`grex`, `cycl.`), and Fries's `tr.` or `trib.` after a genus, unranked subdivisions of the genus by ICN Art. F.4.1. A capitalised word in brackets after the genus, with no marker, is an `INFRAGENERIC_NAME`, and a `SUBGENUS` under the zoological code (ICZN Art. 6.1). Followed by an author with no year, or under the botanical code, the bracket is read as the basionym author of a genus instead. A rank of another code than the one given keeps both, with a warning. In a species the bracketed subgenus is kept as the `infragenericEpithet`; its author, cited inside the brackets as the Prokaryotic Code has it (Rule 10c), has no place there and is dropped with a warning.
 >
 > **Formatting.** An unranked infrageneric name of any code, and a zoological subgenus, are written in brackets with no marker. Every other rank shows its marker, a subgenus the botanical `subg.` (ICN Art. 21).
 @by-code
@@ -75,6 +75,7 @@ Carex ser. Acutae
 Rosa div. Caninae
 Pinus suprasect. Taeda
 Achatinella (sect. Auriculella) Pfeiffer 1854
+Feronia (div. Percus) Dejean, 1828
 Agaricus trib. Pholiota Fr.
 Hieracium unr. Verbasciformia
 Viola [unranked] Mirabiles Nyman
@@ -83,6 +84,7 @@ Calathus (Lindrothius)
 Calathus (Lindrothius) Kurnakov, 1961
 Calathus (Lindrothius) Kurnakov
 Carabus (Megodontus) violaceus L.
+Acetobacter (subgen. Gluconoacetobacter Yamada and Kondo 1985) liquefaciens (Asai 1935) Gosselé et al. 1983
 
 ## Hybrids
 > The hybrid sign `×` marks the part of the name that is a nothotaxon (`notho`). A formula naming two parents is no name of its own.
