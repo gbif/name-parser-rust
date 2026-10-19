@@ -165,3 +165,20 @@ fn a_letter_lost_to_a_broken_encoding_stays_in_the_author() {
         .warning(&[warnings::QUESTION_MARKS_REMOVED])
         .nothing_else();
 }
+
+#[test]
+fn mojibake_in_an_author_is_repaired() {
+    // #188: UTF-8 read as Windows-1252
+    assert_name("Trollius europaeus var. transsylvanicus (Schur) GÃ¼rke")
+        .infra_species("Trollius", "europaeus", Rank::Variety, "transsylvanicus")
+        .bas_authors(None, &["Schur"])
+        .comb_authors(None, &["Gürke"])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+    assert_name_auth("Tectaria gemmifera", "(FÃ©e) Alston")
+        .species("Tectaria", "gemmifera")
+        .bas_authors(None, &["Fée"])
+        .comb_authors(None, &["Alston"])
+        .warning(&[warnings::UNUSUAL_CHARACTERS])
+        .nothing_else();
+}

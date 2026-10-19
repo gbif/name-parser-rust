@@ -29,7 +29,7 @@ use crate::model::{
 };
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
-use crate::unicode::{is_fullwidth, java_trim, normalize_input, normalize_quotes};
+use crate::unicode::{has_mojibake, is_fullwidth, java_trim, normalize_input, normalize_quotes};
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -144,6 +144,8 @@ pub fn run(
         .chars()
         .chain(authorship.unwrap_or_default().chars())
         .any(is_fullwidth);
+    // repaired up front (see `normalize_input`), but flagged: the source's encoding is broken
+    let mojibake = has_mojibake(name) || authorship.is_some_and(has_mojibake);
     let authorship = authorship
         .map(|a| stripandstash::collapse_double_brackets(normalize_quotes(&normalize_input(a))));
 
@@ -163,6 +165,9 @@ pub fn run(
     // folded up front (see `normalize_input`), but still flagged like the homoglyphs they are
     if fullwidth {
         ctx.name.add_warning(warnings::HOMOGLYHPS);
+    }
+    if mojibake {
+        ctx.name.add_warning(warnings::UNUSUAL_CHARACTERS);
     }
     if full_length > LONG_NAME_LENGTH {
         ctx.name.add_warning(warnings::LONG_NAME);

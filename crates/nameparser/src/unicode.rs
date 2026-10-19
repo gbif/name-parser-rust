@@ -285,18 +285,20 @@ pub fn normalize_spaces(x: &str) -> Cow<'_, str> {
 /// homoglyph table cannot do the latter: it maps fullwidth `ｌ` and `Ｉ` to the digit `1`. The soft
 /// hyphen U+00AD only marks where a word may break: it is dropped (`novae\u{ad}zelandiae`,
 /// `Ramí\u{ad}rez`), except between a lower-case and a capital letter, where it stands for a real
-/// hyphen (`Miranda\u{ad}Ribeiro`), and after `Ã`, where it is half of the Windows-1252 mojibake
-/// `Ã\u{ad}` for `í`, repaired later. Decomposed letters are composed (NFC): a combining accent
-/// after its letter (`Za\u{301}gors\u{30c}ek`) otherwise splits the word, and Java read
-/// `Za gors ek`. Borrows when there is nothing to change.
+/// hyphen (`Miranda\u{ad}Ribeiro`). Mojibake is repaired first ([`repair_mojibake`]): its
+/// continuation bytes include the soft hyphen and the no-break space (`Ã\u{ad}` is `í`, `Ã\u{a0}`
+/// is `à`). Decomposed letters are composed (NFC): a combining accent after its letter
+/// (`Za\u{301}gors\u{30c}ek`) otherwise splits the word, and Java read `Za gors ek`. Borrows when
+/// there is nothing to change.
 pub fn normalize_input(x: &str) -> Cow<'_, str> {
+    let x = repair_mojibake(x);
     let x: Cow<'_, str> = if x
         .chars()
         .any(unicode_normalization::char::is_combining_mark)
     {
         Cow::Owned(x.nfc().collect())
     } else {
-        Cow::Borrowed(x)
+        x
     };
     if !x
         .chars()
@@ -313,9 +315,7 @@ pub fn normalize_input(x: &str) -> Cow<'_, str> {
         if c == SOFT_HYPHEN {
             let prev = i.checked_sub(1).map(|k| chars[k]);
             let next = chars.get(i + 1).copied();
-            if prev == Some('Ã') {
-                out.push(c);
-            } else if prev.is_some_and(char::is_lowercase) && next.is_some_and(char::is_uppercase) {
+            if prev.is_some_and(char::is_lowercase) && next.is_some_and(char::is_uppercase) {
                 out.push('-');
             }
             continue;
@@ -329,6 +329,101 @@ pub fn normalize_input(x: &str) -> Cow<'_, str> {
         });
     }
     Cow::Owned(out)
+}
+
+/// UTF-8 text decoded as Windows-1252 (or Latin-1), the commonest mojibake in author names:
+/// `GÃ¼rke` for `Gürke`, `AndrÃ©` for `André`, `KomÃ¡rek` for `Komárek`, `Å¡` for `š` (#188). A
+/// UTF-8 lead byte (`Â`–`ô`) followed by the continuation bytes its sequence needs is encoded back
+/// to those bytes and decoded as UTF-8, where that gives a Latin letter. Broken beyond that — a byte lost
+/// or turned into a space (`Å korniÄ k.`) — it is left alone. Borrows when there is nothing to
+/// repair.
+pub fn repair_mojibake(x: &str) -> Cow<'_, str> {
+    if !x.chars().any(|c| ('\u{C2}'..='\u{F4}').contains(&c)) {
+        return Cow::Borrowed(x);
+    }
+    let chars: Vec<char> = x.chars().collect();
+    let mut out = String::with_capacity(x.len());
+    let mut changed = false;
+    let mut i = 0;
+    while i < chars.len() {
+        if let Some((c, len)) = mojibake_at(&chars[i..]) {
+            out.push(c);
+            i += len;
+            changed = true;
+        } else {
+            out.push(chars[i]);
+            i += 1;
+        }
+    }
+    if changed {
+        Cow::Owned(out)
+    } else {
+        Cow::Borrowed(x)
+    }
+}
+
+/// True if [`repair_mojibake`] would change `x`.
+pub fn has_mojibake(x: &str) -> bool {
+    matches!(repair_mojibake(x), Cow::Owned(_))
+}
+
+/// The letter a mojibake sequence at the start of `chars` stands for, and how many chars it takes.
+fn mojibake_at(chars: &[char]) -> Option<(char, usize)> {
+    let lead = cp1252_byte(*chars.first()?)?;
+    let n = match lead {
+        0xC2..=0xDF => 1,
+        0xE0..=0xEF => 2,
+        0xF0..=0xF4 => 3,
+        _ => return None,
+    };
+    let mut bytes = vec![lead];
+    for &c in chars.get(1..=n)? {
+        let b = cp1252_byte(c).filter(|b| (0x80..=0xBF).contains(b))?;
+        bytes.push(b);
+    }
+    let c = std::str::from_utf8(&bytes).ok()?.chars().next()?;
+    // a Latin letter; anything else is a chance match, `ß’` in `‘Gartenspaß’` decodes to N'Ko `ߒ`
+    let latin = matches!(c, '\u{C0}'..='\u{24F}' | '\u{1E00}'..='\u{1EFF}') && c.is_alphabetic();
+    latin.then_some((c, n + 1))
+}
+
+/// The Windows-1252 byte of `c`: Latin-1 for U+0000–U+00FF (the C1 controls included, as
+/// Latin-1 decoders leave them), the Windows-1252 punctuation and letters for 0x80–0x9F.
+fn cp1252_byte(c: char) -> Option<u8> {
+    let cp = c as u32;
+    if cp <= 0xFF {
+        return Some(cp as u8);
+    }
+    Some(match c {
+        '€' => 0x80,
+        '‚' => 0x82,
+        'ƒ' => 0x83,
+        '„' => 0x84,
+        '…' => 0x85,
+        '†' => 0x86,
+        '‡' => 0x87,
+        'ˆ' => 0x88,
+        '‰' => 0x89,
+        'Š' => 0x8A,
+        '‹' => 0x8B,
+        'Œ' => 0x8C,
+        'Ž' => 0x8E,
+        '‘' => 0x91,
+        '’' => 0x92,
+        '“' => 0x93,
+        '”' => 0x94,
+        '•' => 0x95,
+        '–' => 0x96,
+        '—' => 0x97,
+        '˜' => 0x98,
+        '™' => 0x99,
+        'š' => 0x9A,
+        '›' => 0x9B,
+        'œ' => 0x9C,
+        'ž' => 0x9E,
+        'Ÿ' => 0x9F,
+        _ => return None,
+    })
 }
 
 /// U+00AD, see [`normalize_input`].
@@ -492,6 +587,26 @@ mod tests {
     }
 
     #[test]
+    fn repair_mojibake_decodes_utf8_read_as_windows_1252() {
+        assert_eq!(repair_mojibake("GÃ¼rke"), "Gürke");
+        assert_eq!(repair_mojibake("(FÃ©e) Alston"), "(Fée) Alston");
+        assert_eq!(repair_mojibake("Å¡korniÄ\u{8d}ka"), "škornička");
+        assert_eq!(repair_mojibake("RamÃ\u{ad}rez"), "Ramírez");
+        assert_eq!(repair_mojibake("Ã\u{a0} la"), "à la");
+        // nothing to repair, or broken beyond it: borrowed as is
+        for s in [
+            "Schätti",
+            "Ålesund",
+            "Å korniÄ k.",
+            "Va^Zut",
+            "Müller–Schmidt",
+            "‘Gartenspaß’",
+        ] {
+            assert!(matches!(repair_mojibake(s), Cow::Borrowed(_)), "{s}");
+        }
+    }
+
+    #[test]
     fn normalize_input_drops_invisibles_and_folds_spaces_and_fullwidth_forms() {
         assert_eq!(
             normalize_input("\u{feff}Abies\u{a0}alba Mi\u{200d}ll.\u{200b}"),
@@ -501,9 +616,9 @@ mod tests {
         assert_eq!(normalize_input("Ｍｉｌｌ．"), "Mill.");
         assert_eq!(normalize_input("Za\u{301}gors\u{30c}ek"), "Zágoršek");
         assert!(matches!(normalize_input("Abies alba L."), Cow::Borrowed(_)));
-        // the soft hyphen stays in the mojibake for `í`, stands for a hyphen before a capital and
-        // is dropped elsewhere
-        assert_eq!(normalize_input("Ort\u{c3}\u{ad}z"), "Ort\u{c3}\u{ad}z");
+        // the soft hyphen in the mojibake for `í` is repaired with it, stands for a hyphen before a
+        // capital and is dropped elsewhere
+        assert_eq!(normalize_input("Ort\u{c3}\u{ad}z"), "Ortíz");
         assert_eq!(normalize_input("Miranda\u{ad}Ribeiro"), "Miranda-Ribeiro");
         assert_eq!(normalize_input("novae\u{ad}zelandiae"), "novaezelandiae");
         assert_eq!(normalize_input("D.\u{ad}Hawksw."), "D.Hawksw.");
