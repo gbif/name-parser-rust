@@ -1239,6 +1239,25 @@ fn issue_167_an_epithet_of_words_apart_is_hyphenated() {
 }
 
 #[test]
+fn a_subgenus_cited_in_its_brackets() {
+    // the Prokaryotic Code's Rule 10c: the subgenus author goes inside the brackets. There is no
+    // place for it in a species' name, so it is dropped with a warning.
+    assert_name(
+        "Acetobacter (subgen. Gluconoacetobacter Yamada and Kondo 1985) liquefaciens (Asai 1935) Gosselé et al. 1983",
+    )
+    .species_ig("Acetobacter", "Gluconoacetobacter", "liquefaciens")
+    .bas_authors(Some("1935"), &["Asai"])
+    .comb_authors(Some("1983"), &["Gosselé", "al."])
+    .warning(&["Removed: Yamada and Kondo 1985"])
+    .nothing_else();
+    // on its own it is the authorship
+    assert_name("Acetobacter (subgen. Gluconoacetobacter Yamada and Kondo 1985)")
+        .infrageneric_at("Acetobacter", Rank::Subgenus, "Gluconoacetobacter")
+        .comb_authors(Some("1985"), &["Yamada", "Kondo"])
+        .nothing_else();
+}
+
+#[test]
 fn issue_171_zoological_sections() {
     // ZooBank's sections within a genus are unranked infrageneric names, not botanical sections
     for (name, epithet) in [

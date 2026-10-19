@@ -2223,17 +2223,21 @@ fn strip_superspecies_marker(ctx: &mut ParseContext, s: String) -> String {
 }
 
 /// An infrageneric rank marker and its epithet in brackets after the genus: `Achatinella (sect.
-/// Auriculella)`, `Balanus (section Ortho-Balanus)`. Group 1 the genus, group 2 the marker, group
-/// 3 the epithet.
+/// Auriculella)`, `Balanus (section Ortho-Balanus)`, with the citation of the infrageneric name
+/// inside as the Prokaryotic Code has it (Rule 10c), `Acetobacter (subgen. Gluconoacetobacter
+/// Yamada and Kondo 1985) liquefaciens`. Group 1 the genus, group 2 the marker, group 3 the epithet,
+/// group 4 the citation.
 static BRACKETED_INFRAGENERIC_MARKER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)\((?-u:\s*)((?i:section|subsection|series|subseries|subgenus|sect|subsect|supersect|subgen|subg|ser|subser|div))\.?(?-u:\s+)(\p{Lu}\p{Ll}+(?:-\p{L}[\p{Ll}\-]*)*)(?-u:\s*)\)").unwrap()
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)\((?-u:\s*)((?i:section|subsection|series|subseries|subgenus|sect|subsect|supersect|subgen|subg|ser|subser|div))\.?(?-u:\s+)(\p{Lu}\p{Ll}+(?:-\p{L}[\p{Ll}\-]*)*)(?:(?-u:\s+)(\p{Lu}[^()]*?))?(?-u:\s*)\)").unwrap()
 });
 
 /// ZooBank and others put the marker of an infrageneric name inside its brackets, `Achatinella
 /// (sect. Auriculella) Pfeiffer 1854`; the epithet was lost and the bracket read as a basionym
 /// author `sect.Auriculella` (#88). Without the brackets the marker is read as it always is; a
 /// word written out is abbreviated, `(section Ortho-Balanus)`, and noted as zoologists' usage
-/// (#171).
+/// (#171). A citation in the brackets is the author of the infrageneric name: of a species in it,
+/// a subgenus author has no place in the name and is dropped with a warning; on its own it is the
+/// name's authorship.
 fn unbracket_infrageneric_marker(ctx: &mut ParseContext, s: String) -> String {
     match BRACKETED_INFRAGENERIC_MARKER.captures(&s) {
         Some(caps) => {
@@ -2249,7 +2253,25 @@ fn unbracket_infrageneric_marker(ctx: &mut ParseContext, s: String) -> String {
             .to_string();
             ctx.bracketed_infrageneric_marker = true;
             ctx.written_out_infrageneric_marker = marker.len() < caps[2].len();
-            format!("{} {marker}. {}{rest}", &caps[1], &caps[3])
+            match caps.get(4) {
+                Some(citation) if rest.trim_start().starts_with(char::is_lowercase) => {
+                    ctx.name.add_warning(&format!(
+                        "{}{}",
+                        warnings::REMOVED_PREFIX,
+                        citation.as_str()
+                    ));
+                    format!("{} {marker}. {}{rest}", &caps[1], &caps[3])
+                }
+                Some(citation) => {
+                    format!(
+                        "{} {marker}. {} {}{rest}",
+                        &caps[1],
+                        &caps[3],
+                        citation.as_str()
+                    )
+                }
+                None => format!("{} {marker}. {}{rest}", &caps[1], &caps[3]),
+            }
         }
         None => s,
     }
