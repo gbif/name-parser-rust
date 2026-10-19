@@ -239,6 +239,13 @@ def _clamp_oracle_error(err: dict) -> tuple[str | None, str | None, str | None]:
     return msg, t, code
 
 
+def _anchored_placeholder(parsed: dict) -> bool:
+    """Mirror of the `parse()` routing: a placeholder hanging off a real taxon (`Biota incertae
+    sedis`) has an anchor and stays parsed; the `?` standing in for a missing genus is none."""
+    taxon = parsed.get("genus") or parsed.get("uninomial")
+    return parsed.get("type") == "PLACEHOLDER" and taxon not in (None, "?")
+
+
 def test_python_binding_matches_oracle_across_all_corpora():
     """The parity gate. For every corpus name: both sides must agree on parsability; when
     both parse, `nameparser.parse(name).to_dict()` must match the oracle's `parsed` object
@@ -289,7 +296,8 @@ def test_python_binding_matches_oracle_across_all_corpora():
 
             if "error" in row:
                 oracle_outcome = ("error", row["error"])
-            elif (row.get("parsed") or {}).get("type") not in (None, "SCIENTIFIC", "INFORMAL"):
+            elif (row.get("parsed") or {}).get("type") not in (None, "SCIENTIFIC", "INFORMAL") \
+                    and not _anchored_placeholder(row["parsed"]):
                 # a parsed oracle row of a non-parsable type (a placeholder with its genus
                 # missing) is unparsable through `parse` too
                 t = row["parsed"]["type"]
