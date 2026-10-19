@@ -106,16 +106,15 @@ pub(crate) fn code_from_nom_note(note: Option<&str>) -> Option<NomCode> {
 }
 
 /// Java `CodeInference.applyRankCodeMismatch(ParseContext)` (`CodeInference.java:151-160`).
-/// Rank-restricted code mismatch with the caller-supplied code → override the code to what
-/// the rank requires and warn about it. E.g. `supersect.` is only valid in botany; if the
-/// caller asked for ZOOLOGICAL, surface a `CODE_MISMATCH` and pin BOTANICAL.
+/// A rank of one code under another code the caller gave: `supersect.` is only valid in botany,
+/// so a ZOOLOGICAL hint gets a `CODE_MISMATCH` warning. Both stay as given; Java pinned the
+/// rank's code instead (#60).
 pub(crate) fn apply_rank_code_mismatch(ctx: &mut ParseContext) {
     let pinned = ctx.name.rank.code();
     if let (Some(pinned), Some(existing), Some(requested)) =
         (pinned, ctx.name.code, ctx.requested_code)
     {
         if existing != pinned && requested != pinned {
-            ctx.name.code = Some(pinned);
             ctx.name.add_warning(warnings::CODE_MISMATCH);
         }
     }
@@ -231,12 +230,12 @@ mod tests {
     // ---- apply_rank_code_mismatch ----
 
     #[test]
-    fn rank_code_mismatch_overrides_and_warns() {
+    fn rank_code_mismatch_keeps_the_code_and_warns() {
         let mut ctx = ctx_with_rank(Rank::SupersectionBotany); // BOTANICAL-restricted
         ctx.name.code = Some(NomCode::Zoological);
         ctx.requested_code = Some(NomCode::Zoological);
         apply_rank_code_mismatch(&mut ctx);
-        assert_eq!(ctx.name.code, Some(NomCode::Botanical));
+        assert_eq!(ctx.name.code, Some(NomCode::Zoological));
         assert!(ctx
             .name
             .warnings

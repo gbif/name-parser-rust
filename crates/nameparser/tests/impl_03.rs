@@ -281,10 +281,11 @@ fn infra_generic() {
         .code(NomCode::Botanical)
         .nothing_else();
 
-    // with zoological code it is an impossible name! The zoological section is above family rank and cannot be enclosed in a genus
+    // with zoological code it is an impossible name! The zoological section is above family rank
+    // and cannot be enclosed in a genus. Rank and code stay as given, with a warning (#60).
     assert_name_code("Pinus suprasect. Taeda", NomCode::Zoological)
         .infrageneric_at("Pinus", Rank::SupersectionBotany, "Taeda")
-        .code(NomCode::Botanical)
+        .code(NomCode::Zoological)
         .warning(&[warnings::CODE_MISMATCH])
         .nothing_else();
 

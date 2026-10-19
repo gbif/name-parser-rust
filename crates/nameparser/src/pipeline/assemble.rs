@@ -788,13 +788,13 @@ mod tests {
     }
 
     #[test]
-    fn rank_code_mismatch_wired_through_finish_overrides_and_warns() {
+    fn rank_code_mismatch_wired_through_finish_keeps_the_code_and_warns() {
         let mut ctx = base_ctx();
         ctx.name.rank = Rank::SupersectionBotany; // BOTANICAL-restricted
         ctx.name.code = Some(NomCode::Zoological); // pre-set: step 10 must skip
         ctx.requested_code = Some(NomCode::Zoological);
         finish(&mut ctx, None);
-        assert_eq!(ctx.name.code, Some(NomCode::Botanical));
+        assert_eq!(ctx.name.code, Some(NomCode::Zoological));
         assert!(ctx
             .name
             .warnings
