@@ -273,9 +273,12 @@ static UNCERTAIN_AUTHOR_QMARK: LazyLock<Regex> = LazyLock::new(|| {
 });
 
 /// Java UNCERTAIN_AUTHOR_OR (StripAndStash.java:304-305): `\p{Lu}\p{L}*\s+or\s+\p{Lu}`,
-/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode. Rust-only, the author before the
+/// `or` stands after a space or bracket, never first: the genus of the moth `Tethea or
+/// Schiffermüller & Denis, 1776` is no author. A separate authorship comes with a space put in
+/// front ([`on_authorship`]).
 static UNCERTAIN_AUTHOR_OR: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\p{Lu}\p{L}*\s+or\s+\p{Lu}").unwrap());
+    LazyLock::new(|| Regex::new(r"[\s(]\p{Lu}\p{L}*\s+or\s+\p{Lu}").unwrap());
 
 /// Java UNCERTAIN_AUTHOR_SLASH (StripAndStash.java:306-307): `\p{L}\s*/\s*\p{L}`,
 /// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.

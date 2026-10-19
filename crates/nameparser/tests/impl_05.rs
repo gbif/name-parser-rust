@@ -803,3 +803,31 @@ fn an_underscore_label_with_a_digit_is_a_phrase() {
             .nothing_else();
     }
 }
+
+#[test]
+fn alternative_names_are_no_name() {
+    // #194: the first name became a species with the epithet "or"
+    for name in [
+        "Achilidae or Cixiidae",
+        "Acariformes or Parasitiformes",
+        "Antechinomys laninger or Antechinomys auritus",
+    ] {
+        assert_unparsable(name, NameType::Other);
+    }
+    // alternative authors after the name are an uncertain authorship
+    assert_name("Aus bus Jarocki or Schinz, 1900")
+        .species("Aus", "bus")
+        .comb_authors(Some("1900"), &["Jarocki or Schinz"])
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+}
+
+#[test]
+fn the_epithet_or_is_no_alternative() {
+    // the Poplar Lutestring
+    assert_name("Tethea or Schiffermüller & Denis, 1776")
+        .species("Tethea", "or")
+        .comb_authors(Some("1776"), &["Schiffermüller", "Denis"])
+        .nothing_else();
+}

@@ -180,6 +180,21 @@ static CULTURE_ACCESSION_STANDALONE: LazyLock<Regex> = LazyLock::new(|| {
 // `PURE_ALPHANUM.matches(s) && hasDigit(s)` at that one call site.
 static PURE_ALPHANUM: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[\p{L}\d_.\-]+$").unwrap());
 
+/// Two names given as alternatives, `or` right after the first name's last epithet: `Achilidae or
+/// Cixiidae`, `Antechinomys laninger or Antechinomys auritus` (#194). There is no one name to parse
+/// (the first became a species with the epithet "or"). Uncertain alternative authors stand after
+/// the name and are left alone: `Aus bus Jarocki or Schinz`. So is the moth `Tethea or`, whose
+/// authorship follows ([`AUTHORSHIP_AFTER_OR`]).
+static ALTERNATIVE_NAMES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^\p{Lu}\p{Ll}+(?:(?-u:\s+)\p{Ll}[\p{Ll}\-]+){0,2}(?-u:\s+)or(?-u:\s+)\p{Lu}")
+        .unwrap()
+});
+/// An authorship after an epithet "or": capitalised words up to a comma, an `&`, a bracket or a
+/// year, `Tethea or Schiffermüller & Denis, 1776`, `Monocloeus or Jordan, 1904`.
+static AUTHORSHIP_AFTER_OR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(?-u:\s)or(?-u:\s+)\p{Lu}[\p{L}'.\-]*(?:(?-u:\s+)\p{Lu}[\p{L}'.\-]*)*(?-u:\s*)(?:[,&(]|(?-u:\d{4}))").unwrap()
+});
+
 /// A capitalised word, an underscore and a label opening with a capital or a digit, in a word with
 /// a digit: a designation under a real taxon, `Entodinium_1`, `Acrididae_20230928_001_ORT_001`,
 /// `Stygiellidae_STYG2` (#193). Assemble makes it the uninomial with a phrase, as a GTDB name
@@ -756,6 +771,9 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         && !is_plausible_single_word_name(&s)
         && !UNDERSCORE_LABEL.is_match(&s)
     {
+        return Err(ParseError::new(NameType::Other, None, s));
+    }
+    if ALTERNATIVE_NAMES.is_match(&s) && !AUTHORSHIP_AFTER_OR.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
     }
     // PR2-style underscored name with hyphenated digit suffix → NO_NAME.
