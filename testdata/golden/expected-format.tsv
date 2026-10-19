@@ -4057,9 +4057,9 @@ Cordia (Adans.) Kuntze sect. Salimori	true	Cordia sect. Salimori	Cordia sect. Sa
 Cordia sect. Salimori (Adans.) Kuntz	true	Cordia sect. Salimori (Adans.) Kuntz	Cordia sect. Salimori	Salimori	Cordia sect. Salimori (Adans.) Kuntz	(Adans.) Kuntz
 Poaceae supertrib. Arundinarodae L.Liu	true	Arundinarodae L.Liu	Arundinarodae	Arundinarodae	Arundinarodae L.Liu	L.Liu
 Alchemilla subsect. Sericeae A.Plocek	true	Alchemilla subsect. Sericeae A.Plocek	Alchemilla subsect. Sericeae	Sericeae	Alchemilla subsect. Sericeae A.Plocek	A.Plocek
-subgen. Psammophrynopsis Koch, 1953	true	subgen. Psammophrynopsis Koch, 1953	subgen. Psammophrynopsis	Psammophrynopsis	subgen. Psammophrynopsis Koch, 1953	Koch, 1953
-Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	true	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	Hymenophyllum subgen. Hymenoglossum	Hymenoglossum	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	(Presl) R.M.Tryon & A.Tryon
-Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Pereskia subgen. Maihuenia	Maihuenia	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
+subgen. Psammophrynopsis Koch, 1953	true	subg. Psammophrynopsis Koch, 1953	subg. Psammophrynopsis	Psammophrynopsis	subg. Psammophrynopsis Koch, 1953	Koch, 1953
+Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	true	Hymenophyllum subg. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	Hymenophyllum subg. Hymenoglossum	Hymenoglossum	Hymenophyllum subg. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	(Presl) R.M.Tryon & A.Tryon
+Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	Pereskia subg. Maihuenia	Maihuenia	Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
 Aconitum ser. Tangutica W.T. Wang	true	Aconitum ser. Tangutica W.T.Wang	Aconitum ser. Tangutica	Tangutica	Aconitum ser. Tangutica W.T.Wang	W.T.Wang
 Calathus (Lindrothius) KURNAKOV 1961	true	Calathus (Lindrothius) Kurnakov, 1961	Calathus (Lindrothius)	Lindrothius	Calathus (Lindrothius) Kurnakov, 1961	Kurnakov, 1961
 Eucalyptus subser. Regulares Brooker	true	Eucalyptus subser. Regulares Brooker	Eucalyptus subser. Regulares	Regulares	Eucalyptus subser. Regulares Brooker	Brooker
@@ -4782,8 +4782,8 @@ Clada tricostata clada (Clada) Pascoe, 1887	true	Clada tricostata clada (Clada) 
 Grammitis friderici-et-pauli (Christ) Copel.	true	Grammitis friderici-et-pauli (Christ) Copel.	Grammitis friderici-et-pauli	Grammitis friderici-et-pauli	Grammitis friderici-et-pauli (Christ) Copel.	(Christ) Copel.
 Polygala vulgaris L., 1753 [nom. et typ. cons.]	true	Polygala vulgaris L., 1753	Polygala vulgaris	Polygala vulgaris	Polygala vulgaris L., 1753, nom. & typ. cons.	L., 1753
 Desbrochers des Loges, 1881	true	Desbrochers des Loges, 1881	Desbrochers	Desbrochers	Desbrochers des Loges, 1881	des Loges, 1881
-Centaurea subg. Jacea	true	Centaurea subgen. Jacea	Centaurea subgen. Jacea	Jacea	Centaurea subgen. Jacea	
-Centaurea L. subg. Jacea	true	Centaurea subgen. Jacea	Centaurea subgen. Jacea	Jacea	Centaurea L. subgen. Jacea	
+Centaurea subg. Jacea	true	Centaurea subg. Jacea	Centaurea subg. Jacea	Jacea	Centaurea subg. Jacea	
+Centaurea L. subg. Jacea	true	Centaurea subg. Jacea	Centaurea subg. Jacea	Jacea	Centaurea L. subg. Jacea	
 Mergus merganser Linnaeus, 1758	true	Mergus merganser Linnaeus, 1758	Mergus merganser	Mergus merganser	Mergus merganser Linnaeus, 1758	Linnaeus, 1758
 Gyalidea minuta van den Boom & Vezda	true	Gyalidea minuta van den Boom & Vezda	Gyalidea minuta	Gyalidea minuta	Gyalidea minuta van den Boom & Vezda	van den Boom & Vezda
 Taraxacum dunense v. Soest	true	Taraxacum dunense v.Soest	Taraxacum dunense	Taraxacum dunense	Taraxacum dunense v.Soest	v.Soest
@@ -4861,16 +4861,16 @@ sect. Taeda	true	sect. Taeda	sect. Taeda	Taeda	sect. Taeda
 Aeonium nothosect. Leugalonium	true	Aeonium nothosect. Leugalonium	Aeonium nothosect. Leugalonium	Leugalonium	Aeonium nothosect. Leugalonium	
 Narcissus nothoser. Dubizettae	true	Narcissus nothoser. Dubizettae	Narcissus nothoser. Dubizettae	Dubizettae	Narcissus nothoser. Dubizettae	
 Serapias nothosubsect. Pladiopetalae	true	Serapias nothosubsect. Pladiopetalae	Serapias nothosubsect. Pladiopetalae	Pladiopetalae	Serapias nothosubsect. Pladiopetalae	
-Rubus nothosubgen. Cylarubus	true	Rubus nothosubgen. Cylarubus	Rubus nothosubgen. Cylarubus	Cylarubus	Rubus nothosubgen. Cylarubus	
+Rubus nothosubgen. Cylarubus	true	Rubus nothosubg. Cylarubus	Rubus nothosubg. Cylarubus	Cylarubus	Rubus nothosubg. Cylarubus	
 Arrhoges (Antarctohoges)	true	Arrhoges (Antarctohoges)	Arrhoges (Antarctohoges)	Antarctohoges	Arrhoges (Antarctohoges)	
 Polygonum	true	Polygonum	Polygonum	Polygonum	Polygonum	
-subgen. Trematostoma Sacc.	true	subgen. Trematostoma Sacc.	subgen. Trematostoma	Trematostoma	subgen. Trematostoma Sacc.	Sacc.
+subgen. Trematostoma Sacc.	true	subg. Trematostoma Sacc.	subg. Trematostoma	Trematostoma	subg. Trematostoma Sacc.	Sacc.
 Echinocereus sect. Triglochidiata Bravo	true	Echinocereus sect. Triglochidiata Bravo	Echinocereus sect. Triglochidiata	Triglochidiata	Echinocereus sect. Triglochidiata Bravo	Bravo
-Zignoella subgen. Trematostoma Sacc.	true	Zignoella subgen. Trematostoma Sacc.	Zignoella subgen. Trematostoma	Trematostoma	Zignoella subgen. Trematostoma Sacc.	Sacc.
-Polygonum subgen. Bistorta (L.) Zernov	true	Polygonum subgen. Bistorta (L.) Zernov	Polygonum subgen. Bistorta	Bistorta	Polygonum subgen. Bistorta (L.) Zernov	(L.) Zernov
-Festuca subg. Schedonorus (P. Beauv. ) Peterm.	true	Festuca subgen. Schedonorus (P.Beauv.) Peterm.	Festuca subgen. Schedonorus	Schedonorus	Festuca subgen. Schedonorus (P.Beauv.) Peterm.	(P.Beauv.) Peterm.
-Catapodium subg.Agropyropsis  Trab.	true	Catapodium subgen. Agropyropsis Trab.	Catapodium subgen. Agropyropsis	Agropyropsis	Catapodium subgen. Agropyropsis Trab.	Trab.
-Gnaphalium subg. Laphangium Hilliard & B. L. Burtt	true	Gnaphalium subgen. Laphangium Hilliard & B.L.Burtt	Gnaphalium subgen. Laphangium	Laphangium	Gnaphalium subgen. Laphangium Hilliard & B.L.Burtt	Hilliard & B.L.Burtt
+Zignoella subgen. Trematostoma Sacc.	true	Zignoella subg. Trematostoma Sacc.	Zignoella subg. Trematostoma	Trematostoma	Zignoella subg. Trematostoma Sacc.	Sacc.
+Polygonum subgen. Bistorta (L.) Zernov	true	Polygonum subg. Bistorta (L.) Zernov	Polygonum subg. Bistorta	Bistorta	Polygonum subg. Bistorta (L.) Zernov	(L.) Zernov
+Festuca subg. Schedonorus (P. Beauv. ) Peterm.	true	Festuca subg. Schedonorus (P.Beauv.) Peterm.	Festuca subg. Schedonorus	Schedonorus	Festuca subg. Schedonorus (P.Beauv.) Peterm.	(P.Beauv.) Peterm.
+Catapodium subg.Agropyropsis  Trab.	true	Catapodium subg. Agropyropsis Trab.	Catapodium subg. Agropyropsis	Agropyropsis	Catapodium subg. Agropyropsis Trab.	Trab.
+Gnaphalium subg. Laphangium Hilliard & B. L. Burtt	true	Gnaphalium subg. Laphangium Hilliard & B.L.Burtt	Gnaphalium subg. Laphangium	Laphangium	Gnaphalium subg. Laphangium Hilliard & B.L.Burtt	Hilliard & B.L.Burtt
 Woodsiaceae (Hooker) Herter	true	Woodsiaceae (Hooker) Herter	Woodsiaceae	Woodsiaceae	Woodsiaceae (Hooker) Herter	(Hooker) Herter
 Diatrypella favacea var. favacea (Fr.) Ces. & De Not.	true	Diatrypella favacea var. favacea (Fr.) Ces. & De Not.	Diatrypella favacea var. favacea	Diatrypella favacea favacea	Diatrypella favacea var. favacea (Fr.) Ces. & De Not.	(Fr.) Ces. & De Not.
 Protoventuria rosae (De Not.) Berl. & Sacc.	true	Protoventuria rosae (De Not.) Berl. & Sacc.	Protoventuria rosae	Protoventuria rosae	Protoventuria rosae (De Not.) Berl. & Sacc.	(De Not.) Berl. & Sacc.
@@ -5470,9 +5470,9 @@ Cordia (Adans.) Kuntze sect. Salimori	true	Cordia sect. Salimori	Cordia sect. Sa
 Cordia sect. Salimori (Adans.) Kuntz	true	Cordia sect. Salimori (Adans.) Kuntz	Cordia sect. Salimori	Salimori	Cordia sect. Salimori (Adans.) Kuntz	(Adans.) Kuntz
 Poaceae supertrib. Arundinarodae L.Liu	true	Arundinarodae L.Liu	Arundinarodae	Arundinarodae	Arundinarodae L.Liu	L.Liu
 Alchemilla subsect. Sericeae A.Plocek	true	Alchemilla subsect. Sericeae A.Plocek	Alchemilla subsect. Sericeae	Sericeae	Alchemilla subsect. Sericeae A.Plocek	A.Plocek
-subgen. Psammophrynopsis Koch, 1953	true	subgen. Psammophrynopsis Koch, 1953	subgen. Psammophrynopsis	Psammophrynopsis	subgen. Psammophrynopsis Koch, 1953	Koch, 1953
-Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	true	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	Hymenophyllum subgen. Hymenoglossum	Hymenoglossum	Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	(Presl) R.M.Tryon & A.Tryon
-Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Pereskia subgen. Maihuenia	Maihuenia	Pereskia subgen. Maihuenia Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
+subgen. Psammophrynopsis Koch, 1953	true	subg. Psammophrynopsis Koch, 1953	subg. Psammophrynopsis	Psammophrynopsis	subg. Psammophrynopsis Koch, 1953	Koch, 1953
+Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	true	Hymenophyllum subg. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	Hymenophyllum subg. Hymenoglossum	Hymenoglossum	Hymenophyllum subg. Hymenoglossum (Presl) R.M.Tryon & A.Tryon	(Presl) R.M.Tryon & A.Tryon
+Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	true	Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	Pereskia subg. Maihuenia	Maihuenia	Pereskia subg. Maihuenia Philippi ex F.A.C.Weber, 1898	Philippi ex F.A.C.Weber, 1898
 Aconitum ser. Tangutica W.T. Wang	true	Aconitum ser. Tangutica W.T.Wang	Aconitum ser. Tangutica	Tangutica	Aconitum ser. Tangutica W.T.Wang	W.T.Wang
 Eucalyptus subser. Regulares Brooker	true	Eucalyptus subser. Regulares Brooker	Eucalyptus subser. Regulares	Regulares	Eucalyptus subser. Regulares Brooker	Brooker
 Rosa div. Caninae Lindl.	true	Rosa div. Caninae Lindl.	Rosa div. Caninae	Caninae	Rosa div. Caninae Lindl.	Lindl.

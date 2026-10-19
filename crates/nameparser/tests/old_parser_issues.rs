@@ -901,7 +901,7 @@ fn issue_134_australian_phrase_names_are_informal() {
     }
     // a subgenus and its phrase
     assert_informal("Atrichornis (Rahcinta) sp Glory (BR Maslin 7711)")
-        .taxon("Atrichornis subgen. Rahcinta")
+        .taxon("Atrichornis subg. Rahcinta")
         .taxon_rank(Rank::Subgenus)
         .rank(Rank::Species)
         .phrase("Glory (BR Maslin 7711)")

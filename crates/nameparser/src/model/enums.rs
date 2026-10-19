@@ -716,7 +716,9 @@ impl Rank {
             Rank::SupragenericName => Some("supragen."),
             Rank::Supergenus => Some("supergen."),
             Rank::Genus => Some("gen."),
-            Rank::Subgenus => Some("subgen."),
+            // the botanical "subg." (ICN Art. 21 Ex. 1, 3): zoologists bracket a subgenus instead
+            // (ICZN Art. 6.1); Java's "subgen."
+            Rank::Subgenus => Some("subg."),
             Rank::Infragenus => Some("infrag."),
             Rank::InfragenericName => Some("infragen."),
             Rank::SpeciesAggregate => Some("agg."),

@@ -1145,17 +1145,17 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
     for (input, taxon, phrase) in [
         (
             "Lasioglossum (Dialictus) sp. 1",
-            "Lasioglossum subgen. Dialictus",
+            "Lasioglossum subg. Dialictus",
             "sp. 1",
         ),
         (
             "Enochrus (Methydrus) sp.1",
-            "Enochrus subgen. Methydrus",
+            "Enochrus subg. Methydrus",
             "sp.1",
         ),
         (
             "Lasioglossum (Dialictus) sp.",
-            "Lasioglossum subgen. Dialictus",
+            "Lasioglossum subg. Dialictus",
             "sp.",
         ),
     ] {
@@ -1167,7 +1167,7 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
             .nothing_else();
     }
     assert_informal("Abies subgen. Pseudotsuga sp.")
-        .taxon("Abies subgen. Pseudotsuga")
+        .taxon("Abies subg. Pseudotsuga")
         .taxon_rank(Rank::Subgenus)
         .rank(Rank::Species)
         .phrase("sp.")

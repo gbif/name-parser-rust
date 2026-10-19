@@ -1151,11 +1151,11 @@ mod tests {
 
     #[test]
     fn infrageneric_botanical_uses_rank_marker_and_minimal_drops_genus() {
-        // "subg." normalises to the "subgen." marker; minimal shows only the terminal epithet.
+        // the botanical "subg." marker; minimal shows only the terminal epithet.
         let n = p("Astragalus subg. Cercidothrix");
         assert_eq!(
             n.canonical_name().as_deref(),
-            Some("Astragalus subgen. Cercidothrix")
+            Some("Astragalus subg. Cercidothrix")
         );
         assert_eq!(n.canonical_name_minimal().as_deref(), Some("Cercidothrix"));
     }
@@ -1322,7 +1322,7 @@ mod tests {
         // of no code a subgenus keeps its marker
         assert_eq!(
             canonical("Carabus subgen. Megodontus", None),
-            "Carabus subgen. Megodontus"
+            "Carabus subg. Megodontus"
         );
         assert_eq!(
             canonical("Achillea sect. Ptarmica", None),
@@ -1349,7 +1349,7 @@ mod tests {
             p("Astragalus subg. Cercidothrix")
                 .canonical_name_complete_html()
                 .as_deref(),
-            Some("<i>Astragalus</i> subgen. <i>Cercidothrix</i>")
+            Some("<i>Astragalus</i> subg. <i>Cercidothrix</i>")
         );
     }
 }
