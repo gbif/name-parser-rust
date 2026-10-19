@@ -218,11 +218,11 @@ pub fn run(
             ctx.name.rank = Rank::Serovar;
         }
     }
-    // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a binomial open
-    // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`.
-    // A bare qualified uninomial (`?Monotremata`) keeps its type, as in 5.x, where an INFORMAL one
-    // would have lost the qualifier and the doubtful flag to the flat Informal result.
-    if ctx.qualified_genus && ctx.name.specific_epithet.is_some() {
+    // A qualified genus (`?Sydonia alba`, `cf. Platypeltis croftii`) makes a name open
+    // nomenclature, like the in-name `Sydonia? alba` / `Abies cf. alba`, and so does a qualified
+    // uninomial (`?Monotremata`, `aff. Anthurium`, #192): anchored on itself, it is no longer the
+    // flat Informal result of 5.x that lost the qualifier and the doubtful flag.
+    if ctx.qualified_genus {
         ctx.name.type_ = NameType::Informal;
     }
 
@@ -574,10 +574,7 @@ fn qualify_trailing_doubt(ctx: &mut ParseContext) {
         NamePart::Generic
     };
     n.set_epithet_qualifier(part, "?");
-    // a doubted uninomial keeps its type, as `?Monotremata` does
-    if part != NamePart::Generic {
-        n.type_ = NameType::Informal;
-    }
+    n.type_ = NameType::Informal;
 }
 
 /// A note that a spelling is a misspelling, a lapsus or an error, perhaps of other authors:

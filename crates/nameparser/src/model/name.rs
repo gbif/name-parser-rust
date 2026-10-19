@@ -402,9 +402,9 @@ impl ParsedName {
     /// *Grevillea brachystylis* and `Abies cf. alba` on the genus *Abies*.
     ///
     /// The anchor keeps the name parts down to the deepest one that is present and not qualified
-    /// (cf., aff., ?, ...). A genus doubted with `?` is the exception: `?Sydonia alba` and
-    /// `Ferganoconcha? oblonga` are anchored on that genus, as no part of the name is surer. The
-    /// anchor takes the rank of its deepest part and the authorship that belongs to it: the
+    /// (cf., aff., ?, ...). A qualified genus is the exception: `?Sydonia alba`, `Ferganoconcha?
+    /// oblonga` and `cf. Craticula` are anchored on that genus, as no part of the name is surer.
+    /// The anchor takes the rank of its deepest part and the authorship that belongs to it: the
     /// specific authorship for a species anchor of an infraspecific name, the generic one for a
     /// genus, the name's own when nothing below the anchor is given. The phrase, qualifiers, notes,
     /// publication, warnings and flags other than `candidatus`, `graft_chimaera` and `extinct` are
@@ -420,12 +420,8 @@ impl ParsedName {
                 .as_ref()
                 .is_some_and(|q| q.contains_key(&p))
         };
-        // only doubted, the genus anchors the name all the same: `?Sydonia alba`
-        let doubted_genus = self
-            .epithet_qualifier
-            .as_ref()
-            .and_then(|q| q.get(&NamePart::Generic))
-            .is_some_and(|q| q == "?");
+        // qualified, the genus anchors the name all the same, but alone: `?Sydonia alba`
+        let qualified_genus = qualified(NamePart::Generic);
         let mut a = ParsedName {
             type_: NameType::Scientific,
             code: self.code,
@@ -451,9 +447,6 @@ impl ParsedName {
 
         let Some(genus) = self.genus.clone() else {
             if let Some(uninomial) = self.uninomial.clone() {
-                if qualified(NamePart::Generic) && !doubted_genus {
-                    return None;
-                }
                 a.uninomial = Some(uninomial);
                 a.rank = if self.rank.not_other_or_unranked()
                     && !self.rank.is_species_or_below()
@@ -487,11 +480,8 @@ impl ParsedName {
             return Some(a);
         };
 
-        if qualified(NamePart::Generic) && !doubted_genus {
-            return None;
-        }
         let mut kept = NamePart::Generic;
-        if !doubted_genus {
+        if !qualified_genus {
             if self.infrageneric_epithet.is_some() && !qualified(NamePart::Infrageneric) {
                 kept = NamePart::Infrageneric;
             }

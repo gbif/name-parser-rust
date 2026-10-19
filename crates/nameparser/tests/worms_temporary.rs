@@ -482,10 +482,11 @@ fn leading_question_mark_doubts_the_genus() {
         .warning(&["question marks removed"])
         .comb_authors(Some("1940"), &["Leene"])
         .nothing_else();
-    // a bare uninomial stays a Parsed name, so the qualifier and the flag survive
+    // a bare uninomial is informal too, anchored on itself (#192)
     assert_name("?Monotremata")
         .monomial("Monotremata")
         .qualifiers(&[(NamePart::Generic, "?")])
+        .type_(NameType::Informal)
         .doubtful()
         .warning(&["question marks removed"])
         .nothing_else();
@@ -557,6 +558,7 @@ fn leading_cf_aff_qualifies_the_genus() {
     assert_name("cf. Anthomuricea")
         .monomial("Anthomuricea")
         .qualifiers(&[(NamePart::Generic, "cf.")])
+        .type_(NameType::Informal)
         .nothing_else();
 }
 
@@ -679,4 +681,26 @@ fn a_quoted_genus_loses_its_quotes_but_stays_doubtful() {
         .monomial("Cryptorhynchops")
         .doubtful()
         .nothing_else();
+}
+
+#[test]
+fn a_qualified_uninomial_is_informal_and_anchored_on_itself() {
+    // #186, #192
+    for (name, q) in [("aff. Anthurium", "aff."), ("cf. Craticula", "cf.")] {
+        let taxon = name.split(' ').nth(1).unwrap();
+        assert_name(name)
+            .monomial(taxon)
+            .qualifiers(&[(NamePart::Generic, q)])
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    for name in ["Sacculina?", "Sacculina ?"] {
+        assert_name(name)
+            .monomial("Sacculina")
+            .qualifiers(&[(NamePart::Generic, "?")])
+            .type_(NameType::Informal)
+            .doubtful()
+            .warning(&["question marks removed"])
+            .nothing_else();
+    }
 }

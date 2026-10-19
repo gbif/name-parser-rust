@@ -111,6 +111,7 @@ fn glued_to_a_uninomial_it_doubts_the_uninomial() {
         assert_name(name)
             .monomial("Abies")
             .qualifiers(&[(NamePart::Generic, "?")])
+            .type_(NameType::Informal)
             .doubtful()
             .warning(&[warnings::QUESTION_MARKS_REMOVED])
             .nothing_else();
@@ -206,8 +207,12 @@ fn a_doubted_genus_anchors_the_name() {
     assert_eq!(anchor("Abies? alba").as_deref(), Some("Abies"));
     assert_eq!(anchor("?Sydonia alba").as_deref(), Some("Sydonia"));
     assert_eq!(anchor("?Monotremata").as_deref(), Some("Monotremata"));
-    // another qualifier of the genus still leaves nothing
-    assert_eq!(anchor("cf. Platypeltis croftii"), None);
+    // and so does another qualifier of the genus (#192)
+    assert_eq!(
+        anchor("cf. Platypeltis croftii").as_deref(),
+        Some("Platypeltis")
+    );
+    assert_eq!(anchor("aff. Anthurium").as_deref(), Some("Anthurium"));
 }
 
 #[test]
