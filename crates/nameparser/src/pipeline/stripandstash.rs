@@ -2023,9 +2023,10 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
 }
 
 /// A BOLD BIN (`BOLD:AAF5952`, `BOLD-2016`, canonical `BOLD:2016`) or a UNITE species hypothesis (`SH1957732.10FU`)
-/// after a name. On its own it is an IDENTIFIER (see `preflight`).
+/// after a name. On its own it is an IDENTIFIER (see `preflight`). A `BIN` label before the code
+/// goes with it, `Bledius BIN BOLD:ACU5439` (#187): it was taken for an author.
 static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(.*[^\s])(?-u:\s+)(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)$").unwrap()
+    Regex::new(r"(?i)^(.*?[^\s])(?-u:\s+)(?:BIN(?-u:\s+))?(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)$").unwrap()
 });
 
 /// Sets a trailing BOLD BIN or SH code aside, to be appended to the phrase by Assemble: the
