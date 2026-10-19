@@ -258,8 +258,17 @@ static INED_QMARK: LazyLock<Regex> =
 /// Rust-only, also before a year when the word is capitalised: `Barovski? 1926`, `Rondot? 1887?`,
 /// which Java dropped silently (#80). A lower-case word before the year is an epithet, not an
 /// author.
+///
+/// Rust-only, the word must look like an author, as before the year: capitalised, after a space
+/// or bracket, maybe abbreviated (`Sess?`, `DC.?`, `d'Orb.?`). Java took any letter, so the doubted
+/// epithet of `Abies alba?` and the genus of `Abies?` were uncertain authors, and missed the dot of
+/// `Mikania attenuata DC.?`, whose `?` was dropped without a trace. A separate authorship comes
+/// here with a space put in front ([`on_authorship`]).
 static UNCERTAIN_AUTHOR_QMARK: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"\p{L}\?\s*(?:$|[&,])|(?:^|[\s(])\p{Lu}[\p{L}'.\-]*\?\s+\d{4}").unwrap()
+    Regex::new(
+        r"[\s(](?:\p{Ll}{1,3}')?\p{Lu}[\p{L}'.\-]*\?\s*(?:$|[&,])|(?:^|[\s(])\p{Lu}[\p{L}'.\-]*\?\s+\d{4}",
+    )
+    .unwrap()
 });
 
 /// Java UNCERTAIN_AUTHOR_OR (StripAndStash.java:304-305): `\p{Lu}\p{L}*\s+or\s+\p{Lu}`,
@@ -7635,6 +7644,29 @@ mod tests {
         let out = flag_uncertain_authorship(&mut c, "Aus bus Smith/Jones, 1900".to_string());
         assert_eq!(out, "Aus bus Smith/Jones, 1900");
         assert!(c.name.doubtful);
+    }
+
+    #[test]
+    fn qmark_after_an_abbreviated_author_flags_uncertain() {
+        for s in ["Mikania attenuata DC.?", "Bidens rosaefolius H.B.K.?", " d'Orb.?"] {
+            let mut c = ctx("x");
+            assert_eq!(flag_uncertain_authorship(&mut c, s.to_string()), s);
+            assert!(c.name.doubtful, "{s}");
+            assert!(c
+                .name
+                .warnings
+                .contains(&warnings::UNCERTAIN_AUTHORSHIP.to_string()));
+        }
+    }
+
+    #[test]
+    fn qmark_after_an_epithet_or_the_genus_is_no_uncertain_author() {
+        for s in ["Abies alba?", "Abies?", "Abies alba var. nana?", "Abies? alba"] {
+            let mut c = ctx("x");
+            assert_eq!(flag_uncertain_authorship(&mut c, s.to_string()), s);
+            assert!(!c.name.doubtful, "{s}");
+            assert!(c.name.warnings.is_empty(), "{s}");
+        }
     }
 
     #[test]

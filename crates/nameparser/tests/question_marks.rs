@@ -67,6 +67,70 @@ fn standing_free_it_doubts_the_next_epithet() {
 }
 
 #[test]
+fn glued_to_the_last_epithet_it_doubts_that_epithet_not_an_author() {
+    assert_name("Abies alba?")
+        .species("Abies", "alba")
+        .qualifiers(&[(NamePart::Specific, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+    assert_name_auth("Abies alba?", "Mill.")
+        .species("Abies", "alba")
+        .qualifiers(&[(NamePart::Specific, "?")])
+        .comb_authors(None, &["Mill."])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+    assert_name("Abies alba var. nana?")
+        .infra_species("Abies", "alba", Rank::Variety, "nana")
+        .qualifiers(&[(NamePart::Infraspecific, "?")])
+        .type_(NameType::Informal)
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+}
+
+#[test]
+fn glued_to_a_uninomial_it_doubts_the_uninomial() {
+    assert_name("Abies?")
+        .monomial("Abies")
+        .qualifiers(&[(NamePart::Generic, "?")])
+        .doubtful()
+        .warning(&[warnings::QUESTION_MARKS_REMOVED])
+        .nothing_else();
+}
+
+#[test]
+fn glued_to_an_author_it_marks_the_authorship_uncertain() {
+    assert_name("Aus bus Sess?")
+        .species("Aus", "bus")
+        .comb_authors(None, &["Sess"])
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+    assert_name("Mikania attenuata DC.?")
+        .species("Mikania", "attenuata")
+        .comb_authors(None, &["DC."])
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+    assert_name("Calicium claviculare var. pusillum Ach.?")
+        .infra_species("Calicium", "claviculare", Rank::Variety, "pusillum")
+        .comb_authors(None, &["Ach."])
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+    assert_name_auth("Mikania attenuata", "DC.?")
+        .species("Mikania", "attenuata")
+        .comb_authors(None, &["DC."])
+        .doubtful()
+        .warning(&[warnings::UNCERTAIN_AUTHORSHIP])
+        .nothing_else();
+}
+
+#[test]
 fn a_doubted_genus_anchors_the_name() {
     assert_eq!(anchor("Abies? alba").as_deref(), Some("Abies"));
     assert_eq!(anchor("?Sydonia alba").as_deref(), Some("Sydonia"));
