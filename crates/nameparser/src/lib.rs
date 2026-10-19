@@ -99,10 +99,14 @@ pub fn parse(
     code: Option<NomCode>,
 ) -> ParseResult {
     match pipeline::run(name, authorship, rank, code) {
-        // `Parsed` may only carry a parsable type: a placeholder with its genus missing ("? alba
-        // Smith", "Missing penchinati Bourguignat, 1870") is reported unparsable, like any other
+        // `Parsed` carries a parsable type, or a placeholder hanging off a real taxon, its anchor
+        // ("Chromista incertae sedis", #185). A placeholder with its genus missing ("? alba Smith",
+        // "Missing penchinati Bourguignat, 1870") has none and is reported unparsable, like any other
         // placeholder; `parse_name` still returns its parts.
-        Ok(pn) if !pn.type_.is_parsable() => {
+        Ok(pn)
+            if !pn.type_.is_parsable()
+                && !(pn.type_ == NameType::Placeholder && pn.anchor().is_some()) =>
+        {
             ParseResult::Unparsable(ParseError::new(pn.type_, pn.code, name))
         }
         Ok(pn) => ParseResult::Parsed(pn),

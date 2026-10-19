@@ -235,6 +235,21 @@ static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+/// A real taxon followed by a placeholder keyword: `Chromista incertae sedis`, `Cisticola unnamed`,
+/// `Balaenoptera acutorostrata subsp. unnamed`, `Erpocotyle (incertae sedis)`. Group 1 is the
+/// taxon (a genus, perhaps its bracketed subgenus, up to two epithets), group 2 the placeholder
+/// from its keyword on, rank markers or words before it included (`Davidsonia species
+/// (unnamed)`, `Saccharum hybrid cultivar (unknown)`). A bracketed keyword ends the name: inside it, `Oxypoda (incertae sedis) inimica
+/// Casey, 1911`, it is a note on the species, before an author, `(unknown) C. Agardh`, the basionym
+/// author unknown. `unnamed` counts only here: an
+/// `Unnamed clade` names nothing.
+static ANCHORED_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    let keyword = r"(?i:incertae(?-u:\s+)sedis|inc\.(?-u:\s*)sed\.?|unknown|unnamed|unassigned|not(?-u:\s+)assigned|unidentified|undetermined|indeterminate)";
+    Regex::new(&format!(
+        r"^(\p{{Lu}}\p{{Ll}}+(?:(?-u:\s+)\(\p{{Lu}}\p{{Ll}}+\))?(?:(?-u:\s+)\p{{Ll}}[\p{{Ll}}\-]+){{0,2}}?)(?-u:\s+)((?:(?:\p{{Ll}}{{1,8}}\.|species|genus|family|subspecies|variety|form|hybrid|cultivar)(?-u:\s+)){{0,2}}(?:[(\[]{keyword}[)\]]|{keyword}\b.*))$"
+    ))
+    .unwrap()
+});
 // One to four lowercase words ending in a generic organism word. Group 1 = the qualifier words
 // before it (`marine `, `delta `), group 2 = the remainder after it.
 static ORGANISM_LABEL: LazyLock<Regex> = LazyLock::new(|| {
@@ -616,6 +631,20 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     }
     if lower.starts_with("non ") && (!NON_HOMONYM.is_match(&s) || s.contains('=')) {
         return Err(ParseError::new(NameType::Other, None, original));
+    }
+
+    // A placeholder keyword after a real taxon keeps the taxon: it is the anchor of the
+    // placeholder (#185). Only the taxon parses on; Assemble makes the tail its phrase.
+    // An authorship placeholder ("Ascidia zara author unknown") is no placeholder taxon, see below.
+    let authorship_placeholder =
+        super::stripandstash::without_authorship_placeholder(&s).len() != s.len();
+    if let Some(caps) = ANCHORED_PLACEHOLDER
+        .captures(&s)
+        .filter(|_| !authorship_placeholder)
+    {
+        ctx.placeholder_tail = Some(caps[2].to_string());
+        s = caps[1].to_string();
+        ctx.working = s.clone();
     }
 
     // Placeholder keywords first — some placeholder strings contain "virus" (e.g.

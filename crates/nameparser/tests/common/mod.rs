@@ -160,6 +160,26 @@ pub fn assert_informal_hinted(
     }
 }
 
+/// A placeholder hanging off a real taxon (`Chromista incertae sedis`, #185): a Parsed name of type
+/// PLACEHOLDER, its anchor that taxon and its phrase the placeholder, asserted like an informal
+/// name.
+#[track_caller]
+pub fn assert_placeholder(input: &str) -> InformalAssertion {
+    let call = Call {
+        input,
+        authorship: None,
+        rank: None,
+        code: None,
+    };
+    check_paths(call, Shape::Name);
+    match nameparser::parse(input, None, None, None) {
+        ParseResult::Parsed(pn) if pn.type_ == NameType::Placeholder => {
+            InformalAssertion::new(pn, &call.label())
+        }
+        other => panic!("expected `{input}` to be a parsed placeholder, got {other:?}"),
+    }
+}
+
 /// `assertNoName(name)` — the input must be unparsable. Java asserts `NameType.NO_NAME`, which the
 /// 5.x `NameType` folds into `Other` (see the mapping note in the module doc).
 pub fn assert_no_name(input: &str) {

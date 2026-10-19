@@ -70,8 +70,13 @@ fn hybrid_formulas_are_unparsable_formulas() {
 }
 
 #[test]
-fn placeholders_are_unparsable_placeholders() {
-    check("placeholder.txt", |r| unparsable(r, NameType::Placeholder));
+fn placeholders_are_placeholders() {
+    // unparsable, or parsed when it hangs off a real taxon, its anchor (#185)
+    check("placeholder.txt", |r| {
+        unparsable(r, NameType::Placeholder)
+            || r.parsed()
+                .is_some_and(|pn| pn.type_ == NameType::Placeholder && pn.anchor().is_some())
+    });
 }
 
 #[test]
@@ -97,7 +102,8 @@ fn names_with_authors_keep_their_authors() {
 const CONTRACT_EXCEPTIONS: &[&str] = &[];
 
 /// Over the benchmark corpus, `parse` keeps its contract: a `Parsed` name has a parsable type, an
-/// informal one an anchor, an `Unparsable` one a non-parsable type.
+/// informal one an anchor, or is a placeholder with an anchor; an `Unparsable` one a non-parsable
+/// type.
 #[test]
 fn parse_keeps_its_contract_over_the_benchmark_corpus() {
     let Some(names) = lines("benchmark-data.txt") else {
@@ -106,7 +112,10 @@ fn parse_keeps_its_contract_over_the_benchmark_corpus() {
     let mut problems = Vec::new();
     for name in &names {
         let breach = match nameparser::parse(name, None, None, None) {
-            ParseResult::Parsed(pn) if !pn.type_.is_parsable() => {
+            ParseResult::Parsed(pn)
+                if !pn.type_.is_parsable()
+                    && !(pn.type_ == NameType::Placeholder && pn.anchor().is_some()) =>
+            {
                 Some(format!("Parsed with type {:?}", pn.type_))
             }
             ParseResult::Parsed(pn) => (pn.type_ == NameType::Informal && pn.anchor().is_none())

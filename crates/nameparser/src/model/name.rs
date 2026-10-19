@@ -410,9 +410,14 @@ impl ParsedName {
     /// publication, warnings and flags other than `candidatus`, `graft_chimaera` and `extinct` are
     /// left out. A complete
     /// scientific name is its own anchor, without those details. `None` when no part of the name
-    /// is determined or its type is not parsable.
+    /// is determined or its type is not parsable. A placeholder is anchored on the real taxon it
+    /// hangs off (`Chromista incertae sedis` on *Chromista*, #185), not on the `?` that stands in
+    /// for a missing genus (`? alba`).
     pub fn anchor(&self) -> Option<ParsedName> {
-        if !self.type_.is_parsable() {
+        if !self.type_.is_parsable() && self.type_ != NameType::Placeholder {
+            return None;
+        }
+        if self.genus.as_deref() == Some("?") || self.uninomial.as_deref() == Some("?") {
             return None;
         }
         let qualified = |p: NamePart| {

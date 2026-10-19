@@ -246,12 +246,14 @@ final class StructCodec {
 
   /**
    * Turns a successfully decoded {@link ParsedName} into a {@link ParseResult}: a
-   * {@link ParseResult.Parsed}, informal names included, or — for a name whose type is not parsable
-   * (a placeholder with its genus missing, "? alba Smith") — an {@link ParseResult.Unparsable}
-   * echoing {@code name}, as in Rust's {@code parse}.
+   * {@link ParseResult.Parsed}, informal names and placeholders hanging off a real taxon included
+   * ("Chromista incertae sedis"), or — for a name whose type is not parsable and that has no
+   * anchor (a placeholder with its genus missing, "? alba Smith") — an
+   * {@link ParseResult.Unparsable} echoing {@code name}, as in Rust's {@code parse}.
    */
   static ParseResult toParseResult(ParsedName pn, String name) {
-    if (!pn.getType().isParsable()) {
+    boolean anchoredPlaceholder = pn.getType() == NameType.PLACEHOLDER && pn.anchor().isPresent();
+    if (!pn.getType().isParsable() && !anchoredPlaceholder) {
       return new ParseResult.Unparsable(pn.getType(), pn.getCode(), name);
     }
     return new ParseResult.Parsed(pn);

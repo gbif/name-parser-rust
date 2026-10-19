@@ -164,7 +164,13 @@ fn blacklisted() {
 
     assert_unparsable("Unidentified unidentified Hood", NameType::Placeholder);
 
-    assert_unparsable("Abies unidentified", NameType::Placeholder);
+    // a placeholder hanging off its genus (#185)
+    assert_placeholder("Abies unidentified")
+        .taxon("Abies")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("unidentified")
+        .nothing_else();
 
     assert_name("Passiflora possible Müller")
         .species("Passiflora", "possible")

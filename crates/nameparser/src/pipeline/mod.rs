@@ -174,12 +174,18 @@ pub fn run(
     }
     split_glued_phrase_name(&mut ctx);
 
-    preflight::run(name, &mut ctx)?;
+    // a taxon split off a placeholder that is no name itself leaves the placeholder as it was:
+    // `Viruses incertae sedis`, `Mediterranean clade incertae sedis`
+    preflight::run(name, &mut ctx).map_err(|e| match ctx.placeholder_tail {
+        Some(_) => ParseError::new(NameType::Placeholder, None, name),
+        None => e,
+    })?;
 
     // 5.0.0: Preflight may RESCUE an anchored informal grouping ("Bartonella group",
     // "Vermistella-lineage") into a complete INFORMAL ParsedName instead of erroring — return it
     // as-is, skipping the tokenizer/classifier/assembler (there is nothing left to parse).
     if ctx.preflight_complete {
+        apply_placeholder_tail(&mut ctx);
         assemble::flag_indetermined(&mut ctx.name);
         return Ok(ctx.name);
     }
@@ -515,9 +521,22 @@ pub fn run(
     restore_lost_letters(&mut ctx);
     qualify_trailing_doubt(&mut ctx);
     keep_unplaced_doubt(&mut ctx);
+    apply_placeholder_tail(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
 
     Ok(ctx.name)
+}
+
+/// A placeholder keyword set aside by Preflight after a real taxon (#185): the name is a placeholder
+/// anchored on that taxon, the keyword (and any phrase of the taxon before it) its phrase.
+fn apply_placeholder_tail(ctx: &mut ParseContext) {
+    if let Some(tail) = ctx.placeholder_tail.take() {
+        ctx.name.phrase = Some(match ctx.name.phrase.take() {
+            Some(p) => format!("{p} {tail}"),
+            None => tail,
+        });
+        ctx.name.type_ = NameType::Placeholder;
+    }
 }
 
 /// A word ending in a "?" after a letter or a dot (`pentagona?`, `sensu?,`), as long as no "?"

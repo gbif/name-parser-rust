@@ -501,9 +501,19 @@ fn autonym_authorship() {
 
 #[test]
 fn unparsable_placeholder() {
-    assert_unparsable("Mollusca not assigned", NameType::Placeholder);
+    // hanging off a real taxon, a placeholder is parsed, anchored on it (#185)
+    for (name, taxon, phrase) in [
+        ("Mollusca not assigned", "Mollusca", "not assigned"),
+        ("Biota incertae sedis", "Biota", "incertae sedis"),
+    ] {
+        assert_placeholder(name)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
     assert_unparsable("[unassigned] Cladobranchia", NameType::Placeholder);
-    assert_unparsable("Biota incertae sedis", NameType::Placeholder);
     assert_unparsable("Unaccepted", NameType::Placeholder);
     assert_unparsable(
         "uncultured Verrucomicrobiales bacterium",
@@ -556,7 +566,12 @@ fn unparsable_placeholder() {
     assert_eq!(aster.type_, NameType::Informal);
     assert_eq!(aster.warnings, vec![warnings::INDETERMINED.to_string()]);
 
-    assert_unparsable("Asteraceae incertae sedis", NameType::Placeholder);
+    assert_placeholder("Asteraceae incertae sedis")
+        .taxon("Asteraceae")
+        .taxon_rank(Rank::Family)
+        .rank(Rank::Family)
+        .phrase("incertae sedis")
+        .nothing_else();
     assert_unparsable("unassigned Abies", NameType::Placeholder);
     assert_unparsable("Unident-Boraginaceae", NameType::Placeholder);
     assert_unparsable("Unident", NameType::Placeholder);

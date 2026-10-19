@@ -13,14 +13,48 @@ use nameparser::model::{warnings, NamePart, NameType, Rank};
 
 #[test]
 fn incertae_sedis_variants_are_placeholders() {
+    // hanging off a real taxon, a placeholder is parsed, anchored on it (#185)
+    for (name, taxon, phrase) in [
+        (
+            "Abyssochrysoidea incertae sedis",
+            "Abyssochrysoidea",
+            "incertae sedis",
+        ),
+        (
+            "Ophiuroidea Incertae sedis",
+            "Ophiuroidea",
+            "Incertae sedis",
+        ),
+        (
+            "Erpocotyle (incertae sedis)",
+            "Erpocotyle",
+            "(incertae sedis)",
+        ),
+        (
+            "Paleopneustina incertae sedis A",
+            "Paleopneustina",
+            "incertae sedis A",
+        ),
+        (
+            "Sordariomycetes incertae sedis (fam.)",
+            "Sordariomycetes",
+            "incertae sedis (fam.)",
+        ),
+        (
+            "Astrophorida incertae sedis Hooper & Maldonado, 2002",
+            "Astrophorida",
+            "incertae sedis Hooper & Maldonado, 2002",
+        ),
+    ] {
+        assert_placeholder(name)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
     for name in [
-        "Abyssochrysoidea incertae sedis",
         "Cephalopoda <i>incertae sedis</i>",
-        "Ophiuroidea Incertae sedis",
-        "Erpocotyle (incertae sedis)",
-        "Paleopneustina incertae sedis A",
-        "Sordariomycetes incertae sedis (fam.)",
-        "Astrophorida incertae sedis Hooper & Maldonado, 2002",
         "[unassigned] Decapodiformes",
     ] {
         assert_unparsable(name, NameType::Placeholder);
@@ -51,15 +85,22 @@ fn bracketed_of_citation_after_sp_stays_in_the_phrase() {
 
 #[test]
 fn nbsp_incertae_sedis_is_a_placeholder() {
-    assert_unparsable(
+    // a placeholder hanging off its taxon (#185)
+    assert_placeholder("Assimineidae\u{a0}incertae\u{a0}sedis")
+        .taxon("Assimineidae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("incertae sedis")
+        .nothing_else();
+    let hinted = nameparser::parse(
         "Assimineidae\u{a0}incertae\u{a0}sedis",
-        NameType::Placeholder,
+        None,
+        Some(Rank::Genus),
+        None,
     );
-    assert_unparsable_rank(
-        "Assimineidae\u{a0}incertae\u{a0}sedis",
-        Rank::Genus,
-        NameType::Placeholder,
-    );
+    let pn = hinted.parsed().expect("a parsed placeholder");
+    assert_eq!(pn.type_, NameType::Placeholder);
+    assert_eq!(pn.phrase.as_deref(), Some("incertae sedis"));
 }
 
 #[test]
