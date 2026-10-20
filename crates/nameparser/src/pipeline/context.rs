@@ -210,6 +210,16 @@ impl ParseContext {
         }
     }
 
+    /// The combination's `in` citation named authors and a year: "Edwards in Barraud 1934". The
+    /// year dates the name, though it reaches the authorship only after Assemble. A citation of
+    /// a work does not count: "Benth. in Bentham & Hooker, Gen. Pl. 2: 532. 1873".
+    pub(crate) fn has_dated_in_citation(&self) -> bool {
+        self.pending_in_authors
+            .as_ref()
+            .is_some_and(|team| !team.is_empty())
+            && self.pending_year.is_some()
+    }
+
     pub(crate) fn set_pending_imprint_year(&mut self, year: &str) {
         if self.pending_imprint_year.is_none() {
             self.pending_imprint_year = Some(year.to_string());

@@ -874,20 +874,24 @@ fn genus_basionym_versus_subgenus() {
     // (3) genus + subgenus + authorship — year OUTSIDE the brackets (ZooBank mixed format); a
     // zoological name has no other rank in parentheses after the genus (ICZN Art. 6.1)
     assert_name("Dicromita (Pterodicromita) Fowler, 1925")
-        .infrageneric_at("Dicromita", Rank::InfragenericName, "Pterodicromita")
+        .infrageneric_at("Dicromita", Rank::Subgenus, "Pterodicromita")
         .comb_authors(Some("1925"), &["Fowler"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Tenthredo (Macrophya) Dahlbom, 1835")
-        .infrageneric_at("Tenthredo", Rank::InfragenericName, "Macrophya")
+        .infrageneric_at("Tenthredo", Rank::Subgenus, "Macrophya")
         .comb_authors(Some("1835"), &["Dahlbom"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Caranx (Usa) Whitley, 1927")
-        .infrageneric_at("Caranx", Rank::InfragenericName, "Usa")
+        .infrageneric_at("Caranx", Rank::Subgenus, "Usa")
         .comb_authors(Some("1927"), &["Whitley"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Oligota (Logiota) Mulsant & Rey 1873")
-        .infrageneric_at("Oligota", Rank::InfragenericName, "Logiota")
+        .infrageneric_at("Oligota", Rank::Subgenus, "Logiota")
         .comb_authors(Some("1873"), &["Mulsant", "Rey"])
+        .code(NomCode::Zoological)
         .nothing_else();
 }
 

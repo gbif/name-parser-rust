@@ -17,7 +17,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::model::{warnings, NomCode};
+use crate::model::{warnings, NomCode, Rank};
 use crate::pipeline::authorship_parser::{is_sanctioning_author, AuthState};
 use crate::pipeline::ParseContext;
 
@@ -37,7 +37,8 @@ static ICZN_STATUS: LazyLock<Regex> =
 ///      section/series, etc. The generic markers subsp./var./f. carry *no* code (they are used
 ///      across codes) and so are no evidence.
 ///   2. a named hybrid (BOTANICAL), sanctioning by Fries or Persoon (BOTANICAL), an Approved
-///      Lists citation or a revived name (BACTERIAL), a Candidatus name (BACTERIAL).
+///      Lists citation or a revived name (BACTERIAL), a Candidatus name (BACTERIAL), a dated bare
+///      bracketed subgenus (ZOOLOGICAL).
 ///   3. a zoological-only nomenclatural status ([`code_from_nom_note`]).
 pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // 1. A code-exclusive rank.
@@ -86,6 +87,23 @@ pub(crate) fn infer(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         ctx.name.code = Some(NomCode::Bacterial);
         return;
     }
+    // A bare bracketed name after a genus, dated, is a zoological subgenus: "Aedes (Stegomyia)
+    // Theobald, 1901" (ICZN Art. 6.1). Botany brackets its subdivisions only inside a binomial
+    // (ICN Rec. 21A) and the prokaryote code with "subgen." (Rule 10c). Of the 115k such names in
+    // ChecklistBank, 3 are botanical, and those are subgenera too. Undated it may still be a
+    // botanical subdivision ("Werneria (Euwerneria)") or a basionym author.
+    if ctx.name.rank == Rank::InfragenericName
+        && !ctx.infrageneric_rank_marker
+        && !ctx.bracketed_infrageneric_marker
+        && !ctx.written_out_infrageneric_marker
+        && ctx.name.genus.is_some()
+        && ctx.name.infrageneric_epithet.is_some()
+        && ctx.name.specific_epithet.is_none()
+        && (ctx.name.combination_authorship.year.is_some() || ctx.has_dated_in_citation())
+    {
+        ctx.name.code = Some(NomCode::Zoological);
+        return;
+    }
 
     // 3. A zoological-only nomenclatural status.
     if let Some(note_code) = code_from_nom_note(ctx.name.nomenclatural_note.as_deref()) {
@@ -129,7 +147,6 @@ pub(crate) fn apply_rank_code_mismatch(ctx: &mut ParseContext) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::Rank;
     use crate::pipeline::authorship_parser::parse as parse_auth;
     use crate::token::tokenize;
 
