@@ -822,9 +822,9 @@ Xylosma quichensis var. subalpina Donn.Sm.	true	Xylosma quichensis var. subalpin
 Zexmenia guatemalensis Donn.Sm.	true	Zexmenia guatemalensis Donn.Sm.	Zexmenia guatemalensis	Zexmenia guatemalensis	Zexmenia guatemalensis Donn.Sm.	Donn.Sm.
 Zinnia jugistyla Paul G.Wilson	true	Zinnia jugistyla Paul G.Wilson	Zinnia jugistyla	Zinnia jugistyla	Zinnia jugistyla Paul G.Wilson	Paul G.Wilson
 Poa indeterminate	true	Poa indeterminate	Poa indeterminate	Poa	Poa indeterminate	
-Pezizomycotina, ordines incertae sedis	false					
-Ascomycota, families incertae sedis	false					
-Heterokontophyta, genera incertae sedis	false					
+Pezizomycotina, ordines incertae sedis	true	Pezizomycotina ordines incertae sedis	Pezizomycotina ordines incertae sedis	Pezizomycotina	Pezizomycotina ordines incertae sedis	
+Ascomycota, families incertae sedis	true	Ascomycota families incertae sedis	Ascomycota families incertae sedis	Ascomycota	Ascomycota families incertae sedis	
+Heterokontophyta, genera incertae sedis	true	Heterokontophyta genera incertae sedis	Heterokontophyta genera incertae sedis	Heterokontophyta	Heterokontophyta genera incertae sedis	
 Oxypoda ((incertae sedis)) inimica Casey, 1911	false					
 Undescribed genus	false					
 ? unclassed	false					

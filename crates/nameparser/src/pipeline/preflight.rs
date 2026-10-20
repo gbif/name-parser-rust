@@ -243,10 +243,15 @@ static PLACEHOLDER_KEYWORDS: LazyLock<Regex> = LazyLock::new(|| {
 /// Casey, 1911`, it is a note on the species, before an author, `(unknown) C. Agardh`, the basionym
 /// author unknown. `unnamed` counts only here: an
 /// `Unnamed clade` names nothing.
+/// Dyntaxa and LPSN put a comma after the taxon and a rank word in Latin or English, singular or
+/// plural, before the keyword (`Hacrobia, classes incertae sedis`, `Insecta, ordines incertae
+/// sedis`) or `to <rank>` after it (`Bacillota, not assigned to class`); the comma is in neither
+/// group, and a plural rank word is no epithet (`Hacrobia classes incertae sedis`, #202).
 static ANCHORED_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
     let keyword = r"(?i:incertae(?-u:\s+)sedis|inc\.(?-u:\s*)sed\.?|unknown|unnamed|unassigned|not(?-u:\s+)assigned|unidentified|undetermined|indeterminate)";
+    let rank_word = r"(?:sub|super|infra)?(?:species|genus|genera|family|families|familia|familiae|ordo|ordines|orders?|classis|classes|class|phylum|phyla|divisio|divisions?|kingdoms?|regnum|tribus|tribes?|sectio|sections?)|variety|form|hybrid|cultivar";
     Regex::new(&format!(
-        r"^(\p{{Lu}}\p{{Ll}}+(?:(?-u:\s+)\(\p{{Lu}}\p{{Ll}}+\))?(?:(?-u:\s+)\p{{Ll}}[\p{{Ll}}\-]+){{0,2}}?)(?-u:\s+)((?:(?:\p{{Ll}}{{1,8}}\.|species|genus|family|subspecies|variety|form|hybrid|cultivar)(?-u:\s+)){{0,2}}(?:[(\[]{keyword}[)\]]|{keyword}\b.*))$"
+        r"^(\p{{Lu}}\p{{Ll}}+(?:(?-u:\s+)\(\p{{Lu}}\p{{Ll}}+\))?(?:(?-u:\s+)\p{{Ll}}[\p{{Ll}}\-]+){{0,2}}?),?(?-u:\s+)((?:(?:\p{{Ll}}{{1,8}}\.|{rank_word})(?-u:\s+)){{0,2}}(?:[(\[]{keyword}[)\]]|{keyword}\b.*))$"
     ))
     .unwrap()
 });

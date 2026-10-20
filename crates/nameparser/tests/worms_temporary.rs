@@ -62,6 +62,116 @@ fn incertae_sedis_variants_are_placeholders() {
 }
 
 #[test]
+fn comma_style_placeholders_are_anchored() {
+    // Dyntaxa and LPSN put a comma after the taxon and a rank word, Latin or English, singular or
+    // plural, before the keyword or `to <rank>` after it (#202). The comma is no part of the phrase.
+    for (name, taxon, phrase) in [
+        (
+            "Hacrobia, classes incertae sedis",
+            "Hacrobia",
+            "classes incertae sedis",
+        ),
+        (
+            "Acoelomorpha, classis incertae sedis",
+            "Acoelomorpha",
+            "classis incertae sedis",
+        ),
+        (
+            "Protozoa, phylum incertae sedis",
+            "Protozoa",
+            "phylum incertae sedis",
+        ),
+        (
+            "Coleoptera, genera incertae sedis",
+            "Coleoptera",
+            "genera incertae sedis",
+        ),
+        (
+            "Diptera, families incertae sedis",
+            "Diptera",
+            "families incertae sedis",
+        ),
+        (
+            "Insecta, ordo incertae sedis",
+            "Insecta",
+            "ordo incertae sedis",
+        ),
+        (
+            "Hemiptera, familia incertae sedis",
+            "Hemiptera",
+            "familia incertae sedis",
+        ),
+        (
+            "Insecta, ordines incertae sedis",
+            "Insecta",
+            "ordines incertae sedis",
+        ),
+        (
+            "Insecta, orders incertae sedis",
+            "Insecta",
+            "orders incertae sedis",
+        ),
+        (
+            "Anthozoa, subclassis incertae sedis",
+            "Anthozoa",
+            "subclassis incertae sedis",
+        ),
+        (
+            "Hemiptera, subordines incertae sedis",
+            "Hemiptera",
+            "subordines incertae sedis",
+        ),
+        ("Mollusca, incertae sedis", "Mollusca", "incertae sedis"),
+        (
+            "Bacteria, not assigned to kingdom",
+            "Bacteria",
+            "not assigned to kingdom",
+        ),
+        (
+            "Anaerolineae, not assigned to order",
+            "Anaerolineae",
+            "not assigned to order",
+        ),
+        // the comma-less form: a plural rank word is no epithet
+        (
+            "Hacrobia classes incertae sedis",
+            "Hacrobia",
+            "classes incertae sedis",
+        ),
+        (
+            "Coleoptera genera incertae sedis",
+            "Coleoptera",
+            "genera incertae sedis",
+        ),
+    ] {
+        assert_placeholder(name)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // a rank hint does not change the anchor
+    for (name, rank) in [
+        ("Ascomycota, classes incertae sedis", Rank::Subphylum),
+        ("Bacillota, not assigned to class", Rank::Class),
+    ] {
+        let result = nameparser::parse(name, None, Some(rank), None);
+        let pn = result
+            .parsed()
+            .unwrap_or_else(|| panic!("{name}: a parsed placeholder"));
+        assert_eq!(pn.type_, NameType::Placeholder, "{name}");
+        assert_eq!(
+            pn.uninomial.as_deref(),
+            Some(&name[..name.find(',').unwrap()]),
+            "{name}"
+        );
+    }
+    // a taxon that is no name leaves the placeholder unparsable, as without the comma (#185)
+    assert_unparsable("Viruses, phylum not assigned", NameType::Placeholder);
+}
+
+#[test]
 fn fish_suborders_are_scientific_monomials() {
     assert_name("Acanthistioidei")
         .monomial("Acanthistioidei")
