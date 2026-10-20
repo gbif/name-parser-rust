@@ -17,6 +17,11 @@ model they implement is the Java `org.gbif:name-parser-api`, versioned on its ow
   (#60). Only Fries and Persoon are sanctioning authors. An unranked infrageneric name or a
   zoological subgenus is written in brackets; a subgenus otherwise with `subg.`, or `subgen.` under
   the bacterial code.
+- Walter Berendsohn's ColDP issues (#185 to #196):
+  - A graft-chimaera (`+Crataegomespilus`) sets the new `graftChimaera` flag instead of notho (FFI ABI 9).
+  - A placeholder hanging off a real taxon (`Chromista incertae sedis`) is a parsed PLACEHOLDER, anchored on that taxon.
+  - Any qualified genus (`aff. Anthurium`, `Sacculina?`) is INFORMAL.
+  - Text decoded with the wrong encoding is repaired (`GÃ¼rke` → `Gürke`); a quoted genus loses its quotes.
 
 ## 0.4.0 (2026-10-14, api 5.4.0)
 
