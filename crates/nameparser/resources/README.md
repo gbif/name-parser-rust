@@ -141,3 +141,17 @@ abbreviated in three titles or more that no author abbreviation in IPNI or TL-2 
 export, Smithsonian Libraries) abbreviates with a full stop. Nothing from TL-2 is in the file; it only
 keeps words out. Titles of persons and places (`dr`, `prof`, `mt`) are left out by hand in the script.
 Regenerate rather than edit.
+
+## Basionym authors (`basionym-authors.txt`)
+
+Basionym authors written in full (`Bentham`, `Nitschke`, `Linnaeus`). In brackets after a genus,
+one of them is the basionym author of that genus, even with a year after the combination author:
+`Eutypella (Nitschke) Sacc., 1875`, `Clathrotropis (Bentham) Harms in Dalla Torre & Harms, 1901`.
+Any other single word there, with a year, is a zoological subgenus: `Aedes (Stegomyia) Theobald,
+1901`. See `find_boundary` in `src/pipeline/authorship_split.rs`.
+
+Generated in October 2026 by `scripts/build-basionym-authors.py`, which documents the rules, from
+the ChecklistBank verbatim names (`testdata/clb-verbatim-names.tsv`). An author is listed when it
+opens a separately given authorship as its bracketed basionym in twenty rows or more, and names a
+bracketed subgenus in fewer than five. Authors that are subgenera as often (`Mitra`, `Costa`, `Hua`)
+stay out. Regenerate rather than edit.

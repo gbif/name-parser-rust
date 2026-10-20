@@ -30,10 +30,25 @@
 //! Task 1 made the full `Rank` model the single source of truth, replacing this file's
 //! former ad-hoc `rank_is_infrageneric_strictly` free function.
 
+use std::collections::HashSet;
+use std::sync::LazyLock;
+
 use crate::model::{NomCode, Rank};
 use crate::pipeline::ParseContext;
 use crate::pipeline::{blacklisted_epithets, rank_markers};
 use crate::token::{self, Token, TokenKind};
+
+const BASIONYM_AUTHORS_TXT: &str = include_str!("../../resources/basionym-authors.txt");
+
+/// Basionym authors written in full, which in brackets after a genus are no subgenus, a year
+/// after them notwithstanding: `Bentham`, `Nitschke`, `Linnaeus` (see the resource's README).
+static BASIONYM_AUTHORS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
+    BASIONYM_AUTHORS_TXT
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .collect()
+});
 
 /// A comma written next to an infraspecific rank marker that is followed by its epithet: in front
 /// of the marker ("Felis tigris, var. montanus", "Equus hemionus, var syriacus") it is dropped,
@@ -148,6 +163,8 @@ fn comma_epithet_at(tokens: &[Token], k: usize) -> bool {
 ///  5. the caller asked for an infrageneric rank → subgenus;
 ///  6. the trailing authorship carries a year OUTSIDE the parens — the zoological "Genus
 ///     (Subgenus) Author, year" form ("Dicromita (Pterodicromita) Fowler, 1925") → subgenus;
+///     the year of a stripped `in` citation counts ("Aedes (Paraedes) Edwards in Barraud 1934"),
+///     but a well-known basionym author is none ("Eutypella (Nitschke) Sacc., 1875");
 ///  7. otherwise a trailing author with no year makes "(Word)" the basionym author of a
 ///     botanical genus recombination ("Kyphocarpa (Fenzl) Lopr.").
 ///
@@ -668,7 +685,8 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         } else if code == Some(NomCode::Botanical) || rank_requests_genus {
                             false
                         } else {
-                            has_year_token(tokens, after_paren, n)
+                            (has_year_token(tokens, after_paren, n) || ctx.has_dated_in_citation())
+                                && !BASIONYM_AUTHORS.contains(tokens[j].text.as_str())
                         };
                         if subgenus {
                             i = after_paren;
@@ -1643,6 +1661,11 @@ mod tests {
     #[test]
     fn year_outside_parens_is_subgenus_zoological_form_rule6() {
         assert_eq!(boundary("Dicromita (Pterodicromita) Fowler, 1925", None), 4);
+    }
+
+    #[test]
+    fn a_known_basionym_author_is_no_subgenus_despite_a_year_rule6() {
+        assert_eq!(boundary("Eutypella (Nitschke) Sacc., 1875", None), 1);
     }
 
     #[test]

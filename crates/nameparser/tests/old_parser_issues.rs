@@ -259,8 +259,9 @@ fn issue_164_diacritics_in_epithets() {
 #[test]
 fn issue_165_standalone_subgenera() {
     assert_name("Calathus (Lindrothius) KURNAKOV 1961")
-        .infrageneric_at("Calathus", Rank::InfragenericName, "Lindrothius")
+        .infrageneric_at("Calathus", Rank::Subgenus, "Lindrothius")
         .comb_authors(Some("1961"), &["Kurnakov"])
+        .code(NomCode::Zoological)
         .nothing_else();
     assert_name("Hymenophyllum subgen. Hymenoglossum (Presl) R.M.Tryon & A.Tryon")
         .infrageneric_at("Hymenophyllum", Rank::Subgenus, "Hymenoglossum")
@@ -1343,8 +1344,9 @@ fn issue_171_zoological_sections() {
         ("Balanus (Megabalanus) Hoek, 1913", "Megabalanus"),
     ] {
         assert_name(name)
-            .infrageneric_at("Balanus", Rank::InfragenericName, epithet)
+            .infrageneric_at("Balanus", Rank::Subgenus, epithet)
             .comb_authors(Some("1913"), &["Hoek"])
+            .code(NomCode::Zoological)
             .nothing_else();
     }
     // a botanist's section keeps its rank, with or without a year, a comma or brackets

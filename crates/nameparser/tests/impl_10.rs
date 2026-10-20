@@ -634,12 +634,89 @@ fn hyphens() {
 }
 
 #[test]
+fn a_dated_bracketed_word_after_the_genus_is_a_zoological_subgenus() {
+    // ICZN Art. 6.1: the only rank in brackets after a genus is the subgenus
+    for name in [
+        "Aedes (Stegomyia) Theobald, 1901",
+        "Aedes (Stegomyia) Theobald 1901",
+    ] {
+        assert_name(name)
+            .infrageneric_at("Aedes", Rank::Subgenus, "Stegomyia")
+            .comb_authors(Some("1901"), &["Theobald"])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    // the year of an in citation dates the name too
+    assert_name("Aedes (Paraedes) Edwards in Barraud 1934")
+        .infrageneric_at("Aedes", Rank::Subgenus, "Paraedes")
+        .comb_authors(Some("1934"), &["Edwards"])
+        .comb_in_authors(&["Barraud"])
+        .published_in("Barraud 1934")
+        .published_in_year(Some(1934))
+        .code(NomCode::Zoological)
+        .nothing_else();
+    assert_name("Antlemon (Antlemon) Haliday in Loew, 1871")
+        .infrageneric_at("Antlemon", Rank::Subgenus, "Antlemon")
+        .comb_authors(Some("1871"), &["Haliday"])
+        .comb_in_authors(&["Loew"])
+        .published_in("Loew, 1871")
+        .published_in_year(Some(1871))
+        .code(NomCode::Zoological)
+        .nothing_else();
+    // a well-known basionym author is no subgenus, dated or cited in a work
+    assert_name("Eutypella (Nitschke) Sacc., 1875")
+        .monomial("Eutypella")
+        .bas_authors(None, &["Nitschke"])
+        .comb_authors(Some("1875"), &["Sacc."])
+        .nothing_else();
+    assert_name("Clathrotropis (Bentham) Harms in Dalla Torre & Harms, 1901")
+        .monomial("Clathrotropis")
+        .bas_authors(None, &["Bentham"])
+        .comb_authors(Some("1901"), &["Harms"])
+        .comb_in_authors(&["Dalla Torre", "Harms"])
+        .published_in("Dalla Torre & Harms, 1901")
+        .published_in_year(Some(1901))
+        .nothing_else();
+    // a work cited, not its authors: a genus with its basionym author
+    assert_name("Epilasia (Bunge) Benth. in Bentham & Hooker, Gen. Pl. 2: 532. 1873")
+        .monomial("Epilasia")
+        .bas_authors(None, &["Bunge"])
+        .comb_authors(Some("1873"), &["Benth."])
+        .published_in("Bentham & Hooker, Gen. Pl. 2: 532. 1873")
+        .published_in_year(Some(1873))
+        .nothing_else();
+    // the code given wins
+    assert_name_code("Ranunculus (Cyrtorhyncha) Nutt., 1838", NomCode::Botanical)
+        .monomial("Ranunculus")
+        .bas_authors(None, &["Cyrtorhyncha"])
+        .comb_authors(Some("1838"), &["Nutt."])
+        .code(NomCode::Botanical)
+        .nothing_else();
+    // undated it may be a botanical subdivision
+    assert_name("Aedes (Stegomyia)")
+        .infrageneric_at("Aedes", Rank::InfragenericName, "Stegomyia")
+        .nothing_else();
+    // a marker in the brackets is no subgenus
+    assert_name("Feronia (div. Percus) Dejean, 1828")
+        .infrageneric_at("Feronia", Rank::InfragenericName, "Percus")
+        .comb_authors(Some("1828"), &["Dejean"])
+        .nothing_else();
+}
+
+#[test]
 fn a_rank_or_code_hint_settles_a_bracketed_word_after_the_genus() {
     let name = "Humiriastrum (Urban) Cuatrecasas, 1961";
-    // no hint: the year outside the bracket makes it the zoological subgenus
+    // no hint: Urban is a well-known basionym author, so the year notwithstanding a genus
     assert_name(name)
-        .infrageneric_at("Humiriastrum", Rank::InfragenericName, "Urban")
+        .monomial("Humiriastrum")
+        .bas_authors(None, &["Urban"])
         .comb_authors(Some("1961"), &["Cuatrecasas"])
+        .nothing_else();
+    // any other word with a year after it is the zoological subgenus
+    assert_name("Humiriastrum (Urbanella) Cuatrecasas, 1961")
+        .infrageneric_at("Humiriastrum", Rank::Subgenus, "Urbanella")
+        .comb_authors(Some("1961"), &["Cuatrecasas"])
+        .code(NomCode::Zoological)
         .nothing_else();
     // a genus: Urban is the basionym author
     assert_name_rank(name, Rank::Genus)
