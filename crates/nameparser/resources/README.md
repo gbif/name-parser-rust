@@ -74,8 +74,11 @@ indeterminate species.
 
 ## Homoglyph table (`homoglyphs.txt`)
 
-Confusable-character normalisation table, likewise copied from the Java name-parser resource of
-the same name and `diff`-verified. See `src/unicode.rs` for its use.
+Confusable-character normalisation table, a copy of name-parser-api's `unicode/homoglyphs.txt`.
+The two copies must stay byte-identical, since ChecklistBank flags verbatim terms with the Java one:
+`HomoglyphTableTest` in `bindings/java` fails the build when they differ (#205), so a change to one
+goes into the other too. Java skips the dotless `ı` in its loader, not in the file. See
+`src/unicode.rs` for its use.
 
 ## Double surnames (`double-surnames.tsv`)
 
