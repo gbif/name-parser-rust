@@ -417,6 +417,39 @@ fn a_stray_lower_case_word_ends_the_authorship() {
         .specific_bas_authors(None, &["L.f."])
         .comb_authors(None, &["Rosent"])
         .nothing_else();
+    // an autonym repeats the species epithet and carries no author of its own (#207)
+    assert_name("Aaronsohnia factorovskyi Warb. & Eig. factorovskyi")
+        .infra_species(
+            "Aaronsohnia",
+            "factorovskyi",
+            Rank::InfraspecificName,
+            "factorovskyi",
+        )
+        .specific_authors(None, &["Warb.", "Eig."])
+        .nothing_else();
+    assert_name("Abies alba Mill. alba")
+        .infra_species("Abies", "alba", Rank::InfraspecificName, "alba")
+        .specific_authors(None, &["Mill."])
+        .nothing_else();
+    // ... also after a plain surname, which would otherwise swallow it
+    assert_name("Abarema jupunba (Willd.) Britton & Killip jupunba")
+        .infra_species("Abarema", "jupunba", Rank::InfraspecificName, "jupunba")
+        .specific_authors(None, &["Britton", "Killip"])
+        .specific_bas_authors(None, &["Willd."])
+        .nothing_else();
+    // without its own author or the autonym's repeat a trailing word is no epithet
+    assert_name("Abies alba Mill. pyrenaica")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Mill."])
+        .partial("pyrenaica")
+        .nothing_else();
+    // nor is a name repeated with its subgenus an autonym
+    assert_name("Aphelinoidea dolichoptera Aphelinoidea (Lathromeroides) dolichoptera")
+        .species("Aphelinoidea", "dolichoptera")
+        .partial("dolichoptera");
+    assert_name("Prolepta tuberculatus Prolepta (?) tuberculatus")
+        .species("Prolepta", "tuberculatus")
+        .partial("tuberculatus");
     // a note keyword is no epithet
     assert_name("Abies alba Mill. teste Smith")
         .species("Abies", "alba")
