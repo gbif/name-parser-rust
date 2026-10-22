@@ -1049,7 +1049,9 @@ const NOTE_WORDS: &[&str] = &[
 /// "Polypodium pectinatum (L. f.) typica Rosent". Returns the epithet's index. The epithet is a
 /// whole lower-case word of three or more letters set off by spaces that no author carries and
 /// that opens no note; the species author before it ends on a dot, a bracket or a year, the author
-/// after it is a capitalised word or a basionym bracket.
+/// after it is a capitalised word or a basionym bracket. An autonym ends the name on the species
+/// epithet repeated and carries no author ("Aaronsohnia factorovskyi Warb. & Eig. factorovskyi",
+/// #207); the repeat is evidence enough for a species author ending on a plain surname too.
 pub(crate) fn unmarked_infraspecific_after_author(tokens: &[Token], from: usize) -> Option<usize> {
     let n = tokens.len();
     // not after a rank marker: there the epithet is still to come ("var. (?) pubescens Benth.")
@@ -1105,14 +1107,23 @@ pub(crate) fn unmarked_infraspecific_after_author(tokens: &[Token], from: usize)
         }
         j += 1;
     }
+    // the name given twice repeats its genus too ("Catocala columbina Leech, Catocala columbina")
+    let autonym = j + 1 == n
+        && from > 0
+        && tokens[from - 1].kind == TokenKind::Word
+        && tokens[from - 1].text == tokens[j].text
+        && !tokens[from..j].iter().any(|t| t.text == tokens[0].text);
     // the species author ends on an abbreviation dot, its bracket or a year: after a plain
     // capitalised word the lower-case one may be a second name's epithet ("Mesalia zinkeni (Dunker
-    // 1851) & Promathildia turritella (Dunker 1851)")
+    // 1851) & Promathildia turritella (Dunker 1851)"); an autonym's repeat vouches for a team or
+    // a bracket before the surname, but a lone word is the genus of the name given twice ("Cimex
+    // ruber Cimex ruber")
     if j <= from
-        || !matches!(
-            tokens[j - 1].kind,
-            TokenKind::Dot | TokenKind::CloseParen | TokenKind::Number
-        )
+        || !((autonym && j > from + 1)
+            || matches!(
+                tokens[j - 1].kind,
+                TokenKind::Dot | TokenKind::CloseParen | TokenKind::Number
+            ))
     {
         return None;
     }
@@ -1128,8 +1139,8 @@ pub(crate) fn unmarked_infraspecific_after_author(tokens: &[Token], from: usize)
     }
     let t = tokens.get(j)?;
     let w = t.text.as_str();
-    let spaced =
-        tokens[j - 1].end < t.start && tokens.get(j + 1).is_some_and(|nx| t.end < nx.start);
+    let spaced = tokens[j - 1].end < t.start
+        && (autonym || tokens.get(j + 1).is_some_and(|nx| t.end < nx.start));
     let epithet = t.kind == TokenKind::Word
         && spaced
         && w.chars().count() >= 3
@@ -1157,7 +1168,7 @@ pub(crate) fn unmarked_infraspecific_after_author(tokens: &[Token], from: usize)
             .is_some_and(|a| a.kind == TokenKind::Word && starts_upper(a)),
         _ => false,
     };
-    (epithet && author_follows).then_some(j)
+    (epithet && (author_follows || autonym)).then_some(j)
 }
 
 /// The marker word "ser" or "subser" at `i` — real epithets too — is undotted and followed by an
