@@ -75,6 +75,10 @@
          surefire's working directory, with the module-relative "../../testdata" as ParityTest's
          own fallback if this property is ever unset (e.g. run directly from an IDE). -->
     <nameparser.testdata.dir>${project.basedir}/../../testdata</nameparser.testdata.dir>
+
+    <!-- Likewise for HomoglyphTableTest, which compares the crate's homoglyphs.txt with
+         name-parser-api's copy. -->
+    <nameparser.resources.dir>${project.basedir}/../../crates/nameparser/resources</nameparser.resources.dir>
   </properties>
 
   <dependencies>
@@ -256,7 +260,7 @@
                threads the resolved cdylib path (see the property above / the
                linux-cdylib profile below) into the forked test JVM, where
                Ffi.resolveLibPath() reads it. -->
-          <argLine>--enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=${nameparser.ffi.lib} -Dnameparser.testdata.dir=${nameparser.testdata.dir}</argLine>
+          <argLine>--enable-native-access=ALL-UNNAMED -Dnameparser.ffi.lib=${nameparser.ffi.lib} -Dnameparser.testdata.dir=${nameparser.testdata.dir} -Dnameparser.resources.dir=${nameparser.resources.dir}</argLine>
         </configuration>
       </plugin>
     </plugins>
