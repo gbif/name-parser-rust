@@ -85,6 +85,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = hyphenate_particle_phrase_epithet(ctx, s);
     s = normalise_minor_shapes(s);
     s = repair_question_mark_in_word(ctx, s);
+    s = stash_misplaced_qualifier(ctx, s);
     s = split_glued_year(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -1484,6 +1485,86 @@ static NEW_SPECIES_TAG: LazyLock<Regex> =
 /// splendens", "Oxalis_barrelieri ined.?"), which made one genus "Calopteryx_splendens".
 static UNDERSCORE_BINOMIAL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_(\p{Ll}{3,})(\s|$)").unwrap());
+
+/// A qualifier in a bracket at the end of the name: `Pleuroflammula ragazziana (cf.)` (#214).
+static BRACKETED_QUALIFIER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(.*\S)(?-u:\s*)\((cf|aff)\.?\)$").unwrap());
+/// A qualifier trailing a name with more than a species epithet: `Canis lupus familiaris cf.`,
+/// `Amanita gilbertii Beauseign. cf.`, `Abies alba var. nana cf.` (#214). It was an epithet of a
+/// quadrinomial, or part of the author. The groups: the name, its species epithet, the qualifier.
+static TRAILING_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?:(?-u:\s+)\(\p{Lu}\p{Ll}+\))?(?-u:\s+)(\p{Ll}[\p{Ll}\-]+)(?-u:\s+)\S.*?)(?-u:\s+)(cf|aff|nr)\.?$").unwrap()
+});
+/// A qualifier between the species author and an infraspecific epithet: `Protium giganteum Engl.
+/// cf. var. giganteum`, `Swartzia flaemingii Raddi cf. flaemingii` (#214). The groups: the name up
+/// to the qualifier, its species epithet, the rest, a rank marker, the infraspecific epithet.
+static QUALIFIER_AFTER_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(\p{Ll}[\p{Ll}\-]+)(?-u:\s+)[\p{Lu}(].*?)(?-u:\s+)(?:cf|aff)\.?(?-u:\s+)(((?:var|subsp|ssp|f|fo|forma)\.?(?-u:\s+))?(\p{Ll}[\p{Ll}\-]+).*)$").unwrap()
+});
+/// Words in a species epithet's place that take no qualifier behind the name.
+const NO_QUALIFIED_EPITHET: &[&str] = &[
+    "sp", "spp", "spec", "species", "indet", "cf", "aff", "nr", "near",
+];
+
+/// Takes a qualifier out of where it does not belong, for the pipeline to give it to the name's
+/// last epithet once that is known, see [`TRAILING_QUALIFIER`] and [`QUALIFIER_AFTER_AUTHOR`]. A
+/// lone epithet after the author only with a rank marker or as an autonym: others are mostly second
+/// names (`Septifer bilocularis Brachidontes cf. variabilis`).
+fn stash_misplaced_qualifier(ctx: &mut ParseContext, s: String) -> String {
+    let s = BRACKETED_QUALIFIER.replace(&s, "$1 $2.").into_owned();
+    if let Some(caps) = TRAILING_QUALIFIER.captures(&s) {
+        let head_end = caps[1]
+            .split_whitespace()
+            .last()
+            .unwrap_or("")
+            .trim_end_matches('.');
+        let after_marker = super::rank_markers::match_infraspecific(head_end);
+        if !NO_QUALIFIED_EPITHET.contains(&&caps[2]) && head_end != "vel" && after_marker.is_none()
+        {
+            ctx.pending_qualifier = Some(format!("{}.", &caps[3]));
+            return caps[1].to_string();
+        }
+    }
+    if let Some(caps) = QUALIFIER_AFTER_AUTHOR.captures(&s) {
+        if !NO_QUALIFIED_EPITHET.contains(&&caps[2])
+            && !caps[1].contains('[')
+            && (caps.get(4).is_some() || caps[5] == caps[2])
+        {
+            ctx.pending_qualifier = Some(
+                if caps[0].contains(" aff") {
+                    "aff."
+                } else {
+                    "cf."
+                }
+                .to_string(),
+            );
+            // an autonym with no marker is one of no rank we could tell
+            let marker = if caps.get(4).is_some() {
+                ""
+            } else {
+                "infrasp. "
+            };
+            return format!("{} {marker}{}", &caps[1], &caps[3]);
+        }
+    }
+    s
+}
+
+/// A qualifier trailing a separate authorship: `Vittad. cf.`, as [`TRAILING_QUALIFIER`] on the name
+/// string.
+static AUTHORSHIP_TRAILING_QUALIFIER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(.*\S)(?-u:\s+)\(?(cf|aff|nr)\.?\)?$").unwrap());
+
+/// See [`AUTHORSHIP_TRAILING_QUALIFIER`].
+fn stash_authorship_trailing_qualifier(ctx: &mut ParseContext, s: String) -> String {
+    match AUTHORSHIP_TRAILING_QUALIFIER.captures(&s) {
+        Some(caps) => {
+            ctx.pending_qualifier = Some(format!("{}.", &caps[2]));
+            caps[1].to_string()
+        }
+        None => s,
+    }
+}
 
 /// A year glued to an author, `Tympanuchus cupido (Linnaeus1758)`, `Antennella ritchiei Totton1930`,
 /// `(Ellis&Solander1786)`, `T. Marsson1901` (#213): after an epithet, a bracket, a comma, an
@@ -7330,7 +7411,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 24] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 25] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -7340,6 +7421,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_angle_bracket_authorship,
         strip_html,
         normalise_hort_ex_placeholder,
+        stash_authorship_trailing_qualifier,
         split_glued_year_of_authorship,
         pipe_to_ampersand,
         split_glued_particle,

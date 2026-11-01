@@ -111,6 +111,10 @@ pub(crate) struct ParseContext {
     /// authorship, as the embedded form does: `Festuca rubra/arenaria` (#225), `Apidae-223957883`
     /// (#210).
     pub phrase_takes_authorship: bool,
+    /// Set by StripAndStash when it took a qualifier out of where it does not belong (`Canis lupus
+    /// familiaris cf.`, `Protium giganteum Engl. cf. var. giganteum`, #214). `Pipeline::run` gives
+    /// it to the name's last epithet.
+    pub pending_qualifier: Option<String>,
     /// Set by StripAndStash when it removed a leading `?` / `cf.` / `aff.` qualifying the genus
     /// (`?Sydonia alba`, `cf. Platypeltis croftii`);
     /// `Pipeline::run` types the name INFORMAL once it knows a species epithet follows.
@@ -185,6 +189,7 @@ impl ParseContext {
             pending_serovar: None,
             preflight_complete: false,
             phrase_takes_authorship: false,
+            pending_qualifier: None,
             qualified_genus: false,
             trailing_qmark: false,
             placeholder_tail: None,

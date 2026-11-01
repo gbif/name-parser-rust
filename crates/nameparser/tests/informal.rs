@@ -1457,3 +1457,112 @@ fn a_lower_case_underscore_label_with_a_digit_is_a_phrase() {
         .phrase("1")
         .nothing_else();
 }
+
+// ---- A qualifier out of its place (#214) -----------------------------------------------------
+
+/// `epithet_qualifier` of a parsed name, all that `assert_name` needs beyond the name parts.
+#[track_caller]
+fn qualifier(
+    input: &str,
+    authorship: Option<&str>,
+) -> (Option<String>, NamePart, String, NameType) {
+    let ParseResult::Parsed(pn) = nameparser::parse(input, authorship, None, None) else {
+        panic!("`{input}` is parsed");
+    };
+    let q = pn.epithet_qualifier.as_ref().expect("a qualifier");
+    let (part, value) = q.iter().next().expect("one qualifier");
+    (
+        pn.infraspecific_epithet.clone(),
+        *part,
+        value.clone(),
+        pn.type_,
+    )
+}
+
+#[test]
+fn a_trailing_qualifier_goes_to_the_last_epithet() {
+    for (input, infra, part) in [
+        (
+            "Canis lupus familiaris cf.",
+            Some("familiaris"),
+            NamePart::Infraspecific,
+        ),
+        (
+            "Peromyscus leucopus ochraceus cf.",
+            Some("ochraceus"),
+            NamePart::Infraspecific,
+        ),
+        (
+            "Abies alba var. nana cf.",
+            Some("nana"),
+            NamePart::Infraspecific,
+        ),
+        ("Canis lupus cf.", None, NamePart::Specific),
+        ("Pleuroflammula ragazziana (cf.)", None, NamePart::Specific),
+        ("Amanita gilbertii Beauseign. cf.", None, NamePart::Specific),
+        ("Abies alba L. (aff.)", None, NamePart::Specific),
+    ] {
+        let (epithet, got, _, type_) = qualifier(input, None);
+        assert_eq!(epithet.as_deref(), infra, "{input}");
+        assert_eq!(got, part, "{input}");
+        assert_eq!(type_, NameType::Informal, "{input}");
+    }
+    // the same in a separate authorship
+    assert_paths_agree("Amanita gilbertii", "Beauseign. cf.");
+    assert_paths_agree("Incrustoporia alutacea", "(Lowe) Reid cf.");
+}
+
+#[test]
+fn a_qualifier_after_the_author_goes_to_the_infraspecific_epithet() {
+    for (input, infra) in [
+        ("Protium giganteum Engl. cf. var. giganteum", "giganteum"),
+        (
+            "Swartzia flaemingii Raddi cf. var. flaemingii",
+            "flaemingii",
+        ),
+        ("Swartzia flaemingii Raddi cf. flaemingii", "flaemingii"),
+        (
+            "Gilia capitata Sims cf. subsp. mediomontana V. Grant",
+            "mediomontana",
+        ),
+    ] {
+        let (epithet, part, value, type_) = qualifier(input, None);
+        assert_eq!(epithet.as_deref(), Some(infra), "{input}");
+        assert_eq!(part, NamePart::Infraspecific, "{input}");
+        assert_eq!(value, "cf.", "{input}");
+        assert_eq!(type_, NameType::Informal, "{input}");
+    }
+    // a bare qualifier on a genus stays the phrase of an unnamed species
+    assert_informal("Ulnaria cf.")
+        .taxon("Ulnaria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf.")
+        .nothing_else();
+    // inside a note, or after "vel", it is left alone
+    let ParseResult::Parsed(pn) = nameparser::parse(
+        "Trypanosyllis foliosa (Imajima, 2003) [as Trypanosyllis cf foliosa]",
+        None,
+        None,
+        None,
+    ) else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.infraspecific_epithet, None);
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Hibbertia obtusifolia vel. aff.", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.epithet_qualifier, None);
+    // no autonym and no marker: a second name
+    let ParseResult::Parsed(pn) = nameparser::parse(
+        "Septifer bilocularis Brachidontes cf. variabilis",
+        None,
+        None,
+        None,
+    ) else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.infraspecific_epithet, None);
+}

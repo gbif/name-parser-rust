@@ -529,8 +529,26 @@ pub fn run(
     apply_placeholder_tail(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
     flag_numbered_authors(&mut ctx.name);
+    apply_pending_qualifier(&mut ctx);
 
     Ok(ctx.name)
+}
+
+/// A qualifier set aside by StripAndStash goes to the last epithet of the name (#214), which makes
+/// it open nomenclature, as an epithet qualifier in its place does.
+fn apply_pending_qualifier(ctx: &mut ParseContext) {
+    let Some(qualifier) = ctx.pending_qualifier.take() else {
+        return;
+    };
+    let part = if ctx.name.infraspecific_epithet.is_some() {
+        NamePart::Infraspecific
+    } else if ctx.name.specific_epithet.is_some() {
+        NamePart::Specific
+    } else {
+        return;
+    };
+    ctx.name.set_epithet_qualifier(part, &qualifier);
+    ctx.name.type_ = NameType::Informal;
 }
 
 /// An author with a digit in it is no person's name: `Aus bus Smith2, 1900` (#213).
