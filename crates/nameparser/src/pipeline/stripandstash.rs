@@ -114,6 +114,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = unbracket_in_citation(ctx, s);
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
+    s = split_glued_note(ctx, s);
     s = normalise_manuscript_word(ctx, s);
     s = move_manuscript_marker_behind_author(s);
     s = unbracket_manuscript_marker(ctx, s);
@@ -1468,6 +1469,19 @@ static NEW_SPECIES_TAG: LazyLock<Regex> =
 /// splendens", "Oxalis_barrelieri ined.?"), which made one genus "Calopteryx_splendens".
 static UNDERSCORE_BINOMIAL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_(\p{Ll}{3,})(\s|$)").unwrap());
+
+/// A note glued to the dot of the abbreviated author before it, `Arenaria ciliata L.s.l.`,
+/// `Viola montana L.s.str.`, `Placynthium pulvinatum Øvst.ined`, `Cortinarius suillus Fr.s.s. Lange`
+/// (#217). The whole was one author.
+static GLUED_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"(\p{Lu}[\p{L}.\-]*?\.)(s\.(?-u:\s*)(?:l|lat|str|s|ampl)\.?|ined\.?|auct\.?)((?-u:\s)|[,;)]|\p{Lu}|$)")
+        .unwrap()
+});
+
+/// See [`GLUED_NOTE`].
+fn split_glued_note(_ctx: &mut ParseContext, s: String) -> String {
+    GLUED_NOTE.replace_all(&s, "$1 $2 $3").into_owned()
+}
 
 /// An abbreviated author glued to the species epithet ("Pentapanax angelicifoliusGriseb.",
 /// "Caralluma praegracilisOberm."). Only with its abbreviation dot: an undotted capital inside an
@@ -7227,7 +7241,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 20] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 21] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -7237,6 +7251,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_angle_bracket_authorship,
         strip_html,
         normalise_hort_ex_placeholder,
+        split_glued_note,
         normalise_manuscript_word,
         move_leading_manuscript_marker,
         unbracket_manuscript_marker,

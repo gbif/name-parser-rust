@@ -772,3 +772,35 @@ fn a_nova_note_with_more_behind_it_is_no_author() {
         .nom_note("sp. nov.")
         .nothing_else();
 }
+
+#[test]
+fn a_note_glued_to_the_author_is_split_off() {
+    // #217: the author and the note were one author
+    assert_name("Arenaria ciliata L.s.l.")
+        .species("Arenaria", "ciliata")
+        .comb_authors(None, &["L."])
+        .sensu("s.l.")
+        .nothing_else();
+    assert_name("Viola montana L.s.str.")
+        .species("Viola", "montana")
+        .comb_authors(None, &["L."])
+        .sensu("s.str.")
+        .nothing_else();
+    assert_name("Jurinea cyanoides (L.) Rchb.s.l.")
+        .species("Jurinea", "cyanoides")
+        .bas_authors(None, &["L."])
+        .comb_authors(None, &["Rchb."])
+        .sensu("s.l.")
+        .nothing_else();
+    assert_name("Placynthium pulvinatum Øvst.ined")
+        .species("Placynthium", "pulvinatum")
+        .comb_authors(None, &["Øvst."])
+        .manuscript()
+        .nom_note("ined")
+        .nothing_else();
+    // no note: a capital initial, and a lower-case word running on
+    assert_name("Aus bus J.S.Smith")
+        .species("Aus", "bus")
+        .comb_authors(None, &["J.S.Smith"])
+        .nothing_else();
+}
