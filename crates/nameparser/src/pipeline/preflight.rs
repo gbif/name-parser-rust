@@ -573,7 +573,8 @@ static UNCLASSIFIED: LazyLock<Regex> =
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\s` (in `[-\s]`), no `\p{…}` → whole pattern
 /// (after `^`) wrapped.
 static PLACEHOLDER_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?-u:(?:Unident|Undescribed|IncertaeSedis|Undet)(?:[-\s]|$))").unwrap()
+    Regex::new(r"(?i)^(?-u:(?:Unident|Undescribed|Unpublished|IncertaeSedis|Undet)(?:[-\s]|$))")
+        .unwrap()
 });
 /// Java: no flags. Has `\s` AND `\p{Ll}` → only `\s` is scoped (matches the brief's own
 /// worked example verbatim: `^\?\s+\p{Ll}` → `^\?(?-u:\s+)\p{Ll}`).
@@ -597,9 +598,19 @@ static NN_PLACEHOLDER: LazyLock<Regex> =
 /// et sp non descr". Rust-only: Java took "Gen." for an abbreviated genus, the "et" after it for
 /// the epithet and a locality for the authorship. Undotted, only before "et"/"nov"/"n.", so the
 /// genus-like "Gen 1" or "Gen nilotica Simon 1906" is left alone.
+/// The word `Genus` itself is no genus either (#211): `Genus sp.`, `Genus B sp. 1`, `Genus asaemoides`.
 static GENUS_WORD_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))").unwrap()
+    Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))|^[Gg]enus(?-u:\s)")
+        .unwrap()
 });
+/// A first word that is no genus, but the common word for what was found: `ADN Suelo`, Spanish for
+/// soil DNA, and `Wurm-8005097` (#211). No taxon to hang anything off, so OTHER.
+static NO_GENUS_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:ADN|Wurm)(?:(?-u:\s)|-|$)").unwrap());
+/// A herbarium record: `HNT_Specimen:5625_Accession:29540`, `HNT_Accession:2213*3_Specimen:15133`
+/// (#211). OTHER.
+static SPECIMEN_RECORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:^|_)(?:Specimen|Accession):").unwrap());
 /// A numbered group with no taxon before it: `Subgroup 10`, `Morphotype 1`, `Genotype 3`, `Group
 /// 1.1c`, and a numbered new genus, `Genus Novum 10`, `Genus nov. (2)`. It stands for an unnamed
 /// group of its parent, as `Rissooidea indet. 1` does, and there is no anchor for an informal name
@@ -778,7 +789,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         super::stripandstash::without_authorship_placeholder(&s).len() != s.len();
     if let Some(caps) = ANCHORED_PLACEHOLDER
         .captures(&s)
-        .filter(|_| !authorship_placeholder)
+        .filter(|caps| !authorship_placeholder && &caps[1] != "Genus")
     {
         ctx.placeholder_tail = Some(caps[2].to_string());
         s = caps[1].to_string();
@@ -816,6 +827,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // (`Grapevine red globe virus (unclassified)`) keeps its VIRUS code.
     if UNCLASSIFIED.is_match(&s) {
         return Err(ParseError::new(NameType::Placeholder, None, original));
+    }
+
+    if NO_GENUS_WORD.is_match(&s) || SPECIMEN_RECORD.is_match(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
     }
 
     // A generic organism label instead of a genus — `bacterium Ac10`, `marine actinobacterium F10`,

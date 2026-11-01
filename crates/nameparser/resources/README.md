@@ -14,7 +14,8 @@ blacklisted epithet flags the name **doubtful** with a `blacklisted epithet` war
 
 The file was copied byte-for-byte from the Java name-parser's
 `nameparser/blacklist-epithets.txt` classpath resource (`diff`-verified identical), so both
-implementations flag exactly the same words. It has 275 lowercase, ASCII, one-per-line entries.
+implementations flag exactly the same words. It had 275 lowercase, ASCII, one-per-line entries then;
+`accession`, `parasite`, `sample`, `specimen` and `western` were added since (#211), for 280.
 
 To re-validate the list, query the GBIF ChecklistBank API for each epithet and check how many
 real names match (the Java project kept a `blacklist-test.py` for this) — an entry that matches

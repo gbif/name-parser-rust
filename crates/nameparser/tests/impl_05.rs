@@ -864,3 +864,54 @@ fn a_graft_chimaera_is_no_hybrid() {
         assert_hybrid_formula(name);
     }
 }
+
+#[test]
+fn common_words_for_the_genus_or_epithet() {
+    // #211: no genus at all
+    for input in [
+        "ADN Suelo",
+        "Wurm-8005097",
+        "HNT_Specimen:5625_Accession:29540_Coll:Folsom_James_S.N.",
+        "HNT_Accession:2213*3_Specimen:15133",
+    ] {
+        assert_unparsable(input, NameType::Other);
+    }
+    for input in [
+        "Genus sp.",
+        "Genus B sp. 1",
+        "Genus asaemoides",
+        "Genus incertae sedis",
+        "unpublished name",
+        "Unpublished",
+    ] {
+        assert_unparsable(input, NameType::Placeholder);
+    }
+    // a real word beside them stays a genus
+    assert_name("Genea hispidula Berk.")
+        .species("Genea", "hispidula")
+        .comb_authors(None, &["Berk."])
+        .nothing_else();
+    // no epithet
+    for (input, genus, epithet) in [
+        ("soil sample", "Soil", "sample"),
+        ("Austronanus specimen", "Austronanus", "specimen"),
+        ("Tilapia parasite", "Tilapia", "parasite"),
+        ("Choristoneura western", "Choristoneura", "western"),
+        ("Aus accession", "Aus", "accession"),
+    ] {
+        assert_name(input)
+            .species(genus, epithet)
+            .doubtful()
+            .warning(&[warnings::BLACKLISTED_EPITHET])
+            .nothing_else();
+    }
+    // a real species with such an epithet stays one, an ICTV binomial too
+    assert_name("Alphavirus western")
+        .species("Alphavirus", "western")
+        .code(NomCode::Virus)
+        .nothing_else();
+    assert_name("Stomoxys parasite Fabricius, 1781")
+        .species("Stomoxys", "parasite")
+        .comb_authors(Some("1781"), &["Fabricius"])
+        .nothing_else();
+}

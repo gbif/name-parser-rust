@@ -38,6 +38,8 @@ not	Agra	Erwin	Agra not Erwin, 2002
 okay	Rhyphelia	Nobre	Rhyphelia okay Nobre & Ruiz, 2024
 on	Dysschema	Hering	Dysschema on (Hering, 1928)
 on	Pericopis	Hering	Pericopis on Hering, 1928
+parasite	Halodactyle	Van Beneden	Halodactyle parasite Van Beneden, 1845
+parasite	Stomoxys	Fabricius	Stomoxys parasite Fabricius, 1781
 say	Dasyatis	Lesueur	Dasyatis say (Lesueur, 1817)
 say	Hypanus	Lesueur	Hypanus say (Lesueur, 1817)
 say	Physa	Blainville	Physa say Blainville, 1826
@@ -51,4 +53,5 @@ spec	Lampona	Platnick	Lampona spec Platnick, 2000
 spec	Notozomus	Harvey	Notozomus spec (Harvey, 1992)
 spec	Trichosternus	Darlington	Trichosternus spec Darlington, 1962
 till	Laurus	Poir.	Laurus till Poir.
+western	Alphavirus		Alphavirus western
 what	Spatulapica	Zetterstedt	Spatulapica what (Zetterstedt, 1845)

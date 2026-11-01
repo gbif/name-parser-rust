@@ -25,6 +25,9 @@
 //! [`contains`] still lower-cases the QUERY on every call, matching Java's own
 //! `EPITHETS.contains(epithet.toLowerCase())` (the stored side is already lower-case; the
 //! caller's `epithet` argument generally is not).
+//!
+//! Rust-only since: `accession`, `parasite`, `sample`, `specimen` and `western` (#211), so the file
+//! now has 280 entries and differs from Java's.
 
 use std::collections::HashSet;
 use std::sync::LazyLock;
@@ -136,15 +139,13 @@ mod tests {
         assert_eq!(author_key("x", "L."), None);
     }
 
-    /// Resource parity: the copied file has exactly 275 lines (NOT 274 — see the module doc
-    /// comment on the `wc -l` off-by-one from the missing trailing newline), all data (no
-    /// blanks/comments to skip, verified separately against the source file), and no
-    /// case-insensitive duplicates (also verified against the source via `sort -u`), so the
-    /// loaded set's size must be exactly 275 — a direct regression guard against a bad copy
-    /// or a load-loop bug that silently drops entries.
+    /// The file has exactly 280 lines (NOT 279 — see the module doc comment on the `wc -l`
+    /// off-by-one from the missing trailing newline), all data (no blanks/comments to skip), and
+    /// no case-insensitive duplicates, so the loaded set's size must be exactly 280 — a direct
+    /// regression guard against a load-loop bug that silently drops entries.
     #[test]
-    fn resource_parity_275_entries() {
-        assert_eq!(EPITHETS.len(), 275);
+    fn resource_has_280_entries() {
+        assert_eq!(EPITHETS.len(), 280);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 aber
 about
 accepted
+accession
 after
 again
 agent
@@ -145,6 +146,7 @@ ordnung
 other
 ours
 over
+parasite
 phylum
 preoccupied
 probable
@@ -157,6 +159,7 @@ quite
 rather
 really
 reich
+sample
 sauf
 say
 says
@@ -173,6 +176,7 @@ sind
 so
 soll
 species
+specimen
 stamm
 subclass
 subfamily
@@ -233,6 +237,7 @@ wen
 wer
 werde
 were
+western
 what
 whatever
 when
