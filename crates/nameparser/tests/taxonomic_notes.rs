@@ -706,3 +706,36 @@ fn bare_sl_is_sensu_lato() {
         .sensu("s.l. incl. bubalinus, cisalpinus")
         .nothing_else();
 }
+
+#[test]
+fn the_surname_orth_is_no_note() {
+    // #222: taken for the abbreviated "orth." of an orthographic variant
+    assert_name("Limnia sandovalensis Fisher & Orth, 1978")
+        .species("Limnia", "sandovalensis")
+        .comb_authors(Some("1978"), &["Fisher", "Orth"])
+        .nothing_else();
+    assert_name("Dictya fisheri Orth, 1991")
+        .species("Dictya", "fisheri")
+        .comb_authors(Some("1991"), &["Orth"])
+        .nothing_else();
+    assert_name("Antichaeta vernalis (Fisher & Orth, 1971)")
+        .species("Antichaeta", "vernalis")
+        .bas_authors(Some("1971"), &["Fisher", "Orth"])
+        .nothing_else();
+    assert_name_auth("Anticheta vernalis", "Fisher & Orth, 1971")
+        .species("Anticheta", "vernalis")
+        .comb_authors(Some("1971"), &["Fisher", "Orth"])
+        .nothing_else();
+    // no surname: a capitalised "Nomen" is still the note
+    assert_name("Saphonecrus excisus (Kieffer, 1904) Nomen")
+        .species("Saphonecrus", "excisus")
+        .bas_authors(Some("1904"), &["Kieffer"])
+        .nom_note("Nomen")
+        .nothing_else();
+    // the note keeps its dot or its second word
+    assert_name("Aus bus L. Orth. var.")
+        .species("Aus", "bus")
+        .comb_authors(None, &["L."])
+        .nom_note("Orth. var.")
+        .nothing_else();
+}

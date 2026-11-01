@@ -3967,12 +3967,14 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// "n. sp.", "n.sp." ("Anomia atacamensis n.sp. HERM 1969", where Java read an epithet "n" and an
 /// author "sp.Herm"), and "nsp" ("Pseudosinella biunguiculata nsp", #139). Rust-only also: a note glued to the comma before it, "Liu & Xu,sp. nov." —
 /// the full-width comma of Chinese sources folds to one with no space after it — and a note before
-/// the year of a basionym bracket, "(Chao，comb．nov．,1986)" (#127).
+/// the year of a basionym bracket, "(Chao，comb．nov．,1986)" (#127). "Orth" with no dot and no
+/// lower-case word behind it is a surname: "Fisher & Orth, 1978" (#222), while "Orth. var." is a
+/// note.
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r"(?:\s+|(?<=,))(",
         r"(?i:nomen\s+(?:nudum|novum|dubium|oblitum|illegitimum|invalidum|conservandum|rejiciendum|protectum|inquirendum)\b\.?)",
-        r"|(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
+        r"|(?!Orth(?![.\p{L}]|\s+[a-z]))(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
         r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
         r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?|nsp\b\.?",
