@@ -3836,7 +3836,7 @@ const FULL_WORD_NOM_NOTES: &[&str] = &["correct", "error"];
 /// punctuation, not part of the abbreviation); a note ending in a complete word
 /// (`FULL_WORD_NOM_NOTES`) is left without an added dot either way.
 fn normalise_nom_note(raw: &str) -> String {
-    let mut s = collapse_whitespace(raw);
+    let mut s = collapse_whitespace(raw).replace("., ined", ". ined");
     let et_replaced = ET_WORD.replace_all(&s, "&");
     s = AND_WORD.replace_all(&et_replaced, "&").into_owned();
     s = SPACE_AROUND_DOT.replace_all(&s, ".").into_owned();
@@ -3969,17 +3969,18 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// the full-width comma of Chinese sources folds to one with no space after it — and a note before
 /// the year of a basionym bracket, "(Chao，comb．nov．,1986)" (#127). "Orth" with no dot and no
 /// lower-case word behind it is a surname: "Fisher & Orth, 1978" (#222), while "Orth. var." is a
-/// note.
+/// note. Rust-only as well: "ined." after a comma and the year right after
+/// the note, "W.J. Kress, sp. nov., ined. 2013", where "sp." became an author (#220).
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r"(?:\s+|(?<=,))(",
         r"(?i:nomen\s+(?:nudum|novum|dubium|oblitum|illegitimum|invalidum|conservandum|rejiciendum|protectum|inquirendum)\b\.?)",
         r"|(?!Orth(?![.\p{L}]|\s+[a-z]))(?i:nom|comb|orth|nomen)\b\.?(?:(?!\s+in\s+\p{Lu})[\s.&]*[a-z][a-z.]*)*+",
-        r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:\s+ined\b\.?)?)*",
+        r"|(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:,?\s+ined\b\.?)?(?:\s+(?i:sp|spec|gen|fam|var|form)\b\.?\s*(?i:nov)\b\.?(?:,?\s+ined\b\.?)?)*",
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
         r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?|nsp\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
-        r")\s*(?=$|,\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
+        r")\s*(?=$|,?\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
     ))
     .unwrap()
 });
@@ -4064,6 +4065,13 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
         if code_follows || after_bare_genus || subspecies {
             return s;
         }
+    }
+    // A number after the note of a bare genus is its designation, no year ("Lysipomia sp. nov.
+    // 1163"), as a code is above.
+    if SINGLE_TITLE_WORD.is_match(java_trim(&s[..match_start]))
+        && s[match_end..].starts_with(|c: char| c.is_ascii_digit())
+    {
+        return s;
     }
     let norm = normalise_nom_note(&raw);
     ctx.name.add_nomenclatural_note(&norm);

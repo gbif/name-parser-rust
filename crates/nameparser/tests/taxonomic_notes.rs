@@ -739,3 +739,36 @@ fn the_surname_orth_is_no_note() {
         .nom_note("Orth. var.")
         .nothing_else();
 }
+
+#[test]
+fn a_nova_note_with_more_behind_it_is_no_author() {
+    // #220: "sp." became an author, "nov. 2013" was left unparsed
+    for input in [
+        "Heliconia waoraniana W.J. Kress, sp. nov. ined. 2013",
+        "Heliconia waoraniana W.J. Kress, sp. nov., ined. 2013",
+    ] {
+        assert_name(input)
+            .species("Heliconia", "waoraniana")
+            .comb_authors(Some("2013"), &["W.J.Kress"])
+            .manuscript()
+            .nom_note("sp. nov. ined.")
+            .nothing_else();
+    }
+    assert_name("Heliconia waoraniana W.J. Kress, sp. nov.")
+        .species("Heliconia", "waoraniana")
+        .comb_authors(None, &["W.J.Kress"])
+        .nom_note("sp. nov.")
+        .nothing_else();
+    // a number after the note of a bare genus is its designation
+    assert_informal("Lysipomia sp. nov. 1163")
+        .taxon("Lysipomia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. nov. 1163")
+        .nothing_else();
+    assert_name("Heliconia waoraniana W.J. Kress, sp. nov. 2013")
+        .species("Heliconia", "waoraniana")
+        .comb_authors(Some("2013"), &["W.J.Kress"])
+        .nom_note("sp. nov.")
+        .nothing_else();
+}
