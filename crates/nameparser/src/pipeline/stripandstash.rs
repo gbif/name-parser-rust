@@ -2268,14 +2268,15 @@ static NEW_AFF: LazyLock<Regex> = LazyLock::new(|| {
 /// group 4 the epithet after it, group 5 what follows that: not a dot, which makes it a note's
 /// abbreviation (`ss. auct.`).
 static DOTTED_WORD_BETWEEN_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(^|(?-u:\s))(\p{Ll}[\p{Ll}\-]+(?-u:\s+))([a-z]{2,})\.(?-u:\s*)(\p{Ll}[\p{Ll}\-]+)([^.\p{L}\-]|$)").unwrap()
+    Regex::new(r"(^|(?-u:\s))((?:\p{Ll}[\p{Ll}\-]+|\p{Lu}[\p{L}.\-]*|\S*\))(?-u:\s+))([a-z]{2,})\.(?-u:\s*)(\p{Ll}[\p{Ll}\-]+)([^.\p{L}\-]|$)").unwrap()
 });
 
 /// A misspelt infraspecific marker is the marker it is one letter off
 /// ([`super::rank_markers::match_misspelt_infraspecific`]): `Aulacodiscus margaritaceus va.
 /// distincta` (Index Nominum Algarum), `Unio kungurensis varr. chlebnikowi`, `Campanula balcanica
 /// subfo. umbrosa`. The word became the epithet and the epithet an author, or, with the authorship
-/// given separately, was lost (#115). Only between two epithets and followed by a dot. Rust-only.
+/// given separately, was lost (#115). Only followed by a dot, and between two epithets or after a
+/// species author, `Youngia japonica (L.) DC. subp. japonica` (#215). Rust-only.
 fn correct_misspelt_rank_marker(s: String) -> String {
     if !s.contains('.') {
         return s;

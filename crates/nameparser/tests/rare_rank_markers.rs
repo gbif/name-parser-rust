@@ -544,3 +544,17 @@ fn misspelt_cultivar_markers() {
         )
         .nothing_else();
 }
+
+#[test]
+fn subp_is_a_misspelt_subspecies_marker() {
+    // #215: the subspecies was left unparsed
+    assert_name("Youngia japonica (L.) DC. subp. japonica")
+        .infra_species("Youngia", "japonica", Rank::Subspecies, "japonica")
+        .specific_bas_authors(None, &["L."])
+        .specific_authors(None, &["DC."])
+        .autonym()
+        .nothing_else();
+    assert_name("Carex canescens subp. disjuncta")
+        .infra_species("Carex", "canescens", Rank::Subspecies, "disjuncta")
+        .nothing_else();
+}
