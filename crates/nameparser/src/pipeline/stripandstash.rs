@@ -85,6 +85,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = hyphenate_particle_phrase_epithet(ctx, s);
     s = normalise_minor_shapes(s);
     s = repair_question_mark_in_word(ctx, s);
+    s = split_glued_year(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
     s = stash_organism_label_tail(ctx, s);
@@ -1149,10 +1150,12 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 /// before the epithet ("Gemmula cf. cosmoi NP-2008", "Acalymma nr. blomorum JJG229") and a hyphen
 /// before the code's digits, where the code became an author. And a Candidatus name takes a code
 /// as any other (`Candidatus Caldatribacterium saccharofermentans OP9-77CS`), as does a code of
-/// capitals joined by an underscore (`PW_SP`), which no author has (#84).
+/// capitals joined by an underscore (`PW_SP`), which no author has (#84). A slash may stand in the
+/// code and a genus in square brackets before it: `Agrobacterium pusense L2/2/1`, `[Eubacterium]
+/// rectale M104/1` (#213).
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:\-]*\d[\p{L}\d_\-:]*|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$"
+        &r"^((?:Candidatus\s+)?\[?[\p{Lu}][\p{Ll}]+\]?\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:/\-]*\d[\p{L}\d_\-:/]*|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$"
             .replace("<INFRA>", INFRASPECIFIC_HEAD),
     )
     .unwrap()
@@ -1377,6 +1380,11 @@ static NUMBERED_UNINOMIAL: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^((?:Candidatus(?-u:\s+))?\p{Lu}\p{Ll}+)(?-u:\s+)(\S.*?)(?-u:\s*)$").unwrap()
 });
 
+/// A capitalised word holding a digit, all that follows a uninomial: an interim code, no author,
+/// `Actia Janzen05`, `Eois BioLep24`, `Priscula Dup9`, `Priscula Ven02/80-085` (#213).
+static UNINOMIAL_CODE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{L}*\d[\p{L}\d_:/.\-]*$").unwrap());
+
 /// A number or a code that leads with a digit, as [`TRAILING_STRAIN_CODE`]'s third alternative.
 const LABEL_CODE: &str = r"\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?";
 
@@ -1426,6 +1434,11 @@ fn stash_numbered_uninomial(ctx: &mut ParseContext, s: String) -> String {
         return s;
     };
     let label = caps.get(2).unwrap().as_str();
+    if UNINOMIAL_CODE.is_match(label) {
+        ctx.name.phrase = Some(label.to_string());
+        ctx.name.type_ = NameType::Informal;
+        return caps[1].to_string();
+    }
     let (word, code) = if let Some(l) = NUMBERED_LABEL.captures(label) {
         (l.get(1), l.get(2).unwrap())
     } else if let Some(l) = NUMBERED_LABEL_ALONE.captures(label) {
@@ -1471,6 +1484,46 @@ static NEW_SPECIES_TAG: LazyLock<Regex> =
 /// splendens", "Oxalis_barrelieri ined.?"), which made one genus "Calopteryx_splendens".
 static UNDERSCORE_BINOMIAL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_(\p{Ll}{3,})(\s|$)").unwrap());
+
+/// A year glued to an author, `Tympanuchus cupido (Linnaeus1758)`, `Antennella ritchiei Totton1930`,
+/// `(Ellis&Solander1786)`, `T. Marsson1901` (#213): after an epithet, a bracket, a comma, an
+/// ampersand or an initial. Not after a uninomial or an indet marker, where it is a trap's number
+/// or a code: `Capitonius Malaise1924`, `Hypoderaeum sp. Hubei2014`. Group 1 what stands before the
+/// author, 2 the author, 3 the year, 4 what follows.
+static GLUED_YEAR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"([(\s]\p{Ll}{3,}\s+|[(,&]\s*|\p{Lu}\.\s*)(\p{Lu}\p{Ll}{2,})((?:1[5-9]|20)\d\d)([\s,;)]|$)",
+    )
+    .unwrap()
+});
+/// [`GLUED_YEAR`] in a separate authorship, where any word may be an author's.
+static GLUED_YEAR_AUTHORSHIP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"([\s(,&])(\p{Lu}\p{Ll}{2,})((?:1[5-9]|20)\d\d)([\s,;)]|$)").unwrap()
+});
+
+/// See [`GLUED_YEAR`].
+fn split_glued_year(_ctx: &mut ParseContext, s: String) -> String {
+    GLUED_YEAR
+        .replace_all(&s, |caps: &regex::Captures| {
+            // an isolate's name after an organism label: `Cyanobacteria bacterium Shimoda2014`
+            if matches!(
+                caps[1].trim_start_matches('(').trim(),
+                "bacterium" | "archaeon"
+            ) {
+                caps[0].to_string()
+            } else {
+                format!("{}{} {}{}", &caps[1], &caps[2], &caps[3], &caps[4])
+            }
+        })
+        .into_owned()
+}
+
+/// See [`GLUED_YEAR_AUTHORSHIP`].
+fn split_glued_year_of_authorship(_ctx: &mut ParseContext, s: String) -> String {
+    GLUED_YEAR_AUTHORSHIP
+        .replace_all(&s, "$1$2 $3$4")
+        .into_owned()
+}
 
 /// A pipe between two authors, `Panaeolus cyanescens (Berk. | Broome) Sacc.`, `Macrolepiota
 /// olivascens Singer | M.M. Moser`, `Jordana| Baquero, 2012` (#219). The two read as one author. Not
@@ -7275,7 +7328,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 23] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 24] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -7285,6 +7338,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_angle_bracket_authorship,
         strip_html,
         normalise_hort_ex_placeholder,
+        split_glued_year_of_authorship,
         pipe_to_ampersand,
         split_glued_particle,
         split_glued_note,

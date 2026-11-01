@@ -1147,6 +1147,9 @@ pub mod warnings {
         "authorship year was extract but originally was a year range or other form of year";
     pub const UNLIKELY_YEAR: &str = "unlikely authorship year";
     pub const UNCERTAIN_AUTHORSHIP: &str = "authorship marked as uncertain";
+    /// An author with a digit in it, what is left when no code or year could be told from it
+    /// (`Aus bus Smith2, 1900`, #213).
+    pub const AUTHOR_WITH_NUMBER: &str = "author with attached number";
     pub const QUADRINOMIAL: &str = "name was quadrinomial";
     pub const ABBREVIATED_GENUS: &str = "abbreviated genus name";
     pub const ABBREVIATED_SUBGENUS: &str = "abbreviated subgenus name";

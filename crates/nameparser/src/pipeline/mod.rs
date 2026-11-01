@@ -528,8 +528,20 @@ pub fn run(
     keep_unplaced_doubt(&mut ctx);
     apply_placeholder_tail(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
+    flag_numbered_authors(&mut ctx.name);
 
     Ok(ctx.name)
+}
+
+/// An author with a digit in it is no person's name: `Aus bus Smith2, 1900` (#213).
+fn flag_numbered_authors(name: &mut ParsedName) {
+    let numbered = [&name.combination_authorship, &name.basionym_authorship]
+        .iter()
+        .flat_map(|a| a.authors.iter().chain(&a.ex_authors))
+        .any(|author| author.chars().any(|c| c.is_ascii_digit()));
+    if numbered {
+        name.add_warning(warnings::AUTHOR_WITH_NUMBER);
+    }
 }
 
 /// A placeholder keyword set aside by Preflight after a real taxon (#185): the name is a placeholder
