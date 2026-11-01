@@ -362,3 +362,32 @@ fn co_authors_with_given_names_joined_by_commas_are_no_reference() {
         .comb_authors(None, &["Yali Li", "Sybren de Hoog", "Ruoyu Li"])
         .nothing_else();
 }
+
+#[test]
+fn a_pipe_between_authors_is_an_et() {
+    // #219: the two read as one author
+    assert_name("Panaeolus cyanescens (Berk. | Broome) Sacc.")
+        .species("Panaeolus", "cyanescens")
+        .bas_authors(None, &["Berk.", "Broome"])
+        .comb_authors(None, &["Sacc."])
+        .nothing_else();
+    assert_name("Macrolepiota olivascens Singer | M.M. Moser")
+        .species("Macrolepiota", "olivascens")
+        .comb_authors(None, &["Singer", "M.M.Moser"])
+        .nothing_else();
+    assert_name("Schaefferia profundissima Jordana| Baquero, 2012")
+        .species("Schaefferia", "profundissima")
+        .comb_authors(Some("2012"), &["Jordana", "Baquero"])
+        .nothing_else();
+    assert_name("Fomitopsis betulina (Bull.) B.K. Cui, M.L. Han | Y.C. Dai")
+        .species("Fomitopsis", "betulina")
+        .bas_authors(None, &["Bull."])
+        .comb_authors(None, &["B.K.Cui", "M.L.Han", "Y.C.Dai"])
+        .nothing_else();
+    // no author before it: a word break
+    assert_name("Rosa rubiginosa| L. s.l.")
+        .species("Rosa", "rubiginosa")
+        .comb_authors(None, &["L."])
+        .sensu("s.l.")
+        .nothing_else();
+}

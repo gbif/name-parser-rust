@@ -706,3 +706,101 @@ fn bare_sl_is_sensu_lato() {
         .sensu("s.l. incl. bubalinus, cisalpinus")
         .nothing_else();
 }
+
+#[test]
+fn the_surname_orth_is_no_note() {
+    // #222: taken for the abbreviated "orth." of an orthographic variant
+    assert_name("Limnia sandovalensis Fisher & Orth, 1978")
+        .species("Limnia", "sandovalensis")
+        .comb_authors(Some("1978"), &["Fisher", "Orth"])
+        .nothing_else();
+    assert_name("Dictya fisheri Orth, 1991")
+        .species("Dictya", "fisheri")
+        .comb_authors(Some("1991"), &["Orth"])
+        .nothing_else();
+    assert_name("Antichaeta vernalis (Fisher & Orth, 1971)")
+        .species("Antichaeta", "vernalis")
+        .bas_authors(Some("1971"), &["Fisher", "Orth"])
+        .nothing_else();
+    assert_name_auth("Anticheta vernalis", "Fisher & Orth, 1971")
+        .species("Anticheta", "vernalis")
+        .comb_authors(Some("1971"), &["Fisher", "Orth"])
+        .nothing_else();
+    // no surname: a capitalised "Nomen" is still the note
+    assert_name("Saphonecrus excisus (Kieffer, 1904) Nomen")
+        .species("Saphonecrus", "excisus")
+        .bas_authors(Some("1904"), &["Kieffer"])
+        .nom_note("Nomen")
+        .nothing_else();
+    // the note keeps its dot or its second word
+    assert_name("Aus bus L. Orth. var.")
+        .species("Aus", "bus")
+        .comb_authors(None, &["L."])
+        .nom_note("Orth. var.")
+        .nothing_else();
+}
+
+#[test]
+fn a_nova_note_with_more_behind_it_is_no_author() {
+    // #220: "sp." became an author, "nov. 2013" was left unparsed
+    for input in [
+        "Heliconia waoraniana W.J. Kress, sp. nov. ined. 2013",
+        "Heliconia waoraniana W.J. Kress, sp. nov., ined. 2013",
+    ] {
+        assert_name(input)
+            .species("Heliconia", "waoraniana")
+            .comb_authors(Some("2013"), &["W.J.Kress"])
+            .manuscript()
+            .nom_note("sp. nov. ined.")
+            .nothing_else();
+    }
+    assert_name("Heliconia waoraniana W.J. Kress, sp. nov.")
+        .species("Heliconia", "waoraniana")
+        .comb_authors(None, &["W.J.Kress"])
+        .nom_note("sp. nov.")
+        .nothing_else();
+    // a number after the note of a bare genus is its designation
+    assert_informal("Lysipomia sp. nov. 1163")
+        .taxon("Lysipomia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. nov. 1163")
+        .nothing_else();
+    assert_name("Heliconia waoraniana W.J. Kress, sp. nov. 2013")
+        .species("Heliconia", "waoraniana")
+        .comb_authors(Some("2013"), &["W.J.Kress"])
+        .nom_note("sp. nov.")
+        .nothing_else();
+}
+
+#[test]
+fn a_note_glued_to_the_author_is_split_off() {
+    // #217: the author and the note were one author
+    assert_name("Arenaria ciliata L.s.l.")
+        .species("Arenaria", "ciliata")
+        .comb_authors(None, &["L."])
+        .sensu("s.l.")
+        .nothing_else();
+    assert_name("Viola montana L.s.str.")
+        .species("Viola", "montana")
+        .comb_authors(None, &["L."])
+        .sensu("s.str.")
+        .nothing_else();
+    assert_name("Jurinea cyanoides (L.) Rchb.s.l.")
+        .species("Jurinea", "cyanoides")
+        .bas_authors(None, &["L."])
+        .comb_authors(None, &["Rchb."])
+        .sensu("s.l.")
+        .nothing_else();
+    assert_name("Placynthium pulvinatum Øvst.ined")
+        .species("Placynthium", "pulvinatum")
+        .comb_authors(None, &["Øvst."])
+        .manuscript()
+        .nom_note("ined")
+        .nothing_else();
+    // no note: a capital initial, and a lower-case word running on
+    assert_name("Aus bus J.S.Smith")
+        .species("Aus", "bus")
+        .comb_authors(None, &["J.S.Smith"])
+        .nothing_else();
+}

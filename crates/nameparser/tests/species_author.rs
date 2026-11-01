@@ -190,3 +190,88 @@ fn a_capitalised_species_epithet_is_put_in_lower_case() {
         .comb_authors(Some("1863"), &["Milne Edwards"])
         .nothing_else();
 }
+
+#[test]
+fn fil_before_a_rank_marker_is_a_filius() {
+    // #221: as "f." is, the infraspecific name was left unparsed
+    assert_name("Allium bourgeaui Rech. fil. subsp. bourgeaui")
+        .infra_species("Allium", "bourgeaui", Rank::Subspecies, "bourgeaui")
+        .specific_authors(None, &["Rech.fil."])
+        .autonym()
+        .nothing_else();
+    assert_name("Allium bourgeaui Rech. f. subsp. bourgeaui")
+        .infra_species("Allium", "bourgeaui", Rank::Subspecies, "bourgeaui")
+        .specific_authors(None, &["Rech.f."])
+        .autonym()
+        .nothing_else();
+    assert_name("Allium cepa Rech. fil. var. alba Smith")
+        .infra_species("Allium", "cepa", Rank::Variety, "alba")
+        .specific_authors(None, &["Rech.fil."])
+        .comb_authors(None, &["Smith"])
+        .nothing_else();
+}
+
+#[test]
+fn a_code_is_no_author() {
+    // #213: a capitalised word with a digit after a uninomial is an interim code
+    for (input, taxon, code) in [
+        ("Priscula Dup9", "Priscula", "Dup9"),
+        ("Priscula Ven02/80-085", "Priscula", "Ven02/80-085"),
+        ("Actia Janzen05", "Actia", "Janzen05"),
+        ("Eois BioLep24", "Eois", "BioLep24"),
+        ("Adiopa Poole01DHJ01", "Adiopa", "Poole01DHJ01"),
+        // a trap's number looks like a year
+        ("Capitonius Malaise1924", "Capitonius", "Malaise1924"),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(code)
+            .nothing_else();
+    }
+    // with a slash after a binomial, a code as any other
+    assert_informal("Agrobacterium pusense L2/2/1")
+        .taxon("Agrobacterium pusense")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Species)
+        .phrase("L2/2/1")
+        .nothing_else();
+    // a year glued to the author is split off
+    assert_name("Tympanuchus cupido (Linnaeus1758)")
+        .species("Tympanuchus", "cupido")
+        .bas_authors(Some("1758"), &["Linnaeus"])
+        .nothing_else();
+    assert_name("Antennella ritchiei Totton1930")
+        .species("Antennella", "ritchiei")
+        .comb_authors(Some("1930"), &["Totton"])
+        .nothing_else();
+    assert_name("Bacillaria paxillifera (O.F. Müller) T. Marsson1901")
+        .species("Bacillaria", "paxillifera")
+        .bas_authors(None, &["O.F.Müller"])
+        .comb_authors(Some("1901"), &["T.Marsson"])
+        .nothing_else();
+    // an isolate's name after an organism label stays one
+    assert_informal("Cyanobacteria bacterium Shimoda2014")
+        .taxon("Cyanobacteria")
+        .phrase("bacterium Shimoda2014")
+        .rank(Rank::Species)
+        .taxon_rank(Rank::Genus)
+        .nothing_else();
+    assert_informal("Hypoderaeum sp. Hubei2014")
+        .taxon("Hypoderaeum")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. Hubei2014")
+        .nothing_else();
+    assert_name_auth("Antennella ritchiei", "Totton1930")
+        .species("Antennella", "ritchiei")
+        .comb_authors(Some("1930"), &["Totton"])
+        .nothing_else();
+    // what is left is flagged
+    assert_name("Aus bus Smith2, 1900")
+        .species("Aus", "bus")
+        .comb_authors(Some("1900"), &["Smith2"])
+        .warning(&[warnings::AUTHOR_WITH_NUMBER])
+        .nothing_else();
+}

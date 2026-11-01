@@ -1282,7 +1282,7 @@ pub(crate) fn is_capitalised_autonym(tokens: &[Token], k: usize) -> bool {
 /// an initial, a separator, an "et al.", an apostrophe (`M'Coy`), and — never as its first token —
 /// an "ex", "et" or "and" before the next author ("Nees ex Thwaites", "Pallas ex de Candolle",
 /// "Hatus. et Ohwi"), the hyphen of an abbreviated double name ("Baum.-Bod."), a filius right
-/// before a rank marker or an "ex" ("Hook.f. var.", "Hook.f. ex A.W.Benn.") and a year
+/// before a rank marker or an "ex" ("Hook.f. var.", "Rech. fil. subsp.", "Hook.f. ex A.W.Benn.") and a year
 /// ("Günther, 1867 ssp. tanganica"). Shared by the walks that skip a species author standing
 /// before a rank marker.
 pub(crate) fn continues_author_span(tokens: &[Token], j: usize, from: usize) -> bool {
@@ -1303,7 +1303,9 @@ pub(crate) fn continues_author_span(tokens: &[Token], j: usize, from: usize) -> 
                 || (inner
                     && matches!(t.text.as_str(), "ex" | "et" | "and")
                     && next_word_starts_author(tokens, j + 1))
-                || (inner && t.text == "f" && filius_before_marker_or_ex(tokens, j))
+                || (inner
+                    && matches!(t.text.as_str(), "f" | "fil" | "filius")
+                    && filius_before_marker_or_ex(tokens, j))
         }
         TokenKind::Dot | TokenKind::Ampersand | TokenKind::Comma => true,
         // the sanctioning author of a species before its rank marker ("Boletus edulis Bull. : Fr.

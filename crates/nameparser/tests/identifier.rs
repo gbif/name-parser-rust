@@ -325,3 +325,32 @@ fn a_bin_label_before_the_code_is_no_author() {
         .phrase("BOLD:ACU5439")
         .nothing_else();
 }
+
+#[test]
+fn a_bracketed_bin_is_no_author() {
+    // #216: a basionym author "BIN Bold"
+    assert_informal("Aegialites saintgeorgensis (BIN BOLD:ADH6988)")
+        .taxon("Aegialites saintgeorgensis")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Species)
+        .phrase("BOLD:ADH6988")
+        .nothing_else();
+    assert_informal("Aegialites debilis (BOLD:ADH3884)")
+        .taxon("Aegialites debilis")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Species)
+        .phrase("BOLD:ADH3884")
+        .nothing_else();
+    assert_informal("Aegialites sp. (BIN BOLD:ADH6989)")
+        .taxon("Aegialites")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. BOLD:ADH6989")
+        .nothing_else();
+    assert_informal("Agathidium BIN BOLD:ACM6630")
+        .taxon("Agathidium")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("BOLD:ACM6630")
+        .nothing_else();
+}

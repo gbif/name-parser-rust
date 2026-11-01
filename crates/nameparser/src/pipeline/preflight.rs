@@ -195,12 +195,145 @@ static AUTHORSHIP_AFTER_OR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?-u:\s)or(?-u:\s+)\p{Lu}[\p{L}'.\-]*(?:(?-u:\s+)\p{Lu}[\p{L}'.\-]*)*(?-u:\s*)(?:[,&(]|(?-u:\d{4}))").unwrap()
 });
 
+/// A name followed by alternatives, a slash, a pipe or `or` right after its last epithet: `Festuca
+/// rubra/arenaria`, `Bombus terrestris or lucorum`, `Salmo salar/Salmo trutta`, also qualified,
+/// `Aphaenogaster cf. rudis/texana` (#225). The groups: genus, subgenus, the epithets, the
+/// alternatives. Read by [`read_alternatives`].
+static ALTERNATIVE_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
+    let epithet = r"(?:(?:cf|aff|nr)\.?(?-u:\s+))?\p{Ll}[\p{Ll}\-]+";
+    Regex::new(&format!(
+        r"^(\p{{Lu}}\p{{Ll}}+)(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+){epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
+    ))
+    .unwrap()
+});
+/// An alternative epithet: letters only up to a word end, so no strain code (`Mus musculus c57/bl6`).
+static ALTERNATIVE_EPITHET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Ll}[\p{Ll}\-]+(?:[\s/,.;)\]]|$)").unwrap());
+/// An alternative species, its genus written out or abbreviated: `Salmo trutta`, `S. arcticus`.
+static ALTERNATIVE_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)|\p{Lu}\.(?-u:\s*))(\p{Ll}[\p{Ll}\-]+)(?:[\s/,.;)\]]|$)")
+        .unwrap()
+});
+/// Two uninomials on either side of a slash: `Anser/Branta`, `Escherichia/Shigella sp.` (#212).
+static ALTERNATIVE_GENERA: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)[/|](?-u:\s*)(\p{Lu}\p{Ll}+)(?:[\s/|,.;)\]]|$)").unwrap()
+});
+/// Words next to the slash or `or` that say no epithet: `Nanger petersii variety or form`.
+const NO_ALTERNATIVE_EPITHET: &[&str] = &[
+    "species",
+    "subspecies",
+    "variety",
+    "form",
+    "forma",
+    "race",
+    "hybrid",
+    "cultivar",
+    "strain",
+    "sp",
+    "spp",
+    "ssp",
+    "subsp",
+    "var",
+    "cv",
+];
+/// Words after a capitalised one that make it an author, not the genus of a second species:
+/// `Festuca rubra/Hackel et Smith`.
+const AUTHOR_LINK: &[&str] = &[
+    "et", "and", "ex", "in", "de", "del", "der", "den", "van", "von", "da", "di", "du", "la", "le",
+    "fil", "jr",
+];
+
+/// What the alternatives after a slash or `or` leave of a name, see [`read_alternatives`].
+enum Alternatives<'a> {
+    /// All in one genus: anchored on it, the epithets and alternatives its phrase.
+    OneGenus {
+        genus: &'a str,
+        subgenus: Option<&'a str>,
+        phrase: &'a str,
+    },
+    /// In different genera: there is no one taxon to claim.
+    TwoGenera,
+}
+
+/// The alternatives in `s`, if the slash or `or` stands between names: an identification that
+/// stopped at several species, where the second epithet was read as the author of the first species
+/// (#225, #212). A capitalised word alone may be an author and is left to the authorship: `Festuca
+/// rubra/Hackel`.
+fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
+    if let Some(caps) = ALTERNATIVE_GENERA.captures(s) {
+        return (caps[1] != caps[2]).then_some(Alternatives::TwoGenera);
+    }
+    let caps = ALTERNATIVE_EPITHETS.captures(s)?;
+    let genus = caps.get(1)?.as_str();
+    let is_rank_word = |word: &str| NO_ALTERNATIVE_EPITHET.contains(&word);
+    if is_rank_word(caps[3].split_whitespace().last()?) {
+        return None;
+    }
+    let alternatives = &caps[4];
+    if let Some(species) = ALTERNATIVE_SPECIES.captures(alternatives) {
+        if AUTHOR_LINK.contains(&&species[2]) {
+            return None;
+        }
+        let first = species[1].trim_end();
+        let same_genus = match first.strip_suffix('.') {
+            Some(initial) => genus.starts_with(initial),
+            None => first == genus,
+        };
+        if !same_genus {
+            return Some(Alternatives::TwoGenera);
+        }
+    } else if !ALTERNATIVE_EPITHET.is_match(alternatives)
+        || is_rank_word(
+            alternatives
+                .split_whitespace()
+                .next()?
+                .trim_end_matches(['/', ',', '.']),
+        )
+    {
+        return None;
+    }
+    Some(Alternatives::OneGenus {
+        genus,
+        subgenus: caps.get(2).map(|m| m.as_str()),
+        phrase: &s[caps.get(3)?.start()..],
+    })
+}
+
 /// A capitalised word, an underscore and a label opening with a capital or a digit, in a word with
 /// a digit: a designation under a real taxon, `Entodinium_1`, `Acrididae_20230928_001_ORT_001`,
 /// `Stygiellidae_STYG2` (#193). Assemble makes it the uninomial with a phrase, as a GTDB name
 /// (`Clostridium_R`). A lower-case label would become an epithet: `Acrocirridae_gen1` stays junk.
 static UNDERSCORE_LABEL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}{2,}_[\p{Lu}\d][\p{L}\d_.\-]*$").unwrap());
+/// A capitalised word, a dash and a number: a designation under a real taxon, `Apidae-223957883`,
+/// `Spathidium-2` (#210). As `Apidae 223957883` is, the taxon with the number as its phrase. Rejected
+/// as junk before, like any single word with a digit.
+static DASH_NUMBER_LABEL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}{2,})-(\d+)$").unwrap());
+/// A capitalised word, an underscore and an indet marker with its code: `Sus_spec_2`,
+/// `Candida_sp_NCIM3483` (#209). The underscore stands for the space of `Sus spec_2`.
+static UNDERSCORE_INDET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_((?:sp|spec)_\S+)$").unwrap());
+/// A capitalised word, an underscore and a label opening in lower case or with a digit, the rest of
+/// the name in lower case: `Acrocirridae_gen1`, `Parmales_env_2`, `Abies_01 sp_01`,
+/// `Strat_genus3 sp. 1` (#209). Read by [`read_underscore_label`].
+static UNDERSCORE_LOWER_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}{2,})_([\p{Ll}\d][\p{L}\d_.\-]*)((?-u:\s+)\p{Ll}.*)?$").unwrap()
+});
+
+/// The taxon and the phrase of a name with an underscore label: the label holds a digit, or it would
+/// be an epithet (`Calopteryx_splendens splendens`), and one starting with a digit and standing alone
+/// is an [`UNDERSCORE_LABEL`] left to Assemble (`Entodinium_1`).
+fn read_underscore_label(s: &str) -> Option<(&str, &str)> {
+    let caps = UNDERSCORE_LOWER_LABEL.captures(s)?;
+    let label = caps.get(2)?;
+    let digit_led = label.as_str().starts_with(|c: char| c.is_ascii_digit());
+    if !has_digit(label.as_str()) || (digit_led && caps.get(3).is_none()) {
+        return None;
+    }
+    Some((caps.get(1)?.as_str(), &s[label.start()..]))
+}
+
 // Patterns like "Basal_Cryptophyceae-1" — single underscore-separated parts with a digit
 // suffix. Java: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 // NB (dead-code finding, not fixed — faithful port keeps it): every character PR2_LIKE's
@@ -440,7 +573,8 @@ static UNCLASSIFIED: LazyLock<Regex> =
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\s` (in `[-\s]`), no `\p{…}` → whole pattern
 /// (after `^`) wrapped.
 static PLACEHOLDER_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(?-u:(?:Unident|Undescribed|IncertaeSedis|Undet)(?:[-\s]|$))").unwrap()
+    Regex::new(r"(?i)^(?-u:(?:Unident|Undescribed|Unpublished|IncertaeSedis|Undet)(?:[-\s]|$))")
+        .unwrap()
 });
 /// Java: no flags. Has `\s` AND `\p{Ll}` → only `\s` is scoped (matches the brief's own
 /// worked example verbatim: `^\?\s+\p{Ll}` → `^\?(?-u:\s+)\p{Ll}`).
@@ -464,9 +598,19 @@ static NN_PLACEHOLDER: LazyLock<Regex> =
 /// et sp non descr". Rust-only: Java took "Gen." for an abbreviated genus, the "et" after it for
 /// the epithet and a locality for the authorship. Undotted, only before "et"/"nov"/"n.", so the
 /// genus-like "Gen 1" or "Gen nilotica Simon 1906" is left alone.
+/// The word `Genus` itself is no genus either (#211): `Genus sp.`, `Genus B sp. 1`, `Genus asaemoides`.
 static GENUS_WORD_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))").unwrap()
+    Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))|^[Gg]enus(?-u:\s)")
+        .unwrap()
 });
+/// A first word that is no genus, but the common word for what was found: `ADN Suelo`, Spanish for
+/// soil DNA, and `Wurm-8005097` (#211). No taxon to hang anything off, so OTHER.
+static NO_GENUS_WORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:ADN|Wurm)(?:(?-u:\s)|-|$)").unwrap());
+/// A herbarium record: `HNT_Specimen:5625_Accession:29540`, `HNT_Accession:2213*3_Specimen:15133`
+/// (#211). OTHER.
+static SPECIMEN_RECORD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?:^|_)(?:Specimen|Accession):").unwrap());
 /// A numbered group with no taxon before it: `Subgroup 10`, `Morphotype 1`, `Genotype 3`, `Group
 /// 1.1c`, and a numbered new genus, `Genus Novum 10`, `Genus nov. (2)`. It stands for an unnamed
 /// group of its parent, as `Rissooidea indet. 1` does, and there is no anchor for an informal name
@@ -645,7 +789,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         super::stripandstash::without_authorship_placeholder(&s).len() != s.len();
     if let Some(caps) = ANCHORED_PLACEHOLDER
         .captures(&s)
-        .filter(|_| !authorship_placeholder)
+        .filter(|caps| !authorship_placeholder && &caps[1] != "Genus")
     {
         ctx.placeholder_tail = Some(caps[2].to_string());
         s = caps[1].to_string();
@@ -683,6 +827,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // (`Grapevine red globe virus (unclassified)`) keeps its VIRUS code.
     if UNCLASSIFIED.is_match(&s) {
         return Err(ParseError::new(NameType::Placeholder, None, original));
+    }
+
+    if NO_GENUS_WORD.is_match(&s) || SPECIMEN_RECORD.is_match(&s) {
+        return Err(ParseError::new(NameType::Other, None, original));
     }
 
     // A generic organism label instead of a genus — `bacterium Ac10`, `marine actinobacterium F10`,
@@ -798,6 +946,17 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     {
         return Err(ParseError::new(NameType::Other, None, s));
     }
+    if let Some(caps) = DASH_NUMBER_LABEL.captures(&s) {
+        rescue_label(ctx, &caps[1], &caps[2]);
+        return Ok(());
+    }
+    if let Some(caps) = UNDERSCORE_INDET.captures(&s) {
+        s = format!("{} {}", &caps[1], &caps[2]);
+        ctx.working = s.clone();
+    } else if let Some((taxon, phrase)) = read_underscore_label(&s) {
+        rescue_label(ctx, taxon, phrase);
+        return Ok(());
+    }
     // Pure alphanumeric mash with digit (no spaces) and no obvious Latin epithet.
     if !s.contains(' ')
         && PURE_ALPHANUM.is_match(&s)
@@ -806,6 +965,23 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         && !UNDERSCORE_LABEL.is_match(&s)
     {
         return Err(ParseError::new(NameType::Other, None, s));
+    }
+    // a hybrid formula stays one, whatever its parents' alternatives: `Anser fabalis/serrirostris x
+    // anser`
+    match read_alternatives(&s).filter(|_| !looks_like_hybrid_formula(&s)) {
+        Some(Alternatives::TwoGenera) => return Err(ParseError::new(NameType::Other, None, s)),
+        Some(Alternatives::OneGenus {
+            genus,
+            subgenus,
+            phrase,
+        }) => {
+            rescue_informal_group(ctx, genus, phrase);
+            ctx.name.infrageneric_epithet = subgenus.map(str::to_string);
+            ctx.name.state = State::Partial;
+            ctx.phrase_takes_authorship = true;
+            return Ok(());
+        }
+        None => {}
     }
     if ALTERNATIVE_NAMES.is_match(&s) && !AUTHORSHIP_AFTER_OR.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
@@ -846,6 +1022,17 @@ fn rescue_informal_group(ctx: &mut ParseContext, taxon: &str, marker: &str) {
     ctx.name.phrase = Some(marker.to_string());
     ctx.name.type_ = NameType::Informal;
     ctx.name.state = State::Complete;
+    ctx.preflight_complete = true;
+}
+
+/// A taxon with a designation that is not its epithet, as a GTDB name is: the uninomial and the
+/// label its phrase, `Apidae-223957883`, `Acrocirridae_gen1` (#209, #210).
+fn rescue_label(ctx: &mut ParseContext, taxon: &str, label: &str) {
+    ctx.name.uninomial = Some(taxon.to_string());
+    ctx.name.rank = Rank::Unranked;
+    ctx.name.phrase = Some(label.to_string());
+    ctx.name.type_ = NameType::Informal;
+    ctx.phrase_takes_authorship = true;
     ctx.preflight_complete = true;
 }
 

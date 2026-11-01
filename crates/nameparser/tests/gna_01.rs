@@ -287,7 +287,7 @@ fn binomials_with_authorship() {
 
     assert_name("Muscicapa randi Amadon & duPont, 1970")
         .species("Muscicapa", "randi")
-        .comb_authors(Some("1970"), &["Amadon", "duPont"])
+        .comb_authors(Some("1970"), &["Amadon", "du Pont"])
         .nothing_else();
 
     assert_name("Scytalopus alvarezlopezi Stiles, Laverde-R. & Cadena 2017")

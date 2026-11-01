@@ -198,10 +198,14 @@ const NOT_A_MISSPELT_MARKER: [&str; 9] =
 /// The infraspecific marker a misspelt one stands for: a lowercase ASCII word one letter off a
 /// marker of three letters or more, with the same first letter — `va` or `vat` for `var`, `subfo`
 /// for `subf`, `morp` for `morph` (#115). Off several markers of different ranks, the one it
-/// abbreviates: `subs` is `subsp`, not `subf` or `subv`; else `None` (`sub`, `subp`), as for a
-/// marker or one of [`NOT_A_MISSPELT_MARKER`]. Shorter markers are left out, one letter off them
-/// is too much: `cf` is not `ct`, nor `al` `ab`.
+/// abbreviates: `subs` is `subsp`, not `subf` or `subv`; else `None` (`sub`), as for a marker or
+/// one of [`NOT_A_MISSPELT_MARKER`]. `subp` is off `subsp`, `subf` and `subv` too, but only `subsp`
+/// has its letters, a dropped one being the usual slip (#215). Shorter markers are left out, one
+/// letter off them is too much: `cf` is not `ct`, nor `al` `ab`.
 pub fn match_misspelt_infraspecific(word: &str) -> Option<&'static str> {
+    if word == "subp" {
+        return Some("subsp");
+    }
     if word.len() < 2
         || !word.bytes().all(|b| b.is_ascii_lowercase())
         || NOT_A_MISSPELT_MARKER.contains(&word)
@@ -316,7 +320,7 @@ mod tests {
         }
         // a marker, an ambiguous word, a short marker's neighbour, a known abbreviation
         for word in [
-            "var", "f", "subp", "sub", "cf", "al", "sp", "spp", "cons", "ser", "ss", "Va", "v",
+            "var", "f", "sub", "cf", "al", "sp", "spp", "cons", "ser", "ss", "Va", "v",
         ] {
             assert_eq!(match_misspelt_infraspecific(word), None, "{word}");
         }

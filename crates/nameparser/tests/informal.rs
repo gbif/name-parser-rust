@@ -1181,3 +1181,388 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+// ---- Alternatives: the identification stopped at several species (#225, #212) ----------------
+
+/// An informal name anchored on the genus, the alternatives its phrase, left partial.
+#[track_caller]
+fn assert_alternatives(input: &str, authorship: Option<&str>, rank: Option<Rank>, phrase: &str) {
+    let genus = input.split_whitespace().next().unwrap();
+    assert_informal_hinted(input, authorship, rank, None)
+        .taxon(genus)
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .phrase(phrase)
+        .partial()
+        .nothing_else();
+}
+
+#[test]
+fn a_slash_between_epithets_keeps_only_the_genus() {
+    for (input, phrase) in [
+        ("Festuca rubra/arenaria", "rubra/arenaria"),
+        ("Festuca rubra / arenaria", "rubra / arenaria"),
+        (
+            "Bombus terrestris/lucorum/magnus/cryptarum",
+            "terrestris/lucorum/magnus/cryptarum",
+        ),
+        ("Salmo salar/Salmo trutta", "salar/Salmo trutta"),
+        (
+            "Tachybaptus ruficollis tricolor/vulcanorum",
+            "ruficollis tricolor/vulcanorum",
+        ),
+        (
+            "Eunotia flexuosa/pseudoflexuosa/latitaenia - group",
+            "flexuosa/pseudoflexuosa/latitaenia - group",
+        ),
+        // the second species' genus abbreviated, and the same species twice (#212)
+        (
+            "Sorex tundrensis/S. arcticus complex",
+            "tundrensis/S. arcticus complex",
+        ),
+        // a pipe (#219)
+        (
+            "Salicornia pusilla|Salicornia disarticulata",
+            "pusilla|Salicornia disarticulata",
+        ),
+        // qualified
+        (
+            "Agabus cf. lutosus/griseipennis",
+            "cf. lutosus/griseipennis",
+        ),
+        (
+            "Aphaenogaster cf. rudis/texana ASMAS301-10",
+            "cf. rudis/texana ASMAS301-10",
+        ),
+        (
+            "Memphis philumena aff. xenica/promenaea",
+            "philumena aff. xenica/promenaea",
+        ),
+        (
+            "Bubo virginianus pallescens / Bubo virginianus pinorum intergrade",
+            "virginianus pallescens / Bubo virginianus pinorum intergrade",
+        ),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+}
+
+#[test]
+fn or_between_epithets_keeps_only_the_genus() {
+    for (input, phrase) in [
+        ("Bombus terrestris or lucorum", "terrestris or lucorum"),
+        (
+            "Antechinomys laninger or Antechinomys auritus",
+            "laninger or Antechinomys auritus",
+        ),
+        ("Hirundo scullii or H. rufula", "scullii or H. rufula"),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+}
+
+#[test]
+fn a_rank_or_an_authorship_does_not_bring_the_first_species_back() {
+    assert_alternatives(
+        "Eunotia flexuosa/pseudoflexuosa/latitaenia - group",
+        None,
+        Some(Rank::SpeciesAggregate),
+        "flexuosa/pseudoflexuosa/latitaenia - group",
+    );
+    assert_alternatives(
+        "Festuca rubra/arenaria",
+        None,
+        Some(Rank::Species),
+        "rubra/arenaria",
+    );
+    // the phrase takes an authorship, as any informal name without a species epithet does
+    assert_alternatives(
+        "Festuca rubra/arenaria",
+        Some("Hack."),
+        None,
+        "rubra/arenaria Hack.",
+    );
+    assert_alternatives(
+        "Festuca rubra/arenaria Hack.",
+        Some("Hack."),
+        None,
+        "rubra/arenaria Hack.",
+    );
+}
+
+#[test]
+fn the_subgenus_stays_part_of_the_anchor() {
+    assert_informal("Simulium (Ectemnaspis) lewisi/lutzianum complex")
+        .taxon("Simulium subg. Ectemnaspis")
+        .taxon_rank(Rank::Subgenus)
+        .rank(Rank::Unranked)
+        .phrase("lewisi/lutzianum complex")
+        .partial()
+        .nothing_else();
+}
+
+#[test]
+fn a_slash_that_separates_no_epithets_is_left_alone() {
+    // inside the authorship
+    assert_name("Harrisina americana Guerin-Meneville, 1829/44")
+        .species("Harrisina", "americana")
+        .comb_authors(Some("1829"), &["Guerin-Meneville"])
+        .warning(&[nameparser::model::warnings::YEAR_INTERPRETED])
+        .nothing_else();
+    // a designation, informal already
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Barbus sp. (big mouth/big eye)", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.type_, NameType::Informal);
+    assert_eq!(pn.rank, Rank::Species);
+    assert_eq!(pn.phrase.as_deref(), Some("sp. (big mouth/big eye)"));
+    // a capital alone may be an author, and a strain code is no epithet
+    for input in [
+        "Entamoeba nuttalli / P19",
+        "Festuca rubra/Hackel",
+        "Festuca rubra/Hackel et Smith",
+        "Mus musculus c57/bl6",
+    ] {
+        let ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+            panic!("`{input}` is parsed");
+        };
+        assert_eq!(pn.type_, NameType::Scientific, "{input}");
+        assert!(pn.specific_epithet.is_some(), "{input}");
+    }
+    // a rank word is no alternative epithet
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Nanger petersii variety or form", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.specific_epithet.as_deref(), Some("petersii"));
+    // a hybrid formula stays one
+    assert_unparsable("Potentilla anglica or erecta x reptans", NameType::Formula);
+    assert_unparsable("Anser fabalis/serrirostris x anser", NameType::Formula);
+    // the moth Tethea or, with its subspecies
+    assert_name("Tethea or hibernica Turner, 1927")
+        .infra_species("Tethea", "or", Rank::InfraspecificName, "hibernica")
+        .comb_authors(Some("1927"), &["Turner"])
+        .nothing_else();
+}
+
+#[test]
+fn alternatives_of_two_genera_are_no_name() {
+    // no genus to claim (#212)
+    for input in [
+        "Uria aalge / Alca torda",
+        "Uria aalge/Alca torda",
+        "Anser/Branta",
+        "Agouticarpa/Borojoa",
+        "Escherichia/Shigella sp.",
+        "Bacillus/Lactobacillus/Streptococcus group",
+        "Zea mays/Aspergillus flavus mixed library",
+        "Sorex tundrensis/C. arcticus",
+        "Entosthodon fascicularis or Physcomitrium pyriforme",
+        "Abramis brama|Blicca bjoerkna",
+        "Bilderdykia|Polygonum",
+    ] {
+        assert_unparsable(input, NameType::Other);
+    }
+}
+
+// ---- A label joined to the first word by a dash or an underscore (#209, #210) ----------------
+
+#[test]
+fn a_number_dashed_to_a_taxon_is_its_phrase() {
+    for (input, taxon, phrase) in [
+        ("Apidae-223957883", "Apidae", "223957883"),
+        ("Auchenorrhyncha-2556019", "Auchenorrhyncha", "2556019"),
+        ("Brachycera-2609461", "Brachycera", "2609461"),
+        ("Zygentoma-2609377", "Zygentoma", "2609377"),
+        ("Spathidium-2", "Spathidium", "2"),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // as with a space
+    assert_informal("Apidae 223957883")
+        .taxon("Apidae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("223957883")
+        .nothing_else();
+    // a virus stays one, a code with more behind it no taxon
+    assert_unparsable_code("Crucivirus-112", NameType::Other, NomCode::Virus);
+}
+
+#[test]
+fn an_underscored_indet_marker_stands_for_a_space() {
+    for (input, taxon, phrase) in [
+        ("Sph_spec_1", "Sph", "spec_1"),
+        ("Sus_spec_2", "Sus", "spec_2"),
+        ("Tac_spec_3", "Tac", "spec_3"),
+        ("Candida_sp_NCIM3483", "Candida", "sp_NCIM3483"),
+        // as with a space
+        ("Sph spec_1", "Sph", "spec_1"),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // the marker is not repeated in front of the phrase
+    let ParseResult::Parsed(pn) = nameparser::parse("Sus_spec_2", None, None, None) else {
+        panic!("parsed");
+    };
+    assert_eq!(
+        pn.canonical_name_without_authorship().as_deref(),
+        Some("Sus spec_2")
+    );
+}
+
+#[test]
+fn a_lower_case_underscore_label_with_a_digit_is_a_phrase() {
+    for (input, taxon, phrase) in [
+        ("Abies_01 sp_01", "Abies", "01 sp_01"),
+        ("Acrocirridae_gen1", "Acrocirridae", "gen1"),
+        ("Hapalidiales_unk3 sp. 1HG", "Hapalidiales", "unk3 sp. 1HG"),
+        ("Parmales_env_2", "Parmales", "env_2"),
+        ("Pelagomonadales_clade_A3", "Pelagomonadales", "clade_A3"),
+        (
+            "Sciaridae_genus_JH01 sp. 13_TM",
+            "Sciaridae",
+            "genus_JH01 sp. 13_TM",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // no digit: a genus and its epithet, joined by the underscore
+    assert_name("Oxalis_barrelieri")
+        .species("Oxalis", "barrelieri")
+        .nothing_else();
+    // a capital or a lone number stays the phrase Assemble makes of it, with its authorship
+    assert_informal("Entodinium_1")
+        .taxon("Entodinium")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("1")
+        .nothing_else();
+}
+
+// ---- A qualifier out of its place (#214) -----------------------------------------------------
+
+/// `epithet_qualifier` of a parsed name, all that `assert_name` needs beyond the name parts.
+#[track_caller]
+fn qualifier(
+    input: &str,
+    authorship: Option<&str>,
+) -> (Option<String>, NamePart, String, NameType) {
+    let ParseResult::Parsed(pn) = nameparser::parse(input, authorship, None, None) else {
+        panic!("`{input}` is parsed");
+    };
+    let q = pn.epithet_qualifier.as_ref().expect("a qualifier");
+    let (part, value) = q.iter().next().expect("one qualifier");
+    (
+        pn.infraspecific_epithet.clone(),
+        *part,
+        value.clone(),
+        pn.type_,
+    )
+}
+
+#[test]
+fn a_trailing_qualifier_goes_to_the_last_epithet() {
+    for (input, infra, part) in [
+        (
+            "Canis lupus familiaris cf.",
+            Some("familiaris"),
+            NamePart::Infraspecific,
+        ),
+        (
+            "Peromyscus leucopus ochraceus cf.",
+            Some("ochraceus"),
+            NamePart::Infraspecific,
+        ),
+        (
+            "Abies alba var. nana cf.",
+            Some("nana"),
+            NamePart::Infraspecific,
+        ),
+        ("Canis lupus cf.", None, NamePart::Specific),
+        ("Pleuroflammula ragazziana (cf.)", None, NamePart::Specific),
+        ("Amanita gilbertii Beauseign. cf.", None, NamePart::Specific),
+        ("Abies alba L. (aff.)", None, NamePart::Specific),
+    ] {
+        let (epithet, got, _, type_) = qualifier(input, None);
+        assert_eq!(epithet.as_deref(), infra, "{input}");
+        assert_eq!(got, part, "{input}");
+        assert_eq!(type_, NameType::Informal, "{input}");
+    }
+    // the same in a separate authorship
+    assert_paths_agree("Amanita gilbertii", "Beauseign. cf.");
+    assert_paths_agree("Incrustoporia alutacea", "(Lowe) Reid cf.");
+}
+
+#[test]
+fn a_qualifier_after_the_author_goes_to_the_infraspecific_epithet() {
+    for (input, infra) in [
+        ("Protium giganteum Engl. cf. var. giganteum", "giganteum"),
+        (
+            "Swartzia flaemingii Raddi cf. var. flaemingii",
+            "flaemingii",
+        ),
+        ("Swartzia flaemingii Raddi cf. flaemingii", "flaemingii"),
+        (
+            "Gilia capitata Sims cf. subsp. mediomontana V. Grant",
+            "mediomontana",
+        ),
+    ] {
+        let (epithet, part, value, type_) = qualifier(input, None);
+        assert_eq!(epithet.as_deref(), Some(infra), "{input}");
+        assert_eq!(part, NamePart::Infraspecific, "{input}");
+        assert_eq!(value, "cf.", "{input}");
+        assert_eq!(type_, NameType::Informal, "{input}");
+    }
+    // a bare qualifier on a genus stays the phrase of an unnamed species
+    assert_informal("Ulnaria cf.")
+        .taxon("Ulnaria")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf.")
+        .nothing_else();
+    // inside a note, or after "vel", it is left alone
+    let ParseResult::Parsed(pn) = nameparser::parse(
+        "Trypanosyllis foliosa (Imajima, 2003) [as Trypanosyllis cf foliosa]",
+        None,
+        None,
+        None,
+    ) else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.infraspecific_epithet, None);
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Hibbertia obtusifolia vel. aff.", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.epithet_qualifier, None);
+    // no autonym and no marker: a second name
+    let ParseResult::Parsed(pn) = nameparser::parse(
+        "Septifer bilocularis Brachidontes cf. variabilis",
+        None,
+        None,
+        None,
+    ) else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.infraspecific_epithet, None);
+}
