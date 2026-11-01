@@ -242,3 +242,29 @@ fn a_whitelisted_name_takes_the_particle_as_its_epithet() {
         .comb_authors(Some("1900"), &["du Smith"])
         .nothing_else();
 }
+
+#[test]
+fn a_particle_glued_to_the_surname_is_split_off() {
+    // #218: an infraspecific epithet "vanAchterberg", and an unparsed bracket
+    assert_name("Aphidius tarsalis vanAchterberg 2006")
+        .species("Aphidius", "tarsalis")
+        .comb_authors(Some("2006"), &["van Achterberg"])
+        .nothing_else();
+    assert_name("Korscheltellus fusconebulosa (deGeer, 1778)")
+        .species("Korscheltellus", "fusconebulosa")
+        .bas_authors(Some("1778"), &["de Geer"])
+        .nothing_else();
+    assert_name("Conus fulvobullatus daMotta, 1982")
+        .species("Conus", "fulvobullatus")
+        .comb_authors(Some("1982"), &["da Motta"])
+        .nothing_else();
+    assert_name("Prestoea spicata Henderson & deNevers")
+        .species("Prestoea", "spicata")
+        .comb_authors(None, &["Henderson", "de Nevers"])
+        .nothing_else();
+    // a capital belongs to the surname
+    assert_name("Aus bus LeConte, 1850")
+        .species("Aus", "bus")
+        .comb_authors(Some("1850"), &["LeConte"])
+        .nothing_else();
+}
