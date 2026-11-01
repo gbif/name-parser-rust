@@ -190,6 +190,10 @@ Authors are kept as written, with spacing around initials and dots normalised. E
 | `Homo naledi Berger et al., 2015` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Homo` · specificEpithet `naledi`<br>combination: authors `Berger`, `al.` · year `2015`<br>→ `Homo naledi Berger et al., 2015` |
 | `Ablepharus budaki`<br>authorship given separately: `Poulakakis Et Al., 2005`<br>*"et al." in any case* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Ablepharus` · specificEpithet `budaki`<br>combination: authors `Poulakakis`, `al.` · year `2005`<br>→ `Ablepharus budaki Poulakakis et al., 2005` |
 | `Fissidentalium zelandicum`<br>authorship given separately: `G.B. Sowerby II`<br>*a generation suffix* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Fissidentalium` · specificEpithet `zelandicum`<br>combination: authors `G.B.Sowerby II`<br>→ `Fissidentalium zelandicum G.B.Sowerby II` |
+| `Aphidius tarsalis vanAchterberg 2006`<br>*a glued particle* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Aphidius` · specificEpithet `tarsalis`<br>combination: authors `van Achterberg` · year `2006`<br>→ `Aphidius tarsalis van Achterberg, 2006` |
+| `Panaeolus cyanescens (Berk. \| Broome) Sacc.`<br>*a pipe between authors is an et* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Panaeolus` · specificEpithet `cyanescens`<br>combination: authors `Sacc.`<br>basionym: authors `Berk.`, `Broome`<br>→ `Panaeolus cyanescens (Berk. & Broome) Sacc.` |
+| `Tympanuchus cupido (Linnaeus1758)`<br>*a year glued to the author* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Tympanuchus` · specificEpithet `cupido`<br>basionym: authors `Linnaeus` · year `1758`<br>→ `Tympanuchus cupido (Linnaeus, 1758)` |
+| `Arthrolycosa wolterbeeki Dunlop1, 2023`<br>*a digit left in an author is flagged* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Arthrolycosa` · specificEpithet `wolterbeeki`<br>combination: authors `Dunlop1` · year `2023`<br>warnings `author with attached number`<br>→ `Arthrolycosa wolterbeeki Dunlop1, 2023` |
 
 ## Sanctioned fungal names
 
@@ -254,6 +258,8 @@ Notes on nomenclatural status are moved out of the authorship into `nomenclatura
 | `Mycena subulata Z. W. Liu, Y. P. Ge & Q. Na, sp. nov.` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Mycena` · specificEpithet `subulata`<br>combination: authors `Z.W.Liu`, `Y.P.Ge`, `Q.Na`<br>nomenclaturalNote `sp. nov.`<br>→ `Mycena subulata Z.W.Liu, Y.P.Ge & Q.Na, sp. nov.` |
 | `Nocardia asteroides (Eppinger 1891) Blanchard 1896 (Approved Lists 1980)` | **Parsed** · `SCIENTIFIC` · rank `SPECIES` · code `BACTERIAL`<br>genus `Nocardia` · specificEpithet `asteroides`<br>combination: authors `Blanchard` · year `1896`<br>basionym: authors `Eppinger` · year `1891`<br>nomenclaturalNote `Approved Lists 1980`<br>→ `Nocardia asteroides (Eppinger 1891) Blanchard 1896, Approved Lists 1980` |
 | `Stephanauge nexilis`<br>authorship given separately: `(Verril, 1883) [sic.]`<br>*spelled so in the original* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Stephanauge` · specificEpithet `nexilis`<br>originalSpelling `True`<br>basionym: authors `Verril` · year `1883`<br>→ `Stephanauge nexilis (Verril, 1883)` |
+| `Heliconia waoraniana W.J. Kress, sp. nov., ined. 2013` | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Heliconia` · specificEpithet `waoraniana`<br>manuscript<br>combination: authors `W.J.Kress` · year `2013`<br>nomenclaturalNote `sp. nov. ined.`<br>→ `Heliconia waoraniana W.J.Kress, 2013, sp. nov. ined.` |
+| `Placynthium pulvinatum Øvst.ined`<br>*a note glued to the author* | **Parsed** · `SCIENTIFIC` · rank `SPECIES`<br>genus `Placynthium` · specificEpithet `pulvinatum`<br>manuscript<br>combination: authors `Øvst.`<br>nomenclaturalNote `ined`<br>→ `Placynthium pulvinatum Øvst., ined` |
 
 ## Taxonomic notes and references
 
@@ -282,6 +288,9 @@ Open nomenclature (`cf.`, `aff.`, `?`) qualifies an epithet; such a name is `INF
 | `Buteo borealis ? ventralis` | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Buteo` · specificEpithet `borealis` · infraspecificEpithet `ventralis`<br>anchor `Buteo borealis` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Buteo borealis ? ventralis` |
 | `Sorex cf. S. shinto` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Sorex` · specificEpithet `shinto`<br>anchor `Sorex` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Sorex cf. shinto` |
 | `Ammonia ex gr. beccarii` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ammonia` · specificEpithet `beccarii`<br>anchor `Ammonia` · `GENUS`<br>epithetQualifier `SPECIFIC` `ex gr.`<br>→ `Ammonia ex gr. beccarii` |
+| `Canis lupus familiaris cf.`<br>*a trailing qualifier goes to the last epithet* | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Canis` · specificEpithet `lupus` · infraspecificEpithet `familiaris`<br>anchor `Canis lupus` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `cf.`<br>→ `Canis lupus cf. familiaris` |
+| `Pleuroflammula ragazziana (cf.)` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Pleuroflammula` · specificEpithet `ragazziana`<br>anchor `Pleuroflammula` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Pleuroflammula cf. ragazziana` |
+| `Protium giganteum Engl. cf. var. giganteum` | **Parsed** · `INFORMAL` · rank `VARIETY`<br>genus `Protium` · specificEpithet `giganteum` · infraspecificEpithet `giganteum`<br>anchor `Protium giganteum Engl.` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `cf.`<br>specificAuthorship combination: authors `Engl.`<br>→ `Protium giganteum Engl. cf. var. giganteum` |
 
 ## Provisional and informal names
 
@@ -304,6 +313,14 @@ A taxon carrying a provisional designation is an informal name: its anchor is th
 | `Spirochaeta 2`<br>*a numbered group of the genus* | **Parsed** · `INFORMAL` · rank `UNRANKED`<br>uninomial `Spirochaeta` · phrase `2`<br>anchor `Spirochaeta` · `UNRANKED`<br>→ `Spirochaeta 2` |
 | `Barea Subgroup 4` | **Parsed** · `INFORMAL` · rank `UNRANKED`<br>uninomial `Barea` · phrase `Subgroup 4`<br>anchor `Barea` · `UNRANKED`<br>→ `Barea Subgroup 4` |
 | `Candidatus Pelagibacter sp. HTCC7211`<br>*Candidatus is kept as a flag* | **Parsed** · `INFORMAL` · rank `SPECIES` · code `BACTERIAL`<br>genus `Pelagibacter` · phrase `sp. HTCC7211`<br>anchor `"Candidatus Pelagibacter"` · `GENUS`<br>candidatus<br>warnings `indetermined name missing its terminal epithet`<br>→ `"Candidatus Pelagibacter" sp. HTCC7211` |
+| `Festuca rubra/arenaria`<br>*alternatives: only the genus is sure, the state stays partial* | **Parsed** · `INFORMAL` · rank `UNRANKED` · state `PARTIAL`<br>genus `Festuca` · phrase `rubra/arenaria`<br>anchor `Festuca` · `GENUS`<br>→ `Festuca rubra/arenaria` |
+| `Bombus terrestris or lucorum` | **Parsed** · `INFORMAL` · rank `UNRANKED` · state `PARTIAL`<br>genus `Bombus` · phrase `terrestris or lucorum`<br>anchor `Bombus` · `GENUS`<br>→ `Bombus terrestris or lucorum` |
+| `Salmo salar/Salmo trutta` | **Parsed** · `INFORMAL` · rank `UNRANKED` · state `PARTIAL`<br>genus `Salmo` · phrase `salar/Salmo trutta`<br>anchor `Salmo` · `GENUS`<br>→ `Salmo salar/Salmo trutta` |
+| `Actia Janzen05`<br>*a code is no author* | **Parsed** · `INFORMAL` · rank `UNRANKED`<br>uninomial `Actia` · phrase `Janzen05`<br>anchor `Actia` · `UNRANKED`<br>→ `Actia Janzen05` |
+| `Agrobacterium pusense L2/2/1` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Agrobacterium` · specificEpithet `pusense` · phrase `L2/2/1`<br>anchor `Agrobacterium pusense` · `SPECIES`<br>→ `Agrobacterium pusense L2/2/1` |
+| `Apidae-223957883` | **Parsed** · `INFORMAL` · rank `UNRANKED`<br>uninomial `Apidae` · phrase `223957883`<br>anchor `Apidae` · `UNRANKED`<br>→ `Apidae 223957883` |
+| `Acrocirridae_gen1` | **Parsed** · `INFORMAL` · rank `UNRANKED`<br>uninomial `Acrocirridae` · phrase `gen1`<br>anchor `Acrocirridae` · `UNRANKED`<br>→ `Acrocirridae gen1` |
+| `Sus_spec_2` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Sus` · phrase `spec_2`<br>anchor `Sus` · `GENUS`<br>warnings `indetermined name missing its terminal epithet`<br>→ `Sus spec_2` |
 
 ## Bacteria
 
@@ -341,3 +358,6 @@ Some strings are no scientific names: they come back as an unparsable result tha
 | `BOLD:AAA0001` | **Unparsable** · type `IDENTIFIER` |
 | `SH1234567.08FU` | **Unparsable** · type `IDENTIFIER` |
 | `bacterium DSM 6505` | **Unparsable** · type `IDENTIFIER` |
+| `Uria aalge/Alca torda`<br>*alternatives in two genera* | **Unparsable** · type `OTHER` |
+| `Anser/Branta` | **Unparsable** · type `OTHER` |
+| `Genus sp.` | **Unparsable** · type `PLACEHOLDER` |

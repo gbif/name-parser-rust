@@ -123,6 +123,10 @@ Eumenes elegans	DE SAUSSURE 1852
 Homo naledi Berger et al., 2015
 Ablepharus budaki	Poulakakis Et Al., 2005  # "et al." in any case
 Fissidentalium zelandicum	G.B. Sowerby II  # a generation suffix
+Aphidius tarsalis vanAchterberg 2006  # a glued particle
+Panaeolus cyanescens (Berk. | Broome) Sacc.  # a pipe between authors is an et
+Tympanuchus cupido (Linnaeus1758)  # a year glued to the author
+Arthrolycosa wolterbeeki Dunlop1, 2023  # a digit left in an author is flagged
 
 ## Sanctioned fungal names
 > In mycology, Fries and Persoon "sanctioned" names, cited after a colon; inside a basionym's brackets for a sanctioned basionym.
@@ -167,6 +171,8 @@ Santarosamyia erecta (Coquillett, 1902) comb. nov.
 Mycena subulata Z. W. Liu, Y. P. Ge & Q. Na, sp. nov.
 Nocardia asteroides (Eppinger 1891) Blanchard 1896 (Approved Lists 1980)
 Stephanauge nexilis	(Verril, 1883) [sic.]  # spelled so in the original
+Heliconia waoraniana W.J. Kress, sp. nov., ined. 2013
+Placynthium pulvinatum Øvst.ined  # a note glued to the author
 
 ## Taxonomic notes and references
 > Concepts (`sensu`, `auct.`, `non`, `s.l.`) go to `taxonomicNote`; a citation of the publication to `publishedIn`, with its year in `publishedInYear`.
@@ -187,6 +193,9 @@ Ferganoconcha? oblonga
 Buteo borealis ? ventralis
 Sorex cf. S. shinto
 Ammonia ex gr. beccarii
+Canis lupus familiaris cf.  # a trailing qualifier goes to the last epithet
+Pleuroflammula ragazziana (cf.)
+Protium giganteum Engl. cf. var. giganteum
 
 ## Provisional and informal names
 > A taxon carrying a provisional designation is an informal name: its anchor is the taxon it hangs off, the rank says what the designation stands for, and the designation itself is kept verbatim as the `phrase`.
@@ -205,6 +214,14 @@ Aquimarina muelleri DSM 19832
 Spirochaeta 2  # a numbered group of the genus
 Barea Subgroup 4
 Candidatus Pelagibacter sp. HTCC7211  # Candidatus is kept as a flag
+Festuca rubra/arenaria  # alternatives: only the genus is sure, the state stays partial
+Bombus terrestris or lucorum
+Salmo salar/Salmo trutta
+Actia Janzen05  # a code is no author
+Agrobacterium pusense L2/2/1
+Apidae-223957883
+Acrocirridae_gen1
+Sus_spec_2
 
 ## Bacteria
 Candidatus Liberibacter asiaticus
@@ -232,3 +249,6 @@ N.N.
 BOLD:AAA0001
 SH1234567.08FU
 bacterium DSM 6505
+Uria aalge/Alca torda  # alternatives in two genera
+Anser/Branta
+Genus sp.
