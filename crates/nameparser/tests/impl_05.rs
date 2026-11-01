@@ -807,11 +807,7 @@ fn an_underscore_label_with_a_digit_is_a_phrase() {
 #[test]
 fn alternative_names_are_no_name() {
     // #194: the first name became a species with the epithet "or"
-    for name in [
-        "Achilidae or Cixiidae",
-        "Acariformes or Parasitiformes",
-        "Antechinomys laninger or Antechinomys auritus",
-    ] {
+    for name in ["Achilidae or Cixiidae", "Acariformes or Parasitiformes"] {
         assert_unparsable(name, NameType::Other);
     }
     // alternative authors after the name are an uncertain authorship

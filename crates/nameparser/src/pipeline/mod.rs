@@ -185,6 +185,11 @@ pub fn run(
     // "Vermistella-lineage") into a complete INFORMAL ParsedName instead of erroring — return it
     // as-is, skipping the tokenizer/classifier/assembler (there is nothing left to parse).
     if ctx.preflight_complete {
+        if ctx.alternatives {
+            if let Some(authorship) = ctx.authorship_input.take() {
+                append_authorship_to_phrase(&authorship, &mut ctx.name);
+            }
+        }
         apply_placeholder_tail(&mut ctx);
         assemble::flag_indetermined(&mut ctx.name);
         return Ok(ctx.name);

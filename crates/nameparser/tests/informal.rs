@@ -1181,3 +1181,182 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
         .code(NomCode::Botanical)
         .nothing_else();
 }
+
+// ---- Alternatives: the identification stopped at several species (#225, #212) ----------------
+
+/// An informal name anchored on the genus, the alternatives its phrase, left partial.
+#[track_caller]
+fn assert_alternatives(input: &str, authorship: Option<&str>, rank: Option<Rank>, phrase: &str) {
+    let genus = input.split_whitespace().next().unwrap();
+    assert_informal_hinted(input, authorship, rank, None)
+        .taxon(genus)
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Unranked)
+        .phrase(phrase)
+        .partial()
+        .nothing_else();
+}
+
+#[test]
+fn a_slash_between_epithets_keeps_only_the_genus() {
+    for (input, phrase) in [
+        ("Festuca rubra/arenaria", "rubra/arenaria"),
+        ("Festuca rubra / arenaria", "rubra / arenaria"),
+        (
+            "Bombus terrestris/lucorum/magnus/cryptarum",
+            "terrestris/lucorum/magnus/cryptarum",
+        ),
+        ("Salmo salar/Salmo trutta", "salar/Salmo trutta"),
+        (
+            "Tachybaptus ruficollis tricolor/vulcanorum",
+            "ruficollis tricolor/vulcanorum",
+        ),
+        (
+            "Eunotia flexuosa/pseudoflexuosa/latitaenia - group",
+            "flexuosa/pseudoflexuosa/latitaenia - group",
+        ),
+        // the second species' genus abbreviated, and the same species twice (#212)
+        (
+            "Sorex tundrensis/S. arcticus complex",
+            "tundrensis/S. arcticus complex",
+        ),
+        // qualified
+        (
+            "Agabus cf. lutosus/griseipennis",
+            "cf. lutosus/griseipennis",
+        ),
+        (
+            "Aphaenogaster cf. rudis/texana ASMAS301-10",
+            "cf. rudis/texana ASMAS301-10",
+        ),
+        (
+            "Memphis philumena aff. xenica/promenaea",
+            "philumena aff. xenica/promenaea",
+        ),
+        (
+            "Bubo virginianus pallescens / Bubo virginianus pinorum intergrade",
+            "virginianus pallescens / Bubo virginianus pinorum intergrade",
+        ),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+}
+
+#[test]
+fn or_between_epithets_keeps_only_the_genus() {
+    for (input, phrase) in [
+        ("Bombus terrestris or lucorum", "terrestris or lucorum"),
+        (
+            "Antechinomys laninger or Antechinomys auritus",
+            "laninger or Antechinomys auritus",
+        ),
+        ("Hirundo scullii or H. rufula", "scullii or H. rufula"),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+}
+
+#[test]
+fn a_rank_or_an_authorship_does_not_bring_the_first_species_back() {
+    assert_alternatives(
+        "Eunotia flexuosa/pseudoflexuosa/latitaenia - group",
+        None,
+        Some(Rank::SpeciesAggregate),
+        "flexuosa/pseudoflexuosa/latitaenia - group",
+    );
+    assert_alternatives(
+        "Festuca rubra/arenaria",
+        None,
+        Some(Rank::Species),
+        "rubra/arenaria",
+    );
+    // the phrase takes an authorship, as any informal name without a species epithet does
+    assert_alternatives(
+        "Festuca rubra/arenaria",
+        Some("Hack."),
+        None,
+        "rubra/arenaria Hack.",
+    );
+    assert_alternatives(
+        "Festuca rubra/arenaria Hack.",
+        Some("Hack."),
+        None,
+        "rubra/arenaria Hack.",
+    );
+}
+
+#[test]
+fn the_subgenus_stays_part_of_the_anchor() {
+    assert_informal("Simulium (Ectemnaspis) lewisi/lutzianum complex")
+        .taxon("Simulium subg. Ectemnaspis")
+        .taxon_rank(Rank::Subgenus)
+        .rank(Rank::Unranked)
+        .phrase("lewisi/lutzianum complex")
+        .partial()
+        .nothing_else();
+}
+
+#[test]
+fn a_slash_that_separates_no_epithets_is_left_alone() {
+    // inside the authorship
+    assert_name("Harrisina americana Guerin-Meneville, 1829/44")
+        .species("Harrisina", "americana")
+        .comb_authors(Some("1829"), &["Guerin-Meneville"])
+        .warning(&[nameparser::model::warnings::YEAR_INTERPRETED])
+        .nothing_else();
+    // a designation, informal already
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Barbus sp. (big mouth/big eye)", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.type_, NameType::Informal);
+    assert_eq!(pn.rank, Rank::Species);
+    assert_eq!(pn.phrase.as_deref(), Some("sp. (big mouth/big eye)"));
+    // a capital alone may be an author, and a strain code is no epithet
+    for input in [
+        "Entamoeba nuttalli / P19",
+        "Festuca rubra/Hackel",
+        "Festuca rubra/Hackel et Smith",
+        "Mus musculus c57/bl6",
+    ] {
+        let ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+            panic!("`{input}` is parsed");
+        };
+        assert_eq!(pn.type_, NameType::Scientific, "{input}");
+        assert!(pn.specific_epithet.is_some(), "{input}");
+    }
+    // a rank word is no alternative epithet
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Nanger petersii variety or form", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.specific_epithet.as_deref(), Some("petersii"));
+    // a hybrid formula stays one
+    assert_unparsable("Potentilla anglica or erecta x reptans", NameType::Formula);
+    assert_unparsable("Anser fabalis/serrirostris x anser", NameType::Formula);
+    // the moth Tethea or, with its subspecies
+    assert_name("Tethea or hibernica Turner, 1927")
+        .infra_species("Tethea", "or", Rank::InfraspecificName, "hibernica")
+        .comb_authors(Some("1927"), &["Turner"])
+        .nothing_else();
+}
+
+#[test]
+fn alternatives_of_two_genera_are_no_name() {
+    // no genus to claim (#212)
+    for input in [
+        "Uria aalge / Alca torda",
+        "Uria aalge/Alca torda",
+        "Anser/Branta",
+        "Agouticarpa/Borojoa",
+        "Escherichia/Shigella sp.",
+        "Bacillus/Lactobacillus/Streptococcus group",
+        "Zea mays/Aspergillus flavus mixed library",
+        "Sorex tundrensis/C. arcticus",
+        "Entosthodon fascicularis or Physcomitrium pyriforme",
+    ] {
+        assert_unparsable(input, NameType::Other);
+    }
+}

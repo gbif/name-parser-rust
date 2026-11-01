@@ -1387,6 +1387,13 @@ impl InformalAssertion {
             .and_then(ParsedName::canonical_name_without_authorship)
     }
 
+    /// Assert the name is left partial with nothing unparsed, as alternatives are (#225).
+    pub fn partial(mut self) -> Self {
+        assert_eq!(self.pn.state, State::Partial, "state mismatch");
+        self.pn.state = State::Complete;
+        self
+    }
+
     /// Assert the taxon the name hangs off, its anchor (`"Rhizobium"`, `"Lasioglossum (Dialictus)"`).
     pub fn taxon(mut self, taxon: &str) -> Self {
         assert_eq!(self.anchor_name().as_deref(), Some(taxon), "taxon mismatch");

@@ -107,6 +107,9 @@ pub(crate) struct ParseContext {
     /// than erroring. `Pipeline::run` then returns `ctx.name` as-is and skips the whole
     /// tokenizer/classifier/assembler back end.
     pub preflight_complete: bool,
+    /// Set by Preflight when the rescued name is an identification stopped at several species
+    /// (`Festuca rubra/arenaria`, #225): the phrase takes a separately supplied authorship too.
+    pub alternatives: bool,
     /// Set by StripAndStash when it removed a leading `?` / `cf.` / `aff.` qualifying the genus
     /// (`?Sydonia alba`, `cf. Platypeltis croftii`);
     /// `Pipeline::run` types the name INFORMAL once it knows a species epithet follows.
@@ -180,6 +183,7 @@ impl ParseContext {
             pending_generic_author: None,
             pending_serovar: None,
             preflight_complete: false,
+            alternatives: false,
             qualified_genus: false,
             trailing_qmark: false,
             placeholder_tail: None,
