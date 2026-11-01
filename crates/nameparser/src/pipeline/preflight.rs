@@ -218,6 +218,9 @@ static ALTERNATIVE_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
 static ALTERNATIVE_GENERA: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)[/|](?-u:\s*)(\p{Lu}\p{Ll}+)(?:[\s/|,.;)\]]|$)").unwrap()
 });
+/// What stands between two alternatives.
+static ALTERNATIVE_SEPARATOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+)").unwrap());
 /// Words next to the slash or `or` that say no epithet: `Nanger petersii variety or form`.
 const NO_ALTERNATIVE_EPITHET: &[&str] = &[
     "species",
@@ -245,10 +248,11 @@ const AUTHOR_LINK: &[&str] = &[
 
 /// What the alternatives after a slash or `or` leave of a name, see [`read_alternatives`].
 enum Alternatives<'a> {
-    /// All in one genus: anchored on it, the epithets and alternatives its phrase.
-    OneGenus {
+    /// All in one genus: anchored on it, or on the one species they all lie in, the rest its phrase.
+    OneTaxon {
         genus: &'a str,
         subgenus: Option<&'a str>,
+        species: Option<&'a str>,
         phrase: &'a str,
     },
     /// In different genera: there is no one taxon to claim.
@@ -274,12 +278,7 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
         if AUTHOR_LINK.contains(&&species[2]) {
             return None;
         }
-        let first = species[1].trim_end();
-        let same_genus = match first.strip_suffix('.') {
-            Some(initial) => genus.starts_with(initial),
-            None => first == genus,
-        };
-        if !same_genus {
+        if !names_genus(&species[1], genus) {
             return Some(Alternatives::TwoGenera);
         }
     } else if !ALTERNATIVE_EPITHET.is_match(alternatives)
@@ -292,11 +291,46 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
     {
         return None;
     }
-    Some(Alternatives::OneGenus {
+    let epithets = caps.get(3)?;
+    let species = shared_species(genus, epithets.as_str(), alternatives);
+    let phrase = &s[epithets.start()..];
+    Some(Alternatives::OneTaxon {
         genus,
         subgenus: caps.get(2).map(|m| m.as_str()),
-        phrase: &s[caps.get(3)?.start()..],
+        species,
+        phrase: species.map_or(phrase, |species| phrase[species.len()..].trim_start()),
     })
+}
+
+/// Whether `written`, the genus of an alternative species, is `genus`, in full or abbreviated.
+fn names_genus(written: &str, genus: &str) -> bool {
+    let written = written.trim_end();
+    match written.strip_suffix('.') {
+        Some(initial) => genus.starts_with(initial),
+        None => written == genus,
+    }
+}
+
+/// The species all alternatives lie in, so that it is sure while what is below it is not: `Bubo
+/// virginianus pallescens / Bubo virginianus pinorum intergrade`, `Tachybaptus ruficollis
+/// tricolor/vulcanorum` (#212). `epithets` needs a word below the species, since a lone epithet after
+/// a binomial is another species. A qualifier in front of the species doubts it.
+fn shared_species<'a>(genus: &str, epithets: &'a str, alternatives: &str) -> Option<&'a str> {
+    let (species, _) = epithets.split_once(char::is_whitespace)?;
+    if matches!(species.trim_end_matches('.'), "cf" | "aff" | "nr")
+        || NO_ALTERNATIVE_EPITHET.contains(&species)
+    {
+        return None;
+    }
+    ALTERNATIVE_SEPARATOR
+        .split(alternatives)
+        .all(
+            |alternative| match ALTERNATIVE_SPECIES.captures(alternative) {
+                Some(other) => names_genus(&other[1], genus) && &other[2] == species,
+                None => ALTERNATIVE_EPITHET.is_match(alternative),
+            },
+        )
+        .then_some(species)
 }
 
 /// A capitalised word, an underscore and a label opening with a capital or a digit, in a word with
@@ -970,13 +1004,15 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     // anser`
     match read_alternatives(&s).filter(|_| !looks_like_hybrid_formula(&s)) {
         Some(Alternatives::TwoGenera) => return Err(ParseError::new(NameType::Other, None, s)),
-        Some(Alternatives::OneGenus {
+        Some(Alternatives::OneTaxon {
             genus,
             subgenus,
+            species,
             phrase,
         }) => {
             rescue_informal_group(ctx, genus, phrase);
             ctx.name.infrageneric_epithet = subgenus.map(str::to_string);
+            ctx.name.specific_epithet = species.map(str::to_string);
             ctx.name.state = State::Partial;
             ctx.phrase_takes_authorship = true;
             return Ok(());

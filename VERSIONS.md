@@ -23,7 +23,7 @@ model they implement is the Java `org.gbif:name-parser-api`, versioned on its ow
   - Any qualified genus (`aff. Anthurium`, `Sacculina?`) is INFORMAL.
   - Text decoded with the wrong encoding is repaired (`GÃ¼rke` → `Gürke`); a quoted genus loses its quotes.
 - Alternatives and other shapes from data review (#209 to #225):
-  - A slash, pipe or `or` between epithets keeps only the genus: `Festuca rubra/arenaria` is INFORMAL with the rest as its phrase, left partial. Two genera (`Anser/Branta`) are unparsable.
+  - A slash, pipe or `or` between epithets keeps only the genus: `Festuca rubra/arenaria` is INFORMAL with the rest as its phrase, left partial. Alternatives inside one species keep the species: `Tachybaptus ruficollis tricolor/vulcanorum`. Two genera (`Anser/Branta`) are unparsable.
   - A code is no author: `Actia Janzen05` and `Agrobacterium pusense L2/2/1` take it as a phrase, as `Apidae-223957883` and `Acrocirridae_gen1` do. An author still holding a digit gets the new warning `author with attached number`.
   - Glued authors are split: `vanAchterberg`, `L.s.l.`, `Øvst.ined`, `Linnaeus1758`; a pipe between authors is an `et`.
   - A qualifier out of place (`Canis lupus familiaris cf.`, `Engl. cf. var. giganteum`) goes to the last epithet.

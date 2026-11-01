@@ -66,17 +66,25 @@ static GLUED_PHRASE: LazyLock<Regex> =
 /// already contains it ([`contains_ignoring_punctuation`]). Returns whether it was consumed.
 fn append_authorship_to_phrase(authorship: &str, name: &mut ParsedName) -> bool {
     let a = java_trim(authorship);
-    let Some(phrase) = name.phrase.as_ref() else {
-        return false;
-    };
     let is_citation = a.starts_with("[of ") && a.ends_with(']');
-    if name.type_ != NameType::Informal || (name.specific_epithet.is_some() && !is_citation) {
+    if name.phrase.is_none()
+        || name.type_ != NameType::Informal
+        || (name.specific_epithet.is_some() && !is_citation)
+    {
         return false;
     }
-    if !contains_ignoring_punctuation(phrase, a) {
-        name.phrase = Some(format!("{phrase} {a}"));
-    }
+    join_phrase(a, name);
     true
+}
+
+/// `authorship` at the end of the phrase, unless the phrase already holds it.
+fn join_phrase(authorship: &str, name: &mut ParsedName) {
+    let a = java_trim(authorship);
+    if let Some(phrase) = &name.phrase {
+        if !contains_ignoring_punctuation(phrase, a) {
+            name.phrase = Some(format!("{phrase} {a}"));
+        }
+    }
 }
 
 /// `haystack` contains `needle` once both are reduced to their letters and digits — so
@@ -187,7 +195,7 @@ pub fn run(
     if ctx.preflight_complete {
         if ctx.phrase_takes_authorship {
             if let Some(authorship) = ctx.authorship_input.take() {
-                append_authorship_to_phrase(&authorship, &mut ctx.name);
+                join_phrase(&authorship, &mut ctx.name);
             }
         }
         apply_placeholder_tail(&mut ctx);
