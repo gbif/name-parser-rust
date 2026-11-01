@@ -190,3 +190,23 @@ fn a_capitalised_species_epithet_is_put_in_lower_case() {
         .comb_authors(Some("1863"), &["Milne Edwards"])
         .nothing_else();
 }
+
+#[test]
+fn fil_before_a_rank_marker_is_a_filius() {
+    // #221: as "f." is, the infraspecific name was left unparsed
+    assert_name("Allium bourgeaui Rech. fil. subsp. bourgeaui")
+        .infra_species("Allium", "bourgeaui", Rank::Subspecies, "bourgeaui")
+        .specific_authors(None, &["Rech.fil."])
+        .autonym()
+        .nothing_else();
+    assert_name("Allium bourgeaui Rech. f. subsp. bourgeaui")
+        .infra_species("Allium", "bourgeaui", Rank::Subspecies, "bourgeaui")
+        .specific_authors(None, &["Rech.f."])
+        .autonym()
+        .nothing_else();
+    assert_name("Allium cepa Rech. fil. var. alba Smith")
+        .infra_species("Allium", "cepa", Rank::Variety, "alba")
+        .specific_authors(None, &["Rech.fil."])
+        .comb_authors(None, &["Smith"])
+        .nothing_else();
+}
