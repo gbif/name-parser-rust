@@ -1220,6 +1220,11 @@ fn a_slash_between_epithets_keeps_only_the_genus() {
             "Sorex tundrensis/S. arcticus complex",
             "tundrensis/S. arcticus complex",
         ),
+        // a pipe (#219)
+        (
+            "Salicornia pusilla|Salicornia disarticulata",
+            "pusilla|Salicornia disarticulata",
+        ),
         // qualified
         (
             "Agabus cf. lutosus/griseipennis",
@@ -1356,6 +1361,8 @@ fn alternatives_of_two_genera_are_no_name() {
         "Zea mays/Aspergillus flavus mixed library",
         "Sorex tundrensis/C. arcticus",
         "Entosthodon fascicularis or Physcomitrium pyriforme",
+        "Abramis brama|Blicca bjoerkna",
+        "Bilderdykia|Polygonum",
     ] {
         assert_unparsable(input, NameType::Other);
     }

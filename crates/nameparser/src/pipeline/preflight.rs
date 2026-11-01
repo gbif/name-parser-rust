@@ -195,14 +195,14 @@ static AUTHORSHIP_AFTER_OR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"(?-u:\s)or(?-u:\s+)\p{Lu}[\p{L}'.\-]*(?:(?-u:\s+)\p{Lu}[\p{L}'.\-]*)*(?-u:\s*)(?:[,&(]|(?-u:\d{4}))").unwrap()
 });
 
-/// A name followed by alternatives, a slash or `or` right after its last epithet: `Festuca
+/// A name followed by alternatives, a slash, a pipe or `or` right after its last epithet: `Festuca
 /// rubra/arenaria`, `Bombus terrestris or lucorum`, `Salmo salar/Salmo trutta`, also qualified,
 /// `Aphaenogaster cf. rudis/texana` (#225). The groups: genus, subgenus, the epithets, the
 /// alternatives. Read by [`read_alternatives`].
 static ALTERNATIVE_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
     let epithet = r"(?:(?:cf|aff|nr)\.?(?-u:\s+))?\p{Ll}[\p{Ll}\-]+";
     Regex::new(&format!(
-        r"^(\p{{Lu}}\p{{Ll}}+)(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+){epithet})?)(?:(?-u:\s*)/(?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
+        r"^(\p{{Lu}}\p{{Ll}}+)(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+){epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
     ))
     .unwrap()
 });
@@ -216,7 +216,7 @@ static ALTERNATIVE_SPECIES: LazyLock<Regex> = LazyLock::new(|| {
 });
 /// Two uninomials on either side of a slash: `Anser/Branta`, `Escherichia/Shigella sp.` (#212).
 static ALTERNATIVE_GENERA: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)/(?-u:\s*)(\p{Lu}\p{Ll}+)(?:[\s/,.;)\]]|$)").unwrap()
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s*)[/|](?-u:\s*)(\p{Lu}\p{Ll}+)(?:[\s/|,.;)\]]|$)").unwrap()
 });
 /// Words next to the slash or `or` that say no epithet: `Nanger petersii variety or form`.
 const NO_ALTERNATIVE_EPITHET: &[&str] = &[

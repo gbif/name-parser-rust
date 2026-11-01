@@ -114,6 +114,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = unbracket_in_citation(ctx, s);
     s = strip_candidatus(ctx, s);
     s = normalise_hort_ex_placeholder(ctx, s);
+    s = pipe_to_ampersand(ctx, s);
     s = split_glued_particle(ctx, s);
     s = split_glued_note(ctx, s);
     s = normalise_manuscript_word(ctx, s);
@@ -1470,6 +1471,26 @@ static NEW_SPECIES_TAG: LazyLock<Regex> =
 /// splendens", "Oxalis_barrelieri ined.?"), which made one genus "Calopteryx_splendens".
 static UNDERSCORE_BINOMIAL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_(\p{Ll}{3,})(\s|$)").unwrap());
+
+/// A pipe between two authors, `Panaeolus cyanescens (Berk. | Broome) Sacc.`, `Macrolepiota
+/// olivascens Singer | M.M. Moser`, `Jordana| Baquero, 2012` (#219). The two read as one author. Not
+/// after the genus (`Rosa| L.`), a lower-case epithet (`Rosa rubiginosa| L. s.l.`) or before a
+/// lost letter (`Podpe|3ra`), where the pipe remains a word break.
+static PIPE_BETWEEN_AUTHORS: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(\p{Lu}[\p{L}.\-]*)(?-u:\s*)\|(?-u:\s*)(\p{Lu})").unwrap());
+
+/// See [`PIPE_BETWEEN_AUTHORS`].
+fn pipe_to_ampersand(_ctx: &mut ParseContext, s: String) -> String {
+    PIPE_BETWEEN_AUTHORS
+        .replace_all(&s, |caps: &regex::Captures| {
+            if caps.get(0).unwrap().start() == 0 {
+                caps[0].to_string()
+            } else {
+                format!("{} & {}", &caps[1], &caps[2])
+            }
+        })
+        .into_owned()
+}
 
 /// A particle glued to the surname after it, `Aphidius tarsalis vanAchterberg 2006`,
 /// `(deGeer, 1778)`, `Aguayo & de laTorre 1954` (#218). The whole word was an epithet, or left
@@ -7254,7 +7275,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 22] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 23] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -7264,6 +7285,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_angle_bracket_authorship,
         strip_html,
         normalise_hort_ex_placeholder,
+        pipe_to_ampersand,
         split_glued_particle,
         split_glued_note,
         normalise_manuscript_word,
