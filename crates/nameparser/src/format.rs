@@ -45,7 +45,7 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// UNICODE_CHARACTER_CLASS flag on this pattern), so it is pinned to `(?-u:\b)`. Detects a
 /// phrase that already spells out the species marker as its leading word ("species 1"), so
 /// the formatter must not also synthesise an "sp." marker. Extended beyond Java with the
-/// underscore-glued designations (`n_sp_NIWA_SO254`, `sp_JAVA`, `n_gen n_sp_…`): `\b` sees no
+/// underscore-glued designations (`n_sp_NIWA_SO254`, `sp_JAVA`, `spec_2`, `n_gen n_sp_…`): `\b` sees no
 /// boundary between `sp` and `_`, which rendered "Aulocalyx sp. n_sp_NIWA_SO254". And with the
 /// open-nomenclature qualifiers that stand for the species marker in a phrase (`cf.`, `aff.`,
 /// `nr.`, `near`: "Formicidae cf.", "Acroceridae aff. Terphis sp. SLW-2002"), which rendered
@@ -55,7 +55,7 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// `n. sp.` and `nsp` (#139), and the unnamed genus of `Carabidae gen. sp.` (#174).
 static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)^(?:(?:species|spec|spp|sp|nsp|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
+        r"(?i)^(?:(?:species|spec|spp|sp|nsp|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp(?:ec)?_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
     )
     .unwrap()
 });

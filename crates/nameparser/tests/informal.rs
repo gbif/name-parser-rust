@@ -1360,3 +1360,93 @@ fn alternatives_of_two_genera_are_no_name() {
         assert_unparsable(input, NameType::Other);
     }
 }
+
+// ---- A label joined to the first word by a dash or an underscore (#209, #210) ----------------
+
+#[test]
+fn a_number_dashed_to_a_taxon_is_its_phrase() {
+    for (input, taxon, phrase) in [
+        ("Apidae-223957883", "Apidae", "223957883"),
+        ("Auchenorrhyncha-2556019", "Auchenorrhyncha", "2556019"),
+        ("Brachycera-2609461", "Brachycera", "2609461"),
+        ("Zygentoma-2609377", "Zygentoma", "2609377"),
+        ("Spathidium-2", "Spathidium", "2"),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // as with a space
+    assert_informal("Apidae 223957883")
+        .taxon("Apidae")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("223957883")
+        .nothing_else();
+    // a virus stays one, a code with more behind it no taxon
+    assert_unparsable_code("Crucivirus-112", NameType::Other, NomCode::Virus);
+}
+
+#[test]
+fn an_underscored_indet_marker_stands_for_a_space() {
+    for (input, taxon, phrase) in [
+        ("Sph_spec_1", "Sph", "spec_1"),
+        ("Sus_spec_2", "Sus", "spec_2"),
+        ("Tac_spec_3", "Tac", "spec_3"),
+        ("Candida_sp_NCIM3483", "Candida", "sp_NCIM3483"),
+        // as with a space
+        ("Sph spec_1", "Sph", "spec_1"),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // the marker is not repeated in front of the phrase
+    let ParseResult::Parsed(pn) = nameparser::parse("Sus_spec_2", None, None, None) else {
+        panic!("parsed");
+    };
+    assert_eq!(
+        pn.canonical_name_without_authorship().as_deref(),
+        Some("Sus spec_2")
+    );
+}
+
+#[test]
+fn a_lower_case_underscore_label_with_a_digit_is_a_phrase() {
+    for (input, taxon, phrase) in [
+        ("Abies_01 sp_01", "Abies", "01 sp_01"),
+        ("Acrocirridae_gen1", "Acrocirridae", "gen1"),
+        ("Hapalidiales_unk3 sp. 1HG", "Hapalidiales", "unk3 sp. 1HG"),
+        ("Parmales_env_2", "Parmales", "env_2"),
+        ("Pelagomonadales_clade_A3", "Pelagomonadales", "clade_A3"),
+        (
+            "Sciaridae_genus_JH01 sp. 13_TM",
+            "Sciaridae",
+            "genus_JH01 sp. 13_TM",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(taxon)
+            .taxon_rank(Rank::Unranked)
+            .rank(Rank::Unranked)
+            .phrase(phrase)
+            .nothing_else();
+    }
+    // no digit: a genus and its epithet, joined by the underscore
+    assert_name("Oxalis_barrelieri")
+        .species("Oxalis", "barrelieri")
+        .nothing_else();
+    // a capital or a lone number stays the phrase Assemble makes of it, with its authorship
+    assert_informal("Entodinium_1")
+        .taxon("Entodinium")
+        .taxon_rank(Rank::Unranked)
+        .rank(Rank::Unranked)
+        .phrase("1")
+        .nothing_else();
+}

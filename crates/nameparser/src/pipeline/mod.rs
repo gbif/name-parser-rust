@@ -185,7 +185,7 @@ pub fn run(
     // "Vermistella-lineage") into a complete INFORMAL ParsedName instead of erroring — return it
     // as-is, skipping the tokenizer/classifier/assembler (there is nothing left to parse).
     if ctx.preflight_complete {
-        if ctx.alternatives {
+        if ctx.phrase_takes_authorship {
             if let Some(authorship) = ctx.authorship_input.take() {
                 append_authorship_to_phrase(&authorship, &mut ctx.name);
             }

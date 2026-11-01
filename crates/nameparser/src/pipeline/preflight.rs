@@ -305,6 +305,35 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
 /// (`Clostridium_R`). A lower-case label would become an epithet: `Acrocirridae_gen1` stays junk.
 static UNDERSCORE_LABEL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}{2,}_[\p{Lu}\d][\p{L}\d_.\-]*$").unwrap());
+/// A capitalised word, a dash and a number: a designation under a real taxon, `Apidae-223957883`,
+/// `Spathidium-2` (#210). As `Apidae 223957883` is, the taxon with the number as its phrase. Rejected
+/// as junk before, like any single word with a digit.
+static DASH_NUMBER_LABEL: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}{2,})-(\d+)$").unwrap());
+/// A capitalised word, an underscore and an indet marker with its code: `Sus_spec_2`,
+/// `Candida_sp_NCIM3483` (#209). The underscore stands for the space of `Sus spec_2`.
+static UNDERSCORE_INDET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_((?:sp|spec)_\S+)$").unwrap());
+/// A capitalised word, an underscore and a label opening in lower case or with a digit, the rest of
+/// the name in lower case: `Acrocirridae_gen1`, `Parmales_env_2`, `Abies_01 sp_01`,
+/// `Strat_genus3 sp. 1` (#209). Read by [`read_underscore_label`].
+static UNDERSCORE_LOWER_LABEL: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}{2,})_([\p{Ll}\d][\p{L}\d_.\-]*)((?-u:\s+)\p{Ll}.*)?$").unwrap()
+});
+
+/// The taxon and the phrase of a name with an underscore label: the label holds a digit, or it would
+/// be an epithet (`Calopteryx_splendens splendens`), and one starting with a digit and standing alone
+/// is an [`UNDERSCORE_LABEL`] left to Assemble (`Entodinium_1`).
+fn read_underscore_label(s: &str) -> Option<(&str, &str)> {
+    let caps = UNDERSCORE_LOWER_LABEL.captures(s)?;
+    let label = caps.get(2)?;
+    let digit_led = label.as_str().starts_with(|c: char| c.is_ascii_digit());
+    if !has_digit(label.as_str()) || (digit_led && caps.get(3).is_none()) {
+        return None;
+    }
+    Some((caps.get(1)?.as_str(), &s[label.start()..]))
+}
+
 // Patterns like "Basal_Cryptophyceae-1" — single underscore-separated parts with a digit
 // suffix. Java: `Pattern.UNICODE_CHARACTER_CLASS`, no scoping.
 // NB (dead-code finding, not fixed — faithful port keeps it): every character PR2_LIKE's
@@ -902,6 +931,17 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     {
         return Err(ParseError::new(NameType::Other, None, s));
     }
+    if let Some(caps) = DASH_NUMBER_LABEL.captures(&s) {
+        rescue_label(ctx, &caps[1], &caps[2]);
+        return Ok(());
+    }
+    if let Some(caps) = UNDERSCORE_INDET.captures(&s) {
+        s = format!("{} {}", &caps[1], &caps[2]);
+        ctx.working = s.clone();
+    } else if let Some((taxon, phrase)) = read_underscore_label(&s) {
+        rescue_label(ctx, taxon, phrase);
+        return Ok(());
+    }
     // Pure alphanumeric mash with digit (no spaces) and no obvious Latin epithet.
     if !s.contains(' ')
         && PURE_ALPHANUM.is_match(&s)
@@ -923,7 +963,7 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
             rescue_informal_group(ctx, genus, phrase);
             ctx.name.infrageneric_epithet = subgenus.map(str::to_string);
             ctx.name.state = State::Partial;
-            ctx.alternatives = true;
+            ctx.phrase_takes_authorship = true;
             return Ok(());
         }
         None => {}
@@ -967,6 +1007,17 @@ fn rescue_informal_group(ctx: &mut ParseContext, taxon: &str, marker: &str) {
     ctx.name.phrase = Some(marker.to_string());
     ctx.name.type_ = NameType::Informal;
     ctx.name.state = State::Complete;
+    ctx.preflight_complete = true;
+}
+
+/// A taxon with a designation that is not its epithet, as a GTDB name is: the uninomial and the
+/// label its phrase, `Apidae-223957883`, `Acrocirridae_gen1` (#209, #210).
+fn rescue_label(ctx: &mut ParseContext, taxon: &str, label: &str) {
+    ctx.name.uninomial = Some(taxon.to_string());
+    ctx.name.rank = Rank::Unranked;
+    ctx.name.phrase = Some(label.to_string());
+    ctx.name.type_ = NameType::Informal;
+    ctx.phrase_takes_authorship = true;
     ctx.preflight_complete = true;
 }
 

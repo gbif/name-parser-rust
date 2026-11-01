@@ -1453,7 +1453,7 @@ fn stash_numbered_uninomial(ctx: &mut ParseContext, s: String) -> String {
 /// working string the anchor — a genus, or a `Genus species` head for a subspecies designation.
 static UNDERSCORE_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^([\p{Lu}][\p{Ll}]+(?:(?-u:\s+)[\p{Ll}]+)?)(?-u:\s+)((?:n_)?(sp|ssp|subsp)_[\p{L}\d_]+(?:(?-u:\s+)\[[^\]]*\])?)(?-u:\s*)$",
+        r"^([\p{Lu}][\p{Ll}]+(?:(?-u:\s+)[\p{Ll}]+)?)(?-u:\s+)((?:n_)?(sp|spec|ssp|subsp)_[\p{L}\d_]+(?:(?-u:\s+)\[[^\]]*\])?)(?-u:\s*)$",
     )
     .unwrap()
 });
@@ -1462,7 +1462,7 @@ static UNDERSCORE_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
 static GLUED_NEW_GENUS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)_(n_gen(?:(?-u:\s+).*)?)$").unwrap());
 static NEW_SPECIES_TAG: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?-u:\b)(?:n_)?sp_").unwrap());
+    LazyLock::new(|| Regex::new(r"(?-u:\b)(?:n_)?sp(?:ec)?_").unwrap());
 
 /// A genus joined to its epithet by an underscore for the space ("Calopteryx_splendens
 /// splendens", "Oxalis_barrelieri ined.?"), which made one genus "Calopteryx_splendens".
@@ -1502,7 +1502,7 @@ fn stash_underscore_designation(ctx: &mut ParseContext, s: String) -> String {
     let Some(caps) = UNDERSCORE_DESIGNATION.captures(&s) else {
         return s;
     };
-    ctx.name.rank = if &caps[3] == "sp" {
+    ctx.name.rank = if matches!(&caps[3], "sp" | "spec") {
         Rank::Species
     } else {
         Rank::Subspecies
