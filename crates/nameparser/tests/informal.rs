@@ -1184,6 +1184,25 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
 
 // ---- Alternatives: the identification stopped at several species (#225, #212) ----------------
 
+/// An informal name anchored on the species all its alternatives lie in, the rest its phrase, left
+/// partial.
+#[track_caller]
+fn assert_alternatives_in_species(
+    input: &str,
+    authorship: Option<&str>,
+    rank: Option<Rank>,
+    species: &str,
+    phrase: &str,
+) {
+    assert_informal_hinted(input, authorship, rank, None)
+        .taxon(species)
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Unranked)
+        .phrase(phrase)
+        .partial()
+        .nothing_else();
+}
+
 /// An informal name anchored on the genus, the alternatives its phrase, left partial.
 #[track_caller]
 fn assert_alternatives(input: &str, authorship: Option<&str>, rank: Option<Rank>, phrase: &str) {
@@ -1208,14 +1227,10 @@ fn a_slash_between_epithets_keeps_only_the_genus() {
         ),
         ("Salmo salar/Salmo trutta", "salar/Salmo trutta"),
         (
-            "Tachybaptus ruficollis tricolor/vulcanorum",
-            "ruficollis tricolor/vulcanorum",
-        ),
-        (
             "Eunotia flexuosa/pseudoflexuosa/latitaenia - group",
             "flexuosa/pseudoflexuosa/latitaenia - group",
         ),
-        // the second species' genus abbreviated, and the same species twice (#212)
+        // the second species' genus abbreviated (#212)
         (
             "Sorex tundrensis/S. arcticus complex",
             "tundrensis/S. arcticus complex",
@@ -1234,17 +1249,129 @@ fn a_slash_between_epithets_keeps_only_the_genus() {
             "Aphaenogaster cf. rudis/texana ASMAS301-10",
             "cf. rudis/texana ASMAS301-10",
         ),
-        (
-            "Memphis philumena aff. xenica/promenaea",
-            "philumena aff. xenica/promenaea",
-        ),
-        (
-            "Bubo virginianus pallescens / Bubo virginianus pinorum intergrade",
-            "virginianus pallescens / Bubo virginianus pinorum intergrade",
-        ),
     ] {
         assert_alternatives(input, None, None, phrase);
     }
+}
+
+#[test]
+fn alternatives_inside_one_species_keep_the_species() {
+    for (input, species, phrase) in [
+        // the same species written out twice (#212)
+        (
+            "Bubo virginianus pallescens / Bubo virginianus pinorum intergrade",
+            "Bubo virginianus",
+            "pallescens / Bubo virginianus pinorum intergrade",
+        ),
+        (
+            "Eremophila alpestris lamprochroma / Eremophila alpestris ammophila intergrade",
+            "Eremophila alpestris",
+            "lamprochroma / Eremophila alpestris ammophila intergrade",
+        ),
+        (
+            "Bubo virginianus pallescens/B. virginianus pinorum",
+            "Bubo virginianus",
+            "pallescens/B. virginianus pinorum",
+        ),
+        // the second infraspecific epithet alone
+        (
+            "Tachybaptus ruficollis tricolor/vulcanorum",
+            "Tachybaptus ruficollis",
+            "tricolor/vulcanorum",
+        ),
+        (
+            "Motacilla alba alba/dukhunensis/personata",
+            "Motacilla alba",
+            "alba/dukhunensis/personata",
+        ),
+        (
+            "Phylloscopus collybita tristis/fulvescens group",
+            "Phylloscopus collybita",
+            "tristis/fulvescens group",
+        ),
+        (
+            "Falco peregrinus calidus or tundrius",
+            "Falco peregrinus",
+            "calidus or tundrius",
+        ),
+        // only the second epithet is qualified
+        (
+            "Memphis philumena aff. xenica/promenaea",
+            "Memphis philumena",
+            "aff. xenica/promenaea",
+        ),
+    ] {
+        assert_alternatives_in_species(input, None, None, species, phrase);
+    }
+}
+
+#[test]
+fn a_rank_or_an_authorship_stays_out_of_the_species_anchor() {
+    // the rank of the alternatives, not of the anchor
+    assert_alternatives_in_species(
+        "Tachybaptus ruficollis tricolor/vulcanorum",
+        None,
+        Some(Rank::Subspecies),
+        "Tachybaptus ruficollis",
+        "tricolor/vulcanorum",
+    );
+    // the author of an alternative is not the author of the species
+    assert_alternatives_in_species(
+        "Bubo virginianus pallescens/pinorum",
+        Some("Stone, 1897"),
+        None,
+        "Bubo virginianus",
+        "pallescens/pinorum Stone, 1897",
+    );
+    assert_alternatives_in_species(
+        "Bubo virginianus pallescens/pinorum Stone, 1897",
+        Some("Stone, 1897"),
+        None,
+        "Bubo virginianus",
+        "pallescens/pinorum Stone, 1897",
+    );
+}
+
+#[test]
+fn another_species_among_the_alternatives_leaves_only_the_genus() {
+    for (input, phrase) in [
+        (
+            "Bubo virginianus pallescens / Bubo scandiacus",
+            "virginianus pallescens / Bubo scandiacus",
+        ),
+        (
+            "Tachybaptus ruficollis tricolor/vulcanorum/Tachybaptus dominicus",
+            "ruficollis tricolor/vulcanorum/Tachybaptus dominicus",
+        ),
+        // the species itself is what the qualifier doubts
+        (
+            "Agabus cf. lutosus griseus/griseipennis",
+            "cf. lutosus griseus/griseipennis",
+        ),
+        ("Agabus cf lutosus/griseipennis", "cf lutosus/griseipennis"),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+}
+
+#[test]
+fn the_subgenus_stays_part_of_a_species_anchor() {
+    assert_informal("Simulium (Ectemnaspis) lewisi alba/lutzianum")
+        .taxon("Simulium lewisi")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Unranked)
+        .phrase("alba/lutzianum")
+        .partial()
+        .nothing_else();
+    let ParseResult::Parsed(pn) = nameparser::parse(
+        "Simulium (Ectemnaspis) lewisi alba/lutzianum",
+        None,
+        None,
+        None,
+    ) else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.infrageneric_epithet.as_deref(), Some("Ectemnaspis"));
 }
 
 #[test]
@@ -1275,7 +1402,7 @@ fn a_rank_or_an_authorship_does_not_bring_the_first_species_back() {
         Some(Rank::Species),
         "rubra/arenaria",
     );
-    // the phrase takes an authorship, as any informal name without a species epithet does
+    // the phrase takes an authorship, which belongs to no one of the alternatives for sure
     assert_alternatives(
         "Festuca rubra/arenaria",
         Some("Hack."),

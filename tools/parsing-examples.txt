@@ -217,6 +217,8 @@ Candidatus Pelagibacter sp. HTCC7211  # Candidatus is kept as a flag
 Festuca rubra/arenaria  # alternatives: only the genus is sure, the state stays partial
 Bombus terrestris or lucorum
 Salmo salar/Salmo trutta
+Tachybaptus ruficollis tricolor/vulcanorum  # alternatives inside one species: the species is sure
+Bubo virginianus pallescens / Bubo virginianus pinorum intergrade
 Actia Janzen05  # a code is no author
 Agrobacterium pusense L2/2/1
 Apidae-223957883
