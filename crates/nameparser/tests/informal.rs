@@ -1255,6 +1255,59 @@ fn a_slash_between_epithets_keeps_only_the_genus() {
 }
 
 #[test]
+fn alternatives_after_a_hyphenated_genus_keep_only_the_genus() {
+    // the genus may carry a hyphen, with a capital or without behind it (#228)
+    for (input, phrase) in [
+        (
+            "Pseudo-nitzschia pungens/multiseries",
+            "pungens/multiseries",
+        ),
+        (
+            "Pseudo-nitzschia fraudulenta/australis",
+            "fraudulenta/australis",
+        ),
+        (
+            "Pseudo-nitzschia pungens or multiseries",
+            "pungens or multiseries",
+        ),
+        (
+            "Pseudo-nitzschia cf. pseudodelicatissima/cuspidata",
+            "cf. pseudodelicatissima/cuspidata",
+        ),
+        ("Saint-Hilaireia rubra/alba", "rubra/alba"),
+        ("Sciuro-hypnum starkii/tromsoeense", "starkii/tromsoeense"),
+        (
+            "Pseudo-nitzschia pungens/P. multiseries",
+            "pungens/P. multiseries",
+        ),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+    // a hyphenated genus of its own is a second genus
+    assert_unparsable("Pseudo-nitzschia/Nitzschia", NameType::Other);
+    assert_unparsable(
+        "Saint-Hilaireia rubra/Saint-Augustinia alba",
+        NameType::Other,
+    );
+}
+
+#[test]
+fn alternative_epithets_without_a_genus_are_no_name() {
+    // nothing to anchor on, the first epithet is no uninomial (#228)
+    for input in [
+        "obsoletus/scoticus",
+        "obsoletus / scoticus",
+        "obsoletus|scoticus",
+        "obsoletus or scoticus",
+        "obsoletus/scoticus group",
+        "hirtipes/mixtum group",
+        "alexandriana or lyrata",
+    ] {
+        assert_unparsable(input, NameType::Other);
+    }
+}
+
+#[test]
 fn alternatives_inside_one_species_keep_the_species() {
     for (input, species, phrase) in [
         // the same species written out twice (#212)
