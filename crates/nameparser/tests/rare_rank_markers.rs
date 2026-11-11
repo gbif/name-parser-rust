@@ -75,6 +75,84 @@ fn race_marker() {
         .nothing_else();
 }
 
+/// `s.` between two epithets is the subspecies of Blackwelder's checklist of Latin American beetles
+/// ("Adetus lherminieri s. dominicensis Blackwelder, 1946", rank column "s."). It was taken for a
+/// letter subdivision, rank OTHER. Elsewhere `s.` is sensu (#249) or the species epithet abbreviated.
+#[test]
+fn s_marker_between_epithets() {
+    assert_name_hinted(
+        "Adetus lherminieri s. dominicensis",
+        Some("Blackwelder, 1946"),
+        None,
+        Some(NomCode::Zoological),
+    )
+    .infra_species("Adetus", "lherminieri", Rank::Subspecies, "dominicensis")
+    .comb_authors(Some("1946"), &["Blackwelder"])
+    .code(NomCode::Zoological)
+    .nothing_else();
+    assert_name("Callichroma auricoma s. cyanescens Blackwelder, 1946")
+        .infra_species(
+            "Callichroma",
+            "auricoma",
+            Rank::InfraspecificName,
+            "cyanescens",
+        )
+        .comb_authors(Some("1946"), &["Blackwelder"])
+        .nothing_else();
+    // "s. sp." and "s. esp." (sous-espèce, subespecie) spell it out
+    for name in [
+        "Apomecyna arabica s. sp. mateui",
+        "Apomecyna arabica s.sp. mateui",
+        "Apomecyna arabica s. esp. mateui",
+    ] {
+        assert_name_hinted(name, Some("Mateu, 1954"), None, Some(NomCode::Zoological))
+            .infra_species("Apomecyna", "arabica", Rank::Subspecies, "mateui")
+            .comb_authors(Some("1954"), &["Mateu"])
+            .code(NomCode::Zoological)
+            .nothing_else();
+    }
+    // before a rank marker it repeats the initial of the species epithet, and that marker counts
+    assert_name("Poa secunda s. subsp. juncifolia")
+        .infra_species("Poa", "secunda", Rank::Subspecies, "juncifolia")
+        .nothing_else();
+    assert_name("Amygdalus persica s. duracina")
+        .infra_species("Amygdalus", "persica", Rank::InfraspecificName, "duracina")
+        .nothing_else();
+    // right after the genus it is the species epithet abbreviated
+    assert_name("Abax s. Maran 1955")
+        .species("Abax", "s")
+        .comb_authors(Some("1955"), &["Maran"])
+        .nothing_else();
+    // before an author or at the end it is sensu, and so are s. str. and s. lat.
+    assert_name("Agaricus aethiops s. Fr.")
+        .species("Agaricus", "aethiops")
+        .sensu("s. Fr.")
+        .nothing_else();
+    assert_name("Bremia lactucae s. lat.")
+        .species("Bremia", "lactucae")
+        .sensu("s. lat.")
+        .nothing_else();
+    assert_name("Caloplaca lobulata (Flörke) Hellb. s. st")
+        .species("Caloplaca", "lobulata")
+        .comb_authors(None, &["Hellb."])
+        .bas_authors(None, &["Flörke"])
+        .sensu("s. st")
+        .nothing_else();
+    assert_name("Cladonia arbuscula s. lato")
+        .species("Cladonia", "arbuscula")
+        .sensu("s. lato")
+        .nothing_else();
+    // glued it is no marker: sine numero
+    assert_name("Acacia shirleyi Carroll s.n.")
+        .species("Acacia", "shirleyi")
+        .comb_authors(None, &["Carroll s.n."])
+        .nothing_else();
+    assert_name("Spirifer saranae s. s.")
+        .species("Spirifer", "saranae")
+        .sensu("s.s.")
+        .nothing_else();
+}
+
 /// Markers below the subspecies in older literature: `m.` (morpha, monstrositas or modificatio),
 /// `monstr.`, `mod.`, `morpha`. `m.` used to be glued onto the species author as an initial or
 /// read as the epithet, the real epithet as an author. A zoological `m.` is the morpha.

@@ -966,7 +966,10 @@ fn normalise_letter_subdivision_marker(_ctx: &mut ParseContext, s: String) -> St
         // trailing-empty-discard exactly for this constrained shape (consecutive dots can't
         // occur either, so no internal empty pieces are possible).
         let segments: Vec<&str> = marker.split('.').filter(|seg| !seg.is_empty()).collect();
-        let real_marker = segments.len() == 1 && is_known_infraspecific_marker(segments[0]);
+        // Rust-only: also the "s." of a subspecies (`authorship_split::is_subspecies_s`), not in
+        // the map because it stands for other things elsewhere
+        let real_marker = segments.len() == 1
+            && (is_known_infraspecific_marker(segments[0]) || segments[0] == "s");
         if !real_marker {
             let g1 = caps.get(1).unwrap().as_str();
             let g3 = caps.get(3).unwrap().as_str();
@@ -5258,7 +5261,9 @@ fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
 /// (#249): a lower-case "s." for sensu, on its own or before "auct.", "ss." or an author, as Dyntaxa
 /// writes it (`s.auct. non (Fr) Rea`, `s. Lange & Lange`), which Java read as an author or the
 /// initial of the next one. [`find_tax_note`] and [`strip_tax_note`] keep a code, a co-author's
-/// initial and an abbreviated epithet out of it.
+/// initial and an abbreviated epithet out of it. Also "s. st.", "s. restr." and "s. lato", "s.
+/// stricto", "s. latissimo" spelled out, which the "s." of a subspecies would otherwise take for
+/// its epithet (`authorship_split::is_subspecies_s`).
 static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
@@ -5278,7 +5283,7 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|excl\.(?-u:\s+).*",
         r"|incl\.(?-u:\s+).*",
         r"|ss\b\.?(?-u:\s+).*",
-        r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?|sl\.?)",
+        r"|(?-i:s\.(?-u:\s*)(?:l|st|str|stricto|restr|lat|lato|latiss|latissimo|ampl)\.?|sl\.?)",
         r"|(?-i:s\.(?-u:\s*)(?:(?:auct|ss\.|\p{Lu}).*)?)",
         r"|(?-i:sens\.(?-u:\s*)(?:str|lat|l|ampl)\.?)",
         r"|(?-i:ampl\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
@@ -5522,8 +5527,10 @@ fn is_sensu_s(note: &str) -> bool {
 }
 
 /// The "s. str.", "s. l.", "s. lat." and "s. ampl." markers, which [`TAX_NOTE`] matches on their own.
-static S_MARKER: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^s\.(?-u:\s*)(?:l|str|lat|ampl)\.?$").unwrap());
+static S_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^s\.(?-u:\s*)(?:l|st|str|stricto|restr|lat|lato|latiss|latissimo|ampl)\.?$")
+        .unwrap()
+});
 
 /// Is an "s." after `prefix`, the name string before it, an abbreviated epithet rather than sensu?
 /// So it is straight after the genus (`Abax s. Maran 1955`, `Crematogaster (Atopogne) s. p.`), a

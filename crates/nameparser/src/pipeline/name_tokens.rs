@@ -760,11 +760,16 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 }
                 // 3. infraspecific rank marker (with notho-prefix support)
                 if let Some((rm_infra, notho_flag)) =
-                    rank_markers::match_infraspecific_allow_notho(w).filter(|_| {
-                        (!lower_epithets.is_empty() || !rank_markers::needs_species_epithet(w))
-                            && (!rank_markers::needs_epithet_after(w)
-                                || has_infraspecific_epithet_after(ts, i))
-                    })
+                    rank_markers::match_infraspecific_allow_notho(w)
+                        .filter(|_| {
+                            (!lower_epithets.is_empty() || !rank_markers::needs_species_epithet(w))
+                                && (!rank_markers::needs_epithet_after(w)
+                                    || has_infraspecific_epithet_after(ts, i))
+                        })
+                        .or_else(|| {
+                            authorship_split::is_subspecies_s(ts, i, !lower_epithets.is_empty())
+                                .then_some((Rank::InfraspecificName, false))
+                        })
                 {
                     // The capitalised final epithet of an autonym ("var. Tenuicaulis").
                     let autonym_at = i
@@ -806,12 +811,20 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         if i < ts.len() && ts[i].kind == TokenKind::Dot {
                             i += 1;
                         }
-                        // microbial "f. sp." -> forma specialis: skip the "sp" + dot too
+                        // microbial "f. sp." -> forma specialis: skip the "sp" + dot too. After
+                        // the "s." of a subspecies it is the "s. sp." (and "s. esp.", sous-espèce)
+                        // of a subspecies spelled out ("Apomecyna arabica s. sp. mateui").
+                        let s_marker = w == "s";
                         if i + 1 < ts.len()
                             && ts[i].kind == TokenKind::Word
-                            && ts[i].text.eq_ignore_ascii_case("sp")
+                            && (ts[i].text.eq_ignore_ascii_case("sp")
+                                || (s_marker && ts[i].text == "esp"))
                         {
-                            inline_rank = Some(Rank::FormaSpecialis);
+                            inline_rank = Some(if s_marker {
+                                Rank::Subspecies
+                            } else {
+                                Rank::FormaSpecialis
+                            });
                             i += 1;
                             if i < ts.len() && ts[i].kind == TokenKind::Dot {
                                 i += 1;
