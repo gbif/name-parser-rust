@@ -5,7 +5,7 @@ crate `gbif-name-parser`, the CLI, the Python and R packages and the Java `name-
 model they implement is the Java `org.gbif:name-parser-api`, versioned on its own (see its
 [VERSIONS.md](https://github.com/gbif/name-parser/blob/dev/VERSIONS.md)).
 
-## Unreleased (`main`, api 6.0.0)
+## 0.5.0 (2026-11-11, api 6.0.0)
 
 - No `Informal` parse result any more: a name in open nomenclature is a parsed name of type
   `INFORMAL`, with `ParsedName::anchor()` for the taxon it hangs off (#134).
@@ -27,6 +27,11 @@ model they implement is the Java `org.gbif:name-parser-api`, versioned on its ow
   - A code is no author: `Actia Janzen05` and `Agrobacterium pusense L2/2/1` take it as a phrase, as `Apidae-223957883` and `Acrocirridae_gen1` do. An author still holding a digit gets the new warning `author with attached number`.
   - Glued authors are split: `vanAchterberg`, `L.s.l.`, `Øvst.ined`, `Linnaeus1758`; a pipe between authors is an `et`.
   - A qualifier out of place (`Canis lupus familiaris cf.`, `Engl. cf. var. giganteum`) goes to the last epithet.
+- A question mark doubts the part it follows; a doubted genus anchors the name.
+- A dated bracket after a genus (`Genus (X) Author, year`) is a zoological subgenus (#204); a
+  marker-less autonym is recognised (#207); comma-style and plural placeholders are anchored (#202).
+- A lower-case `s.` for sensu starts a taxonomic note; between two epithets it marks a subspecies
+  (#249).
 
 ## 0.4.0 (2026-10-14, api 5.4.0)
 
