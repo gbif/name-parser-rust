@@ -966,7 +966,10 @@ fn normalise_letter_subdivision_marker(_ctx: &mut ParseContext, s: String) -> St
         // trailing-empty-discard exactly for this constrained shape (consecutive dots can't
         // occur either, so no internal empty pieces are possible).
         let segments: Vec<&str> = marker.split('.').filter(|seg| !seg.is_empty()).collect();
-        let real_marker = segments.len() == 1 && is_known_infraspecific_marker(segments[0]);
+        // Rust-only: also the "s." of a subspecies (`authorship_split::is_subspecies_s`), not in
+        // the map because it stands for other things elsewhere
+        let real_marker = segments.len() == 1
+            && (is_known_infraspecific_marker(segments[0]) || segments[0] == "s");
         if !real_marker {
             let g1 = caps.get(1).unwrap().as_str();
             let g3 = caps.get(3).unwrap().as_str();
@@ -5254,7 +5257,13 @@ fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
 /// "sens. lat." spelled out further than "s. str." (`Rubus fruticosus L. sens.str.`), and "ampl.",
 /// the amplified circumscription of `Cerastium octandrum Hochst. ex A.Rich. ampl. Möschl`.
 /// "non"/"not" may be followed by an "of" (`not of Rafinesque, 1819`), which otherwise left "not"
-/// behind as an author, and a stray closing comma is no part of the note (`auctt.,`).
+/// behind as an author, and a stray closing comma is no part of the note (`auctt.,`). Rust-only too
+/// (#249): a lower-case "s." for sensu, on its own or before "auct.", "ss." or an author, as Dyntaxa
+/// writes it (`s.auct. non (Fr) Rea`, `s. Lange & Lange`), which Java read as an author or the
+/// initial of the next one. [`find_tax_note`] and [`strip_tax_note`] keep a code, a co-author's
+/// initial and an abbreviated epithet out of it. Also "s. st.", "s. restr." and "s. lato", "s.
+/// stricto", "s. latissimo" spelled out, which the "s." of a subspecies would otherwise take for
+/// its epithet (`authorship_split::is_subspecies_s`).
 static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(concat!(
         r"(?i)(?-u:\s+),?(?-u:\s*)(",
@@ -5274,7 +5283,8 @@ static TAX_NOTE: LazyLock<Regex> = LazyLock::new(|| {
         r"|excl\.(?-u:\s+).*",
         r"|incl\.(?-u:\s+).*",
         r"|ss\b\.?(?-u:\s+).*",
-        r"|(?-i:s\.(?-u:\s*)l\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)ampl\.?|sl\.?)",
+        r"|(?-i:s\.(?-u:\s*)(?:l|st|str|stricto|restr|lat|lato|latiss|latissimo|ampl)\.?|sl\.?)",
+        r"|(?-i:s\.(?-u:\s*)(?:(?:auct|ss\.|\p{Lu}).*)?)",
         r"|(?-i:sens\.(?-u:\s*)(?:str|lat|l|ampl)\.?)",
         r"|(?-i:ampl\.)(?-u:\s+)\(?(?-i:\p{Lu}).*",
         r")(?-u:\s*),?$",
@@ -5468,6 +5478,16 @@ fn find_tax_note(s: &str, authorship_only: bool) -> Option<(usize, usize)> {
         let closed = prefix.matches('(').count() == prefix.matches(')').count();
         let keep = if raw.starts_with("Em.") || raw.starts_with("em.") {
             closed && follows_author(prefix, authorship_only)
+        } else if raw.starts_with("s.") && !S_MARKER.is_match(raw) {
+            // [`TAX_NOTE`]'s bare "s.": sensu, unless it is a code ("s.MYCO.102.26sc1") or the
+            // initial of a co-author ("C. J. Tseng et s. Liu", "W., g. s. West", "W. & G. s. West")
+            let initial = last_word.chars().count() == 2
+                && last_word.starts_with(char::is_alphabetic)
+                && last_word.ends_with('.');
+            is_sensu_s(raw)
+                && closed
+                && !initial
+                && !matches!(last_word, "et" | "&" | "and" | "ex" | "in")
         } else if raw.starts_with("vide") || raw.starts_with("Vide") {
             closed
         } else if raw.starts_with("of ") || raw.starts_with("Of ") {
@@ -5487,6 +5507,55 @@ fn find_tax_note(s: &str, authorship_only: bool) -> Option<(usize, usize)> {
     }
     None
 }
+
+/// A [`TAX_NOTE`] note that is the lower-case "s." for sensu (#249): on its own, or before "auct.",
+/// "ss." or an author — `s.auct. non (Fr) Rea`, `s. Lange & Lange`, a bare `s.` — not the
+/// `s. str.`/`s. l.` markers.
+fn is_sensu_s(note: &str) -> bool {
+    note.strip_prefix("s.").is_some_and(|rest| {
+        // a code glued to it is no author: "Mycobacterium sp. s.MYCO.102.26sc1"
+        let glued = rest.split(char::is_whitespace).next().unwrap_or("");
+        if glued.chars().any(|c| c.is_ascii_digit()) {
+            return false;
+        }
+        let rest = rest.trim_start();
+        rest.is_empty()
+            || rest.starts_with(char::is_uppercase)
+            || rest.starts_with("auct")
+            || rest.starts_with("ss.")
+    })
+}
+
+/// The "s. str.", "s. l.", "s. lat." and "s. ampl." markers, which [`TAX_NOTE`] matches on their own.
+static S_MARKER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^s\.(?-u:\s*)(?:l|st|str|stricto|restr|lat|lato|latiss|latissimo|ampl)\.?$")
+        .unwrap()
+});
+
+/// Is an "s." after `prefix`, the name string before it, an abbreviated epithet rather than sensu?
+/// So it is straight after the genus (`Abax s. Maran 1955`, `Crematogaster (Atopogne) s. p.`), a
+/// repeated genus (`Flexicalymene cf. Flexicalymene s.`), a qualifier (`Phacops cf. s.`, `Phacops ex
+/// gr. s.`, `Glyptograptus ? s.`) or a rank marker.
+fn sensu_s_is_epithet(prefix: &str) -> bool {
+    let unbracketed = BRACKETED_GROUP.replace_all(prefix, " ");
+    let words: Vec<&str> = unbracketed.split_whitespace().collect();
+    let (Some(genus), Some(last)) = (words.first(), words.last()) else {
+        return true;
+    };
+    words.len() < 2
+        || last == genus
+        || last.ends_with('?')
+        || SENSU_S_QUALIFIER.is_match(last)
+        || rank_of_marker(last.trim_end_matches('.')).is_some()
+}
+
+/// A bracketed group: the subgenus or a doubted one, `(Atopogne)`, `(P. ?)`.
+static BRACKETED_GROUP: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\([^()]*\)").unwrap());
+
+/// A qualifier an abbreviated epithet follows: `cf.`, `cfr.`, `aff.`, `nr.`, `ex gr.`, `sp.`.
+static SENSU_S_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:cf|cfr|conf|aff|nr|near|gr|grex|ex|sp|spp|indet)\.?$").unwrap()
+});
 
 /// `prefix` ends in an author: a word starting upper case, a year or a closing bracket. On the name
 /// string the genus comes first, so it needs a word before that one.
@@ -5542,6 +5611,9 @@ fn strip_tax_note(ctx: &mut ParseContext, s: String) -> String {
     // a stray comma closing the string is no part of the note ("auctt.,")
     let raw = java_trim(java_trim(&s[note_start..]).trim_end_matches(',')).to_string();
     if raw.is_empty() {
+        return s;
+    }
+    if is_sensu_s(&raw) && sensu_s_is_epithet(&s[..match_start]) {
         return s;
     }
     if (raw.starts_with("auctorum") || raw.starts_with("not "))

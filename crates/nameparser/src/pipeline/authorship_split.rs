@@ -417,17 +417,20 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     && (have_epithet || !rank_markers::needs_species_epithet(w))
                     && (!rank_markers::needs_epithet_after(w)
                         || has_epithet_after_marker(tokens, i, false))
+                    || is_subspecies_s(tokens, i, have_epithet)
                 {
                     // a designation after a bare marker on the genus is the name's, as on a species
                     let designated = have_epithet || is_bare_marker_after_genus(ctx, tokens, i);
+                    let s_marker = w == "s";
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
                     }
-                    // microbial f. sp.
+                    // microbial f. sp., and the s. sp. or s. esp. of a subspecies
                     if i + 1 < n
                         && tokens[i].kind == TokenKind::Word
-                        && tokens[i].text.eq_ignore_ascii_case("sp")
+                        && (tokens[i].text.eq_ignore_ascii_case("sp")
+                            || (s_marker && tokens[i].text == "esp"))
                     {
                         i += 1;
                         if i < n && tokens[i].kind == TokenKind::Dot {
@@ -1263,6 +1266,27 @@ pub(crate) fn is_bare_marker_after_genus(ctx: &ParseContext, ts: &[Token], i: us
         }
     };
     (dotted || unambiguous) && designated && ctx.requested_rank.is_none_or(|r| r.is_infraspecific())
+}
+
+/// The "s." at `i` marks a subspecies, as in Blackwelder's checklist of Latin American beetles
+/// ("Adetus lherminieri s. dominicensis Blackwelder, 1946"): the generic INFRASPECIFIC_NAME, which a
+/// zoological name turns into a subspecies, as for "r.". Only after the species epithet and with a
+/// lower-case epithet after its dot and a space, or the "sp." of "s.sp.". Not in `rank_markers::INFRASPECIFIC`, which many
+/// author steps consult: elsewhere "s." is sensu ("Agaricus aethiops s. Fr.", #249), the species
+/// epithet abbreviated ("Abax s. Maran 1955"), a co-author's initial ("W. & G. s. West") or, glued,
+/// sine numero ("Martius s.n.") and sensu lato ("s.lato").
+pub(crate) fn is_subspecies_s(tokens: &[Token], i: usize, have_epithet: bool) -> bool {
+    have_epithet
+        && tokens[i].kind == TokenKind::Word
+        && tokens[i].text == "s"
+        && matches!(
+            (tokens.get(i + 1), tokens.get(i + 2)),
+            (Some(dot), Some(next)) if dot.kind == TokenKind::Dot
+                && (next.start > dot.end || next.text == "sp")
+                && next.kind == TokenKind::Word
+                && starts_lower(next)
+                && next.text.chars().count() > 1
+        )
 }
 
 /// The word at `k` repeats an earlier lower-case epithet with a capital initial: the capitalised

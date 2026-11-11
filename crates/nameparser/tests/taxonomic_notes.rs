@@ -804,3 +804,118 @@ fn a_note_glued_to_the_author_is_split_off() {
         .comb_authors(None, &["J.S.Smith"])
         .nothing_else();
 }
+
+#[test]
+fn lower_case_s_dot_is_sensu() {
+    // #249: Dyntaxa abbreviates sensu as "s.", often glued to "auct.". It was read as an author,
+    // or as the initial of the author after it.
+    assert_name_auth("Hygrophorus cossus", "s.auct. non (Fr) Rea")
+        .species("Hygrophorus", "cossus")
+        .sensu("s.auct. non (Fr) Rea")
+        .nothing_else();
+    assert_name("Hygrophorus cossus s.auct. non (Fr) Rea")
+        .species("Hygrophorus", "cossus")
+        .sensu("s.auct. non (Fr) Rea")
+        .nothing_else();
+    assert_name_auth("Arthopyrenia litoralis", "s.auct.")
+        .species("Arthopyrenia", "litoralis")
+        .sensu("s.auct.")
+        .nothing_else();
+    assert_name_auth("Bovista pusilla", "s. auct.")
+        .species("Bovista", "pusilla")
+        .sensu("s. auct.")
+        .nothing_else();
+    assert_name_auth("Cortinarius caesiogriseus", "s. ss. auct.")
+        .species("Cortinarius", "caesiogriseus")
+        .sensu("s. ss. auct.")
+        .nothing_else();
+    assert_name_auth(
+        "Cortinarius cinnamomeoluteus",
+        "s. Lange & Lange non P.D.Orton",
+    )
+    .species("Cortinarius", "cinnamomeoluteus")
+    .sensu("s. Lange & Lange non P.D.Orton")
+    .nothing_else();
+    assert_name("Cortinarius cinnamomeoluteus s. Lange & Lange non P.D.Orton")
+        .species("Cortinarius", "cinnamomeoluteus")
+        .sensu("s. Lange & Lange non P.D.Orton")
+        .nothing_else();
+    assert_name_auth("Cortinarius holophaeus", "s. Brandrud et al.")
+        .species("Cortinarius", "holophaeus")
+        .sensu("s. Brandrud et al.")
+        .nothing_else();
+    assert_name_auth("Boletus aurantiacus", "s.Reid")
+        .species("Boletus", "aurantiacus")
+        .sensu("s.Reid")
+        .nothing_else();
+    assert_name_auth("Agaricus aethiops", "s.")
+        .species("Agaricus", "aethiops")
+        .sensu("s.")
+        .nothing_else();
+    assert_name_auth(
+        "Cortinarius calochrous var. coniferarum",
+        "(M. M. Moser) Quadr. s.",
+    )
+    .infra_species("Cortinarius", "calochrous", Rank::Variety, "coniferarum")
+    .bas_authors(None, &["M.M.Moser"])
+    .comb_authors(None, &["Quadr."])
+    .sensu("s.")
+    .nothing_else();
+    assert_name_auth("Russula olivascens", "Fr. s. Romagnesi, non Fries")
+        .species("Russula", "olivascens")
+        .comb_authors(None, &["Fr."])
+        .sensu("s. Romagnesi, non Fries")
+        .nothing_else();
+}
+
+#[test]
+fn lower_case_s_dot_that_is_no_sensu() {
+    // #249: an abbreviated epithet straight after the genus, and a lower-case initial
+    assert_name("Abax s. Maran 1955")
+        .species("Abax", "s")
+        .comb_authors(Some("1955"), &["Maran"])
+        .nothing_else();
+    assert_name("Ilex sublongecaudata C. J. Tseng et s. Liu ex Y. R. Li")
+        .species("Ilex", "sublongecaudata")
+        .comb_authors(None, &["Y.R.Li"])
+        .comb_ex_authors(&["C.J.Tseng", "s.Liu"])
+        .nothing_else();
+    assert_name("Micrasterias denticulata var. angulosa (Hantzsch) W., g. s. West")
+        .infra_species("Micrasterias", "denticulata", Rank::Variety, "angulosa")
+        .bas_authors(None, &["Hantzsch"])
+        .comb_authors(None, &["W.", "g.s.West"])
+        .nothing_else();
+    assert_name_auth("Cosmarium pyramidatum var. angustatum", "W. & G. s. West")
+        .infra_species("Cosmarium", "pyramidatum", Rank::Variety, "angustatum")
+        .comb_authors(None, &["W.", "G.s.West"])
+        .nothing_else();
+    // an abbreviated epithet after a qualifier or a repeated genus
+    assert_name("Phacops cf. s.")
+        .species("Phacops", "s")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Flexicalymene cf. Flexicalymene s.")
+        .species("Flexicalymene", "s")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // a strain code
+    assert_informal("Mycobacterium sp. s.MYCO.102.26sc1")
+        .taxon("Mycobacterium")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. s.MYCO.102.26sc1")
+        .nothing_else();
+    // "n. s.", nova series, in a reference
+    assert_name_auth(
+        "Greenwayodendron suaveolens",
+        "(Engl. & Diels) Verdc., Adansonia, n. s. 9: 90 1969",
+    )
+    .species("Greenwayodendron", "suaveolens")
+    .bas_authors(None, &["Engl.", "Diels"])
+    .comb_authors(Some("1969"), &["Verdc."])
+    .published_in("Adansonia, n. s. 9: 90 1969")
+    .published_in_year(Some(1969))
+    .nothing_else();
+}
