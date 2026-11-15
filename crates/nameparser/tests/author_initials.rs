@@ -193,3 +193,13 @@ fn a_trailing_i_without_that_evidence_stays_an_initial() {
         .comb_authors(None, &["V.Smith"])
         .nothing_else();
 }
+
+#[test]
+fn undotted_leading_initials_before_a_short_surname_are_kept() {
+    // `NK Ng` (N.K. Ng), like `YJ Wang`: undotted initials in front stay as written, and the
+    // two-letter surname `Ng` is no initial to be turned round.
+    assert_name("Ptychognathus lipkei NK Ng, 2010")
+        .species("Ptychognathus", "lipkei")
+        .comb_authors(Some("2010"), &["NK Ng"])
+        .nothing_else();
+}
