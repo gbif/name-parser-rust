@@ -3986,8 +3986,48 @@ fn stash_synonym_bracket(ctx: &mut ParseContext, s: String) -> String {
         }
         return kept;
     }
-    s
+    // Rust-only: a bracket holding "=" anywhere, round or square, is the same kind of note, an
+    // accepted or synonymous name (#241): `Pleurosorus (= Asplenium) rutifolius (R.Br.) Fee`,
+    // `Tillandsia schreiteri Lillo & Castellanos (=T.sphaerocephala Baker?)`. It was read as the
+    // subgenus, an author or an epithet. Set aside the same way, the rest parsed. After an indet
+    // marker it belongs to the phrase of the unnamed species: `Euodia sp. (= RFK/3921)`,
+    // `Dichanthelium species 12 (=chrysopsidifolium)`.
+    let notes: Vec<_> = EQUALS_BRACKET
+        .find_iter(&s)
+        .filter(|m| {
+            !s[..m.start()].split_whitespace().any(|w| {
+                matches!(
+                    w.trim_end_matches('.').to_lowercase().as_str(),
+                    "sp" | "spp" | "spec" | "species"
+                )
+            })
+        })
+        .collect();
+    if notes.is_empty() {
+        return s;
+    }
+    let text: Vec<&str> = notes.iter().map(|m| java_trim(m.as_str())).collect();
+    ctx.set_pending_unparsed(&text.join(" "));
+    ctx.name.doubtful = true;
+    let mut kept = String::with_capacity(s.len());
+    let mut last = 0;
+    for m in &notes {
+        kept.push_str(&s[last..m.start()]);
+        kept.push(' ');
+        last = m.end();
+    }
+    kept.push_str(&s[last..]);
+    let mut kept = collapse_whitespace(&kept);
+    while kept.ends_with(',') {
+        kept.pop();
+        kept = java_trim(&kept).to_string();
+    }
+    kept
 }
+
+/// A round or square bracket holding "=", see [`stash_synonym_bracket`].
+static EQUALS_BRACKET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\s*)[(\[][^()\[\]]*=[^()\[\]]*[)\]]").unwrap());
 
 // ---- Shared helper: normaliseNomNote (used by steps 29 and 30) ----
 

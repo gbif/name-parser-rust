@@ -990,3 +990,36 @@ fn lower_case_s_dot_that_is_no_sensu() {
     .published_in_year(Some(1969))
     .nothing_else();
 }
+
+/// #241: a bracket holding "=" anywhere is a note on an accepted or synonymous name, set aside as
+/// the trailing `[= Grislea L. 1753]` is; it was read as the subgenus, an author or an epithet.
+#[test]
+fn a_bracket_holding_equals_is_set_aside() {
+    assert_name("Pleurosorus (= Asplenium) rutifolius (R.Br.) Fee")
+        .species("Pleurosorus", "rutifolius")
+        .bas_authors(None, &["R.Br."])
+        .comb_authors(None, &["Fee"])
+        .doubtful()
+        .partial("(= Asplenium)")
+        .nothing_else();
+    assert_name("Tillandsia schreiteri Lillo & Castellanos (=T.sphaerocephala Baker?)")
+        .species("Tillandsia", "schreiteri")
+        .comb_authors(None, &["Lillo", "Castellanos"])
+        .doubtful()
+        .partial("(=T.sphaerocephala Baker?)")
+        .nothing_else();
+    assert_name("Sulcorebutia albida (alba Rausch ? = canigueralii)")
+        .species("Sulcorebutia", "albida")
+        .doubtful()
+        .partial("(alba Rausch ? = canigueralii)")
+        .nothing_else();
+    // a synonym reference alone names nothing
+    assert_unparsable("=ixioides?", NameType::Other);
+    // after an indet marker it is the voucher of the unnamed species
+    assert_informal("Euodia sp. (= RFK/3921)")
+        .taxon("Euodia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. (= RFK/3921)")
+        .nothing_else();
+}
