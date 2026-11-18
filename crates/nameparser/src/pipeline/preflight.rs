@@ -665,10 +665,13 @@ static NN_PLACEHOLDER: LazyLock<Regex> =
 /// et sp non descr". Rust-only: Java took "Gen." for an abbreviated genus, the "et" after it for
 /// the epithet and a locality for the authorship. Undotted, only before "et"/"nov"/"n.", so the
 /// genus-like "Gen 1" or "Gen nilotica Simon 1906" is left alone.
-/// The word `Genus` itself is no genus either (#211): `Genus sp.`, `Genus B sp. 1`, `Genus asaemoides`.
+/// The word `Genus` itself is no genus either (#211): `Genus sp.`, `Genus B sp. 1`, `Genus asaemoides`,
+/// also joined to its number by an underscore or a dash, `Genus_01 sp_01`, `Genus-01` (#240).
 static GENUS_WORD_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))|^[Gg]enus(?-u:\s)")
-        .unwrap()
+    Regex::new(
+        r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))|^[Gg]enus(?:(?-u:\s)|[_\-])",
+    )
+    .unwrap()
 });
 /// A first word that is no genus, but the common word for what was found: `ADN Suelo`, Spanish for
 /// soil DNA, and `Wurm-8005097` (#211). No taxon to hang anything off, so OTHER.

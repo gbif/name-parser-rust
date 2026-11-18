@@ -1051,6 +1051,10 @@ fn a_numbered_group_without_a_taxon_is_a_placeholder() {
         "Genotype 3",
         "Genus Novum 10",
         "Genus nov. (2)",
+        // the word Genus joined to its number (#240)
+        "Genus_01 sp_01",
+        "Genus_01",
+        "Genus-01 sp-01",
     ] {
         assert_unparsable(input, NameType::Placeholder);
     }
