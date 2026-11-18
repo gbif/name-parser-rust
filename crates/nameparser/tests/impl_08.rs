@@ -159,6 +159,28 @@ fn phage_inside_a_word_is_not_viral() {
     assert_unparsable_code("Mini Mu phagemid DH5alpha", NameType::Other, NomCode::Virus);
 }
 
+/// #239: a compound epithet in "-phages" names an eater, the nudibranch `Cuthona poritophages`
+/// eats Porites. A phage is singular, or the plural of a viral word.
+#[test]
+fn an_eater_epithet_in_phages_is_not_viral() {
+    for (genus, epithet) in [
+        ("Cuthona", "poritophages"),
+        ("Diplogaster", "coprophages"),
+        ("Alopus", "coccophages"),
+    ] {
+        assert_name(&format!("{genus} {epithet}"))
+            .species(genus, epithet)
+            .nothing_else();
+    }
+    for input in [
+        "Synechococcus cyanophage",
+        "Bacillus phages",
+        "Lactococcus bacteriophages",
+        "Synechococcus cyanophages",
+    ] {
+        assert_unparsable_code(input, NameType::Other, NomCode::Virus);
+    }
+}
 
 /// #238: a viral abbreviation is a word of its own; next to a non-ASCII letter it is part of a
 /// word, `gv` in `Vágvölgyi`, `rna` in `Šrna`. Java's ASCII word boundary made any name with such

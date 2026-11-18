@@ -1177,6 +1177,9 @@ fn apply_virus_gate(s: &str, ctx: &mut ParseContext, original: &str) -> Result<(
     if clean && SOFT_WORD.is_match(last_word(s)) {
         return Ok(()); // bucket B soft
     }
+    if clean && is_eater_epithet(last_word(s)) {
+        return Ok(());
+    }
     if clean && HARD_WORD.is_match(last_word(s)) {
         if let Some(auth) = ctx.authorship_input.as_deref() {
             if AUTH_ZOO.is_match(java_trim(auth)) {
@@ -1190,6 +1193,18 @@ fn apply_virus_gate(s: &str, ctx: &mut ParseContext, original: &str) -> Result<(
         virus.then_some(NomCode::Virus),
         original,
     ))
+}
+
+/// A compound epithet in "-phages", an "eater" of something: `Cuthona poritophages`, `Diplogaster
+/// coprophages`, `Alopus coccophages` (#239). A phage is named in the singular (`Synechococcus
+/// cyanophage`, `Archips abiephage` aside) or with a strain after it, and the plural of a viral
+/// word is no epithet (`bacteriophages`, `cyanophages`).
+fn is_eater_epithet(word: &str) -> bool {
+    static EATER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\p{Ll}{2,}phages$").unwrap());
+    static VIRAL_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^(?:bacterio|mycobacterio|cyano|coli|viro|pro|actino|myco)phages$").unwrap()
+    });
+    EATER.is_match(word) && !VIRAL_PREFIX.is_match(word)
 }
 
 fn first_word(s: &str) -> &str {
