@@ -1055,9 +1055,21 @@ fn a_numbered_group_without_a_taxon_is_a_placeholder() {
         "Genus_01 sp_01",
         "Genus_01",
         "Genus-01 sp-01",
+        // an indet marker with nothing before it (#245): it was the genus "Sp", the number dropped
+        "Sp. 12",
+        "sp. 16",
+        "Spec. 1",
+        "Sp.",
+        "Species 1",
     ] {
         assert_unparsable(input, NameType::Placeholder);
     }
+    // an epithet after the marker makes it an abbreviated genus
+    assert_name("Sp. albiflora")
+        .species("Sp.", "albiflora")
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::ABBREVIATED_GENUS])
+        .nothing_else();
 }
 
 /// #108's boundaries: a plausible year after a uninomial is still the year of an authorship, and a

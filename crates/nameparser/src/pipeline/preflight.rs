@@ -691,6 +691,13 @@ static NUMBERED_GROUP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
     )
     .unwrap()
 });
+/// An indet marker with no taxon before it, perhaps with its number or code: `Sp. 12`, `sp. 16`,
+/// `Spec. 1`, `Sp.`, `Species 1` (#245). Nothing to anchor an informal name on, as for the numbered
+/// groups above; Java read the marker as a genus and dropped the number. An epithet after it makes
+/// the marker an abbreviated genus instead: `Sp. albiflora`.
+static INDET_MARKER_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?i:sp|spp|spec|species)\.?(?:(?-u:\s+)[\d\p{Lu}][\p{L}\d.:_\-]*)?$").unwrap()
+});
 /// A record that names nothing: "None", "None recorded", "not recorded" (any case). Rust-only:
 /// Java parsed them as the genus "None" or "Not".
 static NO_NAME_RECORDED: LazyLock<Regex> =
@@ -882,7 +889,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
-    if GENUS_WORD_PLACEHOLDER.is_match(&s) || NUMBERED_GROUP_PLACEHOLDER.is_match(&s) {
+    if GENUS_WORD_PLACEHOLDER.is_match(&s)
+        || NUMBERED_GROUP_PLACEHOLDER.is_match(&s)
+        || INDET_MARKER_PLACEHOLDER.is_match(&s)
+    {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
 
