@@ -5175,7 +5175,7 @@ fn strip_species_status_note(ctx: &mut ParseContext, s: String) -> String {
 /// here -> plain `regex` crate.
 static SENSU_LATO_REMAINDER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?-u:\s+)(s\.(?-u:\s*)l\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)ampl\.?)(?-u:\s+)(\S.*?)(?-u:\s*)$",
+        r"(?-u:\s+)(s\.(?-u:\s*)l\.?|sl\.|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)ampl\.?)(?-u:\s+)(\S.*?)(?-u:\s*)$",
     )
     .unwrap()
 });
@@ -5189,11 +5189,15 @@ static SENSU_LATO_REMAINDER: LazyLock<Regex> = LazyLock::new(|| {
 /// "Asplenium trichomanes L. s.lat. - Asplen trich" -> `taxonomicNote="s.lat."`,
 /// `unparsed="- Asplen trich"` (the `unparsed` JSON field itself, like `state=PARTIAL`, is
 /// assembled by Pipeline/Assemble from `pending_unparsed` — this step
-/// only needs to stash the pending value).
+/// only needs to stash the pending value). Rust-only: the dotless "sl." for "s.l." (#251), and an
+/// indetermined species after the marker stays the name's ([`INDET_AFTER_SENSU`]).
 fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = SENSU_LATO_REMAINDER.captures(&s) {
         let marker = caps.get(1).unwrap().as_str();
-        let note = WHITESPACE.replace_all(marker, "").to_lowercase();
+        let mut note = WHITESPACE.replace_all(marker, "").to_lowercase();
+        if note == "sl." {
+            note = "s.l.".to_string();
+        }
         let remainder = java_trim(caps.get(2).unwrap().as_str()).to_string();
         let whole = caps.get(0).unwrap();
         // a concept note after the marker continues it, both as written, as a separate authorship
@@ -5205,6 +5209,9 @@ fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
         }
         ctx.name.add_taxonomic_note(&note);
         let name = java_trim(&s[..whole.start()]);
+        if !name.is_empty() && INDET_AFTER_SENSU.is_match(&remainder) {
+            return format!("{name} {remainder}");
+        }
         // Rust-only: the authorship after a marker straight behind the epithet (or genus) stays for the
         // authorship parser ("Acantholimon ulicinum s.l. (Schultes) Boiss."); Java left it unparsed.
         // After an author it is the concept's ("Inocybe tarda Kühner s. str. Stangl").
@@ -5221,6 +5228,13 @@ fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
     }
     s
 }
+
+/// The marker of an indetermined species after a sensu note, the species of the genus in that
+/// sense, not text left over: "Mangelia s.l. sp.", "Mangelia sl. sp.", "Aus s.s. sp.1" (#251). It
+/// stays in the name, which is read as "Mangelia sp." is. Not in a separate authorship ("s. l.
+/// sp."), where it would become an author: there it stays unparsed.
+static INDET_AFTER_SENSU: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:spp?|spec|species)(?:\.|(?-u:\s)|$)").unwrap());
 
 /// A concept note continuing a [`SENSU_LATO_REMAINDER`]'s marker: "sensu Maslin (1996)", "auct.",
 /// "non Mill.".
@@ -5261,11 +5275,16 @@ static SENSU_STRICTO_SS: LazyLock<Regex> =
 fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = SENSU_STRICTO_SS.captures(&s) {
         ctx.name.add_taxonomic_note("s.s.");
-        if let Some(junk) = caps.get(1) {
-            ctx.set_pending_unparsed(java_trim(junk.as_str()));
-        }
         let whole = caps.get(0).unwrap();
-        return java_trim(&s[..whole.start()]).to_string();
+        let name = java_trim(&s[..whole.start()]);
+        if let Some(junk) = caps.get(1).map(|m| java_trim(m.as_str())) {
+            // Rust-only: an indetermined species stays the name's, see [`INDET_AFTER_SENSU`]
+            if !name.is_empty() && INDET_AFTER_SENSU.is_match(junk) {
+                return format!("{name} {junk}");
+            }
+            ctx.set_pending_unparsed(junk);
+        }
+        return name.to_string();
     }
     s
 }
