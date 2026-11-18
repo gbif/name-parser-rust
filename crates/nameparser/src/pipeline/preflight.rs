@@ -50,10 +50,12 @@ use crate::viral::is_viral;
 // `phage1_…`), plus a word-initial `phage` followed by a mixed-case strain code (`phageBT1`) or
 // `phagemid`. Java's unanchored `phages?` also fired inside words — Sphagesauridae,
 // Sphagebranchus, `Treponema phagedenis` — rejecting ~460 real CLB names as viruses.
-// Java: `Pattern.CASE_INSENSITIVE`. No `\p{…}`, so the whole alternation is `(?-u:…)`-wrapped.
+// Java: `Pattern.CASE_INSENSITIVE`. Rust-only: the word boundaries know every letter, not only ASCII
+// ones, so `gv` inside `Vágvölgyi` or `rna` in `Šrna` is no viral word (#238). Java's ASCII `\b`
+// rejected any name with such an author as a virus.
 static VIRUS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b|(?:fusion\s+)?vector\b|\bprions?\b|\bparticles?\b|\breplicons?\b|\bRNA\b))",
+        r"(?i)(?:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b|(?:fusion\s+)?vector\b|\bprions?\b|\bparticles?\b|\breplicons?\b|\bRNA\b))",
     )
     .unwrap()
 });
@@ -63,7 +65,7 @@ static VIRUS: LazyLock<Regex> = LazyLock::new(|| {
 /// without the virus code unless a viral word names them too (`Baculovirus expression vector
 /// pLM`, #124). Rust-only: Java gave them the virus code, and parsed a plasmid as a binomial.
 static GENETIC_ELEMENT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\b(?:vectors?|replicons?|(?:mega|mini)?plasmids?)\b)").unwrap()
+    Regex::new(r"(?i)\b(?:vectors?|replicons?|(?:mega|mini)?plasmids?)\b").unwrap()
 });
 /// A plasmid outside brackets: `Plasmid pACYC184`, `Agrobacterium vitis plasmid pTiAB4`. In
 /// brackets it is a note on its host, `Agrobacterium rhizogenes (RI plasmid PRI1724)`, which
@@ -109,10 +111,10 @@ static SOFT_GENUS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(?-u:(?:Vector|Prions?|Particles?|Replicons?|Rna)\b)").unwrap());
 // The genuinely viral triggers (VIRUS minus the ambiguous English SOFT_WORDs). When only a soft
 // word matched, there is no real viral signal and a leading soft-genus is let through to parse.
-// Java: `Pattern.CASE_INSENSITIVE`. Same treatment as VIRUS.
+// Java: `Pattern.CASE_INSENSITIVE`. Same treatment as VIRUS, Unicode word boundaries included.
 static HARD_VIRUS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b))",
+        r"(?i)(?:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b))",
     )
     .unwrap()
 });
