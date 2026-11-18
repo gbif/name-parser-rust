@@ -204,11 +204,28 @@ const ALTERNATIVE_GENUS: &str = r"\p{Lu}\p{Ll}+(?:-\p{Lu}?\p{Ll}+)?";
 /// `Aphaenogaster cf. rudis/texana` (#225), or with an infraspecific rank marker, `Sylvia cantillans
 /// subsp. inornata/iberiae`. The groups: genus, subgenus, the epithets, the rank marker, the
 /// alternatives. Read by [`read_alternatives`]. The marker is lazy, so that a qualifier stays the
-/// epithet's: `Aus bus cf. cus/dus`.
+/// epithet's: `Aus bus cf. cus/dus`. Before a slash or pipe an authorship may follow the epithets,
+/// each alternative carrying its own (#235): `Chionodoxa forbesii BAKER / luciliae BOISS.`,
+/// `Carduelis carduelis (Linnaeus, 1758) / Serinus canaria (Linnaeus, 1758)`. Alternative authors
+/// stay authors, a capitalised word alone being no alternative: `Aus bus Smith/Jones`. After an
+/// authorship the slash stands apart on one side at least, so that a word holding one is no
+/// alternative: `Carnevali & M. Jua|arez`, `Prostanthera lasianthos Girraween/Polblue variant`.
 static ALTERNATIVE_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
     let epithet = r"(?:(?:cf|aff|nr)\.?(?-u:\s+))?\p{Ll}[\p{Ll}\-]+";
     Regex::new(&format!(
-        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+)(?:(\p{{Ll}}+)\.?(?-u:\s+))??{epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
+        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+)(?:(\p{{Ll}}+)\.?(?-u:\s+))??{epithet})?)(?:(?-u:\s+)(?P<auth>{ALTERNATIVE_AUTHORSHIP})(?:(?-u:\s+)[/|](?-u:\s*)|[/|](?-u:\s+))|(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(?P<alts>.+)$"
+    ))
+    .unwrap()
+});
+/// The authorship of one of several alternatives (#235): capitalised names, years, `&`, `et`, `ex`,
+/// `in` and brackets, no lower-case word or code, so that a strain (`indica PD1998/pus`), a page
+/// (`pl. 222 / figs 1 – 7`) or a host (`ex Ficus popenoei/nymphaefolia`) is no authorship.
+const ALTERNATIVE_AUTHORSHIP: &str = r"\(?\p{Lu}[\p{L}.'\-]*\)?(?:,?(?-u:\s+)(?:\(?\p{Lu}[\p{L}.'\-]*\)?|\(?\d{4}\)?|&|et|ex|in))*,?";
+/// An alternative after one that carries an authorship: an epithet or a species, its genus written
+/// out or abbreviated, perhaps with its own authorship, and nothing else.
+static ALTERNATIVE_WITH_AUTHORSHIP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?:{ALTERNATIVE_GENUS}(?-u:\s+)|\p{{Lu}}\.(?-u:\s*))?\p{{Ll}}[\p{{Ll}}\-]+(?:(?-u:\s+){ALTERNATIVE_AUTHORSHIP})?(?-u:\s*)$"
     ))
     .unwrap()
 });
@@ -305,7 +322,15 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
         }
         None => None,
     };
-    let alternatives = &caps[5];
+    let alternatives = &caps["alts"];
+    // after an authorship every alternative is a whole one, with its own authorship or none
+    if caps.name("auth").is_some()
+        && !ALTERNATIVE_SEPARATOR
+            .split(alternatives)
+            .all(|alternative| ALTERNATIVE_WITH_AUTHORSHIP.is_match(alternative))
+    {
+        return None;
+    }
     if let Some(species) = ALTERNATIVE_SPECIES.captures(alternatives) {
         if AUTHOR_LINK.contains(&&species[2]) {
             return None;

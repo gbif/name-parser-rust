@@ -1724,8 +1724,42 @@ fn alternatives_of_two_genera_are_no_name() {
         "Entosthodon fascicularis or Physcomitrium pyriforme",
         "Abramis brama|Blicca bjoerkna",
         "Bilderdykia|Polygonum",
+        // each with its own authorship (#235): it was Carduelis carduelis by "Serinus canaria"
+        "Carduelis carduelis (Linnaeus, 1758) / Serinus canaria (Linnaeus, 1758)",
+        "Gymnophryxe pretoriensis Bezzi, 1911/ Archiclops pretoriensis Bezzi, 1911",
     ] {
         assert_unparsable(input, NameType::Other);
+    }
+}
+
+#[test]
+fn alternatives_with_their_own_authorship() {
+    // #235: the authorship of the first ended the name, the alternative was left unparsed
+    for (input, phrase) in [
+        (
+            "Chionodoxa forbesii BAKER / luciliae BOISS.",
+            "forbesii BAKER / luciliae BOISS.",
+        ),
+        ("Salmo salar L. / S. trutta L.", "salar L. / S. trutta L."),
+        (
+            "Abies alba Mill. / A. nordmanniana (Steven) Spach",
+            "alba Mill. / A. nordmanniana (Steven) Spach",
+        ),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+    // alternative authors stay authors, and a code, a strain or a word holding a slash or pipe is
+    // no alternative
+    for input in [
+        "Aus bus Jarocki / Schinz",
+        "Geitlerinema acuminatum Shafa/soil/10",
+        "Myrmecophila olmstediae Carnevali & M. Jua|arez",
+        "Prostanthera lasianthos Girraween/Polblue variant",
+    ] {
+        let ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+            panic!("`{input}` is parsed");
+        };
+        assert!(pn.specific_epithet.is_some(), "{input}");
     }
 }
 
