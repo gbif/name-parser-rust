@@ -286,9 +286,12 @@ static UNCERTAIN_AUTHOR_OR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[\s(]\p{Lu}\p{L}*\s+or\s+\p{Lu}").unwrap());
 
 /// Java UNCERTAIN_AUTHOR_SLASH (StripAndStash.java:306-307): `\p{L}\s*/\s*\p{L}`,
-/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode. Rust-only, a capitalised word stands
+/// on one side, as an author does (`Smith/Jones`, `Smith/de Vries`): lower-case words on both sides
+/// are alternative epithets (`Acalitus sp. brevitarsus/phyllereus`) or a designation (`Barbus sp.
+/// (big mouth/big eye)`), no authorship.
 static UNCERTAIN_AUTHOR_SLASH: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\p{L}\s*/\s*\p{L}").unwrap());
+    LazyLock::new(|| Regex::new(r"\p{Lu}\p{L}*\s*/\s*\p{L}|\p{L}\s*/\s*\p{Lu}").unwrap());
 
 /// Java `StripAndStash.flagUncertainAuthorship` (StripAndStash.java:538-551). Flags
 /// open-nomenclature uncertainty before any of it is normalised away. A trailing standalone
@@ -7925,6 +7928,25 @@ mod tests {
         let out = flag_uncertain_authorship(&mut c, "Aus bus Smith/Jones, 1900".to_string());
         assert_eq!(out, "Aus bus Smith/Jones, 1900");
         assert!(c.name.doubtful);
+        for s in ["Aus bus Smith/de Vries", "Aus bus de Vries/Smith"] {
+            let mut c = ctx("x");
+            flag_uncertain_authorship(&mut c, s.to_string());
+            assert!(c.name.doubtful, "{s}");
+        }
+    }
+
+    #[test]
+    fn a_slash_between_lower_case_words_is_no_uncertain_author() {
+        for s in [
+            "Acalitus sp. brevitarsus/phyllereus",
+            "Festuca rubra/arenaria",
+            "Barbus sp. (big mouth/big eye)",
+        ] {
+            let mut c = ctx("x");
+            flag_uncertain_authorship(&mut c, s.to_string());
+            assert!(!c.name.doubtful, "{s}");
+            assert!(c.name.warnings.is_empty(), "{s}");
+        }
     }
 
     #[test]
