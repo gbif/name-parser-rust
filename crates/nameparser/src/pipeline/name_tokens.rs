@@ -567,6 +567,18 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         || separate_authorship
                         || blacklisted_epithets::whitelisted("spec", genus.as_deref(), None))
                     && i + 1 == ts.len();
+                // #252: after the epithets `sp.` followed by anything but the epithet of a
+                // misspelt `ssp.` (2b below) is the marker of an unnamed species, its phrase
+                // running to the end: `Abies alba sp. c`, `Prionospio iberian canyons sp. c`,
+                // `Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a`. It was read as `ssp.`, and a
+                // word before it dropped.
+                let sp_designation = (w.eq_ignore_ascii_case("sp")
+                    || w.eq_ignore_ascii_case("spp"))
+                    && !lower_epithets.is_empty()
+                    && marker_idx_in_epithets < 0
+                    && i + 1 + usize::from(ts.get(i + 1).is_some_and(|t| t.kind == TokenKind::Dot))
+                        < ts.len()
+                    && !sp_is_misspelt_ssp(ts, i);
                 if (w.eq_ignore_ascii_case("sp")
                     || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
@@ -578,15 +590,43 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     && !is_published_spec_epithet
                     && (lower_epithets.is_empty()
                         || marker_idx_in_epithets >= 0
-                        || number_follows_marker)
+                        || number_follows_marker
+                        || sp_designation)
                 {
                     let marker_start = nova_start.take().unwrap_or(ts[i].start);
+                    let marker_idx = i;
                     indet = true;
                     indet_aggregate = is_aggregate_marker(w);
                     ctx.name.type_ = NameType::Informal;
                     i += 1;
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
                         i += 1;
+                    }
+                    // #252: several words or a qualified one before the marker are no species to
+                    // hang the unnamed one off, so it hangs off the genus and they open its phrase:
+                    // `Prionospio iberian canyons sp. c`, `Prionospio aff. iberian sp. c`. One
+                    // word is its species: `Abies alba sp. c` keeps `sp. c`, as `sp. 1` does.
+                    if (sp_designation || number_follows_marker)
+                        && !lower_epithets.is_empty()
+                        && marker_idx_in_epithets < 0
+                        && (lower_epithets.len() >= 2 || cf_aff_qualifier.is_some())
+                    {
+                        let start = ts[..marker_idx]
+                            .iter()
+                            .find(|t| t.kind == TokenKind::Word && starts_lower(t))
+                            .map_or(marker_start, |t| t.start);
+                        ctx.name.phrase =
+                            Some(ctx.working[start..ts[ts.len() - 1].end].to_string());
+                        lower_epithets.clear();
+                        qualifier_phrase = true;
+                        i = ts.len();
+                        continue;
+                    }
+                    if sp_designation {
+                        ctx.name.phrase =
+                            Some(ctx.working[marker_start..ts[ts.len() - 1].end].to_string());
+                        i = ts.len();
+                        continue;
                     }
                     // Verbatim-phrase rule: a supraspecific indet (no species epithet yet)
                     // keeps the WHOLE verbatim tail FROM the marker as its phrase — marker included,
@@ -737,11 +777,13 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 }
                 // 2b. "sp." between species and infraspecific epithet is almost always a
                 // misspelling of "ssp." (subspecies). Only triggers when there's already
-                // a species epithet and a lower epithet follows.
+                // a species epithet and the epithet of a subspecies ends the name, see
+                // `sp_is_misspelt_ssp` (#252).
                 if (w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spp"))
                     && lower_epithets.len() == 1
                     && marker_idx_in_epithets < 0
                     && has_infraspecific_epithet_after(ts, i)
+                    && sp_is_misspelt_ssp(ts, i)
                 {
                     inline_rank = Some(Rank::Subspecies);
                     marker_idx_in_epithets = lower_epithets.len() as i32;
@@ -1395,6 +1437,50 @@ fn is_all_upper_letters(s: &str) -> bool {
 /// either a lowercase word, or a single uppercase letter (informal collector tag like "f.
 /// A" / "form A"). Java `NameTokens.hasInfraspecificEpithetAfter(List<Token>, int, int)`
 /// (`NameTokens.java:665-675`).
+/// Words of four letters or more after `sp.` that are no subspecies epithet but a note or a label:
+/// `Asaphidae gen et sp indef`, `Selenomonas flueggei-like sp. clone AH132`.
+const SP_NO_EPITHET: &[&str] = &[
+    "indet",
+    "indef",
+    "undet",
+    "incertae",
+    "inquirenda",
+    "nova",
+    "novum",
+    "clone",
+    "taxon",
+    "strain",
+    "isolate",
+    "group",
+    "complex",
+];
+
+/// Whether the `sp.` at `marker_idx`, after a species epithet, is a misspelt `ssp.`: the epithet of
+/// a subspecies ends the name, lower-case letters only, four or more (`Oryzaephilus surinamensis
+/// sp. mercator (Fauvel, 1889)`). A letter, a code, an abbreviation or more words make it the
+/// marker of an unnamed species: `Abies alba sp. c`, `sp. n.`, `sp. inc.`, `sp. oral taxon 955`
+/// (#252). Takes the name section or all tokens: an authorship may follow the epithet.
+pub(crate) fn sp_is_misspelt_ssp(ts: &[Token], marker_idx: usize) -> bool {
+    let mut k = marker_idx + 1;
+    if ts.get(k).is_some_and(|t| t.kind == TokenKind::Dot) {
+        k += 1;
+    }
+    let Some(t) = ts.get(k).filter(|t| t.kind == TokenKind::Word) else {
+        return false;
+    };
+    let authorship = |t: &Token| {
+        t.kind == TokenKind::OpenParen || (t.kind == TokenKind::Word && starts_upper(t))
+    };
+    let ends = match ts.get(k + 1) {
+        None => true,
+        Some(d) if d.kind == TokenKind::Dot => ts.get(k + 2).is_none_or(authorship),
+        Some(next) => authorship(next),
+    };
+    ends && t.text.chars().count() >= 4
+        && t.text.chars().all(|c| c.is_lowercase() || c == '-')
+        && !SP_NO_EPITHET.contains(&t.text.as_str())
+}
+
 fn has_infraspecific_epithet_after(ts: &[Token], marker_idx: usize) -> bool {
     let n = ts.len();
     let mut k = marker_idx + 1;

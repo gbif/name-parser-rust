@@ -318,9 +318,31 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         && (tokens[i + 1].kind == TokenKind::OpenParen
                             || (tokens[i + 1].kind == TokenKind::Word
                                 && starts_upper(&tokens[i + 1])));
+                    let marker_at = i;
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
+                    }
+                    // #252: after several words, or a qualified one, `sp.` hangs the unnamed
+                    // species off the genus, and its phrase runs to the end as after the genus
+                    // alone below: `Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a`. A misspelt
+                    // `ssp.` before a subspecies epithet is left to the boundary logic.
+                    if (w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spp"))
+                        && have_epithet
+                        && i < n
+                        && !crate::pipeline::name_tokens::sp_is_misspelt_ssp(tokens, marker_at)
+                    {
+                        let words: Vec<&str> = tokens[..marker_at]
+                            .iter()
+                            .filter(|t| t.kind == TokenKind::Word && starts_lower(t))
+                            .map(|t| t.text.as_str())
+                            .collect();
+                        let qualified = words.iter().any(|w| {
+                            matches!(w.to_lowercase().as_str(), "cf" | "aff" | "nr" | "near")
+                        });
+                        if qualified || words.len() >= 2 {
+                            return n;
+                        }
                     }
                     // 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): after cf./aff. the genus
                     // is often written out again — "Sorex cf. S. shinto", "Microtus cf. Microtus

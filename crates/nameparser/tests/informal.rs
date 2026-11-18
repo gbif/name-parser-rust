@@ -1182,6 +1182,62 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
         .nothing_else();
 }
 
+#[test]
+fn sp_after_the_epithets_marks_an_unnamed_species() {
+    // #252: `sp.` was read as a misspelt `ssp.`, and a word before it dropped. Several words or a
+    // qualified one before it are no species, so the unnamed one hangs off the genus.
+    for (input, phrase) in [
+        ("Prionospio iberian canyons sp. c", "iberian canyons sp. c"),
+        ("Prionospio aff. iberian sp. c", "aff. iberian sp. c"),
+        (
+            "Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a",
+            "aff. szeptycki sp. n. 1 ALL-2022a",
+        ),
+    ] {
+        assert_informal_hinted(input, None, Some(Rank::Species), None)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+    }
+    // one word before it is the species, as for `Abies alba sp. 1`
+    assert_informal("Abies alba sp. c")
+        .taxon("Abies alba")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Species)
+        .phrase("sp. c")
+        .nothing_else();
+    assert_eq!(canonical("Abies alba sp. c"), "Abies alba sp. c");
+}
+
+#[test]
+fn sp_before_a_final_subspecies_epithet_is_a_misspelt_ssp() {
+    // four letters or more, lower case, nothing but an authorship after it
+    assert_name("Oreocnide frutescens sp. occidentalis")
+        .infra_species("Oreocnide", "frutescens", Rank::Subspecies, "occidentalis")
+        .nothing_else();
+    assert_name("Oryzaephilus surinamensis sp. mercator (Fauvel, 1889)")
+        .infra_species("Oryzaephilus", "surinamensis", Rank::Subspecies, "mercator")
+        .bas_authors(Some("1889"), &["Fauvel"])
+        .nothing_else();
+}
+
+#[test]
+fn sp_inc_after_an_epithet_is_a_note_on_the_species() {
+    // #252: species incerta / inquirenda, read as the subspecies `inc` before
+    assert_name("Munidopsis aries sp. inc. (A. Milne Edwards, 1880)")
+        .species("Munidopsis", "aries")
+        .bas_authors(Some("1880"), &["A.Milne Edwards"])
+        .sensu("sp. inc.")
+        .nothing_else();
+    assert_name("Anopheles daciae sp. inq.")
+        .species("Anopheles", "daciae")
+        .sensu("sp. inq.")
+        .nothing_else();
+}
+
 // ---- Alternatives: the identification stopped at several species (#225, #212) ----------------
 
 /// An informal name anchored on the species all its alternatives lie in, the rest its phrase, left

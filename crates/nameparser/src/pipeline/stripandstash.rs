@@ -154,6 +154,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_bracketed_tax_note(ctx, s);
     s = strip_alternative_subgenera(ctx, s);
     s = strip_paren_tax_note(ctx, s);
+    s = strip_species_status_note(ctx, s);
     s = strip_sensu_lato_remainder(ctx, s);
     s = strip_sensu_stricto_ss(ctx, s);
     s = strip_tax_note(ctx, s);
@@ -4160,7 +4161,8 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// the year of a basionym bracket, "(Chao，comb．nov．,1986)" (#127). "Orth" with no dot and no
 /// lower-case word behind it is a surname: "Fisher & Orth, 1978" (#222), while "Orth. var." is a
 /// note. Rust-only as well: "ined." after a comma and the year right after
-/// the note, "W.J. Kress, sp. nov., ined. 2013", where "sp." became an author (#220).
+/// the note, "W.J. Kress, sp. nov., ined. 2013", where "sp." became an author (#220). And a comma
+/// between the note and the authors, "Heptapterus carmelitanorum sp. nov., Azevedo-Santos, Deprá".
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r"(?:\s+|(?<=,))(",
@@ -4170,7 +4172,7 @@ static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
         r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?|nsp\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
-        r")\s*(?=$|,?\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
+        r")\s*(?=$|,?\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|,?\s+\p{Lu})",
     ))
     .unwrap()
 });
@@ -4236,6 +4238,19 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
     let match_start = caps.get(0).unwrap().start();
     let match_end = caps.get(0).unwrap().end();
     let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+    // A comma and a capital after the note start the authors only right after the epithet
+    // ("Heptapterus carmelitanorum sp. nov., Azevedo-Santos"); after an authorship they may be
+    // anything ("(Gussakovskij, 1947) comb. nov., New record for China").
+    let comma_capital = java_trim(&s[match_end..])
+        .strip_prefix(',')
+        .is_some_and(|t| java_trim(t).starts_with(char::is_uppercase));
+    let after_epithet = java_trim(&s[..match_start])
+        .rsplit(char::is_whitespace)
+        .next()
+        .is_some_and(|w| w.starts_with(char::is_lowercase));
+    if comma_capital && !after_epithet {
+        return s;
+    }
     // A "sp. n." / "n. sp." before a specimen code, or after a bare genus with anything behind it,
     // is a provisional name's designation, kept whole for its phrase ("Heteropriapulus sp. n.
     // AAA-2017", "Amrasca (Amrasca) sp. n. VN1", "Aphonopelma sp. n. Guatemala"), and so is a new
@@ -4267,7 +4282,13 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
     ctx.name.add_nomenclatural_note(&norm);
 
     let before = java_trim(&s[..match_start]).to_string();
-    let after = java_trim(&s[match_end..]).to_string();
+    let after = java_trim(&s[match_end..]);
+    // the comma between the note and the authors goes with the note: "sp. nov., Azevedo-Santos"
+    let after = match after.strip_prefix(',').map(java_trim) {
+        Some(authors) if authors.starts_with(char::is_uppercase) => authors,
+        _ => after,
+    }
+    .to_string();
     let mut result = if after.is_empty() {
         before.clone()
     } else {
@@ -5110,6 +5131,28 @@ fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
         return java_trim(&s[..whole.start()]).to_string();
     }
     s
+}
+
+/// `sp. inc.` (species incerta) or `sp. inq.` (species inquirenda) after an epithet: a note on the
+/// species, not the marker of an unnamed one: `Munidopsis aries sp. inc. (A. Milne Edwards,
+/// 1880)` (#252). Groups: the name (none at the start of a separate authorship), the note, the
+/// rest.
+static SPECIES_STATUS_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^((?:.*(?-u:\s)\p{Ll}[\p{L}\-]*)?)(?-u:\s+)(sp\.(?-u:\s*)(?:inc|inq)\.)((?-u:\s+).*)?$",
+    )
+    .unwrap()
+});
+
+/// Rust-only: see [`SPECIES_STATUS_NOTE`]. The note goes to the taxonomic note, an authorship after
+/// it stays the species', in the name string or a separate authorship.
+fn strip_species_status_note(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = SPECIES_STATUS_NOTE.captures(&s) else {
+        return s;
+    };
+    ctx.name
+        .add_taxonomic_note(&WHITESPACE.replace_all(&caps[2], " "));
+    format!("{}{}", &caps[1], caps.get(3).map_or("", |m| m.as_str()))
 }
 
 // ---- Step 41: stripSensuLatoRemainder ----
@@ -7536,12 +7579,13 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
 /// Approved Lists, `mihi`, colon concept references, `s.lat.`/`s.s.`, aggregate suffixes, the page
 /// and `in press`. In `run`'s order.
 pub(crate) fn strip_authorship_trailing_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 10] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 11] = [
         strip_pro_parte,
         strip_pro_sp_annotation,
         strip_approved_lists,
         strip_mihi,
         strip_colon_concept_reference,
+        strip_species_status_note,
         strip_sensu_lato_remainder,
         strip_sensu_stricto_ss,
         strip_aggregate_suffix,
@@ -7705,12 +7749,19 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     let padded_nom = format!(" {s}");
     if let Ok(Some(caps)) = NOM_NOTE.captures(&padded_nom) {
         let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
-        if !raw.is_empty() {
+        let whole = caps.get(0).unwrap();
+        let before = java_trim(&padded_nom[..whole.start()]).to_string();
+        let after = java_trim(&padded_nom[whole.end()..]);
+        // a comma and a capital after the note start the authors only when the note leads, see
+        // `strip_nom_note`
+        let authors_after_comma = after
+            .strip_prefix(',')
+            .map(java_trim)
+            .filter(|t| t.starts_with(char::is_uppercase));
+        if !raw.is_empty() && (authors_after_comma.is_none() || before.is_empty()) {
             let norm = normalise_nom_note(&raw);
             name.add_nomenclatural_note(&norm);
-            let whole = caps.get(0).unwrap();
-            let before = java_trim(&padded_nom[..whole.start()]).to_string();
-            let after = java_trim(&padded_nom[whole.end()..]).to_string();
+            let after = authors_after_comma.unwrap_or(after).to_string();
             s = if after.is_empty() {
                 before
             } else {

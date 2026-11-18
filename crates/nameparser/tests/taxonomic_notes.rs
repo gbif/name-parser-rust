@@ -774,6 +774,32 @@ fn a_nova_note_with_more_behind_it_is_no_author() {
 }
 
 #[test]
+fn a_comma_after_a_nova_note_leads_to_its_authors() {
+    // read as the subspecies "nov" with the authors
+    assert_name(
+        "Heptapterus carmelitanorum sp. nov., Azevedo-Santos, Deprá, Aguilera, Faustino-Fuster & Katz",
+    )
+    .species("Heptapterus", "carmelitanorum")
+    .comb_authors(
+        None,
+        &["Azevedo-Santos", "Deprá", "Aguilera", "Faustino-Fuster", "Katz"],
+    )
+    .nom_note("sp. nov.")
+    .nothing_else();
+    // after an authorship what follows the comma may be anything: it stays unparsed with the note
+    let input = "Asicimbex malaisei (Gussakovskij, 1947) comb. nov., New record for China";
+    let nameparser::ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+        panic!("`{input}` is parsed");
+    };
+    assert_eq!(pn.nomenclatural_note, None);
+    assert!(pn.combination_authorship.authors.is_empty());
+    assert_eq!(
+        pn.unparsed.as_deref(),
+        Some("comb. nov., New record for China")
+    );
+}
+
+#[test]
 fn a_note_glued_to_the_author_is_split_off() {
     // #217: the author and the note were one author
     assert_name("Arenaria ciliata L.s.l.")

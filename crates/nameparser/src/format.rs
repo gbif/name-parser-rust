@@ -321,11 +321,18 @@ fn append_if_not_empty(sb: &mut String, to_append: &str) {
     }
 }
 
-/// Java `NameFormatter.phraseLeadsWithSpeciesMarker(ParsedName)`.
+/// Java `NameFormatter.phraseLeadsWithSpeciesMarker(ParsedName)`. Rust-only, a `sp.` further on
+/// counts too: the phrase of `Prionospio iberian canyons sp. c` holds the words before its marker
+/// (#252), which rendered "Prionospio sp. iberian canyons sp. c".
 fn phrase_leads_with_species_marker(n: &ParsedName) -> bool {
+    let phrase = java_trim(n.phrase.as_deref().unwrap_or(""));
     n.is_phrase_name()
-        && PHRASE_SPECIES_MARKER.is_match(java_trim(n.phrase.as_deref().unwrap_or("")))
+        && (PHRASE_SPECIES_MARKER.is_match(phrase) || PHRASE_INNER_SPP_MARKER.is_match(phrase))
 }
+
+/// A `sp.` or `spp.` word inside a phrase, see [`phrase_leads_with_species_marker`].
+static PHRASE_INNER_SPP_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?:^|(?-u:\s))spp?\.?(?:(?-u:\s)|$)").unwrap());
 
 /// gbif/name-parser-rust#16: true when an informal phrase already OPENS with this name's own
 /// rank marker, spelled out verbatim — "sect. 1" on a `SECTION_BOTANY`, "strain T101" on a
@@ -333,7 +340,8 @@ fn phrase_leads_with_species_marker(n: &ParsedName) -> bool {
 /// source spelling of an indeterminate `Genus <marker> <code>` in the phrase, so synthesising the
 /// marker from the rank as well would double it ("Trachelomonas strain strain T101"). Compared
 /// dot-insensitively, since the marker is stored with its dot ("var.") and the source may write
-/// it without one.
+/// it without one, and in any spelling of an infraspecific rank: "ssp." and "subsp" on a
+/// `SUBSPECIES` (`Sylvia cantillans subsp. inornata/iberiae`).
 ///
 /// The sibling [`phrase_leads_with_species_marker`] stays separate rather than folding into this:
 /// it matches the SPELLED-OUT species markers ("species 1", "spec 3"), none of which equal
