@@ -378,9 +378,12 @@ static UNDERSCORE_LABEL: LazyLock<Regex> =
 static DASH_NUMBER_LABEL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}{2,})-(\d+)$").unwrap());
 /// A capitalised word, an underscore and an indet marker with its code: `Sus_spec_2`,
-/// `Candida_sp_NCIM3483` (#209). The underscore stands for the space of `Sus spec_2`.
-static UNDERSCORE_INDET: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_((?:sp|spec)_\S+)$").unwrap());
+/// `Candida_sp_NCIM3483` (#209). The underscore stands for the space of `Sus spec_2`. So it does
+/// before a dotted marker, `Phoridae_sp. 873`, `Megaselia_sp. BOLD:AAG6185` (#234), which made `sp`
+/// the epithet.
+static UNDERSCORE_INDET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)_((?:sp|spec)_\S+|(?:sp|spp|spec)\.(?:(?-u:\s+)\S.*)?)$").unwrap()
+});
 /// A capitalised word, an underscore and a label opening in lower case or with a digit, the rest of
 /// the name in lower case: `Acrocirridae_gen1`, `Parmales_env_2`, `Abies_01 sp_01`,
 /// `Strat_genus3 sp. 1` (#209). Read by [`read_underscore_label`].

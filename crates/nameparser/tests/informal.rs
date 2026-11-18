@@ -1767,6 +1767,14 @@ fn an_underscored_indet_marker_stands_for_a_space() {
         ("Candida_sp_NCIM3483", "Candida", "sp_NCIM3483"),
         // as with a space
         ("Sph spec_1", "Sph", "spec_1"),
+        // before a dotted marker (#234): `sp` was the epithet
+        ("Phoridae_sp. 873", "Phoridae", "sp. 873"),
+        ("Phoridae_sp. BOLDABA6985", "Phoridae", "sp. BOLDABA6985"),
+        (
+            "Megaselia_sp. BOLD:AAG6185",
+            "Megaselia",
+            "sp. BOLD:AAG6185",
+        ),
     ] {
         assert_informal(input)
             .taxon(taxon)
