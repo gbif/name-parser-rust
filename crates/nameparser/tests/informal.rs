@@ -1051,9 +1051,25 @@ fn a_numbered_group_without_a_taxon_is_a_placeholder() {
         "Genotype 3",
         "Genus Novum 10",
         "Genus nov. (2)",
+        // the word Genus joined to its number (#240)
+        "Genus_01 sp_01",
+        "Genus_01",
+        "Genus-01 sp-01",
+        // an indet marker with nothing before it (#245): it was the genus "Sp", the number dropped
+        "Sp. 12",
+        "sp. 16",
+        "Spec. 1",
+        "Sp.",
+        "Species 1",
     ] {
         assert_unparsable(input, NameType::Placeholder);
     }
+    // an epithet after the marker makes it an abbreviated genus
+    assert_name("Sp. albiflora")
+        .species("Sp.", "albiflora")
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::ABBREVIATED_GENUS])
+        .nothing_else();
 }
 
 /// #108's boundaries: a plausible year after a uninomial is still the year of an authorship, and a
@@ -1179,6 +1195,62 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
         .rank(Rank::Species)
         .phrase("sp. 1")
         .code(NomCode::Botanical)
+        .nothing_else();
+}
+
+#[test]
+fn sp_after_the_epithets_marks_an_unnamed_species() {
+    // #252: `sp.` was read as a misspelt `ssp.`, and a word before it dropped. Several words or a
+    // qualified one before it are no species, so the unnamed one hangs off the genus.
+    for (input, phrase) in [
+        ("Prionospio iberian canyons sp. c", "iberian canyons sp. c"),
+        ("Prionospio aff. iberian sp. c", "aff. iberian sp. c"),
+        (
+            "Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a",
+            "aff. szeptycki sp. n. 1 ALL-2022a",
+        ),
+    ] {
+        assert_informal_hinted(input, None, Some(Rank::Species), None)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+    }
+    // one word before it is the species, as for `Abies alba sp. 1`
+    assert_informal("Abies alba sp. c")
+        .taxon("Abies alba")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Species)
+        .phrase("sp. c")
+        .nothing_else();
+    assert_eq!(canonical("Abies alba sp. c"), "Abies alba sp. c");
+}
+
+#[test]
+fn sp_before_a_final_subspecies_epithet_is_a_misspelt_ssp() {
+    // four letters or more, lower case, nothing but an authorship after it
+    assert_name("Oreocnide frutescens sp. occidentalis")
+        .infra_species("Oreocnide", "frutescens", Rank::Subspecies, "occidentalis")
+        .nothing_else();
+    assert_name("Oryzaephilus surinamensis sp. mercator (Fauvel, 1889)")
+        .infra_species("Oryzaephilus", "surinamensis", Rank::Subspecies, "mercator")
+        .bas_authors(Some("1889"), &["Fauvel"])
+        .nothing_else();
+}
+
+#[test]
+fn sp_inc_after_an_epithet_is_a_note_on_the_species() {
+    // #252: species incerta / inquirenda, read as the subspecies `inc` before
+    assert_name("Munidopsis aries sp. inc. (A. Milne Edwards, 1880)")
+        .species("Munidopsis", "aries")
+        .bas_authors(Some("1880"), &["A.Milne Edwards"])
+        .sensu("sp. inc.")
+        .nothing_else();
+    assert_name("Anopheles daciae sp. inq.")
+        .species("Anopheles", "daciae")
+        .sensu("sp. inq.")
         .nothing_else();
 }
 
@@ -1386,6 +1458,58 @@ fn a_rank_or_an_authorship_stays_out_of_the_species_anchor() {
 }
 
 #[test]
+fn a_rank_marker_before_the_alternatives_gives_their_rank() {
+    // the alternatives were the epithet and its author, `or phyllereus` was left unparsed
+    for (input, species, rank, phrase) in [
+        (
+            "Acalitus brevitarsus subsp. brevitarsus/phyllereus",
+            "Acalitus brevitarsus",
+            Rank::Subspecies,
+            "subsp. brevitarsus/phyllereus",
+        ),
+        (
+            "Acalitus brevitarsus ssp. brevitarsus or phyllereus",
+            "Acalitus brevitarsus",
+            Rank::Subspecies,
+            "ssp. brevitarsus or phyllereus",
+        ),
+        (
+            "Sylvia cantillans subsp. inornata/iberiae",
+            "Sylvia cantillans",
+            Rank::Subspecies,
+            "subsp. inornata/iberiae",
+        ),
+        (
+            "Acalitus brevitarsus var. brevitarsus/phyllereus",
+            "Acalitus brevitarsus",
+            Rank::Variety,
+            "var. brevitarsus/phyllereus",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(species)
+            .taxon_rank(Rank::Species)
+            .rank(rank)
+            .phrase(phrase)
+            .partial()
+            .nothing_else();
+        // the marker is not repeated in front of the phrase
+        assert_eq!(canonical(input), input);
+    }
+    // the code a marker tells stays
+    let input = "Bacillus thuringiensis serovar israelensis/tochigiensis";
+    assert_informal(input)
+        .taxon("Bacillus thuringiensis")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Serovar)
+        .phrase("serovar israelensis/tochigiensis")
+        .code(NomCode::Bacterial)
+        .partial()
+        .nothing_else();
+    assert_eq!(canonical(input), input);
+}
+
+#[test]
 fn another_species_among_the_alternatives_leaves_only_the_genus() {
     for (input, phrase) in [
         (
@@ -1468,6 +1592,63 @@ fn a_rank_or_an_authorship_does_not_bring_the_first_species_back() {
         None,
         "rubra/arenaria Hack.",
     );
+}
+
+/// The canonical name of `input` without authorship.
+#[track_caller]
+fn canonical(input: &str) -> String {
+    match nameparser::parse(input, None, None, None) {
+        ParseResult::Parsed(pn) => pn.canonical_name_without_authorship().unwrap_or_default(),
+        other => panic!("`{input}` is parsed, got {other:?}"),
+    }
+}
+
+#[test]
+fn an_aggregate_marker_without_an_epithet_reads_like_sp() {
+    // before alternatives `agg` became the species epithet and the second alternative its author,
+    // flagged uncertain; after a genus alone the marker was dropped
+    for (input, rank, phrase) in [
+        (
+            "Acalitus sp. brevitarsus/phyllereus",
+            Rank::Species,
+            "sp. brevitarsus/phyllereus",
+        ),
+        (
+            "Acalitus agg. brevitarsus/phyllereus",
+            Rank::SpeciesAggregate,
+            "agg. brevitarsus/phyllereus",
+        ),
+        ("Acalitus sp.", Rank::Species, "sp."),
+        ("Acalitus agg.", Rank::SpeciesAggregate, "agg."),
+    ] {
+        assert_informal(input)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(rank)
+            .phrase(phrase)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+    }
+    assert_informal("Acalitus (Aus) agg.")
+        .taxon("Acalitus subg. Aus")
+        .taxon_rank(Rank::Subgenus)
+        .rank(Rank::SpeciesAggregate)
+        .phrase("agg.")
+        .nothing_else();
+    // the word `aggregate` is an epithet too (given separately, its author leaves it a trailing
+    // aggregate marker, so the dual-path `assert_name` does not apply)
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Centaurea aggregate Fisch. & C.A.Mey.", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.type_, NameType::Scientific);
+    assert_eq!(pn.specific_epithet.as_deref(), Some("aggregate"));
+    assert_eq!(pn.combination_authorship.authors, ["Fisch.", "C.A.Mey."]);
+    // after its species the marker is the rank of a species aggregate, as before
+    assert_name("Acalitus brevitarsus agg.")
+        .binomial("Acalitus", None, "brevitarsus", Rank::SpeciesAggregate)
+        .nothing_else();
 }
 
 #[test]
@@ -1586,6 +1767,17 @@ fn an_underscored_indet_marker_stands_for_a_space() {
         ("Candida_sp_NCIM3483", "Candida", "sp_NCIM3483"),
         // as with a space
         ("Sph spec_1", "Sph", "spec_1"),
+        // before a dotted marker (#234): `sp` was the epithet
+        ("Phoridae_sp. 873", "Phoridae", "sp. 873"),
+        ("Phoridae_sp. BOLDABA6985", "Phoridae", "sp. BOLDABA6985"),
+        (
+            "Megaselia_sp. BOLD:AAG6185",
+            "Megaselia",
+            "sp. BOLD:AAG6185",
+        ),
+        // a marker glued to its number (#242): it was the epithet `sp2`
+        ("Dynestinae sp2", "Dynestinae", "sp2"),
+        ("Mus spec2", "Mus", "spec2"),
     ] {
         assert_informal(input)
             .taxon(taxon)
@@ -1602,6 +1794,14 @@ fn an_underscored_indet_marker_stands_for_a_space() {
         pn.canonical_name_without_authorship().as_deref(),
         Some("Sus spec_2")
     );
+    assert_eq!(canonical("Dynestinae sp2"), "Dynestinae sp2");
+    // after an epithet it is the species' unnamed one, as `sp. c` is (#252)
+    assert_informal("Mus alba sp2")
+        .taxon("Mus alba")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Species)
+        .phrase("sp2")
+        .nothing_else();
 }
 
 #[test]

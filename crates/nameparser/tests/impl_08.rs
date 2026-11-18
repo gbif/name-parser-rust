@@ -159,6 +159,52 @@ fn phage_inside_a_word_is_not_viral() {
     assert_unparsable_code("Mini Mu phagemid DH5alpha", NameType::Other, NomCode::Virus);
 }
 
+/// #239: a compound epithet in "-phages" names an eater, the nudibranch `Cuthona poritophages`
+/// eats Porites. A phage is singular, or the plural of a viral word.
+#[test]
+fn an_eater_epithet_in_phages_is_not_viral() {
+    for (genus, epithet) in [
+        ("Cuthona", "poritophages"),
+        ("Diplogaster", "coprophages"),
+        ("Alopus", "coccophages"),
+    ] {
+        assert_name(&format!("{genus} {epithet}"))
+            .species(genus, epithet)
+            .nothing_else();
+    }
+    for input in [
+        "Synechococcus cyanophage",
+        "Bacillus phages",
+        "Lactococcus bacteriophages",
+        "Synechococcus cyanophages",
+    ] {
+        assert_unparsable_code(input, NameType::Other, NomCode::Virus);
+    }
+}
+
+/// #238: a viral abbreviation is a word of its own; next to a non-ASCII letter it is part of a
+/// word, `gv` in `Vágvölgyi`, `rna` in `Šrna`. Java's ASCII word boundary made any name with such
+/// an author a virus.
+#[test]
+fn a_viral_abbreviation_inside_a_non_ascii_word_is_not_viral() {
+    assert_name("Coprinellus fuscocystidiatus L. Nagy, Házi, Papp & Vágvölgyi")
+        .species("Coprinellus", "fuscocystidiatus")
+        .comb_authors(None, &["L.Nagy", "Házi", "Papp", "Vágvölgyi"])
+        .nothing_else();
+    assert_name("Abies alba Šrna")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Šrna"])
+        .nothing_else();
+    // still viral as words of their own
+    assert_unparsable_code("Cydia pomonella GV", NameType::Other, NomCode::Virus);
+    assert_unparsable_code(
+        "Autographa californica MNPV",
+        NameType::Other,
+        NomCode::Virus,
+    );
+    assert_unparsable_code("Human RNA", NameType::Other, NomCode::Virus);
+}
+
 /// The Preflight `ZOOLOGICAL_BINOMIAL` regex used to be an overlapping-alternation ReDoS —
 /// on an input that triggers the virus gate but has no trailing year it could backtrack
 /// exponentially. The parser has no execution timeout, so this guards the hardened (possessive)

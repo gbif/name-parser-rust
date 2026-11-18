@@ -50,10 +50,12 @@ use crate::viral::is_viral;
 // `phage1_…`), plus a word-initial `phage` followed by a mixed-case strain code (`phageBT1`) or
 // `phagemid`. Java's unanchored `phages?` also fired inside words — Sphagesauridae,
 // Sphagebranchus, `Treponema phagedenis` — rejecting ~460 real CLB names as viruses.
-// Java: `Pattern.CASE_INSENSITIVE`. No `\p{…}`, so the whole alternation is `(?-u:…)`-wrapped.
+// Java: `Pattern.CASE_INSENSITIVE`. Rust-only: the word boundaries know every letter, not only ASCII
+// ones, so `gv` inside `Vágvölgyi` or `rna` in `Šrna` is no viral word (#238). Java's ASCII `\b`
+// rejected any name with such an author as a virus.
 static VIRUS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b|(?:fusion\s+)?vector\b|\bprions?\b|\bparticles?\b|\breplicons?\b|\bRNA\b))",
+        r"(?i)(?:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b|(?:fusion\s+)?vector\b|\bprions?\b|\bparticles?\b|\breplicons?\b|\bRNA\b))",
     )
     .unwrap()
 });
@@ -63,7 +65,7 @@ static VIRUS: LazyLock<Regex> = LazyLock::new(|| {
 /// without the virus code unless a viral word names them too (`Baculovirus expression vector
 /// pLM`, #124). Rust-only: Java gave them the virus code, and parsed a plasmid as a binomial.
 static GENETIC_ELEMENT: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)(?-u:\b(?:vectors?|replicons?|(?:mega|mini)?plasmids?)\b)").unwrap()
+    Regex::new(r"(?i)\b(?:vectors?|replicons?|(?:mega|mini)?plasmids?)\b").unwrap()
 });
 /// A plasmid outside brackets: `Plasmid pACYC184`, `Agrobacterium vitis plasmid pTiAB4`. In
 /// brackets it is a note on its host, `Agrobacterium rhizogenes (RI plasmid PRI1724)`, which
@@ -109,10 +111,10 @@ static SOFT_GENUS: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(?-u:(?:Vector|Prions?|Particles?|Replicons?|Rna)\b)").unwrap());
 // The genuinely viral triggers (VIRUS minus the ambiguous English SOFT_WORDs). When only a soft
 // word matched, there is no real viral signal and a leading soft-genus is let through to parse.
-// Java: `Pattern.CASE_INSENSITIVE`. Same treatment as VIRUS.
+// Java: `Pattern.CASE_INSENSITIVE`. Same treatment as VIRUS, Unicode word boundaries included.
 static HARD_VIRUS: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)(?-u:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b))",
+        r"(?i)(?:(?:viru(?:s|ses)\b|viroid(?:s)?\b|phages?(?:\b|[_\d])|\bphage(?:mids?\b|(?-i:[a-z]*[A-Z0-9_]))|virion(?:s)?\b|\bsatellite\b|(?:alpha|beta|delta|circular)[\s_-]*satellites?\b|\b(?:Clecru|Milvet|Subclov)satellite\b|bacteriophages?\b|\b[MSC]?NPV\b|\bGV\b|\bICTV\b))",
     )
     .unwrap()
 });
@@ -199,12 +201,14 @@ static AUTHORSHIP_AFTER_OR: LazyLock<Regex> = LazyLock::new(|| {
 const ALTERNATIVE_GENUS: &str = r"\p{Lu}\p{Ll}+(?:-\p{Lu}?\p{Ll}+)?";
 /// A name followed by alternatives, a slash, a pipe or `or` right after its last epithet: `Festuca
 /// rubra/arenaria`, `Bombus terrestris or lucorum`, `Salmo salar/Salmo trutta`, also qualified,
-/// `Aphaenogaster cf. rudis/texana` (#225). The groups: genus, subgenus, the epithets, the
-/// alternatives. Read by [`read_alternatives`].
+/// `Aphaenogaster cf. rudis/texana` (#225), or with an infraspecific rank marker, `Sylvia cantillans
+/// subsp. inornata/iberiae`. The groups: genus, subgenus, the epithets, the rank marker, the
+/// alternatives. Read by [`read_alternatives`]. The marker is lazy, so that a qualifier stays the
+/// epithet's: `Aus bus cf. cus/dus`.
 static ALTERNATIVE_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
     let epithet = r"(?:(?:cf|aff|nr)\.?(?-u:\s+))?\p{Ll}[\p{Ll}\-]+";
     Regex::new(&format!(
-        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+){epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
+        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+)(?:(\p{{Ll}}+)\.?(?-u:\s+))??{epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
     ))
     .unwrap()
 });
@@ -265,10 +269,12 @@ const AUTHOR_LINK: &[&str] = &[
 /// What the alternatives after a slash or `or` leave of a name, see [`read_alternatives`].
 enum Alternatives<'a> {
     /// All in one genus: anchored on it, or on the one species they all lie in, the rest its phrase.
+    /// The rank is the one of an infraspecific rank marker in front of the alternatives of a species.
     OneTaxon {
         genus: &'a str,
         subgenus: Option<&'a str>,
         species: Option<&'a str>,
+        rank: Option<Rank>,
         phrase: &'a str,
     },
     /// In different genera: there is no one taxon to claim.
@@ -289,7 +295,17 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
     if is_rank_word(caps[3].split_whitespace().last()?) {
         return None;
     }
-    let alternatives = &caps[4];
+    // a word between the epithets is an infraspecific rank marker or no alternatives are read
+    let rank = match caps.get(4) {
+        Some(marker) => {
+            match crate::pipeline::rank_markers::match_infraspecific_allow_notho(marker.as_str()) {
+                Some((rank, false)) => Some(rank),
+                _ => return None,
+            }
+        }
+        None => None,
+    };
+    let alternatives = &caps[5];
     if let Some(species) = ALTERNATIVE_SPECIES.captures(alternatives) {
         if AUTHOR_LINK.contains(&&species[2]) {
             return None;
@@ -314,6 +330,7 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
         genus,
         subgenus: caps.get(2).map(|m| m.as_str()),
         species,
+        rank: rank.filter(|_| species.is_some()),
         phrase: species.map_or(phrase, |species| phrase[species.len()..].trim_start()),
     })
 }
@@ -361,9 +378,12 @@ static UNDERSCORE_LABEL: LazyLock<Regex> =
 static DASH_NUMBER_LABEL: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}{2,})-(\d+)$").unwrap());
 /// A capitalised word, an underscore and an indet marker with its code: `Sus_spec_2`,
-/// `Candida_sp_NCIM3483` (#209). The underscore stands for the space of `Sus spec_2`.
-static UNDERSCORE_INDET: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(\p{Lu}\p{Ll}+)_((?:sp|spec)_\S+)$").unwrap());
+/// `Candida_sp_NCIM3483` (#209). The underscore stands for the space of `Sus spec_2`. So it does
+/// before a dotted marker, `Phoridae_sp. 873`, `Megaselia_sp. BOLD:AAG6185` (#234), which made `sp`
+/// the epithet.
+static UNDERSCORE_INDET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)_((?:sp|spec)_\S+|(?:sp|spp|spec)\.(?:(?-u:\s+)\S.*)?)$").unwrap()
+});
 /// A capitalised word, an underscore and a label opening in lower case or with a digit, the rest of
 /// the name in lower case: `Acrocirridae_gen1`, `Parmales_env_2`, `Abies_01 sp_01`,
 /// `Strat_genus3 sp. 1` (#209). Read by [`read_underscore_label`].
@@ -648,10 +668,13 @@ static NN_PLACEHOLDER: LazyLock<Regex> =
 /// et sp non descr". Rust-only: Java took "Gen." for an abbreviated genus, the "et" after it for
 /// the epithet and a locality for the authorship. Undotted, only before "et"/"nov"/"n.", so the
 /// genus-like "Gen 1" or "Gen nilotica Simon 1906" is left alone.
-/// The word `Genus` itself is no genus either (#211): `Genus sp.`, `Genus B sp. 1`, `Genus asaemoides`.
+/// The word `Genus` itself is no genus either (#211): `Genus sp.`, `Genus B sp. 1`, `Genus asaemoides`,
+/// also joined to its number by an underscore or a dash, `Genus_01 sp_01`, `Genus-01` (#240).
 static GENUS_WORD_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))|^[Gg]enus(?-u:\s)")
-        .unwrap()
+    Regex::new(
+        r"^[Gg]enn?(?:\.|(?-u:\s+)(?:et|nov|n\.)(?:(?-u:\s)|\.|$))|^[Gg]enus(?:(?-u:\s)|[_\-])",
+    )
+    .unwrap()
 });
 /// A first word that is no genus, but the common word for what was found: `ADN Suelo`, Spanish for
 /// soil DNA, and `Wurm-8005097` (#211). No taxon to hang anything off, so OTHER.
@@ -670,6 +693,13 @@ static NUMBERED_GROUP_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
         r"^(?:(?i:sub-?group|group|cluster|lineage|phylotype|morphotype|ribotype|genotype|serotype|morphospecies|genomospecies|genospecies)|Genus(?-u:\s+)(?i:novum|nov\.?|n\.))(?-u:\s+)\(?\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?\)?$",
     )
     .unwrap()
+});
+/// An indet marker with no taxon before it, perhaps with its number or code: `Sp. 12`, `sp. 16`,
+/// `Spec. 1`, `Sp.`, `Species 1` (#245). Nothing to anchor an informal name on, as for the numbered
+/// groups above; Java read the marker as a genus and dropped the number. An epithet after it makes
+/// the marker an abbreviated genus instead: `Sp. albiflora`.
+static INDET_MARKER_PLACEHOLDER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?i:sp|spp|spec|species)\.?(?:(?-u:\s+)[\d\p{Lu}][\p{L}\d.:_\-]*)?$").unwrap()
 });
 /// A record that names nothing: "None", "None recorded", "not recorded" (any case). Rust-only:
 /// Java parsed them as the genus "None" or "Not".
@@ -862,7 +892,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
-    if GENUS_WORD_PLACEHOLDER.is_match(&s) || NUMBERED_GROUP_PLACEHOLDER.is_match(&s) {
+    if GENUS_WORD_PLACEHOLDER.is_match(&s)
+        || NUMBERED_GROUP_PLACEHOLDER.is_match(&s)
+        || INDET_MARKER_PLACEHOLDER.is_match(&s)
+    {
         return Err(ParseError::new(NameType::Placeholder, None, original));
     }
 
@@ -1027,9 +1060,15 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
             genus,
             subgenus,
             species,
+            rank,
             phrase,
         }) => {
             rescue_informal_group(ctx, genus, phrase);
+            if let Some(rank) = rank {
+                ctx.name.rank = rank;
+                // the code a marker tells: `Bacillus thuringiensis serovar aizawai/pacificus`
+                ctx.name.code = ctx.name.code.or(rank.is_restricted_to_code());
+            }
             ctx.name.infrageneric_epithet = subgenus.map(str::to_string);
             ctx.name.specific_epithet = species.map(str::to_string);
             ctx.name.state = State::Partial;
@@ -1154,6 +1193,9 @@ fn apply_virus_gate(s: &str, ctx: &mut ParseContext, original: &str) -> Result<(
     if clean && SOFT_WORD.is_match(last_word(s)) {
         return Ok(()); // bucket B soft
     }
+    if clean && is_eater_epithet(last_word(s)) {
+        return Ok(());
+    }
     if clean && HARD_WORD.is_match(last_word(s)) {
         if let Some(auth) = ctx.authorship_input.as_deref() {
             if AUTH_ZOO.is_match(java_trim(auth)) {
@@ -1167,6 +1209,18 @@ fn apply_virus_gate(s: &str, ctx: &mut ParseContext, original: &str) -> Result<(
         virus.then_some(NomCode::Virus),
         original,
     ))
+}
+
+/// A compound epithet in "-phages", an "eater" of something: `Cuthona poritophages`, `Diplogaster
+/// coprophages`, `Alopus coccophages` (#239). A phage is named in the singular (`Synechococcus
+/// cyanophage`, `Archips abiephage` aside) or with a strain after it, and the plural of a viral
+/// word is no epithet (`bacteriophages`, `cyanophages`).
+fn is_eater_epithet(word: &str) -> bool {
+    static EATER: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^\p{Ll}{2,}phages$").unwrap());
+    static VIRAL_PREFIX: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r"^(?:bacterio|mycobacterio|cyano|coli|viro|pro|actino|myco)phages$").unwrap()
+    });
+    EATER.is_match(word) && !VIRAL_PREFIX.is_match(word)
 }
 
 fn first_word(s: &str) -> &str {

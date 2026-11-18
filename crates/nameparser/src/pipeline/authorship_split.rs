@@ -289,6 +289,9 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet")
                     || (t.text == "nsp" && !have_epithet)
+                    // an aggregate marker before any epithet opens the phrase as `sp.` does:
+                    // `Acalitus agg. brevitarsus/phyllereus`, `Taraxacum agg.`
+                    || (crate::pipeline::name_tokens::is_aggregate_marker(w) && !have_epithet)
                 {
                     let is_sp = w.eq_ignore_ascii_case("sp")
                         || w.eq_ignore_ascii_case("spp")
@@ -315,9 +318,31 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                         && (tokens[i + 1].kind == TokenKind::OpenParen
                             || (tokens[i + 1].kind == TokenKind::Word
                                 && starts_upper(&tokens[i + 1])));
+                    let marker_at = i;
                     i += 1;
                     if i < n && tokens[i].kind == TokenKind::Dot {
                         i += 1;
+                    }
+                    // #252: after several words, or a qualified one, `sp.` hangs the unnamed
+                    // species off the genus, and its phrase runs to the end as after the genus
+                    // alone below: `Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a`. A misspelt
+                    // `ssp.` before a subspecies epithet is left to the boundary logic.
+                    if (w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spp"))
+                        && have_epithet
+                        && i < n
+                        && !crate::pipeline::name_tokens::sp_is_misspelt_ssp(tokens, marker_at)
+                    {
+                        let words: Vec<&str> = tokens[..marker_at]
+                            .iter()
+                            .filter(|t| t.kind == TokenKind::Word && starts_lower(t))
+                            .map(|t| t.text.as_str())
+                            .collect();
+                        let qualified = words.iter().any(|w| {
+                            matches!(w.to_lowercase().as_str(), "cf" | "aff" | "nr" | "near")
+                        });
+                        if qualified || words.len() >= 2 {
+                            return n;
+                        }
                     }
                     // 5.0.0 enhancement (deliberately BEYOND Java 4.2.0): after cf./aff. the genus
                     // is often written out again — "Sorex cf. S. shinto", "Microtus cf. Microtus
@@ -553,6 +578,16 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 // "hort." — horticultural marker, used as an ex-author placeholder
                 // ("Acacia hort. ex Dallim."). Treat as authorship boundary.
                 if w.eq_ignore_ascii_case("hort") {
+                    return i;
+                }
+                // "et al." with its first author missing opens the authorship, as it does after
+                // one (`Jonesia luteola et al. 2015`, #237); it made `al` an infraspecific epithet.
+                if have_epithet
+                    && t.text == "et"
+                    && tokens
+                        .get(i + 1)
+                        .is_some_and(|al| al.kind == TokenKind::Word && al.text == "al")
+                {
                     return i;
                 }
                 // An author in lower case before an ex, "Tamarix indica koen. ex Roxb.",

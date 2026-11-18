@@ -154,6 +154,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_bracketed_tax_note(ctx, s);
     s = strip_alternative_subgenera(ctx, s);
     s = strip_paren_tax_note(ctx, s);
+    s = strip_species_status_note(ctx, s);
     s = strip_sensu_lato_remainder(ctx, s);
     s = strip_sensu_stricto_ss(ctx, s);
     s = strip_tax_note(ctx, s);
@@ -286,9 +287,12 @@ static UNCERTAIN_AUTHOR_OR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"[\s(]\p{Lu}\p{L}*\s+or\s+\p{Lu}").unwrap());
 
 /// Java UNCERTAIN_AUTHOR_SLASH (StripAndStash.java:306-307): `\p{L}\s*/\s*\p{L}`,
-/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode, ported verbatim.
+/// `Pattern.UNICODE_CHARACTER_CLASS` -> keep default Unicode. Rust-only, a capitalised word stands
+/// on one side, as an author does (`Smith/Jones`, `Smith/de Vries`): lower-case words on both sides
+/// are alternative epithets (`Acalitus sp. brevitarsus/phyllereus`) or a designation (`Barbus sp.
+/// (big mouth/big eye)`), no authorship.
 static UNCERTAIN_AUTHOR_SLASH: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"\p{L}\s*/\s*\p{L}").unwrap());
+    LazyLock::new(|| Regex::new(r"\p{Lu}\p{L}*\s*/\s*\p{L}|\p{L}\s*/\s*\p{Lu}").unwrap());
 
 /// Java `StripAndStash.flagUncertainAuthorship` (StripAndStash.java:538-551). Flags
 /// open-nomenclature uncertainty before any of it is normalised away. A trailing standalone
@@ -506,7 +510,8 @@ fn lone_epithet_of_a_species(ctx: &ParseContext, s: &str) -> bool {
 /// [`apply_missing_genus_placeholder`] and never reaches this capitalised form.
 static LEADING_GENUS_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
     // the genus may still carry HTML (`cf. <em>Dicopia</em> fragilis`) — strip_html runs later
-    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff|nr))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}\p{Ll}.*)$")
+    // or shouted, which a later step writes in title case (`cf. VERBENACEAE`, #232)
+    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff|nr))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}(?:\p{Ll}|\p{Lu}{2,}(?:(?-u:\s)|$)).*)$")
         .unwrap()
 });
 
@@ -4157,7 +4162,8 @@ fn strip_bracketed_nom_note(ctx: &mut ParseContext, s: String) -> String {
 /// the year of a basionym bracket, "(Chao，comb．nov．,1986)" (#127). "Orth" with no dot and no
 /// lower-case word behind it is a surname: "Fisher & Orth, 1978" (#222), while "Orth. var." is a
 /// note. Rust-only as well: "ined." after a comma and the year right after
-/// the note, "W.J. Kress, sp. nov., ined. 2013", where "sp." became an author (#220).
+/// the note, "W.J. Kress, sp. nov., ined. 2013", where "sp." became an author (#220). And a comma
+/// between the note and the authors, "Heptapterus carmelitanorum sp. nov., Azevedo-Santos, Deprá".
 static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
         r"(?:\s+|(?<=,))(",
@@ -4167,7 +4173,7 @@ static NOM_NOTE: LazyLock<FancyRegex> = LazyLock::new(|| {
         r"|(?i:nov)\b\.?\s+(?i:sp|spec|gen|fam|var|form)\b\.?",
         r"|(?:sp|gen|subsp|ssp)\.\s*n\b\.?|n\.\s*(?:sp|gen|subsp|ssp)\b\.?|nsp\b\.?",
         r"|(?:in\s+obs\b\.?,?\s*)?pro\s+syn\b\.?",
-        r")\s*(?=$|,?\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|\s+\p{Lu})",
+        r")\s*(?=$|,?\s*\d{4}\b|,\s*non(?:n\.?)?\b|,\s*nec\b|,\s*emend\b|,\s*sensu\b|,\s*auctt?\b|,\s*fide\b|\s+in\s+\p{Lu}|\s+\(.*\)\s*\.?\s*$|,?\s+\p{Lu})",
     ))
     .unwrap()
 });
@@ -4233,6 +4239,19 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
     let match_start = caps.get(0).unwrap().start();
     let match_end = caps.get(0).unwrap().end();
     let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
+    // A comma and a capital after the note start the authors only right after the epithet
+    // ("Heptapterus carmelitanorum sp. nov., Azevedo-Santos"); after an authorship they may be
+    // anything ("(Gussakovskij, 1947) comb. nov., New record for China").
+    let comma_capital = java_trim(&s[match_end..])
+        .strip_prefix(',')
+        .is_some_and(|t| java_trim(t).starts_with(char::is_uppercase));
+    let after_epithet = java_trim(&s[..match_start])
+        .rsplit(char::is_whitespace)
+        .next()
+        .is_some_and(|w| w.starts_with(char::is_lowercase));
+    if comma_capital && !after_epithet {
+        return s;
+    }
     // A "sp. n." / "n. sp." before a specimen code, or after a bare genus with anything behind it,
     // is a provisional name's designation, kept whole for its phrase ("Heteropriapulus sp. n.
     // AAA-2017", "Amrasca (Amrasca) sp. n. VN1", "Aphonopelma sp. n. Guatemala"), and so is a new
@@ -4264,7 +4283,13 @@ fn strip_nom_note(ctx: &mut ParseContext, s: String) -> String {
     ctx.name.add_nomenclatural_note(&norm);
 
     let before = java_trim(&s[..match_start]).to_string();
-    let after = java_trim(&s[match_end..]).to_string();
+    let after = java_trim(&s[match_end..]);
+    // the comma between the note and the authors goes with the note: "sp. nov., Azevedo-Santos"
+    let after = match after.strip_prefix(',').map(java_trim) {
+        Some(authors) if authors.starts_with(char::is_uppercase) => authors,
+        _ => after,
+    }
+    .to_string();
     let mut result = if after.is_empty() {
         before.clone()
     } else {
@@ -5109,6 +5134,28 @@ fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
+/// `sp. inc.` (species incerta) or `sp. inq.` (species inquirenda) after an epithet: a note on the
+/// species, not the marker of an unnamed one: `Munidopsis aries sp. inc. (A. Milne Edwards,
+/// 1880)` (#252). Groups: the name (none at the start of a separate authorship), the note, the
+/// rest.
+static SPECIES_STATUS_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r"^((?:.*(?-u:\s)\p{Ll}[\p{L}\-]*)?)(?-u:\s+)(sp\.(?-u:\s*)(?:inc|inq)\.)((?-u:\s+).*)?$",
+    )
+    .unwrap()
+});
+
+/// Rust-only: see [`SPECIES_STATUS_NOTE`]. The note goes to the taxonomic note, an authorship after
+/// it stays the species', in the name string or a separate authorship.
+fn strip_species_status_note(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = SPECIES_STATUS_NOTE.captures(&s) else {
+        return s;
+    };
+    ctx.name
+        .add_taxonomic_note(&WHITESPACE.replace_all(&caps[2], " "));
+    format!("{}{}", &caps[1], caps.get(3).map_or("", |m| m.as_str()))
+}
+
 // ---- Step 41: stripSensuLatoRemainder ----
 
 /// Java SENSU_LATO_REMAINDER (StripAndStash.java:91-92):
@@ -5129,7 +5176,7 @@ fn strip_paren_tax_note(ctx: &mut ParseContext, s: String) -> String {
 /// here -> plain `regex` crate.
 static SENSU_LATO_REMAINDER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?-u:\s+)(s\.(?-u:\s*)l\.?|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)ampl\.?)(?-u:\s+)(\S.*?)(?-u:\s*)$",
+        r"(?-u:\s+)(s\.(?-u:\s*)l\.?|sl\.|s\.(?-u:\s*)lat\.?|s\.(?-u:\s*)str\.?|s\.(?-u:\s*)ampl\.?)(?-u:\s+)(\S.*?)(?-u:\s*)$",
     )
     .unwrap()
 });
@@ -5143,11 +5190,15 @@ static SENSU_LATO_REMAINDER: LazyLock<Regex> = LazyLock::new(|| {
 /// "Asplenium trichomanes L. s.lat. - Asplen trich" -> `taxonomicNote="s.lat."`,
 /// `unparsed="- Asplen trich"` (the `unparsed` JSON field itself, like `state=PARTIAL`, is
 /// assembled by Pipeline/Assemble from `pending_unparsed` — this step
-/// only needs to stash the pending value).
+/// only needs to stash the pending value). Rust-only: the dotless "sl." for "s.l." (#251), and an
+/// indetermined species after the marker stays the name's ([`INDET_AFTER_SENSU`]).
 fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = SENSU_LATO_REMAINDER.captures(&s) {
         let marker = caps.get(1).unwrap().as_str();
-        let note = WHITESPACE.replace_all(marker, "").to_lowercase();
+        let mut note = WHITESPACE.replace_all(marker, "").to_lowercase();
+        if note == "sl." {
+            note = "s.l.".to_string();
+        }
         let remainder = java_trim(caps.get(2).unwrap().as_str()).to_string();
         let whole = caps.get(0).unwrap();
         // a concept note after the marker continues it, both as written, as a separate authorship
@@ -5159,6 +5210,9 @@ fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
         }
         ctx.name.add_taxonomic_note(&note);
         let name = java_trim(&s[..whole.start()]);
+        if !name.is_empty() && INDET_AFTER_SENSU.is_match(&remainder) {
+            return format!("{name} {remainder}");
+        }
         // Rust-only: the authorship after a marker straight behind the epithet (or genus) stays for the
         // authorship parser ("Acantholimon ulicinum s.l. (Schultes) Boiss."); Java left it unparsed.
         // After an author it is the concept's ("Inocybe tarda Kühner s. str. Stangl").
@@ -5175,6 +5229,13 @@ fn strip_sensu_lato_remainder(ctx: &mut ParseContext, s: String) -> String {
     }
     s
 }
+
+/// The marker of an indetermined species after a sensu note, the species of the genus in that
+/// sense, not text left over: "Mangelia s.l. sp.", "Mangelia sl. sp.", "Aus s.s. sp.1" (#251). It
+/// stays in the name, which is read as "Mangelia sp." is. Not in a separate authorship ("s. l.
+/// sp."), where it would become an author: there it stays unparsed.
+static INDET_AFTER_SENSU: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:spp?|spec|species)(?:\.|(?-u:\s)|$)").unwrap());
 
 /// A concept note continuing a [`SENSU_LATO_REMAINDER`]'s marker: "sensu Maslin (1996)", "auct.",
 /// "non Mill.".
@@ -5215,11 +5276,16 @@ static SENSU_STRICTO_SS: LazyLock<Regex> =
 fn strip_sensu_stricto_ss(ctx: &mut ParseContext, s: String) -> String {
     if let Some(caps) = SENSU_STRICTO_SS.captures(&s) {
         ctx.name.add_taxonomic_note("s.s.");
-        if let Some(junk) = caps.get(1) {
-            ctx.set_pending_unparsed(java_trim(junk.as_str()));
-        }
         let whole = caps.get(0).unwrap();
-        return java_trim(&s[..whole.start()]).to_string();
+        let name = java_trim(&s[..whole.start()]);
+        if let Some(junk) = caps.get(1).map(|m| java_trim(m.as_str())) {
+            // Rust-only: an indetermined species stays the name's, see [`INDET_AFTER_SENSU`]
+            if !name.is_empty() && INDET_AFTER_SENSU.is_match(junk) {
+                return format!("{name} {junk}");
+            }
+            ctx.set_pending_unparsed(junk);
+        }
+        return name.to_string();
     }
     s
 }
@@ -5701,8 +5767,21 @@ static AGGREGATE: LazyLock<Regex> = LazyLock::new(|| {
 /// string to "Achillea millefolium".
 fn strip_aggregate_suffix(ctx: &mut ParseContext, s: String) -> String {
     if let Some(m) = AGGREGATE.find(&s) {
+        let rest = java_trim(&s[..m.start()]);
+        // Rust-only: after a genus alone (or with its subgenus) `agg.` is kept, so that
+        // NameTokens reads the aggregate of an unnamed species as it reads `Genus sp.`:
+        // `Taraxacum agg.`, `Acalitus (Aus) agg.` Stripped, the genus was left with no trace of
+        // the marker. Not `aggregate`, an epithet too: `Rumphella aggregate`.
+        if super::name_tokens::is_aggregate_marker(m.as_str().trim().trim_end_matches('.'))
+            && !rest.is_empty()
+            && rest
+                .split_whitespace()
+                .all(|w| w.starts_with(|c: char| c.is_uppercase() || c == '('))
+        {
+            return s;
+        }
         ctx.aggregate = true;
-        return java_trim(&s[..m.start()]).to_string();
+        return rest.to_string();
     }
     s
 }
@@ -7520,12 +7599,13 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
 /// Approved Lists, `mihi`, colon concept references, `s.lat.`/`s.s.`, aggregate suffixes, the page
 /// and `in press`. In `run`'s order.
 pub(crate) fn strip_authorship_trailing_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 10] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 11] = [
         strip_pro_parte,
         strip_pro_sp_annotation,
         strip_approved_lists,
         strip_mihi,
         strip_colon_concept_reference,
+        strip_species_status_note,
         strip_sensu_lato_remainder,
         strip_sensu_stricto_ss,
         strip_aggregate_suffix,
@@ -7689,12 +7769,19 @@ pub(crate) fn strip_authorship_markers(authorship: &str, name: &mut ParsedName) 
     let padded_nom = format!(" {s}");
     if let Ok(Some(caps)) = NOM_NOTE.captures(&padded_nom) {
         let raw = java_trim(caps.get(1).unwrap().as_str()).to_string();
-        if !raw.is_empty() {
+        let whole = caps.get(0).unwrap();
+        let before = java_trim(&padded_nom[..whole.start()]).to_string();
+        let after = java_trim(&padded_nom[whole.end()..]);
+        // a comma and a capital after the note start the authors only when the note leads, see
+        // `strip_nom_note`
+        let authors_after_comma = after
+            .strip_prefix(',')
+            .map(java_trim)
+            .filter(|t| t.starts_with(char::is_uppercase));
+        if !raw.is_empty() && (authors_after_comma.is_none() || before.is_empty()) {
             let norm = normalise_nom_note(&raw);
             name.add_nomenclatural_note(&norm);
-            let whole = caps.get(0).unwrap();
-            let before = java_trim(&padded_nom[..whole.start()]).to_string();
-            let after = java_trim(&padded_nom[whole.end()..]).to_string();
+            let after = authors_after_comma.unwrap_or(after).to_string();
             s = if after.is_empty() {
                 before
             } else {
@@ -7925,6 +8012,25 @@ mod tests {
         let out = flag_uncertain_authorship(&mut c, "Aus bus Smith/Jones, 1900".to_string());
         assert_eq!(out, "Aus bus Smith/Jones, 1900");
         assert!(c.name.doubtful);
+        for s in ["Aus bus Smith/de Vries", "Aus bus de Vries/Smith"] {
+            let mut c = ctx("x");
+            flag_uncertain_authorship(&mut c, s.to_string());
+            assert!(c.name.doubtful, "{s}");
+        }
+    }
+
+    #[test]
+    fn a_slash_between_lower_case_words_is_no_uncertain_author() {
+        for s in [
+            "Acalitus sp. brevitarsus/phyllereus",
+            "Festuca rubra/arenaria",
+            "Barbus sp. (big mouth/big eye)",
+        ] {
+            let mut c = ctx("x");
+            flag_uncertain_authorship(&mut c, s.to_string());
+            assert!(!c.name.doubtful, "{s}");
+            assert!(c.name.warnings.is_empty(), "{s}");
+        }
     }
 
     #[test]

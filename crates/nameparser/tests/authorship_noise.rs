@@ -942,3 +942,31 @@ fn the_epithet_repeated_in_capitals_is_no_author() {
         .warning(&["Removed: COERULEA"])
         .nothing_else();
 }
+
+/// #247: a number of one or two digits after the authors is no year; it was dropped without a
+/// trace, now it is left unparsed.
+#[test]
+fn a_short_number_after_the_authors_is_left_unparsed() {
+    assert_name("Agathidium POW.sp.01")
+        .monomial("Agathidium")
+        .comb_authors(None, &["POW.sp."])
+        .partial("01")
+        .nothing_else();
+    assert_name("Agathidium alba Smith, 01")
+        .species("Agathidium", "alba")
+        .comb_authors(None, &["Smith"])
+        .partial("01")
+        .nothing_else();
+    // a page after a colon stays a page
+    let input = "Glottynoides genisei Kimsey, 1991: 61";
+    let nameparser::ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+        panic!("`{input}` is parsed");
+    };
+    assert_eq!(pn.unparsed, None);
+    // the end of a year range stays part of it
+    assert_name("Harrisina americana Guerin-Meneville, 1829/44")
+        .species("Harrisina", "americana")
+        .comb_authors(Some("1829"), &["Guerin-Meneville"])
+        .warning(&[warnings::YEAR_INTERPRETED])
+        .nothing_else();
+}

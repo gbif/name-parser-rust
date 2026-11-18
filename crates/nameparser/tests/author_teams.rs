@@ -391,3 +391,20 @@ fn a_pipe_between_authors_is_an_et() {
         .sensu("s.l.")
         .nothing_else();
 }
+
+/// #237: "et al." without its first author is the authorship, as it is given apart; `al` became an
+/// infraspecific epithet and `et` was dropped.
+#[test]
+fn et_al_without_a_first_author_is_the_authorship() {
+    for input in [
+        "Jonesia luteola et al. 2015",
+        "Paenibacillus herberti et al. 2015",
+    ] {
+        let genus = input.split_whitespace().next().unwrap();
+        let epithet = input.split_whitespace().nth(1).unwrap();
+        assert_name(input)
+            .species(genus, epithet)
+            .comb_authors(Some("2015"), &["al."])
+            .nothing_else();
+    }
+}

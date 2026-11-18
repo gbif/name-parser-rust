@@ -686,6 +686,51 @@ fn incl_lists_the_names_a_concept_covers() {
 }
 
 #[test]
+fn a_sensu_note_before_sp_leaves_an_indetermined_species() {
+    // #251: the dotless "sl." became the epithet, `Mangelia sl` Risso, 1826; after "s.l." the "sp."
+    // was left unparsed
+    for input in [
+        "Mangelia sl. sp.",
+        "Mangelia s.l. sp.",
+        "Mangelia s. l. sp.",
+    ] {
+        assert_name_rank(input, Rank::Species)
+            .genus_rank("Mangelia", Rank::Species)
+            .phrase("sp.")
+            .type_(NameType::Informal)
+            .sensu("s.l.")
+            .warning(&[nameparser::model::warnings::INDETERMINED])
+            .nothing_else();
+    }
+    // with the authorship ChecklistBank passes, as `Mangelia sp.` takes it
+    let sl = nameparser::parse(
+        "Mangelia sl. sp.",
+        Some("Risso, 1826"),
+        Some(Rank::Species),
+        None,
+    );
+    let sp = nameparser::parse(
+        "Mangelia sp.",
+        Some("Risso, 1826"),
+        Some(Rank::Species),
+        None,
+    );
+    let (nameparser::ParseResult::Parsed(mut sl), nameparser::ParseResult::Parsed(sp)) = (sl, sp)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(sl.taxonomic_note.take().as_deref(), Some("s.l."));
+    assert_eq!(sl, sp);
+    // sensu stricto too
+    assert_name("Mangelia s.s. sp.1")
+        .genus_rank("Mangelia", Rank::Species)
+        .phrase("sp.1")
+        .type_(NameType::Informal)
+        .sensu("s.s.")
+        .nothing_else();
+}
+
+#[test]
 fn bare_sl_is_sensu_lato() {
     // #118: undotted "sl" is no infraspecific epithet
     assert_name("Culex pipiens sl")
@@ -771,6 +816,32 @@ fn a_nova_note_with_more_behind_it_is_no_author() {
         .comb_authors(Some("2013"), &["W.J.Kress"])
         .nom_note("sp. nov.")
         .nothing_else();
+}
+
+#[test]
+fn a_comma_after_a_nova_note_leads_to_its_authors() {
+    // read as the subspecies "nov" with the authors
+    assert_name(
+        "Heptapterus carmelitanorum sp. nov., Azevedo-Santos, Deprá, Aguilera, Faustino-Fuster & Katz",
+    )
+    .species("Heptapterus", "carmelitanorum")
+    .comb_authors(
+        None,
+        &["Azevedo-Santos", "Deprá", "Aguilera", "Faustino-Fuster", "Katz"],
+    )
+    .nom_note("sp. nov.")
+    .nothing_else();
+    // after an authorship what follows the comma may be anything: it stays unparsed with the note
+    let input = "Asicimbex malaisei (Gussakovskij, 1947) comb. nov., New record for China";
+    let nameparser::ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+        panic!("`{input}` is parsed");
+    };
+    assert_eq!(pn.nomenclatural_note, None);
+    assert!(pn.combination_authorship.authors.is_empty());
+    assert_eq!(
+        pn.unparsed.as_deref(),
+        Some("comb. nov., New record for China")
+    );
 }
 
 #[test]

@@ -52,10 +52,12 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// "Formicidae sp. cf.". And with the generic organism labels that open the phrase of an unnamed
 /// species (`Wolbachia endosymbiont of Leptogenys gracilis`, `Acidimicrobiales bacterium JGI
 /// 01_E13`), which rendered "Wolbachia sp. endosymbiont of …". And with the new-species markers
-/// `n. sp.` and `nsp` (#139), and the unnamed genus of `Carabidae gen. sp.` (#174).
+/// `n. sp.` and `nsp` (#139), the unnamed genus of `Carabidae gen. sp.` (#174), and the aggregate
+/// marker of `Acalitus agg. brevitarsus/phyllereus`, which rendered "Acalitus agg. agg. …", and a
+/// marker glued to its number, `Dynestinae sp2` (#242).
 static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)^(?:(?:species|spec|spp|sp|nsp|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp(?:ec)?_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
+        r"(?i)^(?:(?:spp?|spec)\d|(?:species|spec|spp|sp|nsp|agg|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp(?:ec)?_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
     )
     .unwrap()
 });
@@ -320,11 +322,18 @@ fn append_if_not_empty(sb: &mut String, to_append: &str) {
     }
 }
 
-/// Java `NameFormatter.phraseLeadsWithSpeciesMarker(ParsedName)`.
+/// Java `NameFormatter.phraseLeadsWithSpeciesMarker(ParsedName)`. Rust-only, a `sp.` further on
+/// counts too: the phrase of `Prionospio iberian canyons sp. c` holds the words before its marker
+/// (#252), which rendered "Prionospio sp. iberian canyons sp. c".
 fn phrase_leads_with_species_marker(n: &ParsedName) -> bool {
+    let phrase = java_trim(n.phrase.as_deref().unwrap_or(""));
     n.is_phrase_name()
-        && PHRASE_SPECIES_MARKER.is_match(java_trim(n.phrase.as_deref().unwrap_or("")))
+        && (PHRASE_SPECIES_MARKER.is_match(phrase) || PHRASE_INNER_SPP_MARKER.is_match(phrase))
 }
+
+/// A `sp.` or `spp.` word inside a phrase, see [`phrase_leads_with_species_marker`].
+static PHRASE_INNER_SPP_MARKER: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?i)(?:^|(?-u:\s))spp?\.?(?:(?-u:\s)|$)").unwrap());
 
 /// gbif/name-parser-rust#16: true when an informal phrase already OPENS with this name's own
 /// rank marker, spelled out verbatim — "sect. 1" on a `SECTION_BOTANY`, "strain T101" on a
@@ -332,7 +341,8 @@ fn phrase_leads_with_species_marker(n: &ParsedName) -> bool {
 /// source spelling of an indeterminate `Genus <marker> <code>` in the phrase, so synthesising the
 /// marker from the rank as well would double it ("Trachelomonas strain strain T101"). Compared
 /// dot-insensitively, since the marker is stored with its dot ("var.") and the source may write
-/// it without one.
+/// it without one, and in any spelling of an infraspecific rank: "ssp." and "subsp" on a
+/// `SUBSPECIES` (`Sylvia cantillans subsp. inornata/iberiae`).
 ///
 /// The sibling [`phrase_leads_with_species_marker`] stays separate rather than folding into this:
 /// it matches the SPELLED-OUT species markers ("species 1", "spec 3"), none of which equal
@@ -345,8 +355,10 @@ fn phrase_leads_with_rank_marker(n: &ParsedName) -> bool {
     let Some(lead) = phrase.split_whitespace().next() else {
         return false;
     };
-    lead.trim_end_matches('.')
-        .eq_ignore_ascii_case(marker.trim_end_matches('.'))
+    let lead = lead.trim_end_matches('.');
+    lead.eq_ignore_ascii_case(marker.trim_end_matches('.'))
+        || n.rank.is_infraspecific()
+            && crate::pipeline::rank_markers::match_infraspecific(lead) == Some(n.rank)
 }
 
 /// The Prokaryotic Code abbreviates subgenus "subgen." (Rules 10c, 34c), where the rank's own
@@ -891,8 +903,13 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                         || n.cultivar_epithet.is_none())
                 {
                     // no infraspecific epitheton given, but rank below species. Indetermined!
-                    // use ssp. for subspecies in case of indetermined names
-                    if n.rank == Rank::Subspecies {
+                    // use ssp. for subspecies in case of indetermined names. Not when the phrase
+                    // spells the marker out already, as alternatives do: `Sylvia cantillans
+                    // subsp. inornata/iberiae`
+                    let marker_in_phrase = n.is_phrase_name() && phrase_leads_with_rank_marker(n);
+                    if marker_in_phrase {
+                        // the phrase follows with its own spelling of the marker
+                    } else if n.rank == Rank::Subspecies {
                         sb.push_str(" ssp.");
                     } else {
                         sb.push(' ');
