@@ -128,6 +128,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = lower_shouted_qualifier(s);
     s = strip_rank_nova(ctx, s);
     s = strip_quoted_attributed_author(s);
+    s = unquote_manuscript_epithet(s);
     s = strip_quoted_cultivar(ctx, s);
     s = strip_bare_cultivar_marker(ctx, s);
     s = strip_extinct_dagger(ctx, s);
@@ -3751,6 +3752,27 @@ static AUTHORSHIP_QUOTED_ATTRIBUTED: LazyLock<Regex> = LazyLock::new(|| {
 ///
 /// All three spot-checked against the Java CLI oracle's `cultivarEpithet`/`rank`/`code`/
 /// `specificAuthorship` output shape.
+/// A quoted epithet followed by a note of a new or unpublished species, bracketed, its bracket left
+/// open, or bare: `Lepidobolus 'quadratus' (sp. nov. ined.`, `Lepidobolus 'quadratus' ms.` (#231).
+/// Groups: the genus, the epithet, the note.
+static QUOTED_MANUSCRIPT_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"^(\p{Lu}\p{Ll}+)(?-u:\s+)['‘’"]([\p{Ll}\-]+)['‘’"](?-u:\s+)\(?((?i:(?:sp|spec)\.?(?-u:\s*)nov\.?(?:,?(?-u:\s*)ined\.?)?|ined\.?|mss?\.?|msc\.?))\)?(?-u:\s*)$"#,
+    )
+    .unwrap()
+});
+
+/// Rust-only: the quotes of an epithet that is not yet published, see [`QUOTED_MANUSCRIPT_EPITHET`],
+/// mark a manuscript name, no cultivar: `Lepidobolus 'quadratus' (sp. nov. ined.` reads as
+/// `Lepidobolus quadratus sp. nov. ined.`, the species `quadratus` with that note and the
+/// manuscript flag. The quoted word with the note became an author ("'quadratus' sp.nov.").
+fn unquote_manuscript_epithet(s: String) -> String {
+    match QUOTED_MANUSCRIPT_EPITHET.captures(&s) {
+        Some(caps) => format!("{} {} {}", &caps[1], &caps[2], &caps[3]),
+        None => s,
+    }
+}
+
 fn strip_quoted_cultivar(ctx: &mut ParseContext, mut s: String) -> String {
     let cm = QUOTED_CULTIVAR_END.captures(&s).ok().flatten();
     let cm_found = cm.is_some();
