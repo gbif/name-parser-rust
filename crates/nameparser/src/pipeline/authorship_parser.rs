@@ -284,6 +284,11 @@ pub(crate) fn parse(tokens: &[Token], from: usize) -> AuthState {
             } else if let Some(tail) = colon_tail {
                 s.unparsed_from = tail as i32;
                 s.unparsed_text = Some(spaced_text(&tokens[tail..n]));
+            } else if let Some(k) = trailing_short_number(tokens, comb_from, comb_end) {
+                s.unparsed_from = k as i32;
+                s.unparsed_text = Some(spaced_text(&tokens[k..n]));
+                comb_end = k;
+                sanctioning_from = n;
             }
         }
         let yr = parse_authors(tokens, comb_from, comb_end, &mut s.combination);
@@ -1479,6 +1484,22 @@ fn take_initials_run(tokens: &[Token], mut j: usize, to: usize, out: &mut String
         }
     }
     j
+}
+
+/// A number of one or two digits ending the authors, no year and no end of a year range: it was
+/// dropped without a trace, "Agathidium POW.sp.01", "Agathidium alba Smith, 01" (#247). Its index,
+/// for the caller to leave it unparsed. A page is left as it was, after its marker or a colon:
+/// "Smith p. 44", "Kimsey, 1991: 61".
+fn trailing_short_number(tokens: &[Token], from: usize, to: usize) -> Option<usize> {
+    let k = to.checked_sub(1).filter(|&k| k > from)?;
+    let t = &tokens[k];
+    let range =
+        tokens[k - 1].kind == TokenKind::Other && matches!(tokens[k - 1].text.as_str(), "-" | "/");
+    let page = tokens[k - 1].kind == TokenKind::Colon
+        || k >= from + 2
+            && tokens[k - 1].kind == TokenKind::Dot
+            && matches!(tokens[k - 2].text.as_str(), "p" | "pp" | "pag");
+    (t.kind == TokenKind::Number && t.text.chars().count() <= 2 && !range && !page).then_some(k)
 }
 
 /// True when the author being read ends before `tokens[k]`: the end of the span, a
