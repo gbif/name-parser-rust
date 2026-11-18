@@ -308,3 +308,20 @@ fn a_lone_epithet_lacks_its_genus() {
 fn a_lower_cased_genus_with_its_subgenus() {
     assert_name("balea (Balea) swalesi").species_ig("Balea", "Balea", "swalesi");
 }
+
+/// #232: a leading qualifier before a shouted name doubts that name, as before one in title case;
+/// "Cf" became the uninomial and the family its author.
+#[test]
+fn a_leading_qualifier_before_a_shouted_name() {
+    for (shouted, title) in [
+        ("cf. VERBENACEAE", "cf. Verbenaceae"),
+        ("aff. ACANTHACEAE", "aff. Acanthaceae"),
+        ("cf. ABIES", "cf. Abies"),
+    ] {
+        assert_eq!(
+            nameparser::parse(shouted, None, None, None),
+            nameparser::parse(title, None, None, None),
+            "{shouted}"
+        );
+    }
+}

@@ -510,7 +510,8 @@ fn lone_epithet_of_a_species(ctx: &ParseContext, s: &str) -> bool {
 /// [`apply_missing_genus_placeholder`] and never reaches this capitalised form.
 static LEADING_GENUS_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
     // the genus may still carry HTML (`cf. <em>Dicopia</em> fragilis`) — strip_html runs later
-    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff|nr))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}\p{Ll}.*)$")
+    // or shouted, which a later step writes in title case (`cf. VERBENACEAE`, #232)
+    Regex::new(r"^(?:(\?)(?-u:\s*)|(?i:(cf|aff|nr))\.?(?-u:\s+))((?:<[^>]+>)?\p{Lu}(?:\p{Ll}|\p{Lu}{2,}(?:(?-u:\s)|$)).*)$")
         .unwrap()
 });
 
