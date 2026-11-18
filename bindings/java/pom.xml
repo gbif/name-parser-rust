@@ -11,7 +11,7 @@
     VERSIONING: this binding shares the Rust ENGINE's version — the Cargo [workspace.package]
     version at this repo's root (package gbif-name-parser) — released in lockstep with the
     CLI/Python/R bindings, so one version across all bindings means one engine. It is NOT the
-    version of the api it implements: `org.gbif:name-parser-api` (6.0.0, a dependency
+    version of the api it implements: `org.gbif:name-parser-api` (6.0.1-SNAPSHOT, a dependency
     below) is independently versioned and pinned. The bindings sit at 0.x while new / gathering
     real-use feedback, and graduate to the product's 5.x line once stable. Keep <version> below in sync
     with the Cargo workspace version — scripts/bump-version.sh does this; see RELEASE.md.
@@ -92,7 +92,7 @@
     <dependency>
       <groupId>org.gbif</groupId>
       <artifactId>name-parser-api</artifactId>
-      <version>6.0.0</version>
+      <version>6.0.1-SNAPSHOT</version>
     </dependency>
     <!-- @Nullable only, not needed at runtime: the api declares it optional since 6.0 -->
     <dependency>
