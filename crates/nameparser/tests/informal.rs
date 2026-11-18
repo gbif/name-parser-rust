@@ -714,6 +714,31 @@ fn a_genus_repeated_after_cf_is_skipped_not_read_as_an_author() {
 /// the qualifier is a genuinely different taxon — `Veneridae cf. Phacosoma sp` anchors on a family
 /// and compares to another genus, `Onthophagus cf. Aphodius` compares two genera with no epithet at
 /// all — so those keep their current reading rather than having an epithet invented for them.
+/// #233: a capitalised epithet after a qualifier is put in lower case on evidence, a Latin ending or
+/// an author after it, and the qualifier doubts it; a word without is the genus compared with.
+#[test]
+fn a_capitalised_epithet_after_a_qualifier() {
+    assert_name("Phrynopus cf. Barlenae")
+        .species("Phrynopus", "barlenae")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+    assert_name("Teucrium cf. Cyprium Boiss.")
+        .species("Teucrium", "cyprium")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .comb_authors(None, &["Boiss."])
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+    assert_informal("Pristimantis cf. Ventrimarmoratus")
+        .taxon("Pristimantis")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf. Ventrimarmoratus")
+        .nothing_else();
+}
+
 #[test]
 fn a_different_genus_after_cf_is_not_skipped() {
     // No species epithet is reachable: the qualifier opens the informal phrase, which keeps the

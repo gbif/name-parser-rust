@@ -2575,11 +2575,12 @@ fn lower_capitalised_marker(s: String) -> String {
     }
 }
 
-/// A genus and a capitalised word (group 2) after it, perhaps with a capitalised part after a
-/// hyphen (`Sancti-Vincenti`), and what follows (group 3).
+/// A genus, perhaps a qualifier (group 2), and a capitalised word (group 3) after it, perhaps with
+/// a capitalised part after a hyphen (`Sancti-Vincenti`), and what follows (group 4). Group 1 is
+/// all before the word.
 static GENUS_CAPITALISED_WORD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(\p{Lu}\p{Ll}+(?-u:\s+))(\p{Lu}[\p{Ll}\-]+(?:\p{Lu}[\p{Ll}\-]*)?)(?:(?-u:\s+)(.+))?$",
+        r"^(\p{Lu}\p{Ll}+(?-u:\s+)((?:cf|aff|nr)\.?(?-u:\s+))?)(\p{Lu}[\p{Ll}\-]+(?:\p{Lu}[\p{Ll}\-]*)?)(?:(?-u:\s+)(.+))?$",
     )
     .unwrap()
 });
@@ -2596,6 +2597,12 @@ static FAMILY_GROUP_ENDING: LazyLock<Regex> =
 static LATIN_COMPOUND_EPITHET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(?:Sancti|Sanctae|Novae|Novi)-\p{L}+$").unwrap());
 
+/// An abbreviated author, perhaps in a team or after a bracketed one: `Boiss.`, `(L.) DC.`, `Hook. &
+/// Arn.`
+static ABBREVIATED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:\(\p{Lu}[\p{L}'\-]*\.\)(?-u:\s*))?\p{Lu}[\p{L}'\-]*\.(?:(?-u:\s*)(?:&|et|ex)(?-u:\s*)\p{Lu}[\p{L}'\-]*\.?)*$").unwrap()
+});
+
 /// An author with a year, perhaps in brackets: `Linnæus, 1758`, `(Agassiz, 1843)`.
 static AUTHOR_WITH_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^\(?\p{Lu}[\p{L}'.\- ]*,?(?-u:\s*)(?:1[789]\d\d|20[0-2]\d)\)?$").unwrap()
@@ -2608,13 +2615,16 @@ static AUTHOR_WITH_YEAR: LazyLock<Regex> = LazyLock::new(|| {
 /// below, an authorship following; when the authorship comes separately, repeating what follows the word or not starting
 /// with it; or when it ends as only a Latin epithet does, nothing or an author with a year after
 /// it. A
-/// genus with a surname of two words, `Homalaspis Milne Edwards, 1863`, has none of these.
+/// genus with a surname of two words, `Homalaspis Milne Edwards, 1863`, has none of these. After a
+/// qualifier an authorship following is evidence too (#233): `Phrynopus cf. Barlenae`, `Teucrium
+/// cf. Cyprium Boiss.` A word with none stays the genus compared with: `Onthophagus cf. Aphodius`.
 fn lower_capitalised_epithet(ctx: &mut ParseContext, s: String) -> String {
     let Some(caps) = GENUS_CAPITALISED_WORD.captures(&s) else {
         return s;
     };
-    let word = &caps[2];
-    let tail = caps.get(3).map(|m| m.as_str());
+    let word = &caps[3];
+    let tail = caps.get(4).map(|m| m.as_str());
+    let qualified = caps.get(2).is_some();
     if caps[1].trim_end() == "Candidatus" || token::is_particle(&word.to_lowercase()) {
         return s;
     }
@@ -2641,7 +2651,19 @@ fn lower_capitalised_epithet(ctx: &mut ParseContext, s: String) -> String {
     let by_ending = (compound
         || (LATIN_EPITHET_ENDING.is_match(word) && !FAMILY_GROUP_ENDING.is_match(word)))
         && tail.is_none_or(|t| AUTHOR_WITH_YEAR.is_match(t));
-    if !(hinted || by_column || by_ending) {
+    // After a qualifier the word is mostly a genus or higher taxon compared with, so a rank hint
+    // tells nothing, nor does an author with a year, mostly the anchor genus' (`Dicranoplia cf.
+    // Anomala` + `Reitter 1903`); an abbreviated author does (`Teucrium cf. Cyprium Boiss.`).
+    let evidence = if qualified {
+        // never a family-group name compared with: `Attacapa cf. Noctuidae`
+        !FAMILY_GROUP_ENDING.is_match(word)
+            && (by_ending
+                || tail.is_some_and(|t| ABBREVIATED_AUTHOR.is_match(t))
+                || (tail.is_none() && column.is_some_and(|c| ABBREVIATED_AUTHOR.is_match(c))))
+    } else {
+        hinted || by_column || by_ending
+    };
+    if !evidence {
         return s;
     }
     ctx.name.add_warning(warnings::CAPITALISED_EPITHET);
