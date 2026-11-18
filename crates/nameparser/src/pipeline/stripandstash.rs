@@ -126,6 +126,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_cultivar_spelling(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
     s = lower_shouted_qualifier(s);
+    s = normalise_spelt_out_markers(s);
     s = strip_rank_nova(ctx, s);
     s = strip_quoted_attributed_author(s);
     s = unquote_manuscript_epithet(s);
@@ -3666,6 +3667,17 @@ static CV_MARKER: LazyLock<FancyRegex> =
 static SHOUTED_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+(?:\s+\p{Ll}+)?\s+)(CF|AFF)\.?(\s+\p{Ll}.*|\s*)$").unwrap()
 });
+
+/// `c.f.` written with two dots for cf., in lower case before an epithet: `Dracaena c.f.
+/// afromontana Mildbr` (#246). The `c` became the epithet. Not the initials of an author: `C.F.
+/// Liang`.
+static SPELT_OUT_CF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(^|(?-u:\s))c\.(?-u:\s?)f\.((?-u:\s+)\p{Ll})").unwrap());
+
+/// See [`SPELT_OUT_CF`].
+fn normalise_spelt_out_markers(s: String) -> String {
+    SPELT_OUT_CF.replace_all(&s, "${1}cf.${2}").into_owned()
+}
 
 /// Lower-cases a [`SHOUTED_QUALIFIER`], which was read as an author "Cf" — not after an indet marker,
 /// where it is a strain code ("Bacillus sp. CF"), nor among authors' initials ("Dubois, CF 1839").

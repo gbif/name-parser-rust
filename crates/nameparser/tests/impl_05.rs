@@ -94,6 +94,7 @@ fn norwegian_radiolaria() {
         .infra_species("Hexaconthium", "pachydermum", Rank::Form, "A")
         .comb_authors(Some("1998"), &["Cortese", "Bjørklund"])
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 
     assert_name("Tripodiscium gephyristes  (Hülseman, 1963) BJ&KR-Atsdatabanken")
@@ -449,6 +450,7 @@ fn alpha_beta_theta_names() {
     assert_name("Cyclotus amethystinus var. β Guppy, 1868")
         .infra_species("Cyclotus", "amethystinus", Rank::Variety, "β")
         .comb_authors(Some("1868"), &["Guppy"])
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 }
 

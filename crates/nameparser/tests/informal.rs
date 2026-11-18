@@ -811,6 +811,7 @@ fn infraspecific_indeterminate_stays_parsed() {
     assert_name("Salix alba subsp. B")
         .infra_species("Salix", "alba", Rank::Subspecies, "B")
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 }
 
@@ -2004,4 +2005,58 @@ fn a_qualifier_after_the_author_goes_to_the_infraspecific_epithet() {
         panic!("parsed");
     };
     assert_eq!(pn.infraspecific_epithet, None);
+}
+
+/// #246: a single letter is no genus or epithet; the misreadings behind most of them are mended and
+/// what is left is flagged.
+#[test]
+fn single_letters_and_their_misreadings() {
+    use nameparser::model::warnings::SINGLE_LETTER;
+    // `c.f.` is cf., not the epithet `c`
+    assert_name("Dracaena c.f. afromontana Mildbr")
+        .species("Dracaena", "afromontana")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .comb_authors(None, &["Mildbr"])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // the author's initials stay initials
+    assert_name("Actinidia chrysantha C.F. Liang")
+        .species("Actinidia", "chrysantha")
+        .comb_authors(None, &["C.F.Liang"])
+        .nothing_else();
+    // a dotless or glued n. sp. is the marker of a new species, not the epithet `n`
+    for (input, phrase) in [
+        (
+            "Forcipata n sp. ancantha DeLong and Caldwell, 1936",
+            "n sp. ancantha DeLong and Caldwell, 1936",
+        ),
+        ("Emblyna n. sp1", "n. sp1"),
+    ] {
+        assert_informal(input)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+        assert_eq!(
+            canonical(input).split_whitespace().nth(1),
+            input.split_whitespace().nth(1)
+        );
+    }
+    // a lone letter as infraspecific epithet is a designation
+    assert_name("Polypedates leucomystax b")
+        .infra_species("Polypedates", "leucomystax", Rank::InfraspecificName, "b")
+        .type_(NameType::Informal)
+        .warning(&[SINGLE_LETTER])
+        .nothing_else();
+    assert_name("M mus")
+        .species("M", "mus")
+        .warning(&[SINGLE_LETTER])
+        .nothing_else();
+    // an abbreviated genus has its own warning
+    assert_name("M. mus")
+        .species("M.", "mus")
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::ABBREVIATED_GENUS])
+        .nothing_else();
 }

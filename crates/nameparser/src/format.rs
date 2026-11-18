@@ -54,10 +54,10 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// 01_E13`), which rendered "Wolbachia sp. endosymbiont of …". And with the new-species markers
 /// `n. sp.` and `nsp` (#139), the unnamed genus of `Carabidae gen. sp.` (#174), and the aggregate
 /// marker of `Acalitus agg. brevitarsus/phyllereus`, which rendered "Acalitus agg. agg. …", and a
-/// marker glued to its number, `Dynestinae sp2` (#242).
+/// marker glued to its number, `Dynestinae sp2` (#242), and the dotless `n sp` (#246).
 static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)^(?:(?:spp?|spec)\d|(?:species|spec|spp|sp|nsp|agg|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp(?:ec)?_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
+        r"(?i)^(?:(?:spp?|spec)\d|(?:species|spec|spp|sp|nsp|agg|n\.?(?-u:\s*)sp\d*|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp(?:ec)?_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
     )
     .unwrap()
 });

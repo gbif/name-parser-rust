@@ -587,6 +587,7 @@ fn indet_names() {
     // a species rank hint keeps an abbreviated species epithet
     assert_name_rank("Zygaena f.", Rank::Species)
         .species("Zygaena", "f")
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 
     let n = nameparser::parse_name("Polygonum spec.", None, None, None)

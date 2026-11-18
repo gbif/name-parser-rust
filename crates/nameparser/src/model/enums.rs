@@ -1162,6 +1162,8 @@ pub mod warnings {
     /// Rust-only so far: a species epithet written with a capital, as Linnaeus did (`Ovis Aries`),
     /// was put in lower case (ICZN Art. 28).
     pub const CAPITALISED_EPITHET: &str = "capitalised epithet put in lower case";
+    /// Rust-only (#246): no genus or epithet has a single letter.
+    pub const SINGLE_LETTER: &str = "single letter genus or epithet";
 }
 
 #[cfg(test)]

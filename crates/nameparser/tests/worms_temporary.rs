@@ -465,6 +465,7 @@ fn single_letter_species_epithet_is_informal() {
         .species("Collettea", letter)
         .type_(NameType::Informal)
         .comb_authors(Some("2005"), &["Blazewicz-Paszkowycz", "Larsen"])
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     }
     assert_name_hinted(
@@ -476,6 +477,7 @@ fn single_letter_species_epithet_is_informal() {
     .species("Collettea", "a")
     .type_(NameType::Informal)
     .comb_authors(Some("2005"), &["Blazewicz-Paszkowycz", "Larsen"])
+    .warning(&[nameparser::model::warnings::SINGLE_LETTER])
     .nothing_else();
 }
 
@@ -495,6 +497,7 @@ fn single_letter_after_an_infraspecific_marker_is_the_epithet() {
             .infra_species("Undella", "hyalina", Rank::Variety, letter)
             .type_(NameType::Informal)
             .comb_authors(Some("1907"), &["Brandt"])
+            .warning(&[nameparser::model::warnings::SINGLE_LETTER])
             .nothing_else();
     }
 }

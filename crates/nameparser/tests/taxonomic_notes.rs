@@ -945,6 +945,7 @@ fn lower_case_s_dot_that_is_no_sensu() {
     assert_name("Abax s. Maran 1955")
         .species("Abax", "s")
         .comb_authors(Some("1955"), &["Maran"])
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     assert_name("Ilex sublongecaudata C. J. Tseng et s. Liu ex Y. R. Li")
         .species("Ilex", "sublongecaudata")
@@ -965,11 +966,13 @@ fn lower_case_s_dot_that_is_no_sensu() {
         .species("Phacops", "s")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     assert_name("Flexicalymene cf. Flexicalymene s.")
         .species("Flexicalymene", "s")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     // a strain code
     assert_informal("Mycobacterium sp. s.MYCO.102.26sc1")

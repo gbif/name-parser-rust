@@ -537,6 +537,7 @@ pub fn run(
     apply_placeholder_tail(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
     flag_numbered_authors(&mut ctx.name);
+    flag_single_letters(&mut ctx.name);
     apply_pending_qualifier(&mut ctx);
 
     Ok(ctx.name)
@@ -557,6 +558,24 @@ fn apply_pending_qualifier(ctx: &mut ParseContext) {
     };
     ctx.name.set_epithet_qualifier(part, &qualifier);
     ctx.name.type_ = NameType::Informal;
+}
+
+/// A genus or an epithet of a single letter is no name of a taxon but a designation or a broken
+/// record (#246): `M mus`, `Polypedates leucomystax b`, `Galium spurium var. L.` An abbreviated
+/// genus keeps its dot and its own warning: `M. mus`.
+fn flag_single_letters(name: &mut ParsedName) {
+    // not the `?` standing for a missing genus (`? alba Smith`)
+    let single = |part: &Option<String>| {
+        part.as_deref()
+            .is_some_and(|w| w.chars().count() == 1 && w != "?")
+    };
+    if single(&name.genus)
+        || single(&name.uninomial)
+        || single(&name.specific_epithet)
+        || single(&name.infraspecific_epithet)
+    {
+        name.add_warning(warnings::SINGLE_LETTER);
+    }
 }
 
 /// An author with a digit in it is no person's name: `Aus bus Smith2, 1900` (#213).
