@@ -199,12 +199,14 @@ static AUTHORSHIP_AFTER_OR: LazyLock<Regex> = LazyLock::new(|| {
 const ALTERNATIVE_GENUS: &str = r"\p{Lu}\p{Ll}+(?:-\p{Lu}?\p{Ll}+)?";
 /// A name followed by alternatives, a slash, a pipe or `or` right after its last epithet: `Festuca
 /// rubra/arenaria`, `Bombus terrestris or lucorum`, `Salmo salar/Salmo trutta`, also qualified,
-/// `Aphaenogaster cf. rudis/texana` (#225). The groups: genus, subgenus, the epithets, the
-/// alternatives. Read by [`read_alternatives`].
+/// `Aphaenogaster cf. rudis/texana` (#225), or with an infraspecific rank marker, `Sylvia cantillans
+/// subsp. inornata/iberiae`. The groups: genus, subgenus, the epithets, the rank marker, the
+/// alternatives. Read by [`read_alternatives`]. The marker is lazy, so that a qualifier stays the
+/// epithet's: `Aus bus cf. cus/dus`.
 static ALTERNATIVE_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
     let epithet = r"(?:(?:cf|aff|nr)\.?(?-u:\s+))?\p{Ll}[\p{Ll}\-]+";
     Regex::new(&format!(
-        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+){epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
+        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+)(?:(\p{{Ll}}+)\.?(?-u:\s+))??{epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
     ))
     .unwrap()
 });
@@ -265,10 +267,12 @@ const AUTHOR_LINK: &[&str] = &[
 /// What the alternatives after a slash or `or` leave of a name, see [`read_alternatives`].
 enum Alternatives<'a> {
     /// All in one genus: anchored on it, or on the one species they all lie in, the rest its phrase.
+    /// The rank is the one of an infraspecific rank marker in front of the alternatives of a species.
     OneTaxon {
         genus: &'a str,
         subgenus: Option<&'a str>,
         species: Option<&'a str>,
+        rank: Option<Rank>,
         phrase: &'a str,
     },
     /// In different genera: there is no one taxon to claim.
@@ -289,7 +293,17 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
     if is_rank_word(caps[3].split_whitespace().last()?) {
         return None;
     }
-    let alternatives = &caps[4];
+    // a word between the epithets is an infraspecific rank marker or no alternatives are read
+    let rank = match caps.get(4) {
+        Some(marker) => {
+            match crate::pipeline::rank_markers::match_infraspecific_allow_notho(marker.as_str()) {
+                Some((rank, false)) => Some(rank),
+                _ => return None,
+            }
+        }
+        None => None,
+    };
+    let alternatives = &caps[5];
     if let Some(species) = ALTERNATIVE_SPECIES.captures(alternatives) {
         if AUTHOR_LINK.contains(&&species[2]) {
             return None;
@@ -314,6 +328,7 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
         genus,
         subgenus: caps.get(2).map(|m| m.as_str()),
         species,
+        rank: rank.filter(|_| species.is_some()),
         phrase: species.map_or(phrase, |species| phrase[species.len()..].trim_start()),
     })
 }
@@ -1027,9 +1042,15 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
             genus,
             subgenus,
             species,
+            rank,
             phrase,
         }) => {
             rescue_informal_group(ctx, genus, phrase);
+            if let Some(rank) = rank {
+                ctx.name.rank = rank;
+                // the code a marker tells: `Bacillus thuringiensis serovar aizawai/pacificus`
+                ctx.name.code = ctx.name.code.or(rank.is_restricted_to_code());
+            }
             ctx.name.infrageneric_epithet = subgenus.map(str::to_string);
             ctx.name.specific_epithet = species.map(str::to_string);
             ctx.name.state = State::Partial;

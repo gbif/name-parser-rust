@@ -1386,6 +1386,58 @@ fn a_rank_or_an_authorship_stays_out_of_the_species_anchor() {
 }
 
 #[test]
+fn a_rank_marker_before_the_alternatives_gives_their_rank() {
+    // the alternatives were the epithet and its author, `or phyllereus` was left unparsed
+    for (input, species, rank, phrase) in [
+        (
+            "Acalitus brevitarsus subsp. brevitarsus/phyllereus",
+            "Acalitus brevitarsus",
+            Rank::Subspecies,
+            "subsp. brevitarsus/phyllereus",
+        ),
+        (
+            "Acalitus brevitarsus ssp. brevitarsus or phyllereus",
+            "Acalitus brevitarsus",
+            Rank::Subspecies,
+            "ssp. brevitarsus or phyllereus",
+        ),
+        (
+            "Sylvia cantillans subsp. inornata/iberiae",
+            "Sylvia cantillans",
+            Rank::Subspecies,
+            "subsp. inornata/iberiae",
+        ),
+        (
+            "Acalitus brevitarsus var. brevitarsus/phyllereus",
+            "Acalitus brevitarsus",
+            Rank::Variety,
+            "var. brevitarsus/phyllereus",
+        ),
+    ] {
+        assert_informal(input)
+            .taxon(species)
+            .taxon_rank(Rank::Species)
+            .rank(rank)
+            .phrase(phrase)
+            .partial()
+            .nothing_else();
+        // the marker is not repeated in front of the phrase
+        assert_eq!(canonical(input), input);
+    }
+    // the code a marker tells stays
+    let input = "Bacillus thuringiensis serovar israelensis/tochigiensis";
+    assert_informal(input)
+        .taxon("Bacillus thuringiensis")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Serovar)
+        .phrase("serovar israelensis/tochigiensis")
+        .code(NomCode::Bacterial)
+        .partial()
+        .nothing_else();
+    assert_eq!(canonical(input), input);
+}
+
+#[test]
 fn another_species_among_the_alternatives_leaves_only_the_genus() {
     for (input, phrase) in [
         (

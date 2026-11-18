@@ -346,8 +346,10 @@ fn phrase_leads_with_rank_marker(n: &ParsedName) -> bool {
     let Some(lead) = phrase.split_whitespace().next() else {
         return false;
     };
-    lead.trim_end_matches('.')
-        .eq_ignore_ascii_case(marker.trim_end_matches('.'))
+    let lead = lead.trim_end_matches('.');
+    lead.eq_ignore_ascii_case(marker.trim_end_matches('.'))
+        || n.rank.is_infraspecific()
+            && crate::pipeline::rank_markers::match_infraspecific(lead) == Some(n.rank)
 }
 
 /// The Prokaryotic Code abbreviates subgenus "subgen." (Rules 10c, 34c), where the rank's own
@@ -892,8 +894,13 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
                         || n.cultivar_epithet.is_none())
                 {
                     // no infraspecific epitheton given, but rank below species. Indetermined!
-                    // use ssp. for subspecies in case of indetermined names
-                    if n.rank == Rank::Subspecies {
+                    // use ssp. for subspecies in case of indetermined names. Not when the phrase
+                    // spells the marker out already, as alternatives do: `Sylvia cantillans
+                    // subsp. inornata/iberiae`
+                    let marker_in_phrase = n.is_phrase_name() && phrase_leads_with_rank_marker(n);
+                    if marker_in_phrase {
+                        // the phrase follows with its own spelling of the marker
+                    } else if n.rank == Rank::Subspecies {
                         sb.push_str(" ssp.");
                     } else {
                         sb.push(' ');
