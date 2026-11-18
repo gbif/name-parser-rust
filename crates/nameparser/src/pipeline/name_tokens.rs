@@ -93,6 +93,13 @@ pub(crate) fn is_aggregate_marker(w: &str) -> bool {
     w.eq_ignore_ascii_case("agg")
 }
 
+/// A species marker glued to its number, the designation of an unnamed species: `Dynestinae sp2`,
+/// `Mus spec2` (#242). It became the epithet `sp2`. The phrase keeps it as written.
+fn is_glued_indet_marker(w: &str) -> bool {
+    let letters = w.trim_end_matches(|c: char| c.is_ascii_digit());
+    letters.len() < w.len() && matches!(letters, "sp" | "spp" | "spec")
+}
+
 /// Java `NameTokens.classify(ParseContext, int)` (`NameTokens.java:25-536`). Walks
 /// `ctx.tokens[0, boundary)`, classifying it into the structural name-part fields on
 /// `ctx.name`, plus `ctx.mid_author_from`/`ctx.mid_author_to` (the species-level author
@@ -572,13 +579,15 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 // running to the end: `Abies alba sp. c`, `Prionospio iberian canyons sp. c`,
                 // `Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a`. It was read as `ssp.`, and a
                 // word before it dropped.
-                let sp_designation = (w.eq_ignore_ascii_case("sp")
-                    || w.eq_ignore_ascii_case("spp"))
-                    && !lower_epithets.is_empty()
+                let sp_designation = !lower_epithets.is_empty()
                     && marker_idx_in_epithets < 0
-                    && i + 1 + usize::from(ts.get(i + 1).is_some_and(|t| t.kind == TokenKind::Dot))
-                        < ts.len()
-                    && !sp_is_misspelt_ssp(ts, i);
+                    && ((w.eq_ignore_ascii_case("sp") || w.eq_ignore_ascii_case("spp"))
+                        && i + 1
+                            + usize::from(ts.get(i + 1).is_some_and(|t| t.kind == TokenKind::Dot))
+                            < ts.len()
+                        && !sp_is_misspelt_ssp(ts, i)
+                        // a marker glued to its number, #242: `Mus alba sp2`
+                        || is_glued_indet_marker(w));
                 if (w.eq_ignore_ascii_case("sp")
                     || w.eq_ignore_ascii_case("spp")
                     || w.eq_ignore_ascii_case("spec")
@@ -586,7 +595,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     || w.eq_ignore_ascii_case("indet")
                     || (w == "nsp" && lower_epithets.is_empty())
                     // `Acalitus agg. brevitarsus/phyllereus`, see AuthorshipSplit
-                    || (is_aggregate_marker(w) && lower_epithets.is_empty()))
+                    || (is_aggregate_marker(w) && lower_epithets.is_empty())
+                    || is_glued_indet_marker(w))
                     && !is_published_spec_epithet
                     && (lower_epithets.is_empty()
                         || marker_idx_in_epithets >= 0
@@ -649,7 +659,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         || w.eq_ignore_ascii_case("spec")
                         || w.eq_ignore_ascii_case("species")
                         || w == "nsp"
-                        || indet_aggregate;
+                        || indet_aggregate
+                        || is_glued_indet_marker(w);
                     // A cultivar epithet (extracted upstream from "Genus sp. cv. 'Name'") is the
                     // operative designation, not the "sp." — so it is NOT an informal indet and the
                     // marker must not be captured as a phrase (assemble step 17 clears INFORMAL for

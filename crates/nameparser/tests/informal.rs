@@ -1775,6 +1775,9 @@ fn an_underscored_indet_marker_stands_for_a_space() {
             "Megaselia",
             "sp. BOLD:AAG6185",
         ),
+        // a marker glued to its number (#242): it was the epithet `sp2`
+        ("Dynestinae sp2", "Dynestinae", "sp2"),
+        ("Mus spec2", "Mus", "spec2"),
     ] {
         assert_informal(input)
             .taxon(taxon)
@@ -1791,6 +1794,14 @@ fn an_underscored_indet_marker_stands_for_a_space() {
         pn.canonical_name_without_authorship().as_deref(),
         Some("Sus spec_2")
     );
+    assert_eq!(canonical("Dynestinae sp2"), "Dynestinae sp2");
+    // after an epithet it is the species' unnamed one, as `sp. c` is (#252)
+    assert_informal("Mus alba sp2")
+        .taxon("Mus alba")
+        .taxon_rank(Rank::Species)
+        .rank(Rank::Species)
+        .phrase("sp2")
+        .nothing_else();
 }
 
 #[test]
