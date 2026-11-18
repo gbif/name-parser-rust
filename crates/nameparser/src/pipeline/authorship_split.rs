@@ -580,6 +580,16 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 if w.eq_ignore_ascii_case("hort") {
                     return i;
                 }
+                // "et al." with its first author missing opens the authorship, as it does after
+                // one (`Jonesia luteola et al. 2015`, #237); it made `al` an infraspecific epithet.
+                if have_epithet
+                    && t.text == "et"
+                    && tokens
+                        .get(i + 1)
+                        .is_some_and(|al| al.kind == TokenKind::Word && al.text == "al")
+                {
+                    return i;
+                }
                 // An author in lower case before an ex, "Tamarix indica koen. ex Roxb.",
                 // "Hieracium multicaule schaffner ex Sch.Bip." (#125), is no infraspecific epithet.
                 if have_epithet && is_lower_ex_author(tokens, i) {
