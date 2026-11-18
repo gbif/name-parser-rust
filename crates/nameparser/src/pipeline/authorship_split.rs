@@ -289,6 +289,9 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet")
                     || (t.text == "nsp" && !have_epithet)
+                    // an aggregate marker before any epithet opens the phrase as `sp.` does:
+                    // `Acalitus agg. brevitarsus/phyllereus`, `Taraxacum agg.`
+                    || (crate::pipeline::name_tokens::is_aggregate_marker(w) && !have_epithet)
                 {
                     let is_sp = w.eq_ignore_ascii_case("sp")
                         || w.eq_ignore_ascii_case("spp")

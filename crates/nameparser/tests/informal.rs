@@ -1470,6 +1470,63 @@ fn a_rank_or_an_authorship_does_not_bring_the_first_species_back() {
     );
 }
 
+/// The canonical name of `input` without authorship.
+#[track_caller]
+fn canonical(input: &str) -> String {
+    match nameparser::parse(input, None, None, None) {
+        ParseResult::Parsed(pn) => pn.canonical_name_without_authorship().unwrap_or_default(),
+        other => panic!("`{input}` is parsed, got {other:?}"),
+    }
+}
+
+#[test]
+fn an_aggregate_marker_without_an_epithet_reads_like_sp() {
+    // before alternatives `agg` became the species epithet and the second alternative its author,
+    // flagged uncertain; after a genus alone the marker was dropped
+    for (input, rank, phrase) in [
+        (
+            "Acalitus sp. brevitarsus/phyllereus",
+            Rank::Species,
+            "sp. brevitarsus/phyllereus",
+        ),
+        (
+            "Acalitus agg. brevitarsus/phyllereus",
+            Rank::SpeciesAggregate,
+            "agg. brevitarsus/phyllereus",
+        ),
+        ("Acalitus sp.", Rank::Species, "sp."),
+        ("Acalitus agg.", Rank::SpeciesAggregate, "agg."),
+    ] {
+        assert_informal(input)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(rank)
+            .phrase(phrase)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+    }
+    assert_informal("Acalitus (Aus) agg.")
+        .taxon("Acalitus subg. Aus")
+        .taxon_rank(Rank::Subgenus)
+        .rank(Rank::SpeciesAggregate)
+        .phrase("agg.")
+        .nothing_else();
+    // the word `aggregate` is an epithet too (given separately, its author leaves it a trailing
+    // aggregate marker, so the dual-path `assert_name` does not apply)
+    let ParseResult::Parsed(pn) =
+        nameparser::parse("Centaurea aggregate Fisch. & C.A.Mey.", None, None, None)
+    else {
+        panic!("parsed");
+    };
+    assert_eq!(pn.type_, NameType::Scientific);
+    assert_eq!(pn.specific_epithet.as_deref(), Some("aggregate"));
+    assert_eq!(pn.combination_authorship.authors, ["Fisch.", "C.A.Mey."]);
+    // after its species the marker is the rank of a species aggregate, as before
+    assert_name("Acalitus brevitarsus agg.")
+        .binomial("Acalitus", None, "brevitarsus", Rank::SpeciesAggregate)
+        .nothing_else();
+}
+
 #[test]
 fn the_subgenus_stays_part_of_the_anchor() {
     assert_informal("Simulium (Ectemnaspis) lewisi/lutzianum complex")

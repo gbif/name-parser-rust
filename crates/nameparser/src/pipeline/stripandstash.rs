@@ -5704,8 +5704,21 @@ static AGGREGATE: LazyLock<Regex> = LazyLock::new(|| {
 /// string to "Achillea millefolium".
 fn strip_aggregate_suffix(ctx: &mut ParseContext, s: String) -> String {
     if let Some(m) = AGGREGATE.find(&s) {
+        let rest = java_trim(&s[..m.start()]);
+        // Rust-only: after a genus alone (or with its subgenus) `agg.` is kept, so that
+        // NameTokens reads the aggregate of an unnamed species as it reads `Genus sp.`:
+        // `Taraxacum agg.`, `Acalitus (Aus) agg.` Stripped, the genus was left with no trace of
+        // the marker. Not `aggregate`, an epithet too: `Rumphella aggregate`.
+        if super::name_tokens::is_aggregate_marker(m.as_str().trim().trim_end_matches('.'))
+            && !rest.is_empty()
+            && rest
+                .split_whitespace()
+                .all(|w| w.starts_with(|c: char| c.is_uppercase() || c == '('))
+        {
+            return s;
+        }
         ctx.aggregate = true;
-        return java_trim(&s[..m.start()]).to_string();
+        return rest.to_string();
     }
     s
 }

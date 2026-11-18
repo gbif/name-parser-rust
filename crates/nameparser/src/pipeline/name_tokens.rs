@@ -85,6 +85,14 @@ pub(crate) fn is_author_year(s: &str) -> bool {
     AUTHOR_YEAR_TAIL.is_match(s)
 }
 
+/// The aggregate marker that, with no epithet before it, opens the phrase of an unnamed aggregate
+/// as `sp.` opens that of an unnamed species: `Taraxacum agg.`, `Acalitus agg.
+/// brevitarsus/phyllereus`. Its rank is SPECIES_AGGREGATE. Not the word `aggregate`, which is an
+/// epithet too: `Centaurea aggregate Fisch. & C.A.Mey.`, `Rumphella aggregate`.
+pub(crate) fn is_aggregate_marker(w: &str) -> bool {
+    w.eq_ignore_ascii_case("agg")
+}
+
 /// Java `NameTokens.classify(ParseContext, int)` (`NameTokens.java:25-536`). Walks
 /// `ctx.tokens[0, boundary)`, classifying it into the structural name-part fields on
 /// `ctx.name`, plus `ctx.mid_author_from`/`ctx.mid_author_to` (the species-level author
@@ -126,6 +134,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     // INDETERMINED even though its phrase now carries the verbatim marker (see the top-check
     // in the indet branch and the warning block near the end of this fn).
     let mut indet_bare = false;
+    // the indet marker is `agg.`, so the name is an aggregate, not a species
+    let mut indet_aggregate = false;
     let mut cf_aff_qualifier: Option<String> = None;
     // A cf./aff./nr./near with no epithet after it opens the informal phrase (see below).
     let mut qualifier_phrase = false;
@@ -562,7 +572,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     || w.eq_ignore_ascii_case("spec")
                     || w.eq_ignore_ascii_case("species")
                     || w.eq_ignore_ascii_case("indet")
-                    || (w == "nsp" && lower_epithets.is_empty()))
+                    || (w == "nsp" && lower_epithets.is_empty())
+                    // `Acalitus agg. brevitarsus/phyllereus`, see AuthorshipSplit
+                    || (is_aggregate_marker(w) && lower_epithets.is_empty()))
                     && !is_published_spec_epithet
                     && (lower_epithets.is_empty()
                         || marker_idx_in_epithets >= 0
@@ -570,6 +582,7 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 {
                     let marker_start = nova_start.take().unwrap_or(ts[i].start);
                     indet = true;
+                    indet_aggregate = is_aggregate_marker(w);
                     ctx.name.type_ = NameType::Informal;
                     i += 1;
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
@@ -595,7 +608,8 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                         || w.eq_ignore_ascii_case("spp")
                         || w.eq_ignore_ascii_case("spec")
                         || w.eq_ignore_ascii_case("species")
-                        || w == "nsp";
+                        || w == "nsp"
+                        || indet_aggregate;
                     // A cultivar epithet (extracted upstream from "Genus sp. cv. 'Name'") is the
                     // operative designation, not the "sp." — so it is NOT an informal indet and the
                     // marker must not be captured as a phrase (assemble step 17 clears INFORMAL for
@@ -1177,7 +1191,11 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                 if ctx.name.code.is_none() {
                     ctx.name.code = ctx.name.rank.is_restricted_to_code();
                 }
-                ctx.name.rank = Rank::Species;
+                ctx.name.rank = if indet_aggregate {
+                    Rank::SpeciesAggregate
+                } else {
+                    Rank::Species
+                };
             }
             if ctx.name.phrase.is_none() || indet_bare {
                 ctx.name.add_warning(warnings::INDETERMINED);
