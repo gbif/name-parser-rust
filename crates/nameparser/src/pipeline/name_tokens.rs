@@ -617,14 +617,15 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
                         i += 1;
                     }
-                    // #252: several words or a qualified one before the marker are no species to
-                    // hang the unnamed one off, so it hangs off the genus and they open its phrase:
-                    // `Prionospio iberian canyons sp. c`, `Prionospio aff. iberian sp. c`. One
-                    // word is its species: `Abies alba sp. c` keeps `sp. c`, as `sp. 1` does.
+                    // #252: several words before the marker are no species to hang the unnamed one
+                    // off, so it hangs off the genus and they open its phrase: `Prionospio iberian
+                    // canyons sp. c`. One word is its species, `Abies alba sp. c` keeps `sp. c` as
+                    // `sp. 1` does, and so does a qualified one, which the qualifier only doubts:
+                    // `Euxoa nr. idahoensis sp. 1clay`, `Ramazzottius aff. szeptycki sp. n. 1`.
                     if (sp_designation || number_follows_marker)
                         && !lower_epithets.is_empty()
                         && marker_idx_in_epithets < 0
-                        && (lower_epithets.len() >= 2 || cf_aff_qualifier.is_some())
+                        && lower_epithets.len() >= 2
                     {
                         let start = ts[..marker_idx]
                             .iter()
