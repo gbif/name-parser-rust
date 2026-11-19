@@ -112,6 +112,43 @@ fn a_cyrillic_o_is_a_letter_o_not_a_zero() {
         .nothing_else();
 }
 
+/// A word written wholly in Cyrillic or Greek is no look-alike of a Latin one and is kept; the
+/// cultivar epithet of a buffalo breed (FAO DAD-IS) became `Aɜep6aйджaHcĸий (ĸaBĸaɜcĸий) 6yйBoл`
+/// (#257). Look-alikes slipped into a Latin name are still replaced.
+#[test]
+fn a_word_in_another_script_keeps_its_letters() {
+    assert_name("Bubalus bubalis 'Азербайджанский (кавказский) буйвол'")
+        .cultivar_sp("Bubalus", "bubalis", "Азербайджанский (кавказский) буйвол")
+        .nothing_else();
+    // made of look-alikes only, alone or beside a Cyrillic word
+    assert_name("Bos taurus 'Москва'")
+        .cultivar_sp("Bos", "taurus", "Москва")
+        .nothing_else();
+    assert_name("Bos taurus 'ВВС Москва'")
+        .cultivar_sp("Bos", "taurus", "ВВС Москва")
+        .nothing_else();
+    assert_name("Abies alba Иванов")
+        .species("Abies", "alba")
+        .comb_authors(None, &["Иванов"])
+        .nothing_else();
+
+    // the Cyrillic С and З of a Latin code, and a Cyrillic а in a Latin word
+    let n = nameparser::parse_name(
+        "Gallus gallus domesticus 'LINE СЗ – 80 B'",
+        None,
+        None,
+        None,
+    )
+    .unwrap();
+    assert_eq!(n.cultivar_epithet.as_deref(), Some("LINE C3 - 80 B"));
+    assert!(n.warnings.iter().any(|w| w == warnings::HOMOGLYHPS));
+    assert_name("Aus \u{0430}bus L.")
+        .species("Aus", "abus")
+        .comb_authors(None, &["L."])
+        .warning(&[warnings::HOMOGLYHPS])
+        .nothing_else();
+}
+
 /// The Turkish dotless ı is a letter of its own in a surname (`Altıner`, `Yıldırım`), not a
 /// look-alike of `i`; in the genus or an epithet it still is one (ChecklistBank dataset 1157).
 #[test]

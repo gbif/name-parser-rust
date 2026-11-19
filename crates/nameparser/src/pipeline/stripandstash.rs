@@ -2209,17 +2209,14 @@ static SPACED_NUMERAL_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
 ///   }
 /// }
 /// ```
-/// Delegates to [`crate::unicode::contains_homoglyphs`]/[`crate::unicode::replace_homoglyphs`]
-/// — the full codepoint -> canonical-char table port (`UnicodeUtils.java:58-139`'s
-/// `~175`-line `unicode/homoglyphs.txt` loader; see that module's own doc comment for the
-/// loader/table details) — flagging `HOMOGLYHPS` only when the string actually changed.
+/// Delegates to [`crate::unicode::replace_homoglyphs_in_name`] — Java's `replaceHomoglyphs` (see
+/// that module for the table and the words in another script it leaves alone), plus the dotless ı
+/// of a genus or epithet — flagging `HOMOGLYHPS` only when the string actually changed.
 /// `inclHyphens=false` at this (the table's only) call site: Unicode hyphen variants are
 /// already normalised to ASCII by the immediately-preceding `normalise_hyphens` (step 12),
 /// per Java's own comment on this method ("Hyphen homoglyphs are intentionally excluded —
-/// those are normalised above already"). Both the outer `contains_homoglyphs` fast-path
-/// check and the inner `repl != s` re-check are redundant in the overwhelmingly common case
-/// (a table hit always changes the string, since no row's canonical ever equals one of its
-/// own look-alikes) but ported verbatim anyway, mirroring Java's exact structure.
+/// those are normalised above already"). The `containsHomoglyphs` check is dropped: the
+/// replacement returns early on a string without look-alikes anyway.
 fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
     let s = match OCR_ZERO.replace_all(&s, "${1}O${2}${3}") {
         Cow::Owned(repl) => {
@@ -2228,12 +2225,10 @@ fn replace_homoglyphs(ctx: &mut ParseContext, s: String) -> String {
         }
         Cow::Borrowed(_) => s,
     };
-    if crate::unicode::contains_homoglyphs(&s) {
-        let repl = crate::unicode::replace_homoglyphs_in_name(&s);
-        if repl != s {
-            ctx.name.add_warning(warnings::HOMOGLYHPS);
-            return repl;
-        }
+    let repl = crate::unicode::replace_homoglyphs_in_name(&s);
+    if repl != s {
+        ctx.name.add_warning(warnings::HOMOGLYHPS);
+        return repl;
     }
     s
 }
@@ -3722,7 +3717,7 @@ fn strip_cultivar_group_grex(ctx: &mut ParseContext, s: String) -> String {
 /// whitespace set. Group 1 = optional "cv. " prefix, group 2 = quote char, group 3 =
 /// cultivar epithet content.
 static QUOTED_CULTIVAR_END: LazyLock<FancyRegex> = LazyLock::new(|| {
-    FancyRegex::new(r#"[ \t\n\x0B\f\r]+(cv\.?[ \t\n\x0B\f\r]+)?(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}))+)\2[ \t\n\x0B\f\r]*$"#)
+    FancyRegex::new(r#"[ \t\n\x0B\f\r]+(cv\.?[ \t\n\x0B\f\r]+)?(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}|['" \t\n\x0B\f\r]))+)\2[ \t\n\x0B\f\r]*$"#)
         .unwrap()
 });
 
@@ -3749,9 +3744,9 @@ static RANK_MARKER_SUFFIX: LazyLock<Regex> =
 /// author (`Cyathea cooperi cv. 'Highland Lace' (Hook. ex F.Muell.) Domin`), groups 7 to 9.
 static QUOTED_CULTIVAR_MID: LazyLock<FancyRegex> = LazyLock::new(|| {
     FancyRegex::new(concat!(
-        r#"\s+(?:cv\.?\s+)?(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}))+)\1(\s+[\p{Lu}].*)$"#,
-        r#"|\s+(?:cv\.?\s+)?(['"])(\p{Lu}(?:[^'"]|(?<=\p{L})'(?=\p{L}))*)\4(\s+(?:(?:de|den|der|van|von|du|da|dos|la|le|ten|ter|zu|zur)\s+){1,2}[\p{Lu}].*)$"#,
-        r#"|\s+cv\.?\s+(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}))+)\7(\s+\(.*)$"#,
+        r#"\s+(?:cv\.?\s+)?(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}|['"]))+)\1(\s+[\p{Lu}].*)$"#,
+        r#"|\s+(?:cv\.?\s+)?(['"])(\p{Lu}(?:[^'"]|(?<=\p{L})'(?=\p{L}|['"]))*)\4(\s+(?:(?:de|den|der|van|von|du|da|dos|la|le|ten|ter|zu|zur)\s+){1,2}[\p{Lu}].*)$"#,
+        r#"|\s+cv\.?\s+(['"])((?:[^'"]|(?<=\p{L})'(?=\p{L}|['"]))+)\7(\s+\(.*)$"#,
     ))
     .unwrap()
 });
