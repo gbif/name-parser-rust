@@ -40,6 +40,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
+use crate::model::name::split_gtdb_suffix;
 use crate::model::{rank_utils, warnings, Authorship, NameType, NomCode, ParsedName, Rank, State};
 use crate::pipeline::authorship_parser::AuthState;
 use crate::pipeline::blacklisted_epithets;
@@ -163,13 +164,11 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     }
 
     // Step 7: a monomial with an underscore is either "Genus_species" (underscore as space:
-    // genus + specific epithet, when the after-part starts lowercase) or a GTDB-style phrase
-    // name (e.g. "Desulfobacterota_B": uninomial + phrase, when the after-part starts
-    // uppercase). Under the bacterial code a GTDB suffix of capitals stays on the uninomial,
-    // though: `Bacillus_BF` is one of several genera GTDB splits Bacillus into, not Bacillus with
-    // a designation, and the suffixed genus of a binomial (`Acholeplasma_D palmae`) is kept whole
-    // too (#102). Without it the suffix may as well be a BOLD placeholder code
-    // (`Blattellinae_SB`).
+    // genus + specific epithet, when the after-part starts lowercase), a GTDB taxon or a
+    // designation of the taxon before it (uninomial + phrase, `Entodinium_1`). A GTDB suffix of
+    // capitals stays on the uninomial, as it does on the genus or epithet of a binomial
+    // (`Acholeplasma_D palmae`, #102): `Bacillus_BF` is one of several genera GTDB splits
+    // Bacillus into, not Bacillus with a designation. Such a name is informal, see step 19.
     if ctx.name.type_ == NameType::Scientific {
         if let Some(idx) = ctx.name.uninomial.as_ref().and_then(|u| u.find('_')) {
             let uni = ctx.name.uninomial.clone().expect("just matched Some above");
@@ -181,13 +180,10 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
                 ctx.name.genus = Some(before);
                 ctx.name.specific_epithet = Some(after);
                 ctx.name.rank = Rank::Species;
-            } else if ctx.requested_code == Some(NomCode::Bacterial)
-                && after.chars().count() <= 4
-                && after.chars().all(|c| c.is_ascii_uppercase())
-            {
+            } else if split_gtdb_suffix(&uni).is_some() {
                 // "Bacillus_BF" → one GTDB genus
             } else {
-                // "Desulfobacterota_B" → GTDB-style phrase name
+                // "Entodinium_1" → a designation of the taxon before it
                 ctx.name.uninomial = Some(before);
                 ctx.name.phrase = Some(after);
                 ctx.name.type_ = NameType::Informal;
@@ -418,8 +414,7 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
     // Step 18: a phrase epithet without a cultivar always denotes an INFORMAL name → promote
     // a monomial uninomial to a genus so callers see "Baeckea ssp. <phrase>" as a phrase name
     // on a genus, not a uninomial scientific name. Skip promotion for suprageneric phrase
-    // forms (e.g. GTDB "Desulfobacterota_B") where the uninomial really is at family/order
-    // level.
+    // forms (e.g. "Eusiridae NZD") where the uninomial really is at family/order level.
     if ctx.name.phrase.as_ref().is_some_and(|p| !p.is_empty())
         && ctx.name.cultivar_epithet.is_none()
     {
@@ -428,6 +423,21 @@ pub(crate) fn finish(ctx: &mut ParseContext, auth_state: Option<&AuthState>) {
         if below_genus && ctx.name.uninomial.is_some() && ctx.name.genus.is_none() {
             ctx.name.genus = ctx.name.uninomial.take();
         }
+        ctx.name.type_ = NameType::Informal;
+    }
+
+    // Step 19: a taxon GTDB split off is no regular scientific name, but an informal one anchored
+    // on the taxon it was split from: `Pseudomonas_E putida`, `Streptococcus mitis_I`,
+    // `Bacillus_BF`. Whatever the code: the same suffixes are used elsewhere in the tree.
+    let gtdb = [
+        &ctx.name.uninomial,
+        &ctx.name.genus,
+        &ctx.name.specific_epithet,
+        &ctx.name.infraspecific_epithet,
+    ]
+    .into_iter()
+    .any(|part| part.as_deref().and_then(split_gtdb_suffix).is_some());
+    if gtdb {
         ctx.name.type_ = NameType::Informal;
     }
 }
@@ -713,18 +723,25 @@ mod tests {
     }
 
     #[test]
-    fn underscore_split_uppercase_after_becomes_gtdb_phrase_name() {
+    fn underscore_split_keeps_a_gtdb_suffix_on_an_informal_uninomial() {
         let mut ctx = base_ctx();
         ctx.name.uninomial = Some("Desulfobacterota_B".to_string());
         finish(&mut ctx, None);
-        assert_eq!(ctx.name.uninomial, Some("Desulfobacterota".to_string()));
-        assert_eq!(ctx.name.phrase, Some("B".to_string()));
+        assert_eq!(ctx.name.uninomial, Some("Desulfobacterota_B".to_string()));
+        assert_eq!(ctx.name.phrase, None);
         assert_eq!(ctx.name.type_, NameType::Informal);
         assert_eq!(ctx.name.rank, Rank::Unranked);
-        assert_eq!(
-            ctx.name.genus, None,
-            "step 18 must not promote a suprageneric GTDB phrase name to genus"
-        );
+        assert_eq!(ctx.name.genus, None);
+    }
+
+    #[test]
+    fn underscore_split_makes_a_designation_the_phrase() {
+        let mut ctx = base_ctx();
+        ctx.name.uninomial = Some("Entodinium_1".to_string());
+        finish(&mut ctx, None);
+        assert_eq!(ctx.name.uninomial, Some("Entodinium".to_string()));
+        assert_eq!(ctx.name.phrase, Some("1".to_string()));
+        assert_eq!(ctx.name.type_, NameType::Informal);
     }
 
     #[test]

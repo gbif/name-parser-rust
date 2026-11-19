@@ -278,14 +278,14 @@ Concepts (`sensu`, `auct.`, `non`, `s.l.`) go to `taxonomicNote`; a citation of 
 
 ## Qualifiers and doubtful names
 
-Open nomenclature (`cf.`, `aff.`, `?`) qualifies an epithet; such a name is `INFORMAL` and the qualifier sits in `epithetQualifier`.
+Open nomenclature (`cf.`, `aff.`, `?`) qualifies an epithet; such a name is `INFORMAL` and the qualifier sits in `epithetQualifier`. A `?` stays out of the rendered name: the name is `doubtful` and the qualifier field holds it (#243).
 
 | Name | Parsed as |
 |---|---|
 | `Abies cf. alba` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Abies` · specificEpithet `alba`<br>anchor `Abies` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Abies cf. alba` |
 | `Pomatoschistus aff. pictus (Malm, 1865)` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Pomatoschistus` · specificEpithet `pictus`<br>anchor `Pomatoschistus` · `GENUS`<br>epithetQualifier `SPECIFIC` `aff.`<br>basionym: authors `Malm` · year `1865`<br>→ `Pomatoschistus aff. pictus (Malm, 1865)` |
-| `Ferganoconcha? oblonga` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ferganoconcha` · specificEpithet `oblonga`<br>anchor `Ferganoconcha` · `GENUS`<br>epithetQualifier `GENERIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `? Ferganoconcha oblonga` |
-| `Buteo borealis ? ventralis` | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Buteo` · specificEpithet `borealis` · infraspecificEpithet `ventralis`<br>anchor `Buteo borealis` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Buteo borealis ? ventralis` |
+| `Ferganoconcha? oblonga` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ferganoconcha` · specificEpithet `oblonga`<br>anchor `Ferganoconcha` · `GENUS`<br>epithetQualifier `GENERIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Ferganoconcha oblonga` |
+| `Buteo borealis ? ventralis` | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Buteo` · specificEpithet `borealis` · infraspecificEpithet `ventralis`<br>anchor `Buteo borealis` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `?` · doubtful<br>warnings `question marks removed`<br>→ `Buteo borealis ventralis` |
 | `Sorex cf. S. shinto` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Sorex` · specificEpithet `shinto`<br>anchor `Sorex` · `GENUS`<br>epithetQualifier `SPECIFIC` `cf.`<br>→ `Sorex cf. shinto` |
 | `Ammonia ex gr. beccarii` | **Parsed** · `INFORMAL` · rank `SPECIES`<br>genus `Ammonia` · specificEpithet `beccarii`<br>anchor `Ammonia` · `GENUS`<br>epithetQualifier `SPECIFIC` `ex gr.`<br>→ `Ammonia ex gr. beccarii` |
 | `Canis lupus familiaris cf.`<br>*a trailing qualifier goes to the last epithet* | **Parsed** · `INFORMAL` · rank `INFRASPECIFIC_NAME`<br>genus `Canis` · specificEpithet `lupus` · infraspecificEpithet `familiaris`<br>anchor `Canis lupus` · `SPECIES`<br>epithetQualifier `INFRASPECIFIC` `cf.`<br>→ `Canis lupus cf. familiaris` |

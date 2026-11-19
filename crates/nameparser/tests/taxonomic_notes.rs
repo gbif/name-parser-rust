@@ -945,6 +945,7 @@ fn lower_case_s_dot_that_is_no_sensu() {
     assert_name("Abax s. Maran 1955")
         .species("Abax", "s")
         .comb_authors(Some("1955"), &["Maran"])
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     assert_name("Ilex sublongecaudata C. J. Tseng et s. Liu ex Y. R. Li")
         .species("Ilex", "sublongecaudata")
@@ -965,11 +966,13 @@ fn lower_case_s_dot_that_is_no_sensu() {
         .species("Phacops", "s")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     assert_name("Flexicalymene cf. Flexicalymene s.")
         .species("Flexicalymene", "s")
         .qualifiers(&[(NamePart::Specific, "cf.")])
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     // a strain code
     assert_informal("Mycobacterium sp. s.MYCO.102.26sc1")
@@ -989,4 +992,37 @@ fn lower_case_s_dot_that_is_no_sensu() {
     .published_in("Adansonia, n. s. 9: 90 1969")
     .published_in_year(Some(1969))
     .nothing_else();
+}
+
+/// #241: a bracket holding "=" anywhere is a note on an accepted or synonymous name, set aside as
+/// the trailing `[= Grislea L. 1753]` is; it was read as the subgenus, an author or an epithet.
+#[test]
+fn a_bracket_holding_equals_is_set_aside() {
+    assert_name("Pleurosorus (= Asplenium) rutifolius (R.Br.) Fee")
+        .species("Pleurosorus", "rutifolius")
+        .bas_authors(None, &["R.Br."])
+        .comb_authors(None, &["Fee"])
+        .doubtful()
+        .partial("(= Asplenium)")
+        .nothing_else();
+    assert_name("Tillandsia schreiteri Lillo & Castellanos (=T.sphaerocephala Baker?)")
+        .species("Tillandsia", "schreiteri")
+        .comb_authors(None, &["Lillo", "Castellanos"])
+        .doubtful()
+        .partial("(=T.sphaerocephala Baker?)")
+        .nothing_else();
+    assert_name("Sulcorebutia albida (alba Rausch ? = canigueralii)")
+        .species("Sulcorebutia", "albida")
+        .doubtful()
+        .partial("(alba Rausch ? = canigueralii)")
+        .nothing_else();
+    // a synonym reference alone names nothing
+    assert_unparsable("=ixioides?", NameType::Other);
+    // after an indet marker it is the voucher of the unnamed species
+    assert_informal("Euodia sp. (= RFK/3921)")
+        .taxon("Euodia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp. (= RFK/3921)")
+        .nothing_else();
 }

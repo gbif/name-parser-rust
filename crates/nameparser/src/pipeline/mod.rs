@@ -23,6 +23,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
+use crate::model::name::split_gtdb_suffix;
 use crate::model::{
     warnings, Authorship, CombinedAuthorship, NamePart, NameType, NomCode, ParseError, ParsedName,
     Rank, State,
@@ -30,6 +31,8 @@ use crate::model::{
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
 use crate::unicode::{has_mojibake, is_fullwidth, java_trim, normalize_input, normalize_quotes};
+use unicode_normalization::char::is_combining_mark;
+use unicode_normalization::UnicodeNormalization;
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -51,8 +54,8 @@ const LONG_NAME_LENGTH: usize = 250;
 /// regardless of that flag.
 ///
 /// Pattern: Latin-style prefix glued to an all-caps / alphanumeric phrase suffix
-/// ("OdontellidaeGEN", "GenusANIC_3"). Underscored prefixes ("Blattellinae_SB") are
-/// handled later in Assemble; this doesn't match those.
+/// ("OdontellidaeGEN", "GenusANIC_3"). Underscored prefixes ("Entodinium_1",
+/// "Blattellinae_SB") are handled later in Assemble; this doesn't match those.
 static GLUED_PHRASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)([\p{Lu}]{2,}[\p{Lu}\d_]*)$").unwrap());
 
@@ -537,6 +540,8 @@ pub fn run(
     apply_placeholder_tail(&mut ctx);
     assemble::flag_indetermined(&mut ctx.name);
     flag_numbered_authors(&mut ctx.name);
+    flag_single_letters(&mut ctx.name);
+    flag_unusual_characters(&mut ctx.name);
     apply_pending_qualifier(&mut ctx);
 
     Ok(ctx.name)
@@ -557,6 +562,58 @@ fn apply_pending_qualifier(ctx: &mut ParseContext) {
     };
     ctx.name.set_epithet_qualifier(part, &qualifier);
     ctx.name.type_ = NameType::Informal;
+}
+
+/// A genus or an epithet of a single letter is no name of a taxon but a designation or a broken
+/// record (#246): `M mus`, `Polypedates leucomystax b`, `Galium spurium var. L.` An abbreviated
+/// genus keeps its dot and its own warning: `M. mus`.
+fn flag_single_letters(name: &mut ParsedName) {
+    // not the `?` standing for a missing genus (`? alba Smith`)
+    let single = |part: &Option<String>| {
+        part.as_deref()
+            .is_some_and(|w| w.chars().count() == 1 && w != "?")
+    };
+    if single(&name.genus)
+        || single(&name.uninomial)
+        || single(&name.specific_epithet)
+        || single(&name.infraspecific_epithet)
+    {
+        name.add_warning(warnings::SINGLE_LETTER);
+    }
+}
+
+/// A genus or an epithet with a digit or a character no scientific name uses (#244, #236): `Imsh8ia
+/// aleurites`, `Imshia aleu3ites`, `Ephedra przewalskiiß`, `Coccinella 6maculata`, `var. β`. Latin
+/// letters may carry a diaeresis or another accent (`Cephaëlis`, `Pardøsa`), the ligatures æ and œ
+/// stand for two of them, a hyphen joins words (`Pseudo-nitzschia`, `novae-angliae`), and an
+/// apostrophe or a dot is an old spelling (`o'donelli`, `st.-johnii`) or the dot of an abbreviated
+/// genus (`M. mus`). A virus species may hold a number (`Simplexvirus humanalpha1`), and a genus or
+/// epithet the capital suffix GTDB gives a split taxon (`Pseudomonas_E putida`, `Streptococcus
+/// mitis_I`, `Bacillus_BF`). The `?` standing for a missing genus is no odd character, and the
+/// cultivar epithet, which may hold anything, is not looked at.
+fn flag_unusual_characters(name: &mut ParsedName) {
+    let virus = name.code == Some(NomCode::Virus);
+    let usual = |c: char| {
+        c.is_ascii_alphabetic()
+            || matches!(c, '-' | '\'' | '.' | 'æ' | 'Æ' | 'œ' | 'Œ' | 'ø' | 'Ø')
+            || is_combining_mark(c)
+            || virus && c.is_ascii_digit()
+    };
+    let unusual = |part: &Option<String>| {
+        part.as_deref().is_some_and(|w| {
+            let w = split_gtdb_suffix(w).map_or(w, |(taxon, _)| taxon);
+            w != "?" && !w.nfd().all(usual)
+        })
+    };
+    if unusual(&name.genus) || unusual(&name.uninomial) {
+        name.add_warning(warnings::UNUSUAL_GENUS);
+    }
+    if unusual(&name.infrageneric_epithet)
+        || unusual(&name.specific_epithet)
+        || unusual(&name.infraspecific_epithet)
+    {
+        name.add_warning(warnings::UNUSUAL_EPITHET);
+    }
 }
 
 /// An author with a digit in it is no person's name: `Aus bus Smith2, 1900` (#213).

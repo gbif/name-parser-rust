@@ -94,6 +94,7 @@ fn norwegian_radiolaria() {
         .infra_species("Hexaconthium", "pachydermum", Rank::Form, "A")
         .comb_authors(Some("1998"), &["Cortese", "Bjørklund"])
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 
     assert_name("Tripodiscium gephyristes  (Hülseman, 1963) BJ&KR-Atsdatabanken")
@@ -285,14 +286,11 @@ fn hybrid_formulas() {
 #[test]
 fn o_tu() {
     // https://github.com/gbif/name-parser/issues/74
-    // 5.0.0: Java's `.phraseName(monomial, phrase)` is a supraspecific-provisional name → an
-    // informal name. The anchor is a suprageneric uninomial (a GTDB-style phylum), so its
-    // `taxon_rank` is UNRANKED (the parser cannot rank it), not GENUS.
-    assert_informal("Desulfobacterota_B")
-        .taxon("Desulfobacterota")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
-        .phrase("B")
+    // a GTDB phylum keeps its suffix and is informal, anchored on the phylum it was split from
+    // (#244)
+    assert_name("Desulfobacterota_B")
+        .monomial("Desulfobacterota_B")
+        .type_(NameType::Informal)
         .nothing_else();
 
     // 5.0.0: a UBA/GTDB-style accession is a scheme-prefixed machine identifier -> Identifier.
@@ -410,11 +408,13 @@ fn case_sensitive() {
 fn alpha_beta_theta_names() {
     assert_name("Euchlanis dilatata β-larga")
         .infra_species("Euchlanis", "dilatata", Rank::InfraspecificName, "β-larga")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 
     assert_name("Trianosperma ficifolia var. βrigida Cogn.")
         .infra_species("Trianosperma", "ficifolia", Rank::Variety, "βrigida")
         .comb_authors(None, &["Cogn."])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 
     assert_name("Agaricus collinitus β mucosus (Bull.) Fr.")
@@ -449,6 +449,10 @@ fn alpha_beta_theta_names() {
     assert_name("Cyclotus amethystinus var. β Guppy, 1868")
         .infra_species("Cyclotus", "amethystinus", Rank::Variety, "β")
         .comb_authors(Some("1868"), &["Guppy"])
+        .warning(&[
+            warnings::UNUSUAL_EPITHET,
+            nameparser::model::warnings::SINGLE_LETTER,
+        ])
         .nothing_else();
 }
 

@@ -64,6 +64,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_bracketed_genus_doubt(ctx, s);
     s = strip_shouted_vernacular(ctx, s);
+    s = stash_family_designation(ctx, s);
     s = stash_genus_designation(ctx, s);
     s = shorten_species_near(s);
     s = strip_rank_lineage(ctx, s);
@@ -86,6 +87,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_minor_shapes(s);
     s = repair_question_mark_in_word(ctx, s);
     s = stash_misplaced_qualifier(ctx, s);
+    s = stash_bracketed_rank_note(ctx, s);
     s = split_glued_year(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -126,8 +128,10 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_cultivar_spelling(ctx, s);
     s = strip_cultivar_group_grex(ctx, s);
     s = lower_shouted_qualifier(s);
+    s = normalise_spelt_out_markers(s);
     s = strip_rank_nova(ctx, s);
     s = strip_quoted_attributed_author(s);
+    s = unquote_manuscript_epithet(s);
     s = strip_quoted_cultivar(ctx, s);
     s = strip_bare_cultivar_marker(ctx, s);
     s = strip_extinct_dagger(ctx, s);
@@ -611,6 +615,30 @@ fn strip_bracketed_genus_doubt(ctx: &mut ParseContext, s: String) -> String {
 static GENUS_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)gen(?:\.(?-u:\s*)|(?-u:\s+))(\S.*?)(?-u:\s*)$").unwrap()
 });
+
+/// A taxon followed by `fam.` and the designation of an unnamed family in it, a letter, a code or an
+/// unnamed genus: `Digenea fam. B sp. MAT.CG.2`, `Mesostigmata fam. MRY1 sp.`, `Tetraphyllidea fam.
+/// gen. sp. scpl02`. Group 1 is the taxon, group 2 the designation. A family's name after `fam.`
+/// and the placeholders (`fam. indet.`, `fam. Incertae sedis`, `fam. n.`) are not.
+static FAMILY_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)fam\.?(?-u:\s+)((?:\p{Lu}|\p{Lu}+\d[\p{L}\d]*|gen\.)(?:(?-u:\s+).*)?)$")
+        .unwrap()
+});
+
+/// See [`FAMILY_DESIGNATION`]. As for [`GENUS_DESIGNATION`], the designation, marker included, is
+/// the phrase of an informal name on the taxon, of rank SPECIES when it designates a species too,
+/// else FAMILY. Read as is, `fam` became the epithet and the rest its author.
+fn stash_family_designation(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = FAMILY_DESIGNATION.captures(&s) else {
+        return s;
+    };
+    let species = GENUS_DESIGNATION_SPECIES.is_match(&caps[2]);
+    let phrase_start = caps.get(1).unwrap().end();
+    ctx.name.phrase = Some(java_trim(&s[phrase_start..]).to_string());
+    ctx.name.rank = if species { Rank::Species } else { Rank::Family };
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
+}
 
 /// A uninomial labelled with its rank, `Ojrotella gen.`. Group 1 is the uninomial.
 static BARE_GENUS_MARKER: LazyLock<Regex> =
@@ -1161,13 +1189,33 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 /// as any other (`Candidatus Caldatribacterium saccharofermentans OP9-77CS`), as does a code of
 /// capitals joined by an underscore (`PW_SP`), which no author has (#84). A slash may stand in the
 /// code and a genus in square brackets before it: `Agrobacterium pusense L2/2/1`, `[Eubacterium]
-/// rectale M104/1` (#213).
+/// rectale M104/1` (#213). Full stops and underscores may stand inside a code too, `Anabaena bergii
+/// PMC215.03`, `Escherichia coli STEC_H.I.8`, `Botrylloides cf. lenis SMRC_3.1`, and a word labelling
+/// it before it, `Acaulospora colossica spore IB.15` (see [`CODE_LABEL`]): split at the full stop,
+/// the code became an author and its last digits were left over.
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        &r"^((?:Candidatus\s+)?\[?[\p{Lu}][\p{Ll}]+\]?\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:/\-]*\d[\p{L}\d_\-:/]*|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$"
-            .replace("<INFRA>", INFRASPECIFIC_HEAD),
+        &r"^((?:Candidatus\s+)?\[?[\p{Lu}][\p{Ll}]+\]?\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+((?:<LABEL>\s+)?(?:[dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:/_.\-]*\d(?:[\p{L}\d_\-:/.]*[\p{L}\d_\-:/])?|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?))\.?\s*$"
+            .replace("<INFRA>", INFRASPECIFIC_HEAD)
+            .replace("<LABEL>", CODE_LABEL),
     )
     .unwrap()
+});
+
+/// Words that label a code after a species, kept with it in the phrase: `spore IB.15`, `type A14`,
+/// `clone CK051`, `isolate Kol-2`, `ectomycorrhiza V24`. Read as is, the word became an
+/// infraspecific epithet and the code its author.
+const CODE_LABEL: &str =
+    "(?:spore|type|clone|isolate|ectomycorrhiza|morphotype|ecotype|phylotype|genotype)";
+
+/// An abbreviated author glued to a year by a full stop, `Mill.1768`: no code, see
+/// [`TRAILING_STRAIN_CODE`].
+static AUTHOR_DOT_YEAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}[\p{L}.]*\.(?-u:\s?)(?:1[5-9]|20)\d\d$").unwrap());
+
+/// A code glued to the epithet by a full stop, `Halimeda cuneata.Africa.1`: a code after it.
+static GLUED_EPITHET_CODE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}{3,})\.(\p{Lu}[\p{L}\d._\-]*\d)$").unwrap()
 });
 
 /// An infraspecific name a trailing code may follow too, in the head of [`TRAILING_STRAIN_CODE`],
@@ -1259,10 +1307,12 @@ static LABEL_HIGHER_ANCHOR: LazyLock<Regex> = LazyLock::new(|| {
 /// spot-checked against the Java CLI oracle. See [`TRAILING_YEAR`] for what became of
 /// Java's `DIGITS_ONLY` guard.
 fn stash_trailing_strain_code(ctx: &mut ParseContext, s: String) -> String {
-    if let Some(caps) = TRAILING_STRAIN_CODE.captures(&s) {
+    let unglued = GLUED_EPITHET_CODE.replace(&s, "$1 $2");
+    if let Some(caps) = TRAILING_STRAIN_CODE.captures(&unglued) {
         let head = caps.get(1).unwrap().as_str();
         let code = caps.get(2).unwrap().as_str();
         if !TRAILING_YEAR.is_match(code)
+            && !AUTHOR_DOT_YEAR.is_match(code)
             && !token::is_numeral_epithet(code)
             && !is_indet_species_marker(second_word(head))
         {
@@ -1509,6 +1559,18 @@ static TRAILING_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
 static QUALIFIER_AFTER_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(\p{Ll}[\p{Ll}\-]+)(?-u:\s+)[\p{Lu}(].*?)(?-u:\s+)(?:cf|aff)\.?(?-u:\s+)(((?:var|subsp|ssp|f|fo|forma)\.?(?-u:\s+))?(\p{Ll}[\p{Ll}\-]+).*)$").unwrap()
 });
+/// `vel aff.` or `vel cf.` behind a name, "this or one close to it": `Garcinia riparia vel aff.`,
+/// `Pisonia macrocarpa Miranda vel aff.`, `Dalbergia densa var. australis vel aff.`. The `vel` was
+/// read as an epithet or an author. The groups: the name, its species epithet, the qualifier.
+static TRAILING_VEL_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(\p{Ll}[\p{Ll}\-]+)(?:(?-u:\s+)\S.*?)?)(?-u:\s+)vel\.?(?-u:\s+)(cf|aff)\.?$").unwrap()
+});
+/// A second name after a species, its genus written out and its epithet qualified: `Septifer
+/// bilocularis Brachidontes cf. variabilis`. No author takes a qualifier. The groups: the species,
+/// its epithet, the second name.
+static QUALIFIED_SECOND_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(\p{Ll}[\p{Ll}\-]{2,}))(?-u:\s+)(\p{Lu}\p{Ll}{2,}(?-u:\s+)(?:cf|aff|nr)\.?(?-u:\s+)(\p{Ll}[\p{Ll}\-]{2,}))$").unwrap()
+});
 /// Words in a species epithet's place that take no qualifier behind the name.
 const NO_QUALIFIED_EPITHET: &[&str] = &[
     "sp", "spp", "spec", "species", "indet", "cf", "aff", "nr", "near",
@@ -1517,9 +1579,27 @@ const NO_QUALIFIED_EPITHET: &[&str] = &[
 /// Takes a qualifier out of where it does not belong, for the pipeline to give it to the name's
 /// last epithet once that is known, see [`TRAILING_QUALIFIER`] and [`QUALIFIER_AFTER_AUTHOR`]. A
 /// lone epithet after the author only with a rank marker or as an autonym: others are mostly second
-/// names (`Septifer bilocularis Brachidontes cf. variabilis`).
+/// names (`Septifer bilocularis Brachidontes cf. variabilis`), set aside as unparsed, see
+/// [`QUALIFIED_SECOND_NAME`]. `vel aff.` is the qualifier as a whole, [`TRAILING_VEL_QUALIFIER`].
 fn stash_misplaced_qualifier(ctx: &mut ParseContext, s: String) -> String {
     let s = BRACKETED_QUALIFIER.replace(&s, "$1 $2.").into_owned();
+    if let Some(caps) = TRAILING_VEL_QUALIFIER.captures(&s) {
+        if !NO_QUALIFIED_EPITHET.contains(&&caps[2]) {
+            ctx.pending_qualifier = Some(format!("vel {}.", &caps[3]));
+            return caps[1].to_string();
+        }
+    }
+    if let Some(caps) = QUALIFIED_SECOND_NAME.captures(&s) {
+        // an autonym after its author is no second name: `Swartzia flaemingii Raddi cf. flaemingii`
+        if !NO_QUALIFIED_EPITHET.contains(&&caps[2])
+            && !NO_QUALIFIED_EPITHET.contains(&&caps[4])
+            && caps[4] != caps[2]
+            && super::rank_markers::match_infraspecific(&caps[4]).is_none()
+        {
+            ctx.set_pending_unparsed(&caps[3]);
+            return caps[1].to_string();
+        }
+    }
     if let Some(caps) = TRAILING_QUALIFIER.captures(&s) {
         let head_end = caps[1]
             .split_whitespace()
@@ -1558,16 +1638,64 @@ fn stash_misplaced_qualifier(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
-/// A qualifier trailing a separate authorship: `Vittad. cf.`, as [`TRAILING_QUALIFIER`] on the name
-/// string.
-static AUTHORSHIP_TRAILING_QUALIFIER: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(.*\S)(?-u:\s+)\(?(cf|aff|nr)\.?\)?$").unwrap());
+/// A rank and an epithet in brackets after an author, and what follows: `Camelina sativa (L.) Crantz
+/// (f. annua), f.1`, `Marchantia polymorpha L. var. polymorpha (var. ruderalis)`. A note, mostly of a
+/// germplasm collection, on the form or variety the material belongs to; the authors swallowed it.
+/// Group 1 the name with its author, group 2 the note.
+static BRACKETED_RANK_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}{3,}(?-u:\s+).*?\p{Lu}.*?\S)(?-u:\s+)(\((?:f|fo|var|subsp|ssp)\.(?-u:\s*)\p{Ll}+\).*)$").unwrap()
+});
+
+/// [`BRACKETED_RANK_NOTE`] in a separate authorship: `(L.) Crantz (f. annua), f.1`.
+static AUTHORSHIP_BRACKETED_RANK_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*?\p{Lu}.*?\S)(?-u:\s+)(\((?:f|fo|var|subsp|ssp)\.(?-u:\s*)\p{Ll}+\).*)$")
+        .unwrap()
+});
+
+/// See [`AUTHORSHIP_BRACKETED_RANK_NOTE`].
+fn stash_authorship_bracketed_rank_note(ctx: &mut ParseContext, s: String) -> String {
+    match AUTHORSHIP_BRACKETED_RANK_NOTE.captures(&s) {
+        Some(caps) => set_aside_rank_note(ctx, &caps[1], &caps[2]),
+        None => s,
+    }
+}
+
+/// See [`BRACKETED_RANK_NOTE`]: set aside as unparsed, the name is left PARTIAL.
+fn stash_bracketed_rank_note(ctx: &mut ParseContext, s: String) -> String {
+    match BRACKETED_RANK_NOTE.captures(&s) {
+        Some(caps) => set_aside_rank_note(ctx, &caps[1], &caps[2]),
+        None => s,
+    }
+}
+
+/// A cultivar after a [`BRACKETED_RANK_NOTE`]: `, cv. Annushka`, `, cv.Venera`.
+static CULTIVAR_AFTER_RANK_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\([^)]*\))(?-u:\s*),(?-u:\s*)(cv\.(?-u:\s*)\p{Lu}.*)$").unwrap()
+});
+
+/// Sets the rank `note` aside as unparsed and returns the `head` before it; a cultivar after the
+/// note stays with the name, whose cultivar it is.
+fn set_aside_rank_note(ctx: &mut ParseContext, head: &str, note: &str) -> String {
+    if let Some(caps) = CULTIVAR_AFTER_RANK_NOTE.captures(note) {
+        ctx.set_pending_unparsed(&caps[1]);
+        return format!("{head} {}", &caps[2]);
+    }
+    ctx.set_pending_unparsed(note);
+    head.to_string()
+}
+
+/// A qualifier trailing a separate authorship: `Vittad. cf.`, `Miranda vel aff.`, as
+/// [`TRAILING_QUALIFIER`] and [`TRAILING_VEL_QUALIFIER`] on the name string.
+static AUTHORSHIP_TRAILING_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*?\S)(?-u:\s+)\(?(vel\.?(?-u:\s+))?(cf|aff|nr)\.?\)?$").unwrap()
+});
 
 /// See [`AUTHORSHIP_TRAILING_QUALIFIER`].
 fn stash_authorship_trailing_qualifier(ctx: &mut ParseContext, s: String) -> String {
     match AUTHORSHIP_TRAILING_QUALIFIER.captures(&s) {
         Some(caps) => {
-            ctx.pending_qualifier = Some(format!("{}.", &caps[2]));
+            let vel = if caps.get(2).is_some() { "vel " } else { "" };
+            ctx.pending_qualifier = Some(format!("{vel}{}.", &caps[3]));
             caps[1].to_string()
         }
         None => s,
@@ -1816,12 +1944,18 @@ fn rank_of_marker(w: &str) -> Option<Rank> {
 /// the standalone `NameType::Identifier` path in `preflight` (shared `culture_collections` list).
 static TRAILING_CULTURE_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"^([\p{{Lu}}][\p{{Ll}}]+[ ]+[\p{{Ll}}]+{})[ ]+({}[ :=_\-]*(?:[A-Z]{{1,4}}\-)?[0-9][0-9A-Za-z.:\-]*)$",
+        r"^([\p{{Lu}}][\p{{Ll}}]+[ ]+[\p{{Ll}}]+{})[ ]+({}[ :=_\-]*(?:[A-Z]{{1,4}}\-)?[0-9][0-9A-Za-z.:\-]*{})$",
         INFRASPECIFIC_HEAD,
-        super::culture_collections::acronym_alternation()
+        super::culture_collections::acronym_alternation(),
+        EQUIVALENT_ACCESSIONS
     ))
     .unwrap()
 });
+
+/// The accessions of the same strain in other collections, each after `=`: `DSM 1382 = ATCC
+/// 19364`, `DSM 30006 = CIP 81.8`. Read as is, the acronyms became a team of authors.
+const EQUIVALENT_ACCESSIONS: &str =
+    r"(?:[ ]*=[ ]*[A-Z]{2,}[ :_\-]*(?:[A-Z]{1,4}\-)?[0-9][0-9A-Za-z.:\-]*)*";
 
 /// See [`TRAILING_CULTURE_ACCESSION`].
 fn stash_trailing_culture_accession(ctx: &mut ParseContext, s: String) -> String {
@@ -1839,8 +1973,9 @@ fn stash_trailing_culture_accession(ctx: &mut ParseContext, s: String) -> String
 /// name, group 3 the code.
 static TRAILING_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+(\p{Lu}{2,}[\p{Lu}\d]*\s+([\p{L}\d][\p{L}\d_\-.:/]*))$"
-            .replace("<INFRA>", INFRASPECIFIC_HEAD),
+        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+(\p{Lu}{2,}[\p{Lu}\d]*\s+([\p{L}\d][\p{L}\d_\-.:/]*)<EQ>)$"
+            .replace("<INFRA>", INFRASPECIFIC_HEAD)
+            .replace("<EQ>", EQUIVALENT_ACCESSIONS),
     )
     .unwrap()
 });
@@ -2218,8 +2353,9 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
 /// after a name. On its own it is an IDENTIFIER (see `preflight`). A `BIN` label before the code
 /// goes with it, `Bledius BIN BOLD:ACU5439` (#187): it was taken for an author. Brackets around
 /// them go too, `Aegialites debilis (BIN BOLD:ADH3884)` (#216), a basionym author `BIN Bold` before.
+/// A BIN split by a comma, `Lacanobia nr. subjuncta Bold:Aab, 0925`, is kept as written.
 static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(.*?[^\s])(?-u:\s+)\(?(?:BIN(?-u:\s+))?(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)\)?$").unwrap()
+    Regex::new(r"(?i)^(.*?[^\s])(?-u:\s+)\(?(?:BIN(?-u:\s+))?(BOLD[:_-][A-Z0-9]+(?:,(?-u:\s*)\d+)?|SH(?-u:\d{6,})\.[0-9A-Z.]+)\)?$").unwrap()
 });
 
 /// Sets a trailing BOLD BIN or SH code aside, to be appended to the phrase by Assemble: the
@@ -2229,8 +2365,12 @@ static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
 fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
     match TRAILING_IDENTIFIER.captures(&s) {
         Some(caps) => {
-            // Canonical in uppercase, as on its own (#119).
-            ctx.trailing_identifier = Some(super::preflight::canonical_identifier(&caps[2]));
+            // Canonical in uppercase, as on its own (#119); a split one as written.
+            ctx.trailing_identifier = Some(if caps[2].contains(',') {
+                caps[2].to_string()
+            } else {
+                super::preflight::canonical_identifier(&caps[2])
+            });
             caps[1].to_string()
         }
         None => s,
@@ -2575,11 +2715,12 @@ fn lower_capitalised_marker(s: String) -> String {
     }
 }
 
-/// A genus and a capitalised word (group 2) after it, perhaps with a capitalised part after a
-/// hyphen (`Sancti-Vincenti`), and what follows (group 3).
+/// A genus, perhaps a qualifier (group 2), and a capitalised word (group 3) after it, perhaps with
+/// a capitalised part after a hyphen (`Sancti-Vincenti`), and what follows (group 4). Group 1 is
+/// all before the word.
 static GENUS_CAPITALISED_WORD: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"^(\p{Lu}\p{Ll}+(?-u:\s+))(\p{Lu}[\p{Ll}\-]+(?:\p{Lu}[\p{Ll}\-]*)?)(?:(?-u:\s+)(.+))?$",
+        r"^(\p{Lu}\p{Ll}+(?-u:\s+)((?:cf|aff|nr)\.?(?-u:\s+))?)(\p{Lu}[\p{Ll}\-]+(?:\p{Lu}[\p{Ll}\-]*)?)(?:(?-u:\s+)(.+))?$",
     )
     .unwrap()
 });
@@ -2596,6 +2737,12 @@ static FAMILY_GROUP_ENDING: LazyLock<Regex> =
 static LATIN_COMPOUND_EPITHET: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^(?:Sancti|Sanctae|Novae|Novi)-\p{L}+$").unwrap());
 
+/// An abbreviated author, perhaps in a team or after a bracketed one: `Boiss.`, `(L.) DC.`, `Hook. &
+/// Arn.`
+static ABBREVIATED_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(?:\(\p{Lu}[\p{L}'\-]*\.\)(?-u:\s*))?\p{Lu}[\p{L}'\-]*\.(?:(?-u:\s*)(?:&|et|ex)(?-u:\s*)\p{Lu}[\p{L}'\-]*\.?)*$").unwrap()
+});
+
 /// An author with a year, perhaps in brackets: `Linnæus, 1758`, `(Agassiz, 1843)`.
 static AUTHOR_WITH_YEAR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^\(?\p{Lu}[\p{L}'.\- ]*,?(?-u:\s*)(?:1[789]\d\d|20[0-2]\d)\)?$").unwrap()
@@ -2608,13 +2755,16 @@ static AUTHOR_WITH_YEAR: LazyLock<Regex> = LazyLock::new(|| {
 /// below, an authorship following; when the authorship comes separately, repeating what follows the word or not starting
 /// with it; or when it ends as only a Latin epithet does, nothing or an author with a year after
 /// it. A
-/// genus with a surname of two words, `Homalaspis Milne Edwards, 1863`, has none of these.
+/// genus with a surname of two words, `Homalaspis Milne Edwards, 1863`, has none of these. After a
+/// qualifier an authorship following is evidence too (#233): `Phrynopus cf. Barlenae`, `Teucrium
+/// cf. Cyprium Boiss.` A word with none stays the genus compared with: `Onthophagus cf. Aphodius`.
 fn lower_capitalised_epithet(ctx: &mut ParseContext, s: String) -> String {
     let Some(caps) = GENUS_CAPITALISED_WORD.captures(&s) else {
         return s;
     };
-    let word = &caps[2];
-    let tail = caps.get(3).map(|m| m.as_str());
+    let word = &caps[3];
+    let tail = caps.get(4).map(|m| m.as_str());
+    let qualified = caps.get(2).is_some();
     if caps[1].trim_end() == "Candidatus" || token::is_particle(&word.to_lowercase()) {
         return s;
     }
@@ -2641,7 +2791,19 @@ fn lower_capitalised_epithet(ctx: &mut ParseContext, s: String) -> String {
     let by_ending = (compound
         || (LATIN_EPITHET_ENDING.is_match(word) && !FAMILY_GROUP_ENDING.is_match(word)))
         && tail.is_none_or(|t| AUTHOR_WITH_YEAR.is_match(t));
-    if !(hinted || by_column || by_ending) {
+    // After a qualifier the word is mostly a genus or higher taxon compared with, so a rank hint
+    // tells nothing, nor does an author with a year, mostly the anchor genus' (`Dicranoplia cf.
+    // Anomala` + `Reitter 1903`); an abbreviated author does (`Teucrium cf. Cyprium Boiss.`).
+    let evidence = if qualified {
+        // never a family-group name compared with: `Attacapa cf. Noctuidae`
+        !FAMILY_GROUP_ENDING.is_match(word)
+            && (by_ending
+                || tail.is_some_and(|t| ABBREVIATED_AUTHOR.is_match(t))
+                || (tail.is_none() && column.is_some_and(|c| ABBREVIATED_AUTHOR.is_match(c))))
+    } else {
+        hinted || by_column || by_ending
+    };
+    if !evidence {
         return s;
     }
     ctx.name.add_warning(warnings::CAPITALISED_EPITHET);
@@ -3644,6 +3806,17 @@ static SHOUTED_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+(?:\s+\p{Ll}+)?\s+)(CF|AFF)\.?(\s+\p{Ll}.*|\s*)$").unwrap()
 });
 
+/// `c.f.` written with two dots for cf., in lower case before an epithet: `Dracaena c.f.
+/// afromontana Mildbr` (#246). The `c` became the epithet. Not the initials of an author: `C.F.
+/// Liang`.
+static SPELT_OUT_CF: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(^|(?-u:\s))c\.(?-u:\s?)f\.((?-u:\s+)\p{Ll})").unwrap());
+
+/// See [`SPELT_OUT_CF`].
+fn normalise_spelt_out_markers(s: String) -> String {
+    SPELT_OUT_CF.replace_all(&s, "${1}cf.${2}").into_owned()
+}
+
 /// Lower-cases a [`SHOUTED_QUALIFIER`], which was read as an author "Cf" — not after an indet marker,
 /// where it is a strain code ("Bacillus sp. CF"), nor among authors' initials ("Dubois, CF 1839").
 fn lower_shouted_qualifier(s: String) -> String {
@@ -3729,6 +3902,27 @@ static AUTHORSHIP_QUOTED_ATTRIBUTED: LazyLock<Regex> = LazyLock::new(|| {
 ///
 /// All three spot-checked against the Java CLI oracle's `cultivarEpithet`/`rank`/`code`/
 /// `specificAuthorship` output shape.
+/// A quoted epithet followed by a note of a new or unpublished species, bracketed, its bracket left
+/// open, or bare: `Lepidobolus 'quadratus' (sp. nov. ined.`, `Lepidobolus 'quadratus' ms.` (#231).
+/// Groups: the genus, the epithet, the note.
+static QUOTED_MANUSCRIPT_EPITHET: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"^(\p{Lu}\p{Ll}+)(?-u:\s+)['‘’"]([\p{Ll}\-]+)['‘’"](?-u:\s+)\(?((?i:(?:sp|spec)\.?(?-u:\s*)nov\.?(?:,?(?-u:\s*)ined\.?)?|ined\.?|mss?\.?|msc\.?))\)?(?-u:\s*)$"#,
+    )
+    .unwrap()
+});
+
+/// Rust-only: the quotes of an epithet that is not yet published, see [`QUOTED_MANUSCRIPT_EPITHET`],
+/// mark a manuscript name, no cultivar: `Lepidobolus 'quadratus' (sp. nov. ined.` reads as
+/// `Lepidobolus quadratus sp. nov. ined.`, the species `quadratus` with that note and the
+/// manuscript flag. The quoted word with the note became an author ("'quadratus' sp.nov.").
+fn unquote_manuscript_epithet(s: String) -> String {
+    match QUOTED_MANUSCRIPT_EPITHET.captures(&s) {
+        Some(caps) => format!("{} {} {}", &caps[1], &caps[2], &caps[3]),
+        None => s,
+    }
+}
+
 fn strip_quoted_cultivar(ctx: &mut ParseContext, mut s: String) -> String {
     let cm = QUOTED_CULTIVAR_END.captures(&s).ok().flatten();
     let cm_found = cm.is_some();
@@ -3986,8 +4180,48 @@ fn stash_synonym_bracket(ctx: &mut ParseContext, s: String) -> String {
         }
         return kept;
     }
-    s
+    // Rust-only: a bracket holding "=" anywhere, round or square, is the same kind of note, an
+    // accepted or synonymous name (#241): `Pleurosorus (= Asplenium) rutifolius (R.Br.) Fee`,
+    // `Tillandsia schreiteri Lillo & Castellanos (=T.sphaerocephala Baker?)`. It was read as the
+    // subgenus, an author or an epithet. Set aside the same way, the rest parsed. After an indet
+    // marker it belongs to the phrase of the unnamed species: `Euodia sp. (= RFK/3921)`,
+    // `Dichanthelium species 12 (=chrysopsidifolium)`.
+    let notes: Vec<_> = EQUALS_BRACKET
+        .find_iter(&s)
+        .filter(|m| {
+            !s[..m.start()].split_whitespace().any(|w| {
+                matches!(
+                    w.trim_end_matches('.').to_lowercase().as_str(),
+                    "sp" | "spp" | "spec" | "species"
+                )
+            })
+        })
+        .collect();
+    if notes.is_empty() {
+        return s;
+    }
+    let text: Vec<&str> = notes.iter().map(|m| java_trim(m.as_str())).collect();
+    ctx.set_pending_unparsed(&text.join(" "));
+    ctx.name.doubtful = true;
+    let mut kept = String::with_capacity(s.len());
+    let mut last = 0;
+    for m in &notes {
+        kept.push_str(&s[last..m.start()]);
+        kept.push(' ');
+        last = m.end();
+    }
+    kept.push_str(&s[last..]);
+    let mut kept = collapse_whitespace(&kept);
+    while kept.ends_with(',') {
+        kept.pop();
+        kept = java_trim(&kept).to_string();
+    }
+    kept
 }
+
+/// A round or square bracket holding "=", see [`stash_synonym_bracket`].
+static EQUALS_BRACKET: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"(?-u:\s*)[(\[][^()\[\]]*=[^()\[\]]*[)\]]").unwrap());
 
 // ---- Shared helper: normaliseNomNote (used by steps 29 and 30) ----
 
@@ -7562,7 +7796,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 25] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 26] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -7573,6 +7807,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_html,
         normalise_hort_ex_placeholder,
         stash_authorship_trailing_qualifier,
+        stash_authorship_bracketed_rank_note,
         split_glued_year_of_authorship,
         pipe_to_ampersand,
         split_glued_particle,

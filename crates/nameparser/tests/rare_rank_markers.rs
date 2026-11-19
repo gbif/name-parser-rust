@@ -72,6 +72,7 @@ fn race_marker() {
     assert_name("Diacamma rugosum r. Karavajev & Karawajew 1935")
         .infra_species("Diacamma", "rugosum", Rank::InfraspecificName, "r")
         .comb_authors(Some("1935"), &["Karavajev", "Karawajew"])
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 }
 
@@ -122,6 +123,7 @@ fn s_marker_between_epithets() {
     assert_name("Abax s. Maran 1955")
         .species("Abax", "s")
         .comb_authors(Some("1955"), &["Maran"])
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
     // before an author or at the end it is sensu, and so are s. str. and s. lat.
     assert_name("Agaricus aethiops s. Fr.")

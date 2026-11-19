@@ -269,14 +269,16 @@ pub fn find_boundary(tokens: &[Token], ctx: &ParseContext) -> usize {
                 }
                 // "n. sp." before any epithet is the species marker "sp." of a new species
                 // ("Jardinella n. sp. keel", #139): walk on to the "sp"
+                let dot = usize::from(tokens.get(i + 1).is_some_and(|d| d.kind == TokenKind::Dot));
                 if t.text == "n"
                     && !have_epithet
-                    && tokens.get(i + 1).is_some_and(|d| d.kind == TokenKind::Dot)
-                    && tokens.get(i + 2).is_some_and(|m| {
-                        m.kind == TokenKind::Word && m.text.eq_ignore_ascii_case("sp")
+                    && tokens.get(i + 1 + dot).is_some_and(|m| {
+                        m.kind == TokenKind::Word
+                            && (m.text.eq_ignore_ascii_case("sp")
+                                || crate::pipeline::name_tokens::is_glued_indet_marker(&m.text))
                     })
                 {
-                    i += 2;
+                    i += 1 + dot;
                     continue;
                 }
                 // cf./aff. qualifiers and indet markers — keep walking

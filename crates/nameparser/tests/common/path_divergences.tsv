@@ -45,3 +45,8 @@ nosplit	Mangelia sl. sp.		SPECIES		-	structural: the sensu note stands between t
 nosplit	Mangelia s.l. sp.		SPECIES		-	structural: the sensu note stands between the genus and the sp. of its indetermined species (#251)
 nosplit	Mangelia s. l. sp.		SPECIES		-	structural: the sensu note stands between the genus and the sp. of its indetermined species (#251)
 nosplit	Mangelia s.s. sp.1				-	structural: the sensu note stands between the genus and the sp. of its indetermined species (#251)
+nosplit	Teucrium cf. Cyprium Boiss.				-	structural: only the author tells the capitalised word after the qualifier is an epithet (#233)
+nosplit	Lepidobolus 'quadratus' (sp. nov. ined.				-	structural: without its note the quoted word is a cultivar (#231)
+nosplit	Lepidobolus 'quadratus' (sp. nov. ined.)				-	structural: without its note the quoted word is a cultivar (#231)
+nosplit	Lepidobolus 'quadratus' ms.				-	structural: without its note the quoted word is a cultivar (#231)
+nosplit	Coccomyces "lignicola" ined.				-	structural: without its note the quoted word is a cultivar (#231)

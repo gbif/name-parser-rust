@@ -136,10 +136,12 @@ fn a_spaced_numeral_epithet() {
     assert_name("Sphex 2 punctata Fabricius, 1793")
         .species("Sphex", "2-punctata")
         .comb_authors(Some("1793"), &["Fabricius"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Coccinella 12 guttata Poda, 1761")
         .species("Coccinella", "12-guttata")
         .comb_authors(Some("1761"), &["Poda"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Episyron rufipes 7. maculatus")
         .infra_species(
@@ -148,9 +150,11 @@ fn a_spaced_numeral_epithet() {
             Rank::InfraspecificName,
             "7-maculatus",
         )
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Compsosoma (Compsosoma) 5 notatum")
         .species_ig("Compsosoma", "Compsosoma", "5-notatum")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     // a number before any other word is no numeral epithet
     if let nameparser::ParseResult::Parsed(p) =

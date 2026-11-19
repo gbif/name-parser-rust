@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::model::{NameType, NomCode, ParseError, Rank, State};
+use crate::model::{NamePart, NameType, NomCode, ParseError, Rank, State};
 use crate::pipeline::ParseContext;
 use crate::unicode::java_trim;
 use crate::viral::is_viral;
@@ -150,6 +150,15 @@ pub(super) fn canonical_identifier(code: &str) -> String {
     }
 }
 
+/// A first word of two or more capitals and digits, perhaps hyphenated, and more words after it:
+/// see its use in [`run`].
+static CLADE_CODE_HEAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Z]{2,}[-_]?[0-9][A-Za-z0-9-]*(?-u:\s+)\S").unwrap());
+
+/// The human and simian immunodeficiency and T-lymphotropic viruses, by their acronym and number.
+static RETROVIRUS_HEAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:HIV|SIV|HTLV)[-_]?[0-9]").unwrap());
+
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\d` (in a class) → scoped.
 static OTU_GTDB_UBA: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:UBA|GTDB|GCA|GCF)(?-u:[\d_-]+)$").unwrap());
@@ -204,11 +213,28 @@ const ALTERNATIVE_GENUS: &str = r"\p{Lu}\p{Ll}+(?:-\p{Lu}?\p{Ll}+)?";
 /// `Aphaenogaster cf. rudis/texana` (#225), or with an infraspecific rank marker, `Sylvia cantillans
 /// subsp. inornata/iberiae`. The groups: genus, subgenus, the epithets, the rank marker, the
 /// alternatives. Read by [`read_alternatives`]. The marker is lazy, so that a qualifier stays the
-/// epithet's: `Aus bus cf. cus/dus`.
+/// epithet's: `Aus bus cf. cus/dus`. Before a slash or pipe an authorship may follow the epithets,
+/// each alternative carrying its own (#235): `Chionodoxa forbesii BAKER / luciliae BOISS.`,
+/// `Carduelis carduelis (Linnaeus, 1758) / Serinus canaria (Linnaeus, 1758)`. Alternative authors
+/// stay authors, a capitalised word alone being no alternative: `Aus bus Smith/Jones`. After an
+/// authorship the slash stands apart on one side at least, so that a word holding one is no
+/// alternative: `Carnevali & M. Jua|arez`, `Prostanthera lasianthos Girraween/Polblue variant`.
 static ALTERNATIVE_EPITHETS: LazyLock<Regex> = LazyLock::new(|| {
     let epithet = r"(?:(?:cf|aff|nr)\.?(?-u:\s+))?\p{Ll}[\p{Ll}\-]+";
     Regex::new(&format!(
-        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+)(?:(\p{{Ll}}+)\.?(?-u:\s+))??{epithet})?)(?:(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(.+)$"
+        r"^({ALTERNATIVE_GENUS})(?:(?-u:\s+)\((\p{{Lu}}\p{{Ll}}+)\))?(?-u:\s+)({epithet}(?:(?-u:\s+)(?:(\p{{Ll}}+)\.?(?-u:\s+))??{epithet})?)(?:(?-u:\s+)(?P<auth>{ALTERNATIVE_AUTHORSHIP})(?:(?-u:\s+)[/|](?-u:\s*)|[/|](?-u:\s+))|(?-u:\s*)[/|](?-u:\s*)|(?-u:\s+)or(?-u:\s+))(?P<alts>.+)$"
+    ))
+    .unwrap()
+});
+/// The authorship of one of several alternatives (#235): capitalised names, years, `&`, `et`, `ex`,
+/// `in` and brackets, no lower-case word or code, so that a strain (`indica PD1998/pus`), a page
+/// (`pl. 222 / figs 1 – 7`) or a host (`ex Ficus popenoei/nymphaefolia`) is no authorship.
+const ALTERNATIVE_AUTHORSHIP: &str = r"\(?\p{Lu}[\p{L}.'\-]*\)?(?:,?(?-u:\s+)(?:\(?\p{Lu}[\p{L}.'\-]*\)?|\(?\d{4}\)?|&|et|ex|in))*,?";
+/// An alternative after one that carries an authorship: an epithet or a species, its genus written
+/// out or abbreviated, perhaps with its own authorship, and nothing else.
+static ALTERNATIVE_WITH_AUTHORSHIP: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?:{ALTERNATIVE_GENUS}(?-u:\s+)|\p{{Lu}}\.(?-u:\s*))?\p{{Ll}}[\p{{Ll}}\-]+(?:(?-u:\s+){ALTERNATIVE_AUTHORSHIP})?(?-u:\s*)$"
     ))
     .unwrap()
 });
@@ -274,6 +300,8 @@ enum Alternatives<'a> {
         genus: &'a str,
         subgenus: Option<&'a str>,
         species: Option<&'a str>,
+        /// The qualifier of that species: `Agabus cf. lutosus griseus/griseipennis`.
+        qualifier: Option<&'a str>,
         rank: Option<Rank>,
         phrase: &'a str,
     },
@@ -305,7 +333,15 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
         }
         None => None,
     };
-    let alternatives = &caps[5];
+    let alternatives = &caps["alts"];
+    // after an authorship every alternative is a whole one, with its own authorship or none
+    if caps.name("auth").is_some()
+        && !ALTERNATIVE_SEPARATOR
+            .split(alternatives)
+            .all(|alternative| ALTERNATIVE_WITH_AUTHORSHIP.is_match(alternative))
+    {
+        return None;
+    }
     if let Some(species) = ALTERNATIVE_SPECIES.captures(alternatives) {
         if AUTHOR_LINK.contains(&&species[2]) {
             return None;
@@ -324,14 +360,16 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
         return None;
     }
     let epithets = caps.get(3)?;
-    let species = shared_species(genus, epithets.as_str(), alternatives);
-    let phrase = &s[epithets.start()..];
+    let shared = shared_species(genus, epithets.as_str(), alternatives);
+    // the phrase starts below the species, at the epithets if there is none
+    let below = shared.map_or(0, |(_, _, below)| epithets.len() - below.len());
     Some(Alternatives::OneTaxon {
         genus,
         subgenus: caps.get(2).map(|m| m.as_str()),
-        species,
-        rank: rank.filter(|_| species.is_some()),
-        phrase: species.map_or(phrase, |species| phrase[species.len()..].trim_start()),
+        species: shared.map(|(_, species, _)| species),
+        qualifier: shared.and_then(|(qualifier, _, _)| qualifier),
+        rank: rank.filter(|_| shared.is_some()),
+        phrase: &s[epithets.start() + below..],
     })
 }
 
@@ -347,12 +385,24 @@ fn names_genus(written: &str, genus: &str) -> bool {
 /// The species all alternatives lie in, so that it is sure while what is below it is not: `Bubo
 /// virginianus pallescens / Bubo virginianus pinorum intergrade`, `Tachybaptus ruficollis
 /// tricolor/vulcanorum` (#212). `epithets` needs a word below the species, since a lone epithet after
-/// a binomial is another species. A qualifier in front of the species doubts it.
-fn shared_species<'a>(genus: &str, epithets: &'a str, alternatives: &str) -> Option<&'a str> {
-    let (species, _) = epithets.split_once(char::is_whitespace)?;
-    if matches!(species.trim_end_matches('.'), "cf" | "aff" | "nr")
-        || NO_ALTERNATIVE_EPITHET.contains(&species)
-    {
+/// a binomial is another species. A qualifier in front of the species doubts it, and the species
+/// keeps it: `Agabus cf. lutosus griseus/griseipennis`. Returns the qualifier without its full stop,
+/// the species and the epithets below it.
+fn shared_species<'a>(
+    genus: &str,
+    epithets: &'a str,
+    alternatives: &str,
+) -> Option<(Option<&'a str>, &'a str, &'a str)> {
+    let (first, rest) = epithets.split_once(char::is_whitespace)?;
+    let (qualifier, (species, below)) = match first.trim_end_matches('.') {
+        qualifier @ ("cf" | "aff" | "nr") => (
+            Some(qualifier),
+            rest.trim_start().split_once(char::is_whitespace)?,
+        ),
+        _ => (None, (first, rest)),
+    };
+    let below = below.trim_start();
+    if NO_ALTERNATIVE_EPITHET.contains(&species) {
         return None;
     }
     ALTERNATIVE_SEPARATOR
@@ -363,7 +413,7 @@ fn shared_species<'a>(genus: &str, epithets: &'a str, alternatives: &str) -> Opt
                 None => ALTERNATIVE_EPITHET.is_match(alternative),
             },
         )
-        .then_some(species)
+        .then_some((qualifier, species, below))
 }
 
 /// A capitalised word, an underscore and a label opening with a capital or a digit, in a word with
@@ -426,6 +476,11 @@ static GEN_NOV: LazyLock<Regex> = LazyLock::new(|| {
 /// (keeping the trailing `$` outside the wrap since anchors aren't `u`-sensitive either way).
 static OTU_SPECIMEN_SUFFIX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)(?-u:\bsp\d{8,})$").unwrap());
+
+/// The unnamed species GTDB places in a genus, the genus with or without its GTDB suffix and `sp`
+/// with the number of a genome assembly: `Pseudomonas_E sp002874965`.
+static GTDB_UNNAMED_SPECIES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+(?:_[A-Z]{1,3})?(?-u:\s+)sp\d{8,}$").unwrap());
 
 // ---------- PLACEHOLDER ----------
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\s`/`\b` (many), no `\p{…}`, no wildcard `.` (only
@@ -1026,8 +1081,18 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     if GEN_NOV.is_match(&s)
         // Dead-but-faithful (same shape as the PR2_LIKE note above): the `@`-check in the delete-marker gate above (Preflight.java:212) already returns for any `s.starts_with('@')`, so this second one (Preflight.java:278) can never fire — ported verbatim anyway to stay faithful.
         || s.starts_with('@')
+        // Rust-only: a synonym reference alone, `=ixioides?` (#241), names nothing
+        || s.starts_with('=')
     {
         return Err(ParseError::new(NameType::Other, None, s));
+    }
+    // Rust-only: a code of capitals and digits in the genus's place is the label of a clade, no
+    // genus: `ANME-1 cluster archaeon GoMg3.2`, `SAR324 cluster bacterium`, `NC10 bacterium`,
+    // `UBA4372 sp`. It was title-cased into a genus `Anme-1`. The retroviruses' strains are
+    // viruses: `HIV-1 06TG.HT064`, `SIV-1 …`, `HTLV-1 …`.
+    if CLADE_CODE_HEAD.is_match(&s) {
+        let code = RETROVIRUS_HEAD.is_match(&s).then_some(NomCode::Virus);
+        return Err(ParseError::new(NameType::Other, code, s));
     }
     if let Some(caps) = DASH_NUMBER_LABEL.captures(&s) {
         rescue_label(ctx, &caps[1], &caps[2]);
@@ -1060,10 +1125,15 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
             genus,
             subgenus,
             species,
+            qualifier,
             rank,
             phrase,
         }) => {
             rescue_informal_group(ctx, genus, phrase);
+            if let Some(qualifier) = qualifier {
+                ctx.name
+                    .set_epithet_qualifier(NamePart::Specific, &format!("{qualifier}."));
+            }
             if let Some(rank) = rank {
                 ctx.name.rank = rank;
                 // the code a marker tells: `Bacillus thuringiensis serovar aizawai/pacificus`
@@ -1084,8 +1154,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     if PR2_LIKE.is_match(&s) && s.contains('-') && has_digit(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
     }
-    // GTDB/SILVA specimen codes ending with "sp" + 8+ digits (e.g. "18JY21-1 sp004344915").
-    if s.contains(' ') && OTU_SPECIMEN_SUFFIX.is_match(&s) {
+    // GTDB/SILVA specimen codes ending with "sp" + 8+ digits (e.g. "18JY21-1 sp004344915"). After
+    // a genus, its GTDB suffix or not, it is the unnamed species GTDB placed there, an informal
+    // name: `Pseudomonas_E sp002874965`, `Acidaminococcus sp000437815`.
+    if s.contains(' ') && OTU_SPECIMEN_SUFFIX.is_match(&s) && !GTDB_UNNAMED_SPECIES.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
     }
 

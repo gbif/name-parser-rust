@@ -145,3 +145,27 @@ fn a_manuscript_marker_inside_a_bracket() {
         .phrase("sp. (pulchella ms)")
         .nothing_else();
 }
+
+/// #231: a quoted epithet before a note of a new or unpublished species is a manuscript name, no
+/// cultivar; the quoted word with the note became an author.
+#[test]
+fn a_quoted_epithet_before_a_manuscript_note() {
+    for (input, note) in [
+        ("Lepidobolus 'quadratus' (sp. nov. ined.", "sp. nov. ined."),
+        ("Lepidobolus 'quadratus' (sp. nov. ined.)", "sp. nov. ined."),
+        ("Lepidobolus 'quadratus' ms.", "ms."),
+        ("Coccomyces \"lignicola\" ined.", "ined."),
+    ] {
+        let genus = input.split_whitespace().next().unwrap();
+        let epithet = input.split(['\'', '"']).nth(1).unwrap();
+        assert_name(input)
+            .species(genus, epithet)
+            .manuscript()
+            .nom_note(note)
+            .nothing_else();
+    }
+    // a quoted word alone stays a cultivar
+    assert_name("Lepidobolus 'quadratus'")
+        .cultivar("Lepidobolus", "quadratus")
+        .nothing_else();
+}

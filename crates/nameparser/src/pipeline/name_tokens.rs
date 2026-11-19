@@ -95,7 +95,7 @@ pub(crate) fn is_aggregate_marker(w: &str) -> bool {
 
 /// A species marker glued to its number, the designation of an unnamed species: `Dynestinae sp2`,
 /// `Mus spec2` (#242). It became the epithet `sp2`. The phrase keeps it as written.
-fn is_glued_indet_marker(w: &str) -> bool {
+pub(crate) fn is_glued_indet_marker(w: &str) -> bool {
     let letters = w.trim_end_matches(|c: char| c.is_ascii_digit());
     letters.len() < w.len() && matches!(letters, "sp" | "spp" | "spec")
 }
@@ -137,6 +137,9 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
     let mut indet = false;
     // a lone-letter species designation (`Collettea a`), see step 8 below
     let mut letter_designation = false;
+    // the last epithet read is a lone letter with no dot after it: a designation in the
+    // infraspecific slot too (`Polypedates leucomystax b`), not an abbreviation (`rugosum r.`, #246)
+    let mut last_epithet_letter = false;
     // A bare supraspecific indet ("Genus sp." with no distinguishing tail) — stays flagged
     // INDETERMINED even though its phrase now carries the verbatim marker (see the top-check
     // in the indet branch and the warning block near the end of this fn).
@@ -514,16 +517,18 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     continue;
                 }
                 // "n. sp." before any epithet: the marker of a new species, opening its phrase
-                // ("Jardinella n. sp. keel", #139)
+                // ("Jardinella n. sp. keel", #139), also without the dot or with its number glued
+                // ("Forcipata n sp. ancantha", "Emblyna n. sp1", #246)
+                let dot = usize::from(ts.get(i + 1).is_some_and(|d| d.kind == TokenKind::Dot));
                 if t.text == "n"
                     && lower_epithets.is_empty()
-                    && ts.get(i + 1).is_some_and(|d| d.kind == TokenKind::Dot)
-                    && ts.get(i + 2).is_some_and(|m| {
-                        m.kind == TokenKind::Word && m.text.eq_ignore_ascii_case("sp")
+                    && ts.get(i + 1 + dot).is_some_and(|m| {
+                        m.kind == TokenKind::Word
+                            && (m.text.eq_ignore_ascii_case("sp") || is_glued_indet_marker(&m.text))
                     })
                 {
                     nova_start = Some(t.start);
-                    i += 2;
+                    i += 1 + dot;
                     continue;
                 }
                 // 2. indet markers — sp./spec./indet
@@ -612,14 +617,15 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                     if i < ts.len() && ts[i].kind == TokenKind::Dot {
                         i += 1;
                     }
-                    // #252: several words or a qualified one before the marker are no species to
-                    // hang the unnamed one off, so it hangs off the genus and they open its phrase:
-                    // `Prionospio iberian canyons sp. c`, `Prionospio aff. iberian sp. c`. One
-                    // word is its species: `Abies alba sp. c` keeps `sp. c`, as `sp. 1` does.
+                    // #252: several words before the marker are no species to hang the unnamed one
+                    // off, so it hangs off the genus and they open its phrase: `Prionospio iberian
+                    // canyons sp. c`. One word is its species, `Abies alba sp. c` keeps `sp. c` as
+                    // `sp. 1` does, and so does a qualified one, which the qualifier only doubts:
+                    // `Euxoa nr. idahoensis sp. 1clay`, `Ramazzottius aff. szeptycki sp. n. 1`.
                     if (sp_designation || number_follows_marker)
                         && !lower_epithets.is_empty()
                         && marker_idx_in_epithets < 0
-                        && (lower_epithets.len() >= 2 || cf_aff_qualifier.is_some())
+                        && lower_epithets.len() >= 2
                     {
                         let start = ts[..marker_idx]
                             .iter()
@@ -1076,6 +1082,12 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
                             || (nx.kind == TokenKind::Word && starts_lower(nx))
                     });
                 }
+                last_epithet_letter = t.text.len() == 1
+                    && t.text.as_bytes()[0].is_ascii_lowercase()
+                    && !ctx
+                        .tokens
+                        .get(i + 1)
+                        .is_some_and(|nx| nx.kind == TokenKind::Dot);
                 lower_epithets.push(t.text.clone());
                 i += 1;
                 continue;
@@ -1228,6 +1240,14 @@ pub(crate) fn classify(ctx: &mut ParseContext, boundary: usize) {
         ctx.name.set_epithet_qualifier(part, q);
     }
     if letter_designation && specific.is_some() {
+        ctx.name.type_ = NameType::Informal;
+    }
+    // a lone letter in the infraspecific slot is a designation too: `Polypedates leucomystax b`
+    // (#246), as after a rank marker (`Galium spurium var. L.`); with a dot it is an abbreviation
+    if specific.is_some()
+        && last_epithet_letter
+        && infraspecific.as_deref() == lower_epithets.last().map(String::as_str)
+    {
         ctx.name.type_ = NameType::Informal;
     }
     if indet {

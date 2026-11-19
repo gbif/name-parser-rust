@@ -54,10 +54,10 @@ static AL: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^al\.?$").unwrap());
 /// 01_E13`), which rendered "Wolbachia sp. endosymbiont of …". And with the new-species markers
 /// `n. sp.` and `nsp` (#139), the unnamed genus of `Carabidae gen. sp.` (#174), and the aggregate
 /// marker of `Acalitus agg. brevitarsus/phyllereus`, which rendered "Acalitus agg. agg. …", and a
-/// marker glued to its number, `Dynestinae sp2` (#242).
+/// marker glued to its number, `Dynestinae sp2` (#242), and the dotless `n sp` (#246).
 static PHRASE_SPECIES_MARKER: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        r"(?i)^(?:(?:spp?|spec)\d|(?:species|spec|spp|sp|nsp|agg|n\.(?-u:\s*)sp|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp(?:ec)?_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
+        r"(?i)^(?:(?:spp?|spec)\d|(?:species|spec|spp|sp|nsp|agg|n\.?(?-u:\s*)sp\d*|cf|aff|nr|near|[a-z]*(?:bacteri(?:um|a)|archae(?:on|a|ote)|symbionts?))(?-u:\b)|(?:n_)?sp(?:ec)?_|n_gen(?-u:\b)|gen(?:\.|(?-u:\s))).*$",
     )
     .unwrap()
 });
@@ -400,10 +400,7 @@ fn append_genus(
     show_qualifier: bool,
     html: bool,
 ) {
-    if show_qualifier && n.has_epithet_qualifier(NamePart::Generic) {
-        sb.push_str(qualifier(n, NamePart::Generic));
-        sb.push(' ');
-    }
+    append_qualifier(sb, n, NamePart::Generic, show_qualifier);
     if hybrid_marker && n.graft_chimaera {
         sb.push(GRAFT_MARKER);
         sb.push(' ');
@@ -427,10 +424,7 @@ fn append_infraspecific(
     html: bool,
 ) {
     sb.push(' ');
-    if show_qualifier && n.has_epithet_qualifier(NamePart::Infraspecific) {
-        sb.push_str(qualifier(n, NamePart::Infraspecific));
-        sb.push(' ');
-    }
+    append_qualifier(sb, n, NamePart::Infraspecific, show_qualifier);
     if hybrid_marker && has_notho(n, NamePart::Infraspecific) {
         if rank_marker && is_infraspecific_marker(n.rank) {
             sb.push_str("notho");
@@ -462,22 +456,20 @@ fn append_infraspecific(
     }
 }
 
-/// A qualifier of `part` and a space, if shown and there is one: the `?` of a doubted subgenus,
-/// `Glenea (? Macroglenea) anulicornis`.
+/// A qualifier of `part` and a space, if shown and there is one: `Abies cf. alba`. The `?` of a
+/// doubted part is left out, the doubtful flag and the qualifier itself carry it (#243):
+/// `Metacnephia ? sommermanae` is `Metacnephia sommermanae`, `Glenea (? Macroglenea) anulicornis`
+/// is `Glenea (Macroglenea) anulicornis`.
 fn append_qualifier(sb: &mut String, n: &ParsedName, part: NamePart, show_qualifier: bool) {
-    if show_qualifier && n.has_epithet_qualifier(part) {
-        sb.push_str(qualifier(n, part));
-        sb.push(' ');
-    }
-}
-
-/// Fetch an epithet qualifier known to exist (caller guards with `has_epithet_qualifier`).
-fn qualifier(n: &ParsedName, part: NamePart) -> &str {
-    n.epithet_qualifier
+    let shown = n
+        .epithet_qualifier
         .as_ref()
         .and_then(|m| m.get(&part))
-        .map(String::as_str)
-        .unwrap_or("")
+        .filter(|q| show_qualifier && q.as_str() != "?");
+    if let Some(q) = shown {
+        sb.push_str(q);
+        sb.push(' ');
+    }
 }
 
 /// Java `NameFormatter.joinAuthors(List<String>, Integer maxAuthors)`.
@@ -873,10 +865,7 @@ fn build_name(n: &ParsedName, f: &Flags) -> Option<String> {
         } else {
             // species part
             sb.push(' ');
-            if f.show_qualifier && n.has_epithet_qualifier(NamePart::Specific) {
-                sb.push_str(qualifier(n, NamePart::Specific));
-                sb.push(' ');
-            }
+            append_qualifier(&mut sb, n, NamePart::Specific, f.show_qualifier);
             if f.hybrid_marker && has_notho(n, NamePart::Specific) {
                 sb.push(HYBRID_MARKER);
                 sb.push(' ');

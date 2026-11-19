@@ -396,11 +396,11 @@ fn bold_placeholder() {
         .code(NomCode::Zoological)
         .nothing_else();
 
-    assert_informal("Blattellinae_SB")
-        .taxon("Blattellinae")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
-        .phrase("SB")
+    // capitals after the underscore read as a GTDB suffix: informal, anchored on Blattellinae
+    // all the same (#244)
+    assert_name("Blattellinae_SB")
+        .monomial("Blattellinae_SB")
+        .type_(NameType::Informal)
         .nothing_else();
 
     assert_informal("GenusANIC_3")
@@ -587,6 +587,7 @@ fn indet_names() {
     // a species rank hint keeps an abbreviated species epithet
     assert_name_rank("Zygaena f.", Rank::Species)
         .species("Zygaena", "f")
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 
     let n = nameparser::parse_name("Polygonum spec.", None, None, None)

@@ -19,6 +19,11 @@ pub enum NameType {
     /// the catch-all `Other`. Placed before `Other` so the catch-all stays last; this makes it
     /// FFI-wire ordinal 4 and shifts `Other` to 5 (a lockstep change gated by the ABI-version bump).
     Identifier,
+    /// Any other unparsable name: no name could be read from it. With the code of the
+    /// `ParseResult::Unparsable` it is all the parser says about why (#248): a virus carries
+    /// [`NomCode::Virus`] (`HIV-1 06TG.HT064`); a code or label rather than a name (`Lepidostoma1`,
+    /// `ANME-1 cluster archaeon`), alternatives in different genera or without one (`Anser/Branta`,
+    /// `obsoletus/scoticus`), a vector or plasmid, numbers, abbreviations or free text carry none.
     Other,
 }
 
@@ -1162,6 +1167,14 @@ pub mod warnings {
     /// Rust-only so far: a species epithet written with a capital, as Linnaeus did (`Ovis Aries`),
     /// was put in lower case (ICZN Art. 28).
     pub const CAPITALISED_EPITHET: &str = "capitalised epithet put in lower case";
+    /// No genus or epithet has a single letter (#246).
+    pub const SINGLE_LETTER: &str = "single letter genus or epithet";
+    /// A genus or uninomial holding a digit or a character no scientific name uses (#244):
+    /// `Imsh8ia aleurites`.
+    pub const UNUSUAL_GENUS: &str = "genus or uninomial with digit or unusual character";
+    /// An infrageneric, specific or infraspecific epithet holding a digit or a character no
+    /// scientific name uses (#244, #236): `Imshia aleu3ites`, `Ephedra przewalskiiß`.
+    pub const UNUSUAL_EPITHET: &str = "epithet with digit or unusual character";
 }
 
 #[cfg(test)]

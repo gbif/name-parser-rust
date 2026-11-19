@@ -242,6 +242,18 @@ pub struct ParsedName {
 static PUBLISHED_IN_YEAR: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?-u:\b(1[5-9]\d{2}|20\d{2}|2100)\b)").unwrap());
 
+/// A word with the suffix GTDB gives a taxon it splits, an underscore and one to three capitals
+/// (`Pseudomonas_E`, `Bacillus_BF`, `mitis_I`), as the taxon and the suffix. Not a lower-case label
+/// or one with digits (`madecassus_01m`, `Stygiellidae_STYG2`).
+pub(crate) fn split_gtdb_suffix(word: &str) -> Option<(&str, &str)> {
+    let (taxon, suffix) = word.rsplit_once('_')?;
+    (taxon.chars().next().is_some_and(char::is_alphabetic)
+        && !taxon.contains('_')
+        && (1..=3).contains(&suffix.len())
+        && suffix.chars().all(|c| c.is_ascii_uppercase()))
+    .then_some((taxon, suffix))
+}
+
 impl ParsedName {
     /// Add a warning if not already present — mirrors Java's `warnings` HashSet (deduping).
     /// (The golden harness sorts warnings before diffing, so order is irrelevant; dedup is what matters.)
@@ -404,6 +416,8 @@ impl ParsedName {
     /// The anchor keeps the name parts down to the deepest one that is present and not qualified
     /// (cf., aff., ?, ...). A qualified genus is the exception: `?Sydonia alba`, `Ferganoconcha?
     /// oblonga` and `cf. Craticula` are anchored on that genus, as no part of the name is surer.
+    /// The suffix GTDB gives a split taxon is dropped: `Pseudomonas_E putida` is anchored on
+    /// *Pseudomonas putida*, `Bacillus_BF` on *Bacillus* (see [`split_gtdb_suffix`]).
     /// The anchor takes the rank of its deepest part and the authorship that belongs to it: the
     /// specific authorship for a species anchor of an infraspecific name, the generic one for a
     /// genus, the name's own when nothing below the anchor is given. The phrase, qualifiers, notes,
@@ -465,6 +479,7 @@ impl ParsedName {
                 if deepest == NamePart::Generic {
                     own_authorship(&mut a);
                 }
+                a.drop_gtdb_suffixes();
                 return Some(a);
             }
             // an infrageneric name without its genus, "subgen. Trematostoma"
@@ -573,7 +588,24 @@ impl ParsedName {
         } else if kept == deepest {
             own_authorship(&mut a);
         }
+        a.drop_gtdb_suffixes();
         Some(a)
+    }
+
+    /// The anchor of a GTDB name is the taxon GTDB split it from: `Pseudomonas_E putida` hangs off
+    /// `Pseudomonas putida`, `Streptococcus mitis_I` off `Streptococcus mitis`, `Bacillus_BF` off
+    /// `Bacillus`.
+    fn drop_gtdb_suffixes(&mut self) {
+        for part in [
+            &mut self.uninomial,
+            &mut self.genus,
+            &mut self.specific_epithet,
+            &mut self.infraspecific_epithet,
+        ] {
+            if let Some((taxon, _)) = part.as_deref().and_then(split_gtdb_suffix) {
+                *part = Some(taxon.to_string());
+            }
+        }
     }
 
     fn keep_notho(&self, anchor: &mut ParsedName, part: NamePart) {

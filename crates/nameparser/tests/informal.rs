@@ -13,7 +13,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NamePart, NameType, NomCode, Rank};
+use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank, State};
 use nameparser::ParseResult;
 
 // ---- Informal: an anchor + a provisional designation, no species epithet ---------------------
@@ -377,6 +377,7 @@ fn the_designation_capture_leaves_epithets_and_authors_alone() {
     assert_name("Benthogone rosea var. 4-lineata R. Perrier, 1896")
         .infra_species("Benthogone", "rosea", Rank::Variety, "4-lineata")
         .comb_authors(Some("1896"), &["R.Perrier"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     for (input, author) in [
         ("Abies alba var.", None),
@@ -465,9 +466,11 @@ fn a_numeral_prefixed_epithet_is_not_a_strain_code() {
             Rank::InfraspecificName,
             "7-maculatus",
         )
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Coccinella 2-pustulata")
         .species("Coccinella", "2-pustulata")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 
@@ -714,6 +717,31 @@ fn a_genus_repeated_after_cf_is_skipped_not_read_as_an_author() {
 /// the qualifier is a genuinely different taxon — `Veneridae cf. Phacosoma sp` anchors on a family
 /// and compares to another genus, `Onthophagus cf. Aphodius` compares two genera with no epithet at
 /// all — so those keep their current reading rather than having an epithet invented for them.
+/// #233: a capitalised epithet after a qualifier is put in lower case on evidence, a Latin ending or
+/// an author after it, and the qualifier doubts it; a word without is the genus compared with.
+#[test]
+fn a_capitalised_epithet_after_a_qualifier() {
+    assert_name("Phrynopus cf. Barlenae")
+        .species("Phrynopus", "barlenae")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+    assert_name("Teucrium cf. Cyprium Boiss.")
+        .species("Teucrium", "cyprium")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .comb_authors(None, &["Boiss."])
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::CAPITALISED_EPITHET])
+        .nothing_else();
+    assert_informal("Pristimantis cf. Ventrimarmoratus")
+        .taxon("Pristimantis")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("cf. Ventrimarmoratus")
+        .nothing_else();
+}
+
 #[test]
 fn a_different_genus_after_cf_is_not_skipped() {
     // No species epithet is reachable: the qualifier opens the informal phrase, which keeps the
@@ -786,6 +814,7 @@ fn infraspecific_indeterminate_stays_parsed() {
     assert_name("Salix alba subsp. B")
         .infra_species("Salix", "alba", Rank::Subspecies, "B")
         .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
         .nothing_else();
 }
 
@@ -939,10 +968,19 @@ fn a_code_or_letter_after_sp_behind_a_species_epithet_is_its_phrase() {
         .nothing_else();
 }
 
-/// #102: under the bacterial code, as ChecklistBank parses GTDB, a suffix of capitals belongs to
-/// the genus: `Bacillus_BF` is one of the genera GTDB splits Bacillus into.
+/// #102, #244: a suffix of capitals belongs to the name part it is glued to, `Bacillus_BF` is one of
+/// the genera GTDB splits Bacillus into. Such a taxon is no regular scientific name: the name is
+/// informal, anchored on the taxon it was split from. With the bacterial code or without, the same
+/// suffixes are used elsewhere in the tree.
 #[test]
-fn a_gtdb_genus_keeps_its_suffix_under_the_bacterial_code() {
+fn a_gtdb_name_is_informal_and_anchored_on_the_taxon_it_was_split_from() {
+    fn anchor(input: &str) -> (String, Rank) {
+        let ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+            panic!("parsed: {input}");
+        };
+        let a = pn.anchor().expect("anchor");
+        (a.canonical_name().unwrap_or_default(), a.rank)
+    }
     assert_name_hinted(
         "Bacillus_BF",
         None,
@@ -951,17 +989,78 @@ fn a_gtdb_genus_keeps_its_suffix_under_the_bacterial_code() {
     )
     .monomial_rank("Bacillus_BF", Rank::Genus)
     .code(NomCode::Bacterial)
+    .type_(NameType::Informal)
     .nothing_else();
-    assert_name_hinted("Bacillaceae_B", None, None, Some(NomCode::Bacterial))
-        .monomial_rank("Bacillaceae_B", Rank::Family)
-        .code(NomCode::Bacterial)
+    assert_name("Bacillus_BF")
+        .monomial("Bacillus_BF")
+        .type_(NameType::Informal)
         .nothing_else();
-    // without it the suffix may be a placeholder code, the designation of the taxon before it
-    assert_informal("Bacillus_BF")
-        .taxon("Bacillus")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
-        .phrase("BF")
+    assert_eq!(
+        anchor("Bacillus_BF"),
+        ("Bacillus".to_string(), Rank::Unranked)
+    );
+    assert_name("Bacillaceae_B")
+        .monomial_rank("Bacillaceae_B", Rank::Family)
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_eq!(
+        anchor("Bacillaceae_B"),
+        ("Bacillaceae".to_string(), Rank::Family)
+    );
+    // on the genus or epithet of a binomial
+    for (input, genus, epithet, anchored) in [
+        (
+            "Pseudomonas_E putida",
+            "Pseudomonas_E",
+            "putida",
+            "Pseudomonas putida",
+        ),
+        (
+            "Streptococcus mitis_I",
+            "Streptococcus",
+            "mitis_I",
+            "Streptococcus mitis",
+        ),
+        (
+            "Haemophilus_A parahaemolyticus_B",
+            "Haemophilus_A",
+            "parahaemolyticus_B",
+            "Haemophilus parahaemolyticus",
+        ),
+    ] {
+        assert_name(input)
+            .species(genus, epithet)
+            .type_(NameType::Informal)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+        assert_eq!(anchor(input), (anchored.to_string(), Rank::Species));
+    }
+    // the unnamed species GTDB places in a genus, its genome assembly the phrase
+    for (input, genus, anchored) in [
+        ("Pseudomonas_E sp002874965", "Pseudomonas_E", "Pseudomonas"),
+        (
+            "Acidaminococcus sp000437815",
+            "Acidaminococcus",
+            "Acidaminococcus",
+        ),
+    ] {
+        let phrase = input.split_once(' ').unwrap().1;
+        assert_name(input)
+            .genus_rank(genus, Rank::Species)
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .warning(&[nameparser::model::warnings::INDETERMINED])
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+        assert_eq!(anchor(input), (anchored.to_string(), Rank::Genus));
+    }
+    // a code in the genus' place is no genus
+    assert_unparsable_no_code("UBA1847 sp013042375", NameType::Other);
+    assert_unparsable_no_code("UBA11359_C", NameType::Other);
+    // a lower-case label or one with digits is no GTDB suffix
+    assert_name("Nesomyrmex madecassus_01m")
+        .species("Nesomyrmex", "madecassus_01m")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 
@@ -1082,10 +1181,12 @@ fn a_year_or_a_numeral_epithet_after_a_uninomial_stays() {
         .nothing_else();
     assert_name("Leptura 4pustulata")
         .species("Leptura", "4pustulata")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name_auth("Callidium 2 fasciatum", "Zimsen, 1964")
         .species("Callidium", "2-fasciatum")
         .comb_authors(Some("1964"), &["Zimsen"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 
@@ -1200,21 +1301,39 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
 
 #[test]
 fn sp_after_the_epithets_marks_an_unnamed_species() {
-    // #252: `sp.` was read as a misspelt `ssp.`, and a word before it dropped. Several words or a
-    // qualified one before it are no species, so the unnamed one hangs off the genus.
-    for (input, phrase) in [
-        ("Prionospio iberian canyons sp. c", "iberian canyons sp. c"),
-        ("Prionospio aff. iberian sp. c", "aff. iberian sp. c"),
-        (
-            "Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a",
-            "aff. szeptycki sp. n. 1 ALL-2022a",
-        ),
-    ] {
+    // #252: `sp.` was read as a misspelt `ssp.`, and a word before it dropped. Several words before
+    // it are no species, so the unnamed one hangs off the genus.
+    for (input, phrase) in [("Prionospio iberian canyons sp. c", "iberian canyons sp. c")] {
         assert_informal_hinted(input, None, Some(Rank::Species), None)
             .taxon(input.split_whitespace().next().unwrap())
             .taxon_rank(Rank::Genus)
             .rank(Rank::Species)
             .phrase(phrase)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+    }
+    // a qualified one too, which the qualifier only doubts
+    for (input, species, qualifier, phrase) in [
+        ("Prionospio aff. iberian sp. c", "iberian", "aff.", "sp. c"),
+        (
+            "Ramazzottius aff. szeptycki sp. n. 1 ALL-2022a",
+            "szeptycki",
+            "aff.",
+            "sp. n. 1 ALL-2022a",
+        ),
+        (
+            "Euxoa nr. idahoensis sp. 1clay",
+            "idahoensis",
+            "nr.",
+            "sp. 1clay",
+        ),
+    ] {
+        let genus = input.split_whitespace().next().unwrap();
+        assert_name(input)
+            .species(genus, species)
+            .qualifiers(&[(NamePart::Specific, qualifier)])
+            .phrase(phrase)
+            .type_(NameType::Informal)
             .nothing_else();
         assert_eq!(canonical(input), input);
     }
@@ -1521,13 +1640,39 @@ fn another_species_among_the_alternatives_leaves_only_the_genus() {
             "ruficollis tricolor/vulcanorum/Tachybaptus dominicus",
         ),
         // the species itself is what the qualifier doubts
-        (
-            "Agabus cf. lutosus griseus/griseipennis",
-            "cf. lutosus griseus/griseipennis",
-        ),
         ("Agabus cf lutosus/griseipennis", "cf lutosus/griseipennis"),
+        (
+            "Agabus cf. lutosus griseus/Agabus bipustulatus",
+            "cf. lutosus griseus/Agabus bipustulatus",
+        ),
     ] {
         assert_alternatives(input, None, None, phrase);
+    }
+}
+
+#[test]
+fn a_qualified_species_keeps_the_alternatives_below_it() {
+    // the qualifier doubts the species, the alternatives lie below it
+    for (input, qualifier, phrase) in [
+        (
+            "Agabus cf. lutosus griseus/griseipennis",
+            "cf.",
+            "griseus/griseipennis",
+        ),
+        (
+            "Agabus aff. lutosus griseus or griseipennis",
+            "aff.",
+            "griseus or griseipennis",
+        ),
+    ] {
+        assert_name(input)
+            .binomial("Agabus", None, "lutosus", Rank::Unranked)
+            .qualifiers(&[(NamePart::Specific, qualifier)])
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .state(State::Partial)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
     }
 }
 
@@ -1724,8 +1869,42 @@ fn alternatives_of_two_genera_are_no_name() {
         "Entosthodon fascicularis or Physcomitrium pyriforme",
         "Abramis brama|Blicca bjoerkna",
         "Bilderdykia|Polygonum",
+        // each with its own authorship (#235): it was Carduelis carduelis by "Serinus canaria"
+        "Carduelis carduelis (Linnaeus, 1758) / Serinus canaria (Linnaeus, 1758)",
+        "Gymnophryxe pretoriensis Bezzi, 1911/ Archiclops pretoriensis Bezzi, 1911",
     ] {
         assert_unparsable(input, NameType::Other);
+    }
+}
+
+#[test]
+fn alternatives_with_their_own_authorship() {
+    // #235: the authorship of the first ended the name, the alternative was left unparsed
+    for (input, phrase) in [
+        (
+            "Chionodoxa forbesii BAKER / luciliae BOISS.",
+            "forbesii BAKER / luciliae BOISS.",
+        ),
+        ("Salmo salar L. / S. trutta L.", "salar L. / S. trutta L."),
+        (
+            "Abies alba Mill. / A. nordmanniana (Steven) Spach",
+            "alba Mill. / A. nordmanniana (Steven) Spach",
+        ),
+    ] {
+        assert_alternatives(input, None, None, phrase);
+    }
+    // alternative authors stay authors, and a code, a strain or a word holding a slash or pipe is
+    // no alternative
+    for input in [
+        "Aus bus Jarocki / Schinz",
+        "Geitlerinema acuminatum Shafa/soil/10",
+        "Myrmecophila olmstediae Carnevali & M. Jua|arez",
+        "Prostanthera lasianthos Girraween/Polblue variant",
+    ] {
+        let ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+            panic!("`{input}` is parsed");
+        };
+        assert!(pn.specific_epithet.is_some(), "{input}");
     }
 }
 
@@ -1929,20 +2108,234 @@ fn a_qualifier_after_the_author_goes_to_the_infraspecific_epithet() {
         panic!("parsed");
     };
     assert_eq!(pn.infraspecific_epithet, None);
-    let ParseResult::Parsed(pn) =
-        nameparser::parse("Hibbertia obtusifolia vel. aff.", None, None, None)
-    else {
-        panic!("parsed");
-    };
-    assert_eq!(pn.epithet_qualifier, None);
-    // no autonym and no marker: a second name
-    let ParseResult::Parsed(pn) = nameparser::parse(
-        "Septifer bilocularis Brachidontes cf. variabilis",
-        None,
-        None,
-        None,
-    ) else {
-        panic!("parsed");
-    };
-    assert_eq!(pn.infraspecific_epithet, None);
+    // `vel aff.` is the qualifier as a whole, "this or one close to it", on the last epithet
+    for (input, qualified) in [
+        ("Hibbertia obtusifolia vel. aff.", "obtusifolia"),
+        ("Garcinia riparia vel aff.", "riparia"),
+        ("Clematis glycinoides vel cf.", "glycinoides"),
+    ] {
+        let genus = input.split_whitespace().next().unwrap();
+        assert_name(input)
+            .species(genus, qualified)
+            .qualifiers(&[(
+                NamePart::Specific,
+                input
+                    .rsplit_once(qualified)
+                    .unwrap()
+                    .1
+                    .trim()
+                    .replace("vel.", "vel")
+                    .as_str(),
+            )])
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    assert_name("Pisonia macrocarpa Miranda vel aff.")
+        .species("Pisonia", "macrocarpa")
+        .comb_authors(None, &["Miranda"])
+        .qualifiers(&[(NamePart::Specific, "vel aff.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Dalbergia densa var. australis vel aff.")
+        .infra_species("Dalbergia", "densa", Rank::Variety, "australis")
+        .qualifiers(&[(NamePart::Infraspecific, "vel aff.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // no autonym and no marker after a qualified word: a second name, set aside
+    assert_name("Septifer bilocularis Brachidontes cf. variabilis")
+        .species("Septifer", "bilocularis")
+        .partial("Brachidontes cf. variabilis")
+        .nothing_else();
+}
+
+/// #246: a single letter is no genus or epithet; the misreadings behind most of them are mended and
+/// what is left is flagged.
+#[test]
+fn single_letters_and_their_misreadings() {
+    use nameparser::model::warnings::SINGLE_LETTER;
+    // `c.f.` is cf., not the epithet `c`
+    assert_name("Dracaena c.f. afromontana Mildbr")
+        .species("Dracaena", "afromontana")
+        .qualifiers(&[(NamePart::Specific, "cf.")])
+        .comb_authors(None, &["Mildbr"])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // the author's initials stay initials
+    assert_name("Actinidia chrysantha C.F. Liang")
+        .species("Actinidia", "chrysantha")
+        .comb_authors(None, &["C.F.Liang"])
+        .nothing_else();
+    // a dotless or glued n. sp. is the marker of a new species, not the epithet `n`
+    for (input, phrase) in [
+        (
+            "Forcipata n sp. ancantha DeLong and Caldwell, 1936",
+            "n sp. ancantha DeLong and Caldwell, 1936",
+        ),
+        ("Emblyna n. sp1", "n. sp1"),
+    ] {
+        assert_informal(input)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(Rank::Genus)
+            .rank(Rank::Species)
+            .phrase(phrase)
+            .nothing_else();
+        assert_eq!(
+            canonical(input).split_whitespace().nth(1),
+            input.split_whitespace().nth(1)
+        );
+    }
+    // a lone letter as infraspecific epithet is a designation
+    assert_name("Polypedates leucomystax b")
+        .infra_species("Polypedates", "leucomystax", Rank::InfraspecificName, "b")
+        .type_(NameType::Informal)
+        .warning(&[SINGLE_LETTER])
+        .nothing_else();
+    assert_name("M mus")
+        .species("M", "mus")
+        .warning(&[SINGLE_LETTER])
+        .nothing_else();
+    // an abbreviated genus has its own warning
+    assert_name("M. mus")
+        .species("M.", "mus")
+        .type_(NameType::Informal)
+        .warning(&[nameparser::model::warnings::ABBREVIATED_GENUS])
+        .nothing_else();
+}
+
+/// A code after a species, with full stops, underscores or a labelling word in it, or the
+/// accessions of other collections after `=`, is the phrase of the species: split at a full stop,
+/// the code became an author and its last digits were left over. A qualifier keeps the species, the
+/// code its phrase.
+#[test]
+fn codes_with_full_stops_after_a_species() {
+    for (input, phrase) in [
+        ("Acaryochloris marina I2.1", "I2.1"),
+        ("Anabaena bergii PMC215.03", "PMC215.03"),
+        ("Aphanizomenon gracile PMC637.10", "PMC637.10"),
+        ("Escherichia coli D6-117.29", "D6-117.29"),
+        ("Escherichia coli P0305260.11", "P0305260.11"),
+        ("Escherichia coli STEC_H.I.8", "STEC_H.I.8"),
+        ("Acaulospora colossica spore IB.15", "spore IB.15"),
+        ("Vandenboschia radicans type A14", "type A14"),
+        (
+            "Hebeloma incarnatulum ectomycorrhiza V24",
+            "ectomycorrhiza V24",
+        ),
+        (
+            "Acinetobacter calcoaceticus DSM 30006 = CIP 81.8",
+            "DSM 30006 = CIP 81.8",
+        ),
+        (
+            "Mycobacterium arosiense DSM 45069 = ATCC BAA-1401",
+            "DSM 45069 = ATCC BAA-1401",
+        ),
+        ("Halimeda cuneata.Africa.1", "Africa.1"),
+    ] {
+        let mut words = input.split(|c: char| c.is_whitespace() || c == '.');
+        let (genus, species) = (words.next().unwrap(), words.next().unwrap());
+        assert_name(input)
+            .species(genus, species)
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    for (input, qualifier, phrase) in [
+        ("Acremonium aff. persicinum CBS203.73", "aff.", "CBS203.73"),
+        ("Ancistrus cf. leucostictus PYLB97-3.1", "cf.", "PYLB97-3.1"),
+        ("Botrylloides cf. lenis SMRC_3.1", "cf.", "SMRC_3.1"),
+        (
+            "Characidium cf. steindachneri CHIFF0007.1",
+            "cf.",
+            "CHIFF0007.1",
+        ),
+        ("Cryptococcus cf. flavus SU8.4", "cf.", "SU8.4"),
+        ("Lemonniera cf. alabamensis UMB-550.10", "cf.", "UMB-550.10"),
+    ] {
+        let words: Vec<&str> = input.split_whitespace().collect();
+        assert_name(input)
+            .species(words[0], words[2])
+            .qualifiers(&[(NamePart::Specific, qualifier)])
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    // an abbreviated author glued to a year is no code
+    assert_name("Abies alba Mill.1768")
+        .species("Abies", "alba")
+        .comb_authors(Some("1768"), &["Mill."])
+        .nothing_else();
+    // a year with a full stop and more digits keeps its year, the rest is left over
+    assert_name("Agapeta diversana Hübner 1811.18")
+        .species("Agapeta", "diversana")
+        .comb_authors(Some("1811"), &["Hübner"])
+        .partial("18")
+        .nothing_else();
+}
+
+/// `fam.` and a letter, a code or `gen.` after a taxon designates an unnamed family in it, the
+/// phrase of an informal name on the taxon, as `gen.` does for a genus.
+#[test]
+fn an_unnamed_family_after_its_taxon() {
+    for (input, phrase, taxon_rank, rank) in [
+        (
+            "Digenea fam. B sp. MAT.CG.2",
+            "fam. B sp. MAT.CG.2",
+            Rank::Genus,
+            Rank::Species,
+        ),
+        (
+            "Tetraphyllidea fam. gen. sp. scpl02",
+            "fam. gen. sp. scpl02",
+            Rank::Genus,
+            Rank::Species,
+        ),
+        ("Digenea fam. A", "fam. A", Rank::Family, Rank::Family),
+    ] {
+        assert_informal(input)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(taxon_rank)
+            .rank(rank)
+            .phrase(phrase)
+            .nothing_else();
+    }
+}
+
+/// A rank and an epithet in brackets after the author, and what follows, are left unparsed: a note
+/// on the form or variety, mostly of a germplasm collection.
+#[test]
+fn a_bracketed_rank_after_the_author_is_left_over() {
+    assert_name("Camelina sativa (L.) Crantz (f. annua), f.1")
+        .species("Camelina", "sativa")
+        .bas_authors(None, &["L."])
+        .comb_authors(None, &["Crantz"])
+        .partial("(f. annua), f.1")
+        .nothing_else();
+    // a cultivar after the note is the name's own
+    assert_name("Brassica juncea (L.) Czern. (f. biennis), cv. Annushka")
+        .cultivar_sp("Brassica", "juncea", "Annushka")
+        .specific_bas_authors(None, &["L."])
+        .specific_authors(None, &["Czern."])
+        .partial("(f. biennis)")
+        .nothing_else();
+    assert_name("Marchantia polymorpha L. var. polymorpha (var. ruderalis)")
+        .infra_species("Marchantia", "polymorpha", Rank::Variety, "polymorpha")
+        .specific_authors(None, &["L."])
+        .partial("(var. ruderalis)")
+        .nothing_else();
+}
+
+/// A code of capitals and digits in the genus's place labels a clade; no genus.
+#[test]
+fn a_clade_code_is_no_genus() {
+    for input in [
+        "ANME-1 cluster archaeon GoMg3.2",
+        "SAR324 cluster bacterium",
+        "NC10 bacterium",
+        "UBA4372 sp",
+        "TM7 phylum",
+    ] {
+        assert_unparsable_no_code(input, NameType::Other);
+    }
+    // a retrovirus's strain is a virus
+    assert_unparsable_code("HIV-1 06TG.HT064", NameType::Other, NomCode::Virus);
 }
