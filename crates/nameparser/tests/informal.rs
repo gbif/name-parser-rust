@@ -13,7 +13,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NamePart, NameType, NomCode, Rank};
+use nameparser::model::{NamePart, NameType, NomCode, Rank, State};
 use nameparser::ParseResult;
 
 // ---- Informal: an anchor + a provisional designation, no species epithet ---------------------
@@ -1565,13 +1565,39 @@ fn another_species_among_the_alternatives_leaves_only_the_genus() {
             "ruficollis tricolor/vulcanorum/Tachybaptus dominicus",
         ),
         // the species itself is what the qualifier doubts
-        (
-            "Agabus cf. lutosus griseus/griseipennis",
-            "cf. lutosus griseus/griseipennis",
-        ),
         ("Agabus cf lutosus/griseipennis", "cf lutosus/griseipennis"),
+        (
+            "Agabus cf. lutosus griseus/Agabus bipustulatus",
+            "cf. lutosus griseus/Agabus bipustulatus",
+        ),
     ] {
         assert_alternatives(input, None, None, phrase);
+    }
+}
+
+#[test]
+fn a_qualified_species_keeps_the_alternatives_below_it() {
+    // the qualifier doubts the species, the alternatives lie below it
+    for (input, qualifier, phrase) in [
+        (
+            "Agabus cf. lutosus griseus/griseipennis",
+            "cf.",
+            "griseus/griseipennis",
+        ),
+        (
+            "Agabus aff. lutosus griseus or griseipennis",
+            "aff.",
+            "griseus or griseipennis",
+        ),
+    ] {
+        assert_name(input)
+            .binomial("Agabus", None, "lutosus", Rank::Unranked)
+            .qualifiers(&[(NamePart::Specific, qualifier)])
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .state(State::Partial)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
     }
 }
 

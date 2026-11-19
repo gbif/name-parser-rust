@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
-use crate::model::{NameType, NomCode, ParseError, Rank, State};
+use crate::model::{NamePart, NameType, NomCode, ParseError, Rank, State};
 use crate::pipeline::ParseContext;
 use crate::unicode::java_trim;
 use crate::viral::is_viral;
@@ -300,6 +300,8 @@ enum Alternatives<'a> {
         genus: &'a str,
         subgenus: Option<&'a str>,
         species: Option<&'a str>,
+        /// The qualifier of that species: `Agabus cf. lutosus griseus/griseipennis`.
+        qualifier: Option<&'a str>,
         rank: Option<Rank>,
         phrase: &'a str,
     },
@@ -358,14 +360,16 @@ fn read_alternatives(s: &str) -> Option<Alternatives<'_>> {
         return None;
     }
     let epithets = caps.get(3)?;
-    let species = shared_species(genus, epithets.as_str(), alternatives);
-    let phrase = &s[epithets.start()..];
+    let shared = shared_species(genus, epithets.as_str(), alternatives);
+    // the phrase starts below the species, at the epithets if there is none
+    let below = shared.map_or(0, |(_, _, below)| epithets.len() - below.len());
     Some(Alternatives::OneTaxon {
         genus,
         subgenus: caps.get(2).map(|m| m.as_str()),
-        species,
-        rank: rank.filter(|_| species.is_some()),
-        phrase: species.map_or(phrase, |species| phrase[species.len()..].trim_start()),
+        species: shared.map(|(_, species, _)| species),
+        qualifier: shared.and_then(|(qualifier, _, _)| qualifier),
+        rank: rank.filter(|_| shared.is_some()),
+        phrase: &s[epithets.start() + below..],
     })
 }
 
@@ -381,12 +385,24 @@ fn names_genus(written: &str, genus: &str) -> bool {
 /// The species all alternatives lie in, so that it is sure while what is below it is not: `Bubo
 /// virginianus pallescens / Bubo virginianus pinorum intergrade`, `Tachybaptus ruficollis
 /// tricolor/vulcanorum` (#212). `epithets` needs a word below the species, since a lone epithet after
-/// a binomial is another species. A qualifier in front of the species doubts it.
-fn shared_species<'a>(genus: &str, epithets: &'a str, alternatives: &str) -> Option<&'a str> {
-    let (species, _) = epithets.split_once(char::is_whitespace)?;
-    if matches!(species.trim_end_matches('.'), "cf" | "aff" | "nr")
-        || NO_ALTERNATIVE_EPITHET.contains(&species)
-    {
+/// a binomial is another species. A qualifier in front of the species doubts it, and the species
+/// keeps it: `Agabus cf. lutosus griseus/griseipennis`. Returns the qualifier without its full stop,
+/// the species and the epithets below it.
+fn shared_species<'a>(
+    genus: &str,
+    epithets: &'a str,
+    alternatives: &str,
+) -> Option<(Option<&'a str>, &'a str, &'a str)> {
+    let (first, rest) = epithets.split_once(char::is_whitespace)?;
+    let (qualifier, (species, below)) = match first.trim_end_matches('.') {
+        qualifier @ ("cf" | "aff" | "nr") => (
+            Some(qualifier),
+            rest.trim_start().split_once(char::is_whitespace)?,
+        ),
+        _ => (None, (first, rest)),
+    };
+    let below = below.trim_start();
+    if NO_ALTERNATIVE_EPITHET.contains(&species) {
         return None;
     }
     ALTERNATIVE_SEPARATOR
@@ -397,7 +413,7 @@ fn shared_species<'a>(genus: &str, epithets: &'a str, alternatives: &str) -> Opt
                 None => ALTERNATIVE_EPITHET.is_match(alternative),
             },
         )
-        .then_some(species)
+        .then_some((qualifier, species, below))
 }
 
 /// A capitalised word, an underscore and a label opening with a capital or a digit, in a word with
@@ -1104,10 +1120,15 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
             genus,
             subgenus,
             species,
+            qualifier,
             rank,
             phrase,
         }) => {
             rescue_informal_group(ctx, genus, phrase);
+            if let Some(qualifier) = qualifier {
+                ctx.name
+                    .set_epithet_qualifier(NamePart::Specific, &format!("{qualifier}."));
+            }
             if let Some(rank) = rank {
                 ctx.name.rank = rank;
                 // the code a marker tells: `Bacillus thuringiensis serovar aizawai/pacificus`
