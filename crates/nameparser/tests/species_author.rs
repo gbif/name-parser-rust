@@ -44,6 +44,64 @@ fn an_autonym_keeps_the_species_author_apart() {
         .nothing_else();
 }
 
+/// The examples of autonyms in the ICN (Madrid Code), written as Art. 26.1 asks: the author cited
+/// is the species', the autonym has none of its own (#230).
+#[test]
+fn icn_autonym_examples_cite_the_species_author() {
+    for (input, genus, epithet, rank, author) in [
+        // Art. 24.3 Ex. 5
+        (
+            "Galium verum L. subsp. verum",
+            "Galium",
+            "verum",
+            Rank::Subspecies,
+            "L.",
+        ),
+        // Art. 26.1 Ex. 1
+        (
+            "Lobelia spicata Lam. var. spicata",
+            "Lobelia",
+            "spicata",
+            Rank::Variety,
+            "Lam.",
+        ),
+        // Art. 46.1 Ex. 1
+        (
+            "Rosa gallica L. var. gallica",
+            "Rosa",
+            "gallica",
+            Rank::Variety,
+            "L.",
+        ),
+    ] {
+        for code in [None, Some(NomCode::Botanical)] {
+            let a = match code {
+                Some(code) => assert_name_code(input, code).code(code),
+                None => assert_name(input),
+            };
+            a.infra_species(genus, epithet, rank, epithet)
+                .specific_authors(None, &[author])
+                .autonym()
+                .nothing_else();
+        }
+
+        let n = nameparser::parse_name(input, None, None, Some(NomCode::Botanical)).unwrap();
+        assert!(
+            !n.has_authorship(),
+            "{input}: the autonym has no authorship of its own"
+        );
+        assert_eq!(n.canonical_name_complete().as_deref(), Some(input));
+    }
+
+    // a species author with a basionym
+    assert_name("Lobelia spicata (Lam.) Hook. var. spicata")
+        .infra_species("Lobelia", "spicata", Rank::Variety, "spicata")
+        .specific_authors(None, &["Hook."])
+        .specific_bas_authors(None, &["Lam."])
+        .autonym()
+        .nothing_else();
+}
+
 #[test]
 fn a_separate_authorship_repeating_an_autonyms_species_author_is_no_authorship_of_it() {
     // VASCAN repeats the species author in the authorship column (#86)
