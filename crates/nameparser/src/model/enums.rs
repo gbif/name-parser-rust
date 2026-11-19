@@ -19,6 +19,11 @@ pub enum NameType {
     /// the catch-all `Other`. Placed before `Other` so the catch-all stays last; this makes it
     /// FFI-wire ordinal 4 and shifts `Other` to 5 (a lockstep change gated by the ABI-version bump).
     Identifier,
+    /// Any other unparsable name: no name could be read from it. With the code of the
+    /// `ParseResult::Unparsable` it is all the parser says about why (#248): a virus carries
+    /// [`NomCode::Virus`] (`HIV-1 06TG.HT064`); a code or label rather than a name (`Lepidostoma1`,
+    /// `ANME-1 cluster archaeon`), alternatives in different genera or without one (`Anser/Branta`,
+    /// `obsoletus/scoticus`), a vector or plasmid, numbers, abbreviations or free text carry none.
     Other,
 }
 
