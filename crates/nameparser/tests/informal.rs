@@ -1303,15 +1303,14 @@ fn a_provisional_species_in_a_subgenus_or_section_is_a_species() {
 fn sp_after_the_epithets_marks_an_unnamed_species() {
     // #252: `sp.` was read as a misspelt `ssp.`, and a word before it dropped. Several words before
     // it are no species, so the unnamed one hangs off the genus.
-    for (input, phrase) in [("Prionospio iberian canyons sp. c", "iberian canyons sp. c")] {
-        assert_informal_hinted(input, None, Some(Rank::Species), None)
-            .taxon(input.split_whitespace().next().unwrap())
-            .taxon_rank(Rank::Genus)
-            .rank(Rank::Species)
-            .phrase(phrase)
-            .nothing_else();
-        assert_eq!(canonical(input), input);
-    }
+    let input = "Prionospio iberian canyons sp. c";
+    assert_informal_hinted(input, None, Some(Rank::Species), None)
+        .taxon("Prionospio")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("iberian canyons sp. c")
+        .nothing_else();
+    assert_eq!(canonical(input), input);
     // a qualified one too, which the qualifier only doubts
     for (input, species, qualifier, phrase) in [
         ("Prionospio aff. iberian sp. c", "iberian", "aff.", "sp. c"),
