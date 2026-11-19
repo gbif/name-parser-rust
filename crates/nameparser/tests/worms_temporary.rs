@@ -783,11 +783,9 @@ fn a_question_mark_in_brackets_after_the_genus_doubts_it() {
         .warning(&["question marks removed"])
         .comb_authors(Some("1873"), &["Macleay"])
         .nothing_else();
+    // the doubt stays out of the name (#243)
     let agrion = nameparser::parse_name("Agrion (?) satelles", None, None, None).unwrap();
-    assert_eq!(
-        agrion.canonical_name().as_deref(),
-        Some("? Agrion satelles")
-    );
+    assert_eq!(agrion.canonical_name().as_deref(), Some("Agrion satelles"));
 
     // in the subgenus's brackets it doubts the subgenus
     for name in [
@@ -807,7 +805,7 @@ fn a_question_mark_in_brackets_after_the_genus_doubts_it() {
         nameparser::parse_name("Glenea (? Macroglenea) anulicornis", None, None, None).unwrap();
     assert_eq!(
         glenea.canonical_name_complete().as_deref(),
-        Some("Glenea (? Macroglenea) anulicornis")
+        Some("Glenea (Macroglenea) anulicornis")
     );
     assert_eq!(
         glenea
