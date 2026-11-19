@@ -968,10 +968,19 @@ fn a_code_or_letter_after_sp_behind_a_species_epithet_is_its_phrase() {
         .nothing_else();
 }
 
-/// #102: under the bacterial code, as ChecklistBank parses GTDB, a suffix of capitals belongs to
-/// the genus: `Bacillus_BF` is one of the genera GTDB splits Bacillus into.
+/// #102, #244: a suffix of capitals belongs to the name part it is glued to, `Bacillus_BF` is one of
+/// the genera GTDB splits Bacillus into. Such a taxon is no regular scientific name: the name is
+/// informal, anchored on the taxon it was split from. With the bacterial code or without, the same
+/// suffixes are used elsewhere in the tree.
 #[test]
-fn a_gtdb_genus_keeps_its_suffix_under_the_bacterial_code() {
+fn a_gtdb_name_is_informal_and_anchored_on_the_taxon_it_was_split_from() {
+    fn anchor(input: &str) -> (String, Rank) {
+        let ParseResult::Parsed(pn) = nameparser::parse(input, None, None, None) else {
+            panic!("parsed: {input}");
+        };
+        let a = pn.anchor().expect("anchor");
+        (a.canonical_name().unwrap_or_default(), a.rank)
+    }
     assert_name_hinted(
         "Bacillus_BF",
         None,
@@ -980,17 +989,78 @@ fn a_gtdb_genus_keeps_its_suffix_under_the_bacterial_code() {
     )
     .monomial_rank("Bacillus_BF", Rank::Genus)
     .code(NomCode::Bacterial)
+    .type_(NameType::Informal)
     .nothing_else();
-    assert_name_hinted("Bacillaceae_B", None, None, Some(NomCode::Bacterial))
-        .monomial_rank("Bacillaceae_B", Rank::Family)
-        .code(NomCode::Bacterial)
+    assert_name("Bacillus_BF")
+        .monomial("Bacillus_BF")
+        .type_(NameType::Informal)
         .nothing_else();
-    // without it the suffix may be a placeholder code, the designation of the taxon before it
-    assert_informal("Bacillus_BF")
-        .taxon("Bacillus")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
-        .phrase("BF")
+    assert_eq!(
+        anchor("Bacillus_BF"),
+        ("Bacillus".to_string(), Rank::Unranked)
+    );
+    assert_name("Bacillaceae_B")
+        .monomial_rank("Bacillaceae_B", Rank::Family)
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_eq!(
+        anchor("Bacillaceae_B"),
+        ("Bacillaceae".to_string(), Rank::Family)
+    );
+    // on the genus or epithet of a binomial
+    for (input, genus, epithet, anchored) in [
+        (
+            "Pseudomonas_E putida",
+            "Pseudomonas_E",
+            "putida",
+            "Pseudomonas putida",
+        ),
+        (
+            "Streptococcus mitis_I",
+            "Streptococcus",
+            "mitis_I",
+            "Streptococcus mitis",
+        ),
+        (
+            "Haemophilus_A parahaemolyticus_B",
+            "Haemophilus_A",
+            "parahaemolyticus_B",
+            "Haemophilus parahaemolyticus",
+        ),
+    ] {
+        assert_name(input)
+            .species(genus, epithet)
+            .type_(NameType::Informal)
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+        assert_eq!(anchor(input), (anchored.to_string(), Rank::Species));
+    }
+    // the unnamed species GTDB places in a genus, its genome assembly the phrase
+    for (input, genus, anchored) in [
+        ("Pseudomonas_E sp002874965", "Pseudomonas_E", "Pseudomonas"),
+        (
+            "Acidaminococcus sp000437815",
+            "Acidaminococcus",
+            "Acidaminococcus",
+        ),
+    ] {
+        let phrase = input.split_once(' ').unwrap().1;
+        assert_name(input)
+            .genus_rank(genus, Rank::Species)
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .warning(&[nameparser::model::warnings::INDETERMINED])
+            .nothing_else();
+        assert_eq!(canonical(input), input);
+        assert_eq!(anchor(input), (anchored.to_string(), Rank::Genus));
+    }
+    // a code in the genus' place is no genus
+    assert_unparsable_no_code("UBA1847 sp013042375", NameType::Other);
+    assert_unparsable_no_code("UBA11359_C", NameType::Other);
+    // a lower-case label or one with digits is no GTDB suffix
+    assert_name("Nesomyrmex madecassus_01m")
+        .species("Nesomyrmex", "madecassus_01m")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 

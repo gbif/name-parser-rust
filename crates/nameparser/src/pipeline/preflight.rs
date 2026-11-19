@@ -477,6 +477,11 @@ static GEN_NOV: LazyLock<Regex> = LazyLock::new(|| {
 static OTU_SPECIMEN_SUFFIX: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)(?-u:\bsp\d{8,})$").unwrap());
 
+/// The unnamed species GTDB places in a genus, the genus with or without its GTDB suffix and `sp`
+/// with the number of a genome assembly: `Pseudomonas_E sp002874965`.
+static GTDB_UNNAMED_SPECIES: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}\p{Ll}+(?:_[A-Z]{1,3})?(?-u:\s+)sp\d{8,}$").unwrap());
+
 // ---------- PLACEHOLDER ----------
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\s`/`\b` (many), no `\p{…}`, no wildcard `.` (only
 /// escaped `\.`) → whole alternation `(?-u:…)`-wrapped. `incertae sedis` needs no word boundary
@@ -1149,8 +1154,10 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
     if PR2_LIKE.is_match(&s) && s.contains('-') && has_digit(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
     }
-    // GTDB/SILVA specimen codes ending with "sp" + 8+ digits (e.g. "18JY21-1 sp004344915").
-    if s.contains(' ') && OTU_SPECIMEN_SUFFIX.is_match(&s) {
+    // GTDB/SILVA specimen codes ending with "sp" + 8+ digits (e.g. "18JY21-1 sp004344915"). After
+    // a genus, its GTDB suffix or not, it is the unnamed species GTDB placed there, an informal
+    // name: `Pseudomonas_E sp002874965`, `Acidaminococcus sp000437815`.
+    if s.contains(' ') && OTU_SPECIMEN_SUFFIX.is_match(&s) && !GTDB_UNNAMED_SPECIES.is_match(&s) {
         return Err(ParseError::new(NameType::Other, None, s));
     }
 

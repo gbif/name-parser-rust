@@ -226,12 +226,14 @@ fn a_digit_or_an_odd_character_in_a_genus_or_epithet_is_flagged() {
     assert_name("Pseudo-nitzschia novae-angliae")
         .species("Pseudo-nitzschia", "novae-angliae")
         .nothing_else();
-    // nor is the suffix GTDB gives a split genus or species, with or without the bacterial code
+    // nor is the suffix GTDB gives a split genus or species, which makes the name informal (#244)
     assert_name("Haemophilus_A parahaemolyticus_B")
         .species("Haemophilus_A", "parahaemolyticus_B")
+        .type_(nameparser::model::NameType::Informal)
         .nothing_else();
     assert_name("Streptococcus mitis_I")
         .species("Streptococcus", "mitis_I")
+        .type_(nameparser::model::NameType::Informal)
         .nothing_else();
     // a lower-case label after the underscore is
     assert_name("Culicoides clavipalpis group_sp08")

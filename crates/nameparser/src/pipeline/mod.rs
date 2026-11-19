@@ -23,6 +23,7 @@ use std::sync::LazyLock;
 
 use regex::Regex;
 
+use crate::model::name::split_gtdb_suffix;
 use crate::model::{
     warnings, Authorship, CombinedAuthorship, NamePart, NameType, NomCode, ParseError, ParsedName,
     Rank, State,
@@ -53,8 +54,8 @@ const LONG_NAME_LENGTH: usize = 250;
 /// regardless of that flag.
 ///
 /// Pattern: Latin-style prefix glued to an all-caps / alphanumeric phrase suffix
-/// ("OdontellidaeGEN", "GenusANIC_3"). Underscored prefixes ("Blattellinae_SB") are
-/// handled later in Assemble; this doesn't match those.
+/// ("OdontellidaeGEN", "GenusANIC_3"). Underscored prefixes ("Entodinium_1",
+/// "Blattellinae_SB") are handled later in Assemble; this doesn't match those.
 static GLUED_PHRASE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^([\p{Lu}][\p{Ll}]+)([\p{Lu}]{2,}[\p{Lu}\d_]*)$").unwrap());
 
@@ -600,16 +601,7 @@ fn flag_unusual_characters(name: &mut ParsedName) {
     };
     let unusual = |part: &Option<String>| {
         part.as_deref().is_some_and(|w| {
-            let w = match w.split_once('_') {
-                Some((taxon, suffix))
-                    if !taxon.is_empty()
-                        && !suffix.is_empty()
-                        && suffix.chars().all(|c| c.is_ascii_uppercase()) =>
-                {
-                    taxon
-                }
-                _ => w,
-            };
+            let w = split_gtdb_suffix(w).map_or(w, |(taxon, _)| taxon);
             w != "?" && !w.nfd().all(usual)
         })
     };

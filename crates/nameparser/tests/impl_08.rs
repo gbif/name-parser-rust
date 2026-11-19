@@ -396,11 +396,11 @@ fn bold_placeholder() {
         .code(NomCode::Zoological)
         .nothing_else();
 
-    assert_informal("Blattellinae_SB")
-        .taxon("Blattellinae")
-        .taxon_rank(Rank::Unranked)
-        .rank(Rank::Unranked)
-        .phrase("SB")
+    // capitals after the underscore read as a GTDB suffix: informal, anchored on Blattellinae
+    // all the same (#244)
+    assert_name("Blattellinae_SB")
+        .monomial("Blattellinae_SB")
+        .type_(NameType::Informal)
         .nothing_else();
 
     assert_informal("GenusANIC_3")
