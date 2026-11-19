@@ -171,12 +171,14 @@ static HOMOGLYPHS: LazyLock<HashMap<char, char>> = LazyLock::new(|| {
         } else {
             (None, None)
         };
+        // the dotless ı is a letter of its own, Java's `ignoredLetters`
         for cp in line.chars().skip(1) {
             if (cp as u32) > 128
                 && cp != HYBRID_MARKER
                 && !DIACRITICS.contains(&cp)
                 && !map.contains_key(&cp)
                 && !QUOTE_IGNORE.contains(&cp)
+                && cp != DOTLESS_I
             {
                 let folded = match (cp.is_uppercase(), cp.is_lowercase()) {
                     (true, _) => upper_letter,
@@ -193,37 +195,50 @@ static HOMOGLYPHS: LazyLock<HashMap<char, char>> = LazyLock::new(|| {
     map
 });
 
-/// Java `UnicodeUtils.containsHomoglyphs(CharSequence)` (`UnicodeUtils.java:194-196`,
-/// delegating to `findHomoglyph` at `:203-215`). Returns true if `s` contains at least one
-/// character that is a known homoglyph of a Latin letter. Java's version short-circuits via
-/// a codepoint lower/upper-bound check before the map lookup (an `Int2CharMap`-specific
-/// micro-optimisation); a `HashMap<char, _>` lookup here is already O(1) average without
-/// needing that bound check reproduced.
+/// Java `UnicodeUtils.containsHomoglyphs(CharSequence)`: whether [`replace_homoglyphs`] changes
+/// `s`, i.e. whether it has a look-alike of a Latin letter outside a word written in another
+/// script.
 pub fn contains_homoglyphs(s: &str) -> bool {
-    s.chars().any(|c| HOMOGLYPHS.contains_key(&c))
+    s.chars().any(|c| HOMOGLYPHS.contains_key(&c)) && replace_homoglyphs(s) != s
 }
 
-/// Java `UnicodeUtils.replaceHomoglyphs(CharSequence, boolean)` / its 3-arg sibling
-/// (`UnicodeUtils.java:239-276`), specialised to the only shape any ported call site ever
-/// needs: `inclHyphens=false` and no `keep` set. `pipeline::stripandstash`'s step 13 (the
-/// sole caller) always passes `inclHyphens=false` — Unicode hyphen variants are already
-/// normalised to ASCII `-` by the immediately-preceding step 12 (`normaliseHyphens`), per
-/// that Java method's own comment ("Hyphen homoglyphs are intentionally excluded — those
-/// are normalised above already") — so `HYPHEN_HOMOGLYHPS` (`UnicodeUtils.java:141-167`)
-/// and the `keep`-list parameter are both unreachable dead weight for this port's actual
-/// call graph and are not ported. Replaces every character present as a key in
-/// [`HOMOGLYPHS`] with its mapped canonical; every other character passes through
-/// unchanged.
+/// Java `UnicodeUtils.replaceHomoglyphs(CharSequence, false)`: replaces every look-alike of a Latin
+/// letter in [`HOMOGLYPHS`] with that letter, except in a word written in another script, which is
+/// left alone (#257): a word without Latin letters that
+/// - has a letter with no Latin look-alike, the Cyrillic `й` of `буйвол` or the `д` and `ж` of
+///   `Азербайджанский`, which became `6yйBoл` and `Aɜep6aйджaHcĸий`, or
+/// - has three letters or more, one of them lower-case, all look-alikes (`Москва`, not `MocĸBa`).
+///
+/// Once `s` has such a word, the other words without Latin letters are taken for that script too
+/// (`ВВС Москва`). Otherwise they are look-alikes slipped into Latin text, as the Cyrillic `СЗ` of
+/// `'LINE СЗ – 80 B'` (`C3`) or a Greek variety marker `α`; and so is every look-alike in a word
+/// that has Latin letters (`Aus аbus`). A word is a run of letters, digits and marks.
+///
+/// The behaviour is shared with Java, case by case: `resources/homoglyph-cases.txt` is copied to
+/// name-parser-api, and both test against it. Java's `inclHyphens` and `keep` options are not
+/// ported: the one call site, `pipeline::stripandstash`'s step 13, normalises hyphens itself.
 pub fn replace_homoglyphs(s: &str) -> String {
-    s.chars()
-        .map(|c| *HOMOGLYPHS.get(&c).unwrap_or(&c))
-        .collect()
+    replace(s, false)
 }
 
-/// [`replace_homoglyphs`], except that a Turkish dotless ı (U+0131) stays in a capitalised word
-/// other than the first: the surnames `Altıner`, `Yıldırım`. In the genus or an epithet it is a
-/// look-alike of `i` all the same. Rust-only: Java folded it everywhere (`Altiner`).
+/// [`replace_homoglyphs`], and a Turkish dotless ı (U+0131) is a look-alike of `i` in the genus or
+/// an epithet, though not in a capitalised word other than the first: the surnames `Altıner`,
+/// `Yıldırım`. Java's table leaves it out, as a letter of its own. Rust-only.
 pub fn replace_homoglyphs_in_name(s: &str) -> String {
+    replace(s, true)
+}
+
+const DOTLESS_I: char = '\u{0131}';
+
+fn replace(s: &str, in_name: bool) -> String {
+    if !s
+        .chars()
+        .any(|c| HOMOGLYPHS.contains_key(&c) || (in_name && c == DOTLESS_I))
+    {
+        return s.to_string();
+    }
+    let kept = foreign_words(s);
+    let mut kept = kept.iter().peekable();
     let mut out = String::with_capacity(s.len());
     let mut at_word_start = true;
     let mut surname = false;
@@ -231,20 +246,73 @@ pub fn replace_homoglyphs_in_name(s: &str) -> String {
         if c.is_whitespace() {
             at_word_start = true;
             surname = false;
-            out.push(c);
-            continue;
-        }
-        if at_word_start && !matches!(c, '(' | '[' | '"' | '\'') {
+        } else if at_word_start && !matches!(c, '(' | '[' | '"' | '\'') {
             surname = i > 0 && c.is_uppercase();
             at_word_start = false;
         }
-        if c == '\u{0131}' && surname {
-            out.push(c);
-        } else {
-            out.push(*HOMOGLYPHS.get(&c).unwrap_or(&c));
-        }
+        while kept.next_if(|&&(_, b)| b <= i).is_some() {}
+        out.push(match c {
+            _ if kept.peek().is_some_and(|&&(a, _)| a <= i) => c,
+            DOTLESS_I if in_name && !surname => 'i',
+            _ => *HOMOGLYPHS.get(&c).unwrap_or(&c),
+        });
     }
     out
+}
+
+/// The byte ranges of the words of `s` written in another script, see [`replace_homoglyphs`].
+fn foreign_words(s: &str) -> Vec<(usize, usize)> {
+    let non_latin: Vec<(usize, usize)> = words(s)
+        .into_iter()
+        .filter(|&(a, b)| {
+            let w = &s[a..b];
+            !w.chars().any(is_latin) && w.chars().any(char::is_alphabetic)
+        })
+        .collect();
+    let foreign = non_latin.iter().any(|&(a, b)| {
+        let w = &s[a..b];
+        w.chars()
+            .any(|c| c.is_alphabetic() && !HOMOGLYPHS.contains_key(&c))
+            || (w.chars().filter(|c| c.is_alphabetic()).count() >= 3
+                && w.chars().any(char::is_lowercase))
+    });
+    if foreign {
+        non_latin
+    } else {
+        Vec::new()
+    }
+}
+
+/// The byte ranges of the runs of letters, digits and marks in `s` (Unicode `Alphabetic`, and the
+/// general categories `N` and `M`).
+fn words(s: &str) -> Vec<(usize, usize)> {
+    let mut words = Vec::new();
+    let mut start = None;
+    for (i, c) in s.char_indices() {
+        let word_char = c.is_alphanumeric() || unicode_normalization::char::is_combining_mark(c);
+        match (word_char, start) {
+            (true, None) => start = Some(i),
+            (false, Some(a)) => {
+                words.push((a, i));
+                start = None;
+            }
+            _ => {}
+        }
+    }
+    if let Some(a) = start {
+        words.push((a, s.len()));
+    }
+    words
+}
+
+/// Whether `c` is a letter of the Latin script: Basic Latin, Latin-1, Latin Extended-A to -E, the
+/// IPA and phonetic extensions, Latin Extended Additional and the Latin ligatures.
+fn is_latin(c: char) -> bool {
+    c.is_alphabetic()
+        && matches!(c as u32,
+            0x41..=0x5A | 0x61..=0x7A | 0xAA | 0xBA | 0xC0..=0x2AF | 0x1D00..=0x1DBF
+            | 0x1E00..=0x1EFF | 0x2C60..=0x2C7F | 0xA720..=0xA7FF | 0xAB30..=0xAB6F
+            | 0xFB00..=0xFB06)
 }
 
 /// Faithful port of Java `String.trim()`: strips only leading/trailing chars whose
@@ -482,7 +550,8 @@ mod tests {
     /// line 20, canonical `-`) are also [`IGNORED_CANONICALS`], leaving 124 rows that each
     /// contribute at least one homoglyph codepoint (independently verified against the
     /// source file — no row contributes zero) — plus the `'ſ'` pre-seed, for an exact total
-    /// of 1733 map entries (1751 before the 18 distinct letters of #65 were removed). Asserted
+    /// of 1732 map entries (1751 before the 18 distinct letters of #65 were removed, 1733 before the
+    /// dotless ı was, as in Java). Asserted
     /// exactly (not just "a lot"), as a direct regression guard against a bad resource copy or
     /// a loader loop that silently stops early/never reaches `'ɸ'`/double-counts/under-filters.
     #[test]
@@ -498,10 +567,10 @@ mod tests {
     }
 
     #[test]
-    fn resource_loads_exactly_1733_entries() {
+    fn resource_loads_exactly_1732_entries() {
         assert_eq!(
             HOMOGLYPHS.len(),
-            1733,
+            1732,
             "loaded homoglyph count drifted — see this test's own doc comment"
         );
     }
@@ -556,6 +625,35 @@ mod tests {
 
     /// A Cyrillic 'а' (U+0430, `homoglyphs.txt` line 67's `a`-canonical row) look-alike
     /// mid-word folds to plain "a", flagging as a homoglyph.
+    /// The cases shared with name-parser-api's `UnicodeUtils.replaceHomoglyphs`, which tests the
+    /// same file: both implementations must agree.
+    #[test]
+    fn homoglyph_cases_shared_with_java() {
+        let cases = include_str!("../resources/homoglyph-cases.txt");
+        let mut n = 0;
+        for line in cases
+            .lines()
+            .filter(|l| !l.is_empty() && !l.starts_with('#'))
+        {
+            let (input, expected) = line.split_once('\t').expect("input<TAB>expected");
+            assert_eq!(replace_homoglyphs(input), expected, "{input}");
+            assert_eq!(contains_homoglyphs(input), input != expected, "{input}");
+            n += 1;
+        }
+        assert!(n >= 20, "only {n} cases read");
+    }
+
+    /// The dotless ı is a look-alike of `i` in a genus or an epithet only, not in Java's table.
+    #[test]
+    fn dotless_i_folds_in_a_name_but_not_in_a_surname() {
+        assert_eq!(replace_homoglyphs("Abies alıba"), "Abies alıba");
+        assert!(!contains_homoglyphs("Abies alıba"));
+        assert_eq!(
+            replace_homoglyphs_in_name("Abies alıba Yıldırım"),
+            "Abies aliba Yıldırım"
+        );
+    }
+
     #[test]
     fn cyrillic_a_lookalike_folds_to_latin_a() {
         assert!(contains_homoglyphs("Aus \u{0430}bus"));

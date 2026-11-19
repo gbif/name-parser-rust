@@ -241,6 +241,63 @@ fn apostrophe_inside_a_quoted_cultivar() {
         .nothing_else();
 }
 
+// An apostrophe ending a word of the cultivar epithet is a letter, a glottal stop or a
+// transliterated soft sign, in livestock breeds written like cultivars (FAO DAD-IS, #256). It was
+// taken for the closing quote, and the epithet became the author.
+#[test]
+fn apostrophe_ending_a_word_of_a_quoted_cultivar() {
+    for (input, species, epithet) in [
+        (
+            "Ovis aries 'Kazakhskaya Korridel''",
+            "aries",
+            "Kazakhskaya Korridel'",
+        ),
+        ("Ovis aries 'Korridel' Mutton'", "aries", "Korridel' Mutton"),
+        ("Equus caballus 'M' Par'", "caballus", "M' Par"),
+        (
+            "Ovis aries ‘Kazakhskaya Korridel’’",
+            "aries",
+            "Kazakhskaya Korridel'",
+        ),
+        (
+            "Ovis aries 'Kazakhskaya Korridelʼ'",
+            "aries",
+            "Kazakhskaya Korridel'",
+        ),
+        (
+            "Ovis aries \"Kazakhskaya Korridel'\"",
+            "aries",
+            "Kazakhskaya Korridel'",
+        ),
+    ] {
+        let genus = input.split(' ').next().unwrap();
+        assert_name(input)
+            .cultivar_sp(genus, species, epithet)
+            .nothing_else();
+        assert_name_code(input, NomCode::Zoological)
+            .cultivar_sp(genus, species, epithet)
+            .nothing_else();
+    }
+
+    // under a subspecies
+    let n = nameparser::parse_name(
+        "Gallus gallus domesticus 'Gaga''",
+        None,
+        None,
+        Some(NomCode::Zoological),
+    )
+    .unwrap();
+    assert_eq!(n.infraspecific_epithet.as_deref(), Some("domesticus"));
+    assert_eq!(n.cultivar_epithet.as_deref(), Some("Gaga'"));
+    assert!(n.combination_authorship.authors.is_empty());
+
+    // followed by an author
+    assert_name("Ovis aries 'Gaga'' Smith")
+        .cultivar_sp("Ovis", "aries", "Gaga'")
+        .comb_authors(None, &["Smith"])
+        .nothing_else();
+}
+
 // "ht." is an occasional abbreviation of the horticultural marker "hort." written
 // directly on the author span. It must parse like its spelled-out twin
 // ("Gymnogramma alstoni hort.Birkenh.; Gard.") instead of leaking "ht" in as a bogus
