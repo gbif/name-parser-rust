@@ -365,6 +365,7 @@ fn old_style_s() {
         .nothing_else();
     assert_name("Dreyfusia nüßlini")
         .species("Dreyfusia", "nüßlini")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 

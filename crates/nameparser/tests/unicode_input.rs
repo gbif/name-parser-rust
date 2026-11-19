@@ -182,3 +182,48 @@ fn mojibake_in_an_author_is_repaired() {
         .warning(&[warnings::UNUSUAL_CHARACTERS])
         .nothing_else();
 }
+
+/// A digit or a character no scientific name uses is flagged by the part it stands in (#244, #236),
+/// so that a genus can be trusted when only an epithet is broken. A word with a digit on its own
+/// stays no name.
+#[test]
+fn a_digit_or_an_odd_character_in_a_genus_or_epithet_is_flagged() {
+    use nameparser::model::NameType;
+    assert_name("Imsh8ia aleurites")
+        .species("Imsh8ia", "aleurites")
+        .warning(&[warnings::UNUSUAL_GENUS])
+        .nothing_else();
+    assert_name("Imshia aleu3ites")
+        .species("Imshia", "aleu3ites")
+        .warning(&[warnings::UNUSUAL_EPITHET])
+        .nothing_else();
+    assert_name("Lepidostoma unidentified_sp1_ab9tf03")
+        .species("Lepidostoma", "unidentified_sp1_ab9tf03")
+        .warning(&[warnings::UNUSUAL_EPITHET])
+        .nothing_else();
+    assert_informal("Imsh8ia sp.")
+        .taxon("Imsh8ia")
+        .taxon_rank(Rank::Genus)
+        .rank(Rank::Species)
+        .phrase("sp.")
+        .warning(&[warnings::UNUSUAL_GENUS])
+        .nothing_else();
+    assert_unparsable_no_code("Lepidostoma1", NameType::Other);
+    assert_unparsable_no_code("Imsh8ia", NameType::Other);
+    // a German sharp s in an epithet, not in an author
+    assert_name("Ephedra przewalskiiß")
+        .species("Ephedra", "przewalskiiß")
+        .warning(&[warnings::UNUSUAL_EPITHET])
+        .nothing_else();
+    assert_name("Amantichitinum ursilacus Moß et al. 2013")
+        .species("Amantichitinum", "ursilacus")
+        .comb_authors(Some("2013"), &["Moß", "al."])
+        .nothing_else();
+    // accents, ligatures, hyphens and the dot of an abbreviated genus are no odd characters
+    assert_name("Cephaëlis ipecacuanha")
+        .species("Cephaëlis", "ipecacuanha")
+        .nothing_else();
+    assert_name("Pseudo-nitzschia novae-angliae")
+        .species("Pseudo-nitzschia", "novae-angliae")
+        .nothing_else();
+}

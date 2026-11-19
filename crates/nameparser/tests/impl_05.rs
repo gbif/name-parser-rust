@@ -411,11 +411,13 @@ fn case_sensitive() {
 fn alpha_beta_theta_names() {
     assert_name("Euchlanis dilatata β-larga")
         .infra_species("Euchlanis", "dilatata", Rank::InfraspecificName, "β-larga")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 
     assert_name("Trianosperma ficifolia var. βrigida Cogn.")
         .infra_species("Trianosperma", "ficifolia", Rank::Variety, "βrigida")
         .comb_authors(None, &["Cogn."])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 
     assert_name("Agaricus collinitus β mucosus (Bull.) Fr.")
@@ -450,7 +452,10 @@ fn alpha_beta_theta_names() {
     assert_name("Cyclotus amethystinus var. β Guppy, 1868")
         .infra_species("Cyclotus", "amethystinus", Rank::Variety, "β")
         .comb_authors(Some("1868"), &["Guppy"])
-        .warning(&[nameparser::model::warnings::SINGLE_LETTER])
+        .warning(&[
+            warnings::UNUSUAL_EPITHET,
+            nameparser::model::warnings::SINGLE_LETTER,
+        ])
         .nothing_else();
 }
 

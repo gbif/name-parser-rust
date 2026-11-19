@@ -1162,8 +1162,14 @@ pub mod warnings {
     /// Rust-only so far: a species epithet written with a capital, as Linnaeus did (`Ovis Aries`),
     /// was put in lower case (ICZN Art. 28).
     pub const CAPITALISED_EPITHET: &str = "capitalised epithet put in lower case";
-    /// Rust-only (#246): no genus or epithet has a single letter.
+    /// No genus or epithet has a single letter (#246).
     pub const SINGLE_LETTER: &str = "single letter genus or epithet";
+    /// A genus or uninomial holding a digit or a character no scientific name uses (#244):
+    /// `Imsh8ia aleurites`.
+    pub const UNUSUAL_GENUS: &str = "genus or uninomial with digit or unusual character";
+    /// An infrageneric, specific or infraspecific epithet holding a digit or a character no
+    /// scientific name uses (#244, #236): `Imshia aleu3ites`, `Ephedra przewalskiiß`.
+    pub const UNUSUAL_EPITHET: &str = "epithet with digit or unusual character";
 }
 
 #[cfg(test)]

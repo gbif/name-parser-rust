@@ -379,6 +379,7 @@ fn stray_char_in_epithet() {
     assert_name("Lamprostiba pu!chra Pace, 2014")
         .species("Lamprostiba", "pu!chra")
         .comb_authors(Some("2014"), &["Pace"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 

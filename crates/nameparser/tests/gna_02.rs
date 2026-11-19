@@ -520,6 +520,7 @@ fn infraspecies_with_greek_letters_icn() {
     assert_name("Aristotelia fruticosa var. δmicrophylla Hook.f.")
         .infra_species("Aristotelia", "fruticosa", Rank::Variety, "δmicrophylla")
         .comb_authors(None, &["Hook.f."])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     // "unr." marks an unranked infrageneric name
     assert_name("Hieracium unr. Verbasciformia Arv.-Touv.")

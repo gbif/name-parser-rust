@@ -13,7 +13,7 @@
 
 mod common;
 use common::*;
-use nameparser::model::{NamePart, NameType, NomCode, Rank, State};
+use nameparser::model::{warnings, NamePart, NameType, NomCode, Rank, State};
 use nameparser::ParseResult;
 
 // ---- Informal: an anchor + a provisional designation, no species epithet ---------------------
@@ -377,6 +377,7 @@ fn the_designation_capture_leaves_epithets_and_authors_alone() {
     assert_name("Benthogone rosea var. 4-lineata R. Perrier, 1896")
         .infra_species("Benthogone", "rosea", Rank::Variety, "4-lineata")
         .comb_authors(Some("1896"), &["R.Perrier"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     for (input, author) in [
         ("Abies alba var.", None),
@@ -465,9 +466,11 @@ fn a_numeral_prefixed_epithet_is_not_a_strain_code() {
             Rank::InfraspecificName,
             "7-maculatus",
         )
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Coccinella 2-pustulata")
         .species("Coccinella", "2-pustulata")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 
@@ -1108,10 +1111,12 @@ fn a_year_or_a_numeral_epithet_after_a_uninomial_stays() {
         .nothing_else();
     assert_name("Leptura 4pustulata")
         .species("Leptura", "4pustulata")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name_auth("Callidium 2 fasciatum", "Zimsen, 1964")
         .species("Callidium", "2-fasciatum")
         .comb_authors(Some("1964"), &["Zimsen"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 

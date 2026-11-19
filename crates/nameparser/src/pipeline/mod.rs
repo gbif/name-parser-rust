@@ -30,6 +30,8 @@ use crate::model::{
 use crate::pipeline::authorship_parser::AuthState;
 use crate::token::tokenize;
 use crate::unicode::{has_mojibake, is_fullwidth, java_trim, normalize_input, normalize_quotes};
+use unicode_normalization::char::is_combining_mark;
+use unicode_normalization::UnicodeNormalization;
 
 /// Java `Pipeline.MAX_LENGTH`. Hard upper bound on the input length. Beyond this the
 /// input is rejected as unparsable rather than parsed: real scientific names — even with
@@ -538,6 +540,7 @@ pub fn run(
     assemble::flag_indetermined(&mut ctx.name);
     flag_numbered_authors(&mut ctx.name);
     flag_single_letters(&mut ctx.name);
+    flag_unusual_characters(&mut ctx.name);
     apply_pending_qualifier(&mut ctx);
 
     Ok(ctx.name)
@@ -575,6 +578,50 @@ fn flag_single_letters(name: &mut ParsedName) {
         || single(&name.infraspecific_epithet)
     {
         name.add_warning(warnings::SINGLE_LETTER);
+    }
+}
+
+/// A genus or an epithet with a digit or a character no scientific name uses (#244, #236): `Imsh8ia
+/// aleurites`, `Imshia aleu3ites`, `Ephedra przewalskiiß`, `Coccinella 6maculata`, `var. β`. Latin
+/// letters may carry a diaeresis or another accent (`Cephaëlis`, `Pardøsa`), the ligatures æ and œ stand for two
+/// of them, a hyphen joins words (`Pseudo-nitzschia`, `novae-angliae`), and an apostrophe or a dot is
+/// an old spelling (`o'donelli`, `st.-johnii`) or the dot of an abbreviated genus (`M. mus`). A virus
+/// species may hold a number (`Simplexvirus humanalpha1`), a genus under the bacterial code the
+/// suffix GTDB gives a split genus (`Bacillus_BF`). The `?` standing for a missing genus is no odd
+/// character, and the cultivar epithet, which may hold anything, is not looked at.
+fn flag_unusual_characters(name: &mut ParsedName) {
+    let virus = name.code == Some(NomCode::Virus);
+    let bacterial = name.code == Some(NomCode::Bacterial);
+    let usual = |c: char| {
+        c.is_ascii_alphabetic()
+            || matches!(c, '-' | '\'' | '.' | 'æ' | 'Æ' | 'œ' | 'Œ' | 'ø' | 'Ø')
+            || is_combining_mark(c)
+            || virus && c.is_ascii_digit()
+    };
+    let unusual = |part: &Option<String>| {
+        part.as_deref().is_some_and(|w| {
+            let w = match w.split_once('_') {
+                Some((genus, suffix))
+                    if bacterial
+                        && !genus.is_empty()
+                        && !suffix.is_empty()
+                        && suffix.chars().all(|c| c.is_ascii_uppercase()) =>
+                {
+                    genus
+                }
+                _ => w,
+            };
+            w != "?" && !w.nfd().all(usual)
+        })
+    };
+    if unusual(&name.genus) || unusual(&name.uninomial) {
+        name.add_warning(warnings::UNUSUAL_GENUS);
+    }
+    if unusual(&name.infrageneric_epithet)
+        || unusual(&name.specific_epithet)
+        || unusual(&name.infraspecific_epithet)
+    {
+        name.add_warning(warnings::UNUSUAL_EPITHET);
     }
 }
 

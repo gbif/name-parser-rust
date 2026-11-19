@@ -151,14 +151,17 @@ fn digit_epithets_leading_numeral() {
     assert_name("Coccinella 11-punctata Linnaeus, 1758")
         .species("Coccinella", "11-punctata")
         .comb_authors(Some("1758"), &["Linnaeus"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Coccinella 2-pustulata")
         .species("Coccinella", "2-pustulata")
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     // a dot for the hyphen
     assert_name("Rhynchophorus 13.punctatus Herbst, J.F.W., 1795")
         .species("Rhynchophorus", "13-punctatus")
         .comb_authors(Some("1795"), &["J.F.W.Herbst"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 
@@ -172,6 +175,7 @@ fn digit_epithets_leading_numeral_unhyphenated() {
     assert_name("Coccinella 6maculata Fabricius, 1781")
         .species("Coccinella", "6maculata")
         .comb_authors(Some("1781"), &["Fabricius"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Camponotus sericeus 4maculatus")
         .infra_species(
@@ -180,15 +184,18 @@ fn digit_epithets_leading_numeral_unhyphenated() {
             Rank::InfraspecificName,
             "4maculatus",
         )
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     assert_name("Latrodectus 13decimguttatus Walckenaer, 1805")
         .species("Latrodectus", "13decimguttatus")
         .comb_authors(Some("1805"), &["Walckenaer"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
     // A parenthesised author now lands in the basionym slot, as it should.
     assert_name("Chalcis 2spinosa (Fabricius, 1804)")
         .species("Chalcis", "2spinosa")
         .bas_authors(Some("1804"), &["Fabricius"])
+        .warning(&[warnings::UNUSUAL_EPITHET])
         .nothing_else();
 }
 
