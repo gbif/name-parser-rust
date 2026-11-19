@@ -437,8 +437,13 @@ fn open_nomenclature_approximate_names() {
         .rank(Rank::Species)
         .phrase("sp. nr. subjuncta Bold:Aab, 0925")
         .nothing_else();
-    // FIXME(review): the mangled BIN "Bold:Aab, 0925" is read as a botanical author sanctioned by Aab
-    // skipped: Lacanobia nr. subjuncta Bold:Aab, 0925
+    // the mangled BIN "Bold:Aab, 0925" designates a specimen of the doubted species
+    assert_name("Lacanobia nr. subjuncta Bold:Aab, 0925")
+        .species("Lacanobia", "subjuncta")
+        .qualifiers(&[(NamePart::Specific, "nr.")])
+        .phrase("Bold:Aab, 0925")
+        .type_(NameType::Informal)
+        .nothing_else();
     assert_name("Abturia cf. alabamensis (Morton )")
         .species("Abturia", "alabamensis")
         .bas_authors(None, &["Morton"])

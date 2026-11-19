@@ -1511,6 +1511,18 @@ static TRAILING_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
 static QUALIFIER_AFTER_AUTHOR: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(\p{Ll}[\p{Ll}\-]+)(?-u:\s+)[\p{Lu}(].*?)(?-u:\s+)(?:cf|aff)\.?(?-u:\s+)(((?:var|subsp|ssp|f|fo|forma)\.?(?-u:\s+))?(\p{Ll}[\p{Ll}\-]+).*)$").unwrap()
 });
+/// `vel aff.` or `vel cf.` behind a name, "this or one close to it": `Garcinia riparia vel aff.`,
+/// `Pisonia macrocarpa Miranda vel aff.`, `Dalbergia densa var. australis vel aff.`. The `vel` was
+/// read as an epithet or an author. The groups: the name, its species epithet, the qualifier.
+static TRAILING_VEL_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(\p{Ll}[\p{Ll}\-]+)(?:(?-u:\s+)\S.*?)?)(?-u:\s+)vel\.?(?-u:\s+)(cf|aff)\.?$").unwrap()
+});
+/// A second name after a species, its genus written out and its epithet qualified: `Septifer
+/// bilocularis Brachidontes cf. variabilis`. No author takes a qualifier. The groups: the species,
+/// its epithet, the second name.
+static QUALIFIED_SECOND_NAME: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)(\p{Ll}[\p{Ll}\-]{2,}))(?-u:\s+)(\p{Lu}\p{Ll}{2,}(?-u:\s+)(?:cf|aff|nr)\.?(?-u:\s+)(\p{Ll}[\p{Ll}\-]{2,}))$").unwrap()
+});
 /// Words in a species epithet's place that take no qualifier behind the name.
 const NO_QUALIFIED_EPITHET: &[&str] = &[
     "sp", "spp", "spec", "species", "indet", "cf", "aff", "nr", "near",
@@ -1519,9 +1531,27 @@ const NO_QUALIFIED_EPITHET: &[&str] = &[
 /// Takes a qualifier out of where it does not belong, for the pipeline to give it to the name's
 /// last epithet once that is known, see [`TRAILING_QUALIFIER`] and [`QUALIFIER_AFTER_AUTHOR`]. A
 /// lone epithet after the author only with a rank marker or as an autonym: others are mostly second
-/// names (`Septifer bilocularis Brachidontes cf. variabilis`).
+/// names (`Septifer bilocularis Brachidontes cf. variabilis`), set aside as unparsed, see
+/// [`QUALIFIED_SECOND_NAME`]. `vel aff.` is the qualifier as a whole, [`TRAILING_VEL_QUALIFIER`].
 fn stash_misplaced_qualifier(ctx: &mut ParseContext, s: String) -> String {
     let s = BRACKETED_QUALIFIER.replace(&s, "$1 $2.").into_owned();
+    if let Some(caps) = TRAILING_VEL_QUALIFIER.captures(&s) {
+        if !NO_QUALIFIED_EPITHET.contains(&&caps[2]) {
+            ctx.pending_qualifier = Some(format!("vel {}.", &caps[3]));
+            return caps[1].to_string();
+        }
+    }
+    if let Some(caps) = QUALIFIED_SECOND_NAME.captures(&s) {
+        // an autonym after its author is no second name: `Swartzia flaemingii Raddi cf. flaemingii`
+        if !NO_QUALIFIED_EPITHET.contains(&&caps[2])
+            && !NO_QUALIFIED_EPITHET.contains(&&caps[4])
+            && caps[4] != caps[2]
+            && super::rank_markers::match_infraspecific(&caps[4]).is_none()
+        {
+            ctx.set_pending_unparsed(&caps[3]);
+            return caps[1].to_string();
+        }
+    }
     if let Some(caps) = TRAILING_QUALIFIER.captures(&s) {
         let head_end = caps[1]
             .split_whitespace()
@@ -1560,16 +1590,18 @@ fn stash_misplaced_qualifier(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
-/// A qualifier trailing a separate authorship: `Vittad. cf.`, as [`TRAILING_QUALIFIER`] on the name
-/// string.
-static AUTHORSHIP_TRAILING_QUALIFIER: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"^(.*\S)(?-u:\s+)\(?(cf|aff|nr)\.?\)?$").unwrap());
+/// A qualifier trailing a separate authorship: `Vittad. cf.`, `Miranda vel aff.`, as
+/// [`TRAILING_QUALIFIER`] and [`TRAILING_VEL_QUALIFIER`] on the name string.
+static AUTHORSHIP_TRAILING_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*?\S)(?-u:\s+)\(?(vel\.?(?-u:\s+))?(cf|aff|nr)\.?\)?$").unwrap()
+});
 
 /// See [`AUTHORSHIP_TRAILING_QUALIFIER`].
 fn stash_authorship_trailing_qualifier(ctx: &mut ParseContext, s: String) -> String {
     match AUTHORSHIP_TRAILING_QUALIFIER.captures(&s) {
         Some(caps) => {
-            ctx.pending_qualifier = Some(format!("{}.", &caps[2]));
+            let vel = if caps.get(2).is_some() { "vel " } else { "" };
+            ctx.pending_qualifier = Some(format!("{vel}{}.", &caps[3]));
             caps[1].to_string()
         }
         None => s,
@@ -2220,8 +2252,9 @@ fn repair_colon_diacritics(ctx: &mut ParseContext, s: String) -> String {
 /// after a name. On its own it is an IDENTIFIER (see `preflight`). A `BIN` label before the code
 /// goes with it, `Bledius BIN BOLD:ACU5439` (#187): it was taken for an author. Brackets around
 /// them go too, `Aegialites debilis (BIN BOLD:ADH3884)` (#216), a basionym author `BIN Bold` before.
+/// A BIN split by a comma, `Lacanobia nr. subjuncta Bold:Aab, 0925`, is kept as written.
 static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r"(?i)^(.*?[^\s])(?-u:\s+)\(?(?:BIN(?-u:\s+))?(BOLD[:_-][A-Z0-9]+|SH(?-u:\d{6,})\.[0-9A-Z.]+)\)?$").unwrap()
+    Regex::new(r"(?i)^(.*?[^\s])(?-u:\s+)\(?(?:BIN(?-u:\s+))?(BOLD[:_-][A-Z0-9]+(?:,(?-u:\s*)\d+)?|SH(?-u:\d{6,})\.[0-9A-Z.]+)\)?$").unwrap()
 });
 
 /// Sets a trailing BOLD BIN or SH code aside, to be appended to the phrase by Assemble: the
@@ -2231,8 +2264,12 @@ static TRAILING_IDENTIFIER: LazyLock<Regex> = LazyLock::new(|| {
 fn stash_trailing_identifier(ctx: &mut ParseContext, s: String) -> String {
     match TRAILING_IDENTIFIER.captures(&s) {
         Some(caps) => {
-            // Canonical in uppercase, as on its own (#119).
-            ctx.trailing_identifier = Some(super::preflight::canonical_identifier(&caps[2]));
+            // Canonical in uppercase, as on its own (#119); a split one as written.
+            ctx.trailing_identifier = Some(if caps[2].contains(',') {
+                caps[2].to_string()
+            } else {
+                super::preflight::canonical_identifier(&caps[2])
+            });
             caps[1].to_string()
         }
         None => s,

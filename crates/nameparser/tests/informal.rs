@@ -2007,22 +2007,44 @@ fn a_qualifier_after_the_author_goes_to_the_infraspecific_epithet() {
         panic!("parsed");
     };
     assert_eq!(pn.infraspecific_epithet, None);
-    let ParseResult::Parsed(pn) =
-        nameparser::parse("Hibbertia obtusifolia vel. aff.", None, None, None)
-    else {
-        panic!("parsed");
-    };
-    assert_eq!(pn.epithet_qualifier, None);
-    // no autonym and no marker: a second name
-    let ParseResult::Parsed(pn) = nameparser::parse(
-        "Septifer bilocularis Brachidontes cf. variabilis",
-        None,
-        None,
-        None,
-    ) else {
-        panic!("parsed");
-    };
-    assert_eq!(pn.infraspecific_epithet, None);
+    // `vel aff.` is the qualifier as a whole, "this or one close to it", on the last epithet
+    for (input, qualified) in [
+        ("Hibbertia obtusifolia vel. aff.", "obtusifolia"),
+        ("Garcinia riparia vel aff.", "riparia"),
+        ("Clematis glycinoides vel cf.", "glycinoides"),
+    ] {
+        let genus = input.split_whitespace().next().unwrap();
+        assert_name(input)
+            .species(genus, qualified)
+            .qualifiers(&[(
+                NamePart::Specific,
+                input
+                    .rsplit_once(qualified)
+                    .unwrap()
+                    .1
+                    .trim()
+                    .replace("vel.", "vel")
+                    .as_str(),
+            )])
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    assert_name("Pisonia macrocarpa Miranda vel aff.")
+        .species("Pisonia", "macrocarpa")
+        .comb_authors(None, &["Miranda"])
+        .qualifiers(&[(NamePart::Specific, "vel aff.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    assert_name("Dalbergia densa var. australis vel aff.")
+        .infra_species("Dalbergia", "densa", Rank::Variety, "australis")
+        .qualifiers(&[(NamePart::Infraspecific, "vel aff.")])
+        .type_(NameType::Informal)
+        .nothing_else();
+    // no autonym and no marker after a qualified word: a second name, set aside
+    assert_name("Septifer bilocularis Brachidontes cf. variabilis")
+        .species("Septifer", "bilocularis")
+        .partial("Brachidontes cf. variabilis")
+        .nothing_else();
 }
 
 /// #246: a single letter is no genus or epithet; the misreadings behind most of them are mended and
