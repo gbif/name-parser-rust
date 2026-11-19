@@ -150,6 +150,15 @@ pub(super) fn canonical_identifier(code: &str) -> String {
     }
 }
 
+/// A first word of two or more capitals and digits, perhaps hyphenated, and more words after it:
+/// see its use in [`run`].
+static CLADE_CODE_HEAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^[A-Z]{2,}[-_]?[0-9][A-Za-z0-9-]*(?-u:\s+)\S").unwrap());
+
+/// The human and simian immunodeficiency and T-lymphotropic viruses, by their acronym and number.
+static RETROVIRUS_HEAD: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^(?:HIV|SIV|HTLV)[-_]?[0-9]").unwrap());
+
 /// Java: `Pattern.CASE_INSENSITIVE`. Has `\d` (in a class) → scoped.
 static OTU_GTDB_UBA: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"(?i)^(?:UBA|GTDB|GCA|GCF)(?-u:[\d_-]+)$").unwrap());
@@ -1055,6 +1064,14 @@ pub fn run(original: &str, ctx: &mut ParseContext) -> Result<(), ParseError> {
         || s.starts_with('=')
     {
         return Err(ParseError::new(NameType::Other, None, s));
+    }
+    // Rust-only: a code of capitals and digits in the genus's place is the label of a clade, no
+    // genus: `ANME-1 cluster archaeon GoMg3.2`, `SAR324 cluster bacterium`, `NC10 bacterium`,
+    // `UBA4372 sp`. It was title-cased into a genus `Anme-1`. The retroviruses' strains are
+    // viruses: `HIV-1 06TG.HT064`, `SIV-1 …`, `HTLV-1 …`.
+    if CLADE_CODE_HEAD.is_match(&s) {
+        let code = RETROVIRUS_HEAD.is_match(&s).then_some(NomCode::Virus);
+        return Err(ParseError::new(NameType::Other, code, s));
     }
     if let Some(caps) = DASH_NUMBER_LABEL.captures(&s) {
         rescue_label(ctx, &caps[1], &caps[2]);

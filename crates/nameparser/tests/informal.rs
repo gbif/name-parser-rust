@@ -2222,3 +2222,19 @@ fn a_bracketed_rank_after_the_author_is_left_over() {
         .partial("(var. ruderalis)")
         .nothing_else();
 }
+
+/// A code of capitals and digits in the genus's place labels a clade; no genus.
+#[test]
+fn a_clade_code_is_no_genus() {
+    for input in [
+        "ANME-1 cluster archaeon GoMg3.2",
+        "SAR324 cluster bacterium",
+        "NC10 bacterium",
+        "UBA4372 sp",
+        "TM7 phylum",
+    ] {
+        assert_unparsable_no_code(input, NameType::Other);
+    }
+    // a retrovirus's strain is a virus
+    assert_unparsable_code("HIV-1 06TG.HT064", NameType::Other, NomCode::Virus);
+}
