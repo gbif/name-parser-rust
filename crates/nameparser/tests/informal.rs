@@ -2100,3 +2100,125 @@ fn single_letters_and_their_misreadings() {
         .warning(&[nameparser::model::warnings::ABBREVIATED_GENUS])
         .nothing_else();
 }
+
+/// A code after a species, with full stops, underscores or a labelling word in it, or the
+/// accessions of other collections after `=`, is the phrase of the species: split at a full stop,
+/// the code became an author and its last digits were left over. A qualifier keeps the species, the
+/// code its phrase.
+#[test]
+fn codes_with_full_stops_after_a_species() {
+    for (input, phrase) in [
+        ("Acaryochloris marina I2.1", "I2.1"),
+        ("Anabaena bergii PMC215.03", "PMC215.03"),
+        ("Aphanizomenon gracile PMC637.10", "PMC637.10"),
+        ("Escherichia coli D6-117.29", "D6-117.29"),
+        ("Escherichia coli P0305260.11", "P0305260.11"),
+        ("Escherichia coli STEC_H.I.8", "STEC_H.I.8"),
+        ("Acaulospora colossica spore IB.15", "spore IB.15"),
+        ("Vandenboschia radicans type A14", "type A14"),
+        (
+            "Hebeloma incarnatulum ectomycorrhiza V24",
+            "ectomycorrhiza V24",
+        ),
+        (
+            "Acinetobacter calcoaceticus DSM 30006 = CIP 81.8",
+            "DSM 30006 = CIP 81.8",
+        ),
+        (
+            "Mycobacterium arosiense DSM 45069 = ATCC BAA-1401",
+            "DSM 45069 = ATCC BAA-1401",
+        ),
+        ("Halimeda cuneata.Africa.1", "Africa.1"),
+    ] {
+        let mut words = input.split(|c: char| c.is_whitespace() || c == '.');
+        let (genus, species) = (words.next().unwrap(), words.next().unwrap());
+        assert_name(input)
+            .species(genus, species)
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    for (input, qualifier, phrase) in [
+        ("Acremonium aff. persicinum CBS203.73", "aff.", "CBS203.73"),
+        ("Ancistrus cf. leucostictus PYLB97-3.1", "cf.", "PYLB97-3.1"),
+        ("Botrylloides cf. lenis SMRC_3.1", "cf.", "SMRC_3.1"),
+        (
+            "Characidium cf. steindachneri CHIFF0007.1",
+            "cf.",
+            "CHIFF0007.1",
+        ),
+        ("Cryptococcus cf. flavus SU8.4", "cf.", "SU8.4"),
+        ("Lemonniera cf. alabamensis UMB-550.10", "cf.", "UMB-550.10"),
+    ] {
+        let words: Vec<&str> = input.split_whitespace().collect();
+        assert_name(input)
+            .species(words[0], words[2])
+            .qualifiers(&[(NamePart::Specific, qualifier)])
+            .phrase(phrase)
+            .type_(NameType::Informal)
+            .nothing_else();
+    }
+    // an abbreviated author glued to a year is no code
+    assert_name("Abies alba Mill.1768")
+        .species("Abies", "alba")
+        .comb_authors(Some("1768"), &["Mill."])
+        .nothing_else();
+    // a year with a full stop and more digits keeps its year, the rest is left over
+    assert_name("Agapeta diversana Hübner 1811.18")
+        .species("Agapeta", "diversana")
+        .comb_authors(Some("1811"), &["Hübner"])
+        .partial("18")
+        .nothing_else();
+}
+
+/// `fam.` and a letter, a code or `gen.` after a taxon designates an unnamed family in it, the
+/// phrase of an informal name on the taxon, as `gen.` does for a genus.
+#[test]
+fn an_unnamed_family_after_its_taxon() {
+    for (input, phrase, taxon_rank, rank) in [
+        (
+            "Digenea fam. B sp. MAT.CG.2",
+            "fam. B sp. MAT.CG.2",
+            Rank::Genus,
+            Rank::Species,
+        ),
+        (
+            "Tetraphyllidea fam. gen. sp. scpl02",
+            "fam. gen. sp. scpl02",
+            Rank::Genus,
+            Rank::Species,
+        ),
+        ("Digenea fam. A", "fam. A", Rank::Family, Rank::Family),
+    ] {
+        assert_informal(input)
+            .taxon(input.split_whitespace().next().unwrap())
+            .taxon_rank(taxon_rank)
+            .rank(rank)
+            .phrase(phrase)
+            .nothing_else();
+    }
+}
+
+/// A rank and an epithet in brackets after the author, and what follows, are left unparsed: a note
+/// on the form or variety, mostly of a germplasm collection.
+#[test]
+fn a_bracketed_rank_after_the_author_is_left_over() {
+    assert_name("Camelina sativa (L.) Crantz (f. annua), f.1")
+        .species("Camelina", "sativa")
+        .bas_authors(None, &["L."])
+        .comb_authors(None, &["Crantz"])
+        .partial("(f. annua), f.1")
+        .nothing_else();
+    // a cultivar after the note is the name's own
+    assert_name("Brassica juncea (L.) Czern. (f. biennis), cv. Annushka")
+        .cultivar_sp("Brassica", "juncea", "Annushka")
+        .specific_bas_authors(None, &["L."])
+        .specific_authors(None, &["Czern."])
+        .partial("(f. biennis)")
+        .nothing_else();
+    assert_name("Marchantia polymorpha L. var. polymorpha (var. ruderalis)")
+        .infra_species("Marchantia", "polymorpha", Rank::Variety, "polymorpha")
+        .specific_authors(None, &["L."])
+        .partial("(var. ruderalis)")
+        .nothing_else();
+}

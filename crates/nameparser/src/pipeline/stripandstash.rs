@@ -64,6 +64,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = strip_leading_genus_qualifier(ctx, s);
     s = strip_bracketed_genus_doubt(ctx, s);
     s = strip_shouted_vernacular(ctx, s);
+    s = stash_family_designation(ctx, s);
     s = stash_genus_designation(ctx, s);
     s = shorten_species_near(s);
     s = strip_rank_lineage(ctx, s);
@@ -86,6 +87,7 @@ pub(crate) fn run(ctx: &mut ParseContext) {
     s = normalise_minor_shapes(s);
     s = repair_question_mark_in_word(ctx, s);
     s = stash_misplaced_qualifier(ctx, s);
+    s = stash_bracketed_rank_note(ctx, s);
     s = split_glued_year(ctx, s);
     s = strip_strain_designation(ctx, s);
     s = stash_trailing_rank_marker_code(ctx, s);
@@ -613,6 +615,30 @@ fn strip_bracketed_genus_doubt(ctx: &mut ParseContext, s: String) -> String {
 static GENUS_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)gen(?:\.(?-u:\s*)|(?-u:\s+))(\S.*?)(?-u:\s*)$").unwrap()
 });
+
+/// A taxon followed by `fam.` and the designation of an unnamed family in it, a letter, a code or an
+/// unnamed genus: `Digenea fam. B sp. MAT.CG.2`, `Mesostigmata fam. MRY1 sp.`, `Tetraphyllidea fam.
+/// gen. sp. scpl02`. Group 1 is the taxon, group 2 the designation. A family's name after `fam.`
+/// and the placeholders (`fam. indet.`, `fam. Incertae sedis`, `fam. n.`) are not.
+static FAMILY_DESIGNATION: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+)(?-u:\s+)fam\.?(?-u:\s+)((?:\p{Lu}|\p{Lu}+\d[\p{L}\d]*|gen\.)(?:(?-u:\s+).*)?)$")
+        .unwrap()
+});
+
+/// See [`FAMILY_DESIGNATION`]. As for [`GENUS_DESIGNATION`], the designation, marker included, is
+/// the phrase of an informal name on the taxon, of rank SPECIES when it designates a species too,
+/// else FAMILY. Read as is, `fam` became the epithet and the rest its author.
+fn stash_family_designation(ctx: &mut ParseContext, s: String) -> String {
+    let Some(caps) = FAMILY_DESIGNATION.captures(&s) else {
+        return s;
+    };
+    let species = GENUS_DESIGNATION_SPECIES.is_match(&caps[2]);
+    let phrase_start = caps.get(1).unwrap().end();
+    ctx.name.phrase = Some(java_trim(&s[phrase_start..]).to_string());
+    ctx.name.rank = if species { Rank::Species } else { Rank::Family };
+    ctx.name.type_ = NameType::Informal;
+    caps[1].to_string()
+}
 
 /// A uninomial labelled with its rank, `Ojrotella gen.`. Group 1 is the uninomial.
 static BARE_GENUS_MARKER: LazyLock<Regex> =
@@ -1163,13 +1189,33 @@ fn strip_strain_designation(ctx: &mut ParseContext, s: String) -> String {
 /// as any other (`Candidatus Caldatribacterium saccharofermentans OP9-77CS`), as does a code of
 /// capitals joined by an underscore (`PW_SP`), which no author has (#84). A slash may stand in the
 /// code and a genus in square brackets before it: `Agrobacterium pusense L2/2/1`, `[Eubacterium]
-/// rectale M104/1` (#213).
+/// rectale M104/1` (#213). Full stops and underscores may stand inside a code too, `Anabaena bergii
+/// PMC215.03`, `Escherichia coli STEC_H.I.8`, `Botrylloides cf. lenis SMRC_3.1`, and a word labelling
+/// it before it, `Acaulospora colossica spore IB.15` (see [`CODE_LABEL`]): split at the full stop,
+/// the code became an author and its last digits were left over.
 static TRAILING_STRAIN_CODE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        &r"^((?:Candidatus\s+)?\[?[\p{Lu}][\p{Ll}]+\]?\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+([dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:/\-]*\d[\p{L}\d_\-:/]*|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?)\.?\s*$"
-            .replace("<INFRA>", INFRASPECIFIC_HEAD),
+        &r"^((?:Candidatus\s+)?\[?[\p{Lu}][\p{Ll}]+\]?\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+((?:<LABEL>\s+)?(?:[dr]?RNA[a-zA-Z0-9_\-]*|[\p{Lu}][\p{L}\d:/_.\-]*\d(?:[\p{L}\d_\-:/.]*[\p{L}\d_\-:/])?|[\p{Lu}][\p{Lu}\d]*_[\p{Lu}\d_]*[\p{Lu}\d]|\d(?:[\p{L}\d_:/.\-]*[\p{L}\d])?))\.?\s*$"
+            .replace("<INFRA>", INFRASPECIFIC_HEAD)
+            .replace("<LABEL>", CODE_LABEL),
     )
     .unwrap()
+});
+
+/// Words that label a code after a species, kept with it in the phrase: `spore IB.15`, `type A14`,
+/// `clone CK051`, `isolate Kol-2`, `ectomycorrhiza V24`. Read as is, the word became an
+/// infraspecific epithet and the code its author.
+const CODE_LABEL: &str =
+    "(?:spore|type|clone|isolate|ectomycorrhiza|morphotype|ecotype|phylotype|genotype)";
+
+/// An abbreviated author glued to a year by a full stop, `Mill.1768`: no code, see
+/// [`TRAILING_STRAIN_CODE`].
+static AUTHOR_DOT_YEAR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"^\p{Lu}[\p{L}.]*\.(?-u:\s?)(?:1[5-9]|20)\d\d$").unwrap());
+
+/// A code glued to the epithet by a full stop, `Halimeda cuneata.Africa.1`: a code after it.
+static GLUED_EPITHET_CODE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}{3,})\.(\p{Lu}[\p{L}\d._\-]*\d)$").unwrap()
 });
 
 /// An infraspecific name a trailing code may follow too, in the head of [`TRAILING_STRAIN_CODE`],
@@ -1261,10 +1307,12 @@ static LABEL_HIGHER_ANCHOR: LazyLock<Regex> = LazyLock::new(|| {
 /// spot-checked against the Java CLI oracle. See [`TRAILING_YEAR`] for what became of
 /// Java's `DIGITS_ONLY` guard.
 fn stash_trailing_strain_code(ctx: &mut ParseContext, s: String) -> String {
-    if let Some(caps) = TRAILING_STRAIN_CODE.captures(&s) {
+    let unglued = GLUED_EPITHET_CODE.replace(&s, "$1 $2");
+    if let Some(caps) = TRAILING_STRAIN_CODE.captures(&unglued) {
         let head = caps.get(1).unwrap().as_str();
         let code = caps.get(2).unwrap().as_str();
         if !TRAILING_YEAR.is_match(code)
+            && !AUTHOR_DOT_YEAR.is_match(code)
             && !token::is_numeral_epithet(code)
             && !is_indet_species_marker(second_word(head))
         {
@@ -1590,6 +1638,52 @@ fn stash_misplaced_qualifier(ctx: &mut ParseContext, s: String) -> String {
     s
 }
 
+/// A rank and an epithet in brackets after an author, and what follows: `Camelina sativa (L.) Crantz
+/// (f. annua), f.1`, `Marchantia polymorpha L. var. polymorpha (var. ruderalis)`. A note, mostly of a
+/// germplasm collection, on the form or variety the material belongs to; the authors swallowed it.
+/// Group 1 the name with its author, group 2 the note.
+static BRACKETED_RANK_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\p{Lu}\p{Ll}+(?-u:\s+)\p{Ll}{3,}(?-u:\s+).*?\p{Lu}.*?\S)(?-u:\s+)(\((?:f|fo|var|subsp|ssp)\.(?-u:\s*)\p{Ll}+\).*)$").unwrap()
+});
+
+/// [`BRACKETED_RANK_NOTE`] in a separate authorship: `(L.) Crantz (f. annua), f.1`.
+static AUTHORSHIP_BRACKETED_RANK_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(.*?\p{Lu}.*?\S)(?-u:\s+)(\((?:f|fo|var|subsp|ssp)\.(?-u:\s*)\p{Ll}+\).*)$")
+        .unwrap()
+});
+
+/// See [`AUTHORSHIP_BRACKETED_RANK_NOTE`].
+fn stash_authorship_bracketed_rank_note(ctx: &mut ParseContext, s: String) -> String {
+    match AUTHORSHIP_BRACKETED_RANK_NOTE.captures(&s) {
+        Some(caps) => set_aside_rank_note(ctx, &caps[1], &caps[2]),
+        None => s,
+    }
+}
+
+/// See [`BRACKETED_RANK_NOTE`]: set aside as unparsed, the name is left PARTIAL.
+fn stash_bracketed_rank_note(ctx: &mut ParseContext, s: String) -> String {
+    match BRACKETED_RANK_NOTE.captures(&s) {
+        Some(caps) => set_aside_rank_note(ctx, &caps[1], &caps[2]),
+        None => s,
+    }
+}
+
+/// A cultivar after a [`BRACKETED_RANK_NOTE`]: `, cv. Annushka`, `, cv.Venera`.
+static CULTIVAR_AFTER_RANK_NOTE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r"^(\([^)]*\))(?-u:\s*),(?-u:\s*)(cv\.(?-u:\s*)\p{Lu}.*)$").unwrap()
+});
+
+/// Sets the rank `note` aside as unparsed and returns the `head` before it; a cultivar after the
+/// note stays with the name, whose cultivar it is.
+fn set_aside_rank_note(ctx: &mut ParseContext, head: &str, note: &str) -> String {
+    if let Some(caps) = CULTIVAR_AFTER_RANK_NOTE.captures(note) {
+        ctx.set_pending_unparsed(&caps[1]);
+        return format!("{head} {}", &caps[2]);
+    }
+    ctx.set_pending_unparsed(note);
+    head.to_string()
+}
+
 /// A qualifier trailing a separate authorship: `Vittad. cf.`, `Miranda vel aff.`, as
 /// [`TRAILING_QUALIFIER`] and [`TRAILING_VEL_QUALIFIER`] on the name string.
 static AUTHORSHIP_TRAILING_QUALIFIER: LazyLock<Regex> = LazyLock::new(|| {
@@ -1850,12 +1944,18 @@ fn rank_of_marker(w: &str) -> Option<Rank> {
 /// the standalone `NameType::Identifier` path in `preflight` (shared `culture_collections` list).
 static TRAILING_CULTURE_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
-        r"^([\p{{Lu}}][\p{{Ll}}]+[ ]+[\p{{Ll}}]+{})[ ]+({}[ :=_\-]*(?:[A-Z]{{1,4}}\-)?[0-9][0-9A-Za-z.:\-]*)$",
+        r"^([\p{{Lu}}][\p{{Ll}}]+[ ]+[\p{{Ll}}]+{})[ ]+({}[ :=_\-]*(?:[A-Z]{{1,4}}\-)?[0-9][0-9A-Za-z.:\-]*{})$",
         INFRASPECIFIC_HEAD,
-        super::culture_collections::acronym_alternation()
+        super::culture_collections::acronym_alternation(),
+        EQUIVALENT_ACCESSIONS
     ))
     .unwrap()
 });
+
+/// The accessions of the same strain in other collections, each after `=`: `DSM 1382 = ATCC
+/// 19364`, `DSM 30006 = CIP 81.8`. Read as is, the acronyms became a team of authors.
+const EQUIVALENT_ACCESSIONS: &str =
+    r"(?:[ ]*=[ ]*[A-Z]{2,}[ :_\-]*(?:[A-Z]{1,4}\-)?[0-9][0-9A-Za-z.:\-]*)*";
 
 /// See [`TRAILING_CULTURE_ACCESSION`].
 fn stash_trailing_culture_accession(ctx: &mut ParseContext, s: String) -> String {
@@ -1873,8 +1973,9 @@ fn stash_trailing_culture_accession(ctx: &mut ParseContext, s: String) -> String
 /// name, group 3 the code.
 static TRAILING_ACCESSION: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(
-        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+(\p{Lu}{2,}[\p{Lu}\d]*\s+([\p{L}\d][\p{L}\d_\-.:/]*))$"
-            .replace("<INFRA>", INFRASPECIFIC_HEAD),
+        &r"^((?:Candidatus\s+)?[\p{Lu}][\p{Ll}]+\s+(?:(?:cf|aff|nr|near)\.?\s+)?[\p{Ll}]+<INFRA>)\s+(\p{Lu}{2,}[\p{Lu}\d]*\s+([\p{L}\d][\p{L}\d_\-.:/]*)<EQ>)$"
+            .replace("<INFRA>", INFRASPECIFIC_HEAD)
+            .replace("<EQ>", EQUIVALENT_ACCESSIONS),
     )
     .unwrap()
 });
@@ -7695,7 +7796,7 @@ fn on_authorship(
 /// `or`, `/`), imprint years, hyphens and homoglyphs, angle-bracketed placeholders, HTML, `hort.`,
 /// the extinct dagger and a bracketed synonym (`[= Grislea L. 1753]`). In `run`'s order.
 pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) -> String {
-    let steps: [fn(&mut ParseContext, String) -> String; 25] = [
+    let steps: [fn(&mut ParseContext, String) -> String; 26] = [
         close_bracket_after_year,
         repair_colon_diacritics,
         flag_uncertain_authorship,
@@ -7706,6 +7807,7 @@ pub(crate) fn strip_authorship_leading_steps(ctx: &mut ParseContext, s: String) 
         strip_html,
         normalise_hort_ex_placeholder,
         stash_authorship_trailing_qualifier,
+        stash_authorship_bracketed_rank_note,
         split_glued_year_of_authorship,
         pipe_to_ampersand,
         split_glued_particle,
