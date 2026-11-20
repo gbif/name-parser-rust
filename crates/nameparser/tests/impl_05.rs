@@ -298,6 +298,36 @@ fn apostrophe_ending_a_word_of_a_quoted_cultivar() {
         .nothing_else();
 }
 
+// A cross inside a quoted cultivar epithet belongs to the epithet: the quotes delimit it, so the
+// name is no hybrid formula (#259). A cultivar of a real formula stays a formula.
+#[test]
+fn cross_inside_a_quoted_cultivar() {
+    assert_name("Sus domesticus 'Landrace x Large White'")
+        .cultivar_sp("Sus", "domesticus", "Landrace x Large White")
+        .nothing_else();
+    assert_name("Bos taurus 'Santa Gertrudis x Zebu'")
+        .cultivar_sp("Bos", "taurus", "Santa Gertrudis x Zebu")
+        .nothing_else();
+    assert_name("Oryctolagus cuniculus 'California X New Zealand'")
+        .cultivar_sp("Oryctolagus", "cuniculus", "California X New Zealand")
+        .nothing_else();
+    for input in [
+        "Rosa 'Kiss x Tell'",
+        "Rosa ‘Kiss × Tell’",
+        "Rosa \"Kiss x Tell\"",
+    ] {
+        let epithet = if input.contains('×') {
+            "Kiss × Tell"
+        } else {
+            "Kiss x Tell"
+        };
+        assert_name(input).cultivar("Rosa", epithet).nothing_else();
+    }
+
+    assert_hybrid_formula("Anas platyrhynchos × Cairina moschata 'Mulard'");
+    assert_hybrid_formula("Anas platyrhynchos x Cairina moschata 'Mulard x Pekin'");
+}
+
 // "ht." is an occasional abbreviation of the horticultural marker "hort." written
 // directly on the author span. It must parse like its spelled-out twin
 // ("Gymnogramma alstoni hort.Birkenh.; Gard.") instead of leaking "ht" in as a bogus

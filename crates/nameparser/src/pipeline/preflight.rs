@@ -1322,7 +1322,13 @@ fn last_word(s: &str) -> &str {
 fn looks_like_hybrid_formula(s: &str) -> bool {
     let cs: Vec<(usize, char)> = s.char_indices().collect();
     let n = cs.len();
+    let quoted = quoted_spans(&cs);
     for i in 0..n {
+        // a cross inside a quoted cultivar epithet is part of the epithet:
+        // `Sus domesticus 'Landrace x Large White'` (#259)
+        if quoted.iter().any(|r| r.contains(&i)) {
+            continue;
+        }
         let c = cs[i].1;
         let cross = c == '×';
         let ascii_x = !cross
@@ -1381,6 +1387,36 @@ fn looks_like_hybrid_formula(s: &str) -> bool {
         }
     }
     false
+}
+
+/// The char-position ranges of the quoted spans in `cs`, as a cultivar epithet is quoted: a quote
+/// after a space (or at the start) opens, before a letter or digit, and the same quote closes before
+/// a space, the end or a punctuation mark. An apostrophe between letters neither opens nor closes
+/// one (`d'Orbigny`, `'Gill's Gem'`), and an unclosed quote marks no span.
+fn quoted_spans(cs: &[(usize, char)]) -> Vec<std::ops::Range<usize>> {
+    let is_quote = |c: char| c == '\'' || c == '"';
+    let mut spans = Vec::new();
+    let mut i = 0;
+    while i < cs.len() {
+        let q = cs[i].1;
+        let opens = is_quote(q)
+            && (i == 0 || cs[i - 1].1.is_whitespace())
+            && cs.get(i + 1).is_some_and(|&(_, c)| c.is_alphanumeric());
+        if opens {
+            let close = (i + 2..cs.len()).find(|&j| {
+                cs[j].1 == q
+                    && !cs[j - 1].1.is_whitespace()
+                    && cs.get(j + 1).is_none_or(|&(_, c)| !c.is_alphanumeric())
+            });
+            if let Some(j) = close {
+                spans.push(i..j + 1);
+                i = j + 1;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    spans
 }
 
 /// A name after a cross, as opposed to an author or a cultivar: a plain capitalised Latin word
