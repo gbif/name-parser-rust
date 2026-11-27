@@ -5,6 +5,24 @@ crate `gbif-name-parser`, the CLI, the Python and R packages and the Java `name-
 model they implement is the Java `org.gbif:name-parser-api`, versioned on its own (see its
 [VERSIONS.md](https://github.com/gbif/name-parser/blob/dev/VERSIONS.md)).
 
+## 0.5.1 (2026-11-27, api 6.0.2)
+
+- A GTDB name (`Desulfobacterota_B`) is INFORMAL, anchored on the taxon it was split from (#244).
+- New warnings for a digit or odd character in a genus or epithet (#244, #236); a rendered name has
+  no question mark (#243).
+- An aggregate marker without an epithet reads like `sp.`; alternatives after an infraspecific rank
+  marker take its rank; a qualified species keeps the alternatives below it.
+- Unnamed-species shapes: `sp.` glued to its number (#242), `Genus` joined to its number (#240), an
+  indet marker with no taxon before it (#245), `sp.` after an epithet (#252), `sl.` before `sp.`
+  (#251), an underscore before a dotted `sp.` (#234).
+- Authorship: `et al.` without its first author (#237), alternatives with their own authorship
+  (#235), a short number after the authors left unparsed (#247), a bracket holding `=` is a synonym
+  note (#241).
+- No virus from `-phages` epithets or viral abbreviations inside non-ASCII words (#238, #239); a clade
+  code is no genus; single letters and their misreadings (#246).
+- Cultivar epithets keep a trailing apostrophe, and a cross inside one makes no hybrid formula
+  (#258, #259); words in another script keep their letters.
+
 ## 0.5.0 (2026-11-11, api 6.0.0)
 
 - No `Informal` parse result any more: a name in open nomenclature is a parsed name of type
