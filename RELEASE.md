@@ -7,7 +7,7 @@ version number means the **same underlying Rust engine** everywhere.
 
 - The Cargo **`[workspace.package]` version** (root `Cargo.toml`) is the *engine version*. The
   core crate, CLI, Python wheel, R package, and the Java FFM binding all carry this same number.
-- `org.gbif:name-parser-api` (currently **`6.0.0`**) is the stable Java **contract** — an
+- `org.gbif:name-parser-api` (currently **`6.0.2`**) is the stable Java **contract** — an
   independently versioned **dependency**, *not* part of this version. The Java binding implements it
   but versions with the engine (an impl versioning independently from its api is normal).
 - The bindings sit at **`0.x`** while new and gathering real-use feedback. Once stable they
@@ -15,10 +15,10 @@ version number means the **same underlying Rust engine** everywhere.
 
 | Channel | Artifact | Registry | Trigger | Status |
 |---|---|---|---|---|
-| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.5.0` released |
-| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.5.0` released |
-| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.5.0` published (setup done); later versions via tag |
-| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.5.0` published (setup done); later versions via tag |
+| Java FFM binding | `org.gbif.nameparser:name-parser-rust` | GBIF Nexus | Jenkins | ✅ `0.5.1` released |
+| CLI | `nameparser-cli-<target>` archives | GitHub Releases | `cli-v*` tag | ✅ `0.5.1` released |
+| Python | `gbif-name-parser` | PyPI | `py-v*` tag | ✅ `0.5.1` published (setup done); later versions via tag |
+| Rust engine | `gbif-name-parser` | crates.io | `crate-v*` tag | ✅ `0.5.1` published (setup done); later versions via tag |
 | R | `nameparser` | CRAN | `scripts/build-r-tarball.sh` + manual submission | 🟡 tarball checks clean locally + on Linux/macOS/Windows CI; win-builder pending, then first submission |
 
 ---
@@ -131,7 +131,7 @@ For any subsequent release, after the §1 version bump — **dry-run first** (re
 never publishes). Then the real release:
 
 ```sh
-git tag crate-v0.2.1 && git push origin crate-v0.2.1   # a NEW version each time — 0.1.0/0.2.0/0.2.1/0.2.2/0.3.0/0.4.0/0.5.0 are published
+git tag crate-v0.2.1 && git push origin crate-v0.2.1   # a NEW version each time — 0.1.0/0.2.0/0.2.1/0.2.2/0.3.0/0.4.0/0.5.0/0.5.1 are published
 ```
 
 `.github/workflows/crate-release.yml` guards the tag against the engine version (root `Cargo.toml`
